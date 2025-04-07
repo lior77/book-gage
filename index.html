@@ -3,54 +3,24 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8">
-  <title>הספר שלי</title>
+  <title>עמוד נחיתה - תמונה בלבד</title>
   <style>
     body {
-      direction: rtl;
-      font-family: Arial, sans-serif;
-      text-align: center;
+      margin: 0;
       background-color: #f4f4f4;
-      padding: 40px;
-    }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      display: inline-block;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
     img {
-      width: 250px;
-      margin-bottom: 20px;
-    }
-    h1, p, h2 {
-      margin-bottom: 20px;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 16px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
+      max-width: 90%;
+      height: auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>הספר החדש שלי – "שם הספר"</h1>
-    <img src="cover.jpg" alt="עטיפת הספר">
-    <p>ספר מרתק על החיים, אהבה והתפתחות אישית. מתאים לכל הגילאים.</p>
-    <h2>רכישה ב-49 ש"ח בלבד</h2>
-
-    <!-- כפתור התשלום -->
-    <form action="https://buy.meshulam.co.il/form?token=REPLACE_WITH_YOUR_TOKEN" method="get">
-      <button type="submit">לתשלום מאובטח</button>
-    </form>
-  </div>
+  <img src="100.jpg" alt="תמונה">
 </body>
 </html>
