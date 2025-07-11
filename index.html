@@ -12,7 +12,8 @@
     body {
       min-height: 100vh;
       font-family: 'Heebo', Arial, sans-serif;
-      background: #f8f8f8;
+      background: #f8f8f8 url('background.jpg') no-repeat center center fixed;
+      background-size: cover;
       position: relative;
       overflow: hidden;
     }
@@ -25,6 +26,11 @@
       align-items: center;
       z-index: 2;
       text-align: center;
+      background: rgba(255, 255, 255, 0.72); /* שכבת רקע בהירה לטקסט */
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+      border-radius: 28px;
+      margin: 48px 8px;
+      padding: 40px 20px;
     }
     h1 {
       font-size: 2.5em;
@@ -53,17 +59,6 @@
     .buy-btn:hover {
       background: #3949ab;
     }
-    .background-img {
-      position: fixed;
-      left: 0;
-      bottom: 0;
-      width: 100vw;
-      height: 33vh;
-      object-fit: cover;
-      z-index: 1;
-      pointer-events: none;
-      user-select: none;
-    }
     @media (max-width: 600px) {
       h1 {
         font-size: 1.6em;
@@ -75,6 +70,10 @@
         font-size: 1em;
         padding: 14px 24px;
       }
+      .center-container {
+        margin: 16px 0;
+        padding: 16px 4px;
+      }
     }
   </style>
 </head>
@@ -82,10 +81,9 @@
   <div class="center-container">
     <h1>צבי נרקיס; טיפוגרפיה ועיצוב</h1>
     <h2>ספר ייחודי על עיצוב, אותיות והשראה מאת יהודה חפשי</h2>
-    <a "https://pay.grow.link/bd90d3a1c6395a945386bddaf53f18a3-MTkyNTYwMQ">
+    <a href="https://pay.grow.link/bd90d3a1c6395a945386bddaf53f18a3-MTkyNTYwMQ">
       <button class="buy-btn">רכישת ספר</button>
     </a>
   </div>
-  <img src="background.jpg" alt="רקע טיפוגרפי" class="background-img">
 </body>
 </html>
