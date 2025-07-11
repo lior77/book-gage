@@ -4,22 +4,27 @@
   <meta charset="UTF-8">
   <title>צבי נרקיס ; טיפוגרפיה בעיצוב</title>
   <style>
-    body {
+    html, body {
+      height: 100%;
       margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
       font-family: 'Heebo', Arial, sans-serif;
       background: #f8f8f8;
+      position: relative;
+      overflow: hidden;
+    }
+    .center-container {
+      position: relative;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
-      position: relative;
-    }
-    .main-content {
-      position: relative;
+      justify-content: center;
+      align-items: center;
       z-index: 2;
       text-align: center;
-      padding: 60px 20px 200px 20px;
-      color: #222;
     }
     h1 {
       font-size: 2.5em;
@@ -60,9 +65,6 @@
       user-select: none;
     }
     @media (max-width: 600px) {
-      .main-content {
-        padding-bottom: 130px;
-      }
       h1 {
         font-size: 1.6em;
       }
@@ -77,7 +79,7 @@
   </style>
 </head>
 <body>
-  <div class="main-content">
+  <div class="center-container">
     <h1>צבי נרקיס ; טיפוגרפיה בעיצוב</h1>
     <h2>ספר ייחודי על עיצוב, אותיות והשראה מאת צבי נרקיס</h2>
     <a href="https://pay.grow.link/bd90d3a1c6395a945386bddaf53f18a3-MTkyNTYwMQ">
