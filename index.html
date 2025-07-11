@@ -1,22 +1,89 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>דף רכישת כרטיסים</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>צבי נרקיס ; טיפוגרפיה בעיצוב</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Heebo', Arial, sans-serif;
+      background: #f8f8f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .main-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 60px 20px 200px 20px;
+      color: #222;
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 0.2em;
+      letter-spacing: 1px;
+    }
+    h2 {
+      font-size: 1.3em;
+      margin-bottom: 2em;
+      font-weight: 400;
+      color: #555;
+    }
+    .buy-btn {
+      background: #1a237e;
+      color: #fff;
+      font-size: 1.2em;
+      padding: 18px 44px;
+      border: none;
+      border-radius: 32px;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(26,35,126,0.1);
+      transition: background 0.2s;
+      margin-top: 40px;
+      font-family: inherit;
+    }
+    .buy-btn:hover {
+      background: #3949ab;
+    }
+    .background-img {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 33vh;
+      object-fit: cover;
+      z-index: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+    @media (max-width: 600px) {
+      .main-content {
+        padding-bottom: 130px;
+      }
+      h1 {
+        font-size: 1.6em;
+      }
+      h2 {
+        font-size: 1em;
+      }
+      .buy-btn {
+        font-size: 1em;
+        padding: 14px 24px;
+      }
+    }
+  </style>
 </head>
-<body style="font-family: Arial, sans-serif; text-align: center; direction: rtl;">
-    <h1>השקת הספר "צבי נרקיס; טיפוגרפיה ועיצוב"</h1>
-    <p>האירוע פתוח ל-200 המזמינים הראשונים.</p>
-    <a href="https://tickets.tamuseum.org.il/show/8640" 
-       style="display: inline-block; background-color: #00A859; color: white;
-              padding: 16px 32px; border-radius: 8px; text-decoration: none;
-              font-size: 18px; font-weight: bold;">
-        הזמנת כרטיס
+<body>
+  <div class="main-content">
+    <h1>צבי נרקיס ; טיפוגרפיה בעיצוב</h1>
+    <h2>ספר ייחודי על עיצוב, אותיות והשראה מאת צבי נרקיס</h2>
+    <a href="https://pay.grow.link/bd90d3a1c6395a945386bddaf53f18a3-MTkyNTYwMQ">
+      <button class="buy-btn">רכישת ספר</button>
     </a>
-    <p style="font-size: small; margin-top: 32px;">
-        קוד QR לקבלת הספר "צבי נרקיס; טיפוגרפיה ועיצוב".<br/>
-        (קבלת הספר לתומכי headstart הזכאים)
-    </p>
+  </div>
+  <img src="background.jpeg" alt="רקע טיפוגרפי" class="background-img">
 </body>
 </html>
