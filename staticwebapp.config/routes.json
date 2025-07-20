@@ -1,0 +1,9 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "redirect": "https://pay.grow.link/86b1c7221993f6b214c2f6d4de6df5eb-MTkyNTU0NQ",
+      "statusCode": 301
+    }
+  ]
+}
