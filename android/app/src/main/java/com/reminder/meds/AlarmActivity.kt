@@ -64,14 +64,16 @@ class AlarmActivity : AppCompatActivity() {
         beepCount = 0
         handler.post(beepRunnable)
 
-        // Accompany it with vibration for the same three seconds.
+        // Accompany it with vibration for the same duration.
         vibrateForSound()
     }
 
+    // Number of beeps that fill SOUND_DURATION_MS (e.g. 6000 / 500 = 12 beeps ≈ 6 seconds).
+    private val totalBeeps = (SOUND_DURATION_MS / BEEP_INTERVAL_MS).toInt()
+
     private val beepRunnable = object : Runnable {
         override fun run() {
-            // 6 beeps, 500 ms apart ≈ 3 seconds total.
-            if (beepCount >= 6) {
+            if (beepCount >= totalBeeps) {
                 stopTone()
                 return
             }
@@ -82,15 +84,21 @@ class AlarmActivity : AppCompatActivity() {
             }
             toneGenerator?.startTone(tone, 250)
             beepCount++
-            handler.postDelayed(this, 500)
+            handler.postDelayed(this, BEEP_INTERVAL_MS)
         }
     }
 
     private fun vibrateForSound() {
         val vib = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return
         vibrator = vib
-        // Buzz-pause pattern for ~3 seconds.
-        val pattern = longArrayOf(0, 500, 300, 500, 300, 500, 300)
+        // Buzz-pause pattern lasting about SOUND_DURATION_MS (one 500 ms buzz + 300 ms pause per beep).
+        val pattern = ArrayList<Long>().apply {
+            add(0L) // no initial delay
+            repeat(totalBeeps) {
+                add(500L) // buzz
+                add(300L) // pause
+            }
+        }.toLongArray()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vib.vibrate(VibrationEffect.createWaveform(pattern, -1))
         } else {
