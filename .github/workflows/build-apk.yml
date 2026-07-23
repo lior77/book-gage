@@ -40,13 +40,6 @@ jobs:
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk MedReminder.apk
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: med-reminder-apk
-          path: MedReminder.apk
-          if-no-files-found: error
-
       - name: Publish APK to a Release (permanent download link)
         uses: softprops/action-gh-release@v2
         with:
