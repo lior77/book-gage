@@ -2,7 +2,9 @@ package com.reminder.meds
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.TimePickerDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -11,9 +13,11 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import java.util.Calendar
 
 /**
  * The single home screen: one big button that turns the reminder on ("הפעל") and off ("כבה").
@@ -58,13 +62,50 @@ class MainActivity : AppCompatActivity() {
     private fun proceedEnable() {
         ensureExactAlarmPermission()
         ensureBatteryUnrestricted()
-        enableReminders()
+        promptTestTimeThenEnable()
+    }
+
+    /**
+     * Every time the app is enabled, offer to pick one extra "test" time so the user can verify the
+     * app works without waiting for a fixed time. Picking a time enables the reminders and schedules
+     * the one-off test; "דלג" (skip) just enables the four fixed reminders.
+     */
+    private fun promptTestTimeThenEnable() {
+        // Default the picker to two minutes from now — a convenient near-future test time.
+        val now = Calendar.getInstance().apply { add(Calendar.MINUTE, 2) }
+        val dialog = TimePickerDialog(
+            this,
+            { _, hour, minute ->
+                enableReminders()
+                AlarmScheduler.scheduleTest(this, hour, minute)
+                val time = String.format("%02d:%02d", hour, minute)
+                Toast.makeText(
+                    this,
+                    getString(R.string.test_scheduled, time),
+                    Toast.LENGTH_LONG
+                ).show()
+            },
+            now.get(Calendar.HOUR_OF_DAY),
+            now.get(Calendar.MINUTE),
+            true
+        )
+        dialog.setTitle(getString(R.string.test_time_title))
+        // "דלג" — enable the fixed reminders without a test time.
+        dialog.setButton(DialogInterface.BUTTON_NEUTRAL, getString(R.string.skip)) { _, _ ->
+            enableReminders()
+        }
+        // Closing the dialog (back button / tap outside) still enables the fixed reminders.
+        dialog.setOnCancelListener { enableReminders() }
+        dialog.show()
     }
 
     private fun enableReminders() {
-        Prefs.setEnabled(this, true)
-        AlarmScheduler.scheduleAll(this)
-        updateButtonLabel()
+        // Guard against the dialog callbacks enabling twice.
+        if (!Prefs.isEnabled(this)) {
+            Prefs.setEnabled(this, true)
+            AlarmScheduler.scheduleAll(this)
+            updateButtonLabel()
+        }
     }
 
     private fun updateButtonLabel() {

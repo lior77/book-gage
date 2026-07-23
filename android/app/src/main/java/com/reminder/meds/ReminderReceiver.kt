@@ -20,16 +20,20 @@ class ReminderReceiver : BroadcastReceiver() {
         val slot = intent.getIntExtra(EXTRA_SLOT, -1)
         val snoozeCount = intent.getIntExtra(EXTRA_SNOOZE_COUNT, 0)
 
-        // Only the initial ring (not a nudge) re-arms the daily schedule for the next day.
-        if (snoozeCount == 0 && slot in AlarmScheduler.TIMES.indices) {
+        val isFixed = slot in AlarmScheduler.TIMES.indices
+        val isTest = slot == TEST_SLOT
+
+        // Only a fixed daily reminder re-arms itself for the next day on its initial ring.
+        // The test reminder is one-off, so it is never rescheduled.
+        if (snoozeCount == 0 && isFixed) {
             AlarmScheduler.scheduleDaily(context, slot)
         }
 
         // Ring + show the "תרופות" button.
         AlarmNotifier.showReminder(context, slot)
 
-        // Schedule the next nudge (two minutes later), at most twice.
-        if (snoozeCount < MAX_SNOOZE && slot in AlarmScheduler.TIMES.indices) {
+        // Schedule the next nudge (one minute later), at most twice — for both fixed and test.
+        if (snoozeCount < MAX_SNOOZE && (isFixed || isTest)) {
             AlarmScheduler.scheduleSnooze(context, slot, snoozeCount + 1)
         }
     }

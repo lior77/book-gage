@@ -12,10 +12,9 @@ import java.util.Calendar
  */
 object AlarmScheduler {
 
-    /** The daily reminder times: 07:30, 12:35, 13:00, 17:00, 22:00. */
+    /** The four fixed daily reminder times: 07:30, 13:00, 17:00, 22:00. */
     val TIMES: List<Pair<Int, Int>> = listOf(
         7 to 30,
-        12 to 35,
         13 to 0,
         17 to 0,
         22 to 0
@@ -23,6 +22,7 @@ object AlarmScheduler {
 
     private const val REQ_DAILY_BASE = 0     // request codes 0..(TIMES.size - 1)
     private const val REQ_SNOOZE_BASE = 100  // request codes 100..(100 + TIMES.size - 1)
+    // TEST_SLOT (99) reuses the same builders → daily code 99, snooze code 199 (no collision).
 
     private fun alarmManager(context: Context) =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -34,13 +34,39 @@ object AlarmScheduler {
         for (slot in TIMES.indices) scheduleDaily(context, slot)
     }
 
-    /** Cancel all daily reminders and any pending snooze. */
+    /** Cancel all daily reminders, the test reminder, and any pending snooze. */
     fun cancelAll(context: Context) {
         val am = alarmManager(context)
         for (slot in TIMES.indices) {
             am.cancel(dailyPendingIntent(context, slot))
             am.cancel(snoozePendingIntent(context, slot, 0))
         }
+        cancelTest(context)
+    }
+
+    /**
+     * Schedule a one-off "test" reminder at the given time (next occurrence). It behaves like a
+     * normal reminder (rings, shows the "תרופות" button, nudges) but does NOT repeat daily — it
+     * exists only to verify the app works, and is re-chosen each time the app is enabled.
+     */
+    fun scheduleTest(context: Context, hour: Int, minute: Int) {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+        setExact(context, cal.timeInMillis, dailyPendingIntent(context, TEST_SLOT))
+    }
+
+    /** Cancel the test reminder and its pending nudge. */
+    fun cancelTest(context: Context) {
+        val am = alarmManager(context)
+        am.cancel(dailyPendingIntent(context, TEST_SLOT))
+        am.cancel(snoozePendingIntent(context, TEST_SLOT, 0))
     }
 
     /** Schedule (or re-schedule) the next occurrence of one daily time. */

@@ -3,8 +3,11 @@ package com.reminder.meds
 /** Broadcast action for a medication reminder (initial ring or a snooze/"nudge"). */
 const val ACTION_REMIND = "com.reminder.meds.ACTION_REMIND"
 
-/** Which of the four daily times fired (0..3). */
+/** Which of the four daily times fired (0..3), or TEST_SLOT for a one-off test reminder. */
 const val EXTRA_SLOT = "extra_slot"
+
+/** Sentinel slot for the optional one-off "test" reminder chosen when enabling the app. */
+const val TEST_SLOT = 99
 
 /** How many snoozes ("nudges") have happened for this reminder so far. */
 const val EXTRA_SNOOZE_COUNT = "extra_snooze_count"
