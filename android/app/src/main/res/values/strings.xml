@@ -5,7 +5,7 @@
     <!-- Home screen -->
     <string name="turn_on">הפעל</string>
     <string name="turn_off">כבה</string>
-    <string name="times_hint">התזכורות: 07:30, 13:00, 17:00, 22:00</string>
+    <string name="times_hint">התזכורות: 07:30, 12:35, 13:00, 17:00, 22:00</string>
 
     <!-- Alarm screen -->
     <string name="reminder_title">הגיע הזמן לקחת תרופות</string>

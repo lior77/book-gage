@@ -12,16 +12,17 @@ import java.util.Calendar
  */
 object AlarmScheduler {
 
-    /** The four daily reminder times: 07:30, 13:00, 17:00, 22:00. */
+    /** The daily reminder times: 07:30, 12:35, 13:00, 17:00, 22:00. */
     val TIMES: List<Pair<Int, Int>> = listOf(
         7 to 30,
+        12 to 35,
         13 to 0,
         17 to 0,
         22 to 0
     )
 
-    private const val REQ_DAILY_BASE = 0     // request codes 0..3
-    private const val REQ_SNOOZE_BASE = 100  // request codes 100..103
+    private const val REQ_DAILY_BASE = 0     // request codes 0..(TIMES.size - 1)
+    private const val REQ_SNOOZE_BASE = 100  // request codes 100..(100 + TIMES.size - 1)
 
     private fun alarmManager(context: Context) =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
