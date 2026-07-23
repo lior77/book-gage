@@ -50,7 +50,27 @@ class AlarmService : Service() {
         }
 
         startSound()
+        launchAlarmScreen(slot)
         return START_NOT_STICKY
+    }
+
+    /**
+     * Try to open the full-screen alarm screen directly. With the "display over other apps"
+     * permission (or a locked screen) this launches even while the phone is in use, so the screen
+     * appears on its own instead of only after tapping the notification. The full-screen-intent
+     * notification remains as a fallback if the direct start is blocked.
+     */
+    private fun launchAlarmScreen(slot: Int) {
+        val activityIntent = Intent(this, AlarmActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra(EXTRA_SLOT, slot)
+        }
+        try {
+            startActivity(activityIntent)
+        } catch (_: Exception) {
+            // Background-activity-start blocked (no overlay permission and screen unlocked) —
+            // the full-screen-intent notification still provides the entry point.
+        }
     }
 
     private fun startSound() {

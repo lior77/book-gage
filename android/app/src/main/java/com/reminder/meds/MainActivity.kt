@@ -58,10 +58,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Runs after the notifications permission step: request the remaining permissions, then arm. */
+    /** Runs after the notifications permission step: request exact alarms, then arm. */
     private fun proceedEnable() {
         ensureExactAlarmPermission()
-        ensureBatteryUnrestricted()
         promptTestTimeThenEnable()
     }
 
@@ -105,6 +104,10 @@ class MainActivity : AppCompatActivity() {
             Prefs.setEnabled(this, true)
             AlarmScheduler.scheduleAll(this)
             updateButtonLabel()
+            // Prompt (once) for the permissions that make the alarm reliable and let its screen
+            // pop up on its own — shown after the test-time dialog so they don't bury it.
+            ensureBatteryUnrestricted()
+            ensureOverlayPermission()
         }
     }
 
@@ -166,6 +169,26 @@ class MainActivity : AppCompatActivity() {
                 } catch (_: Exception) {
                     // Dialog unavailable on this device — the manual settings path still works.
                 }
+            }
+        }
+    }
+
+    /**
+     * Ask for the "display over other apps" permission. With it granted, the app can open the
+     * full-screen alarm screen on its own — even while the phone is being used — instead of the
+     * reminder only appearing as a notification that must be tapped. Prompts only if not granted.
+     */
+    private fun ensureOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            try {
+                startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")
+                    )
+                )
+            } catch (_: Exception) {
+                // Settings screen unavailable — the full-screen-intent notification still applies.
             }
         }
     }
