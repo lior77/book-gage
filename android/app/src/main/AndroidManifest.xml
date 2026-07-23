@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Ask to be exempt from battery optimization so alarms are not delayed/blocked -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Play the alarm tone the moment the reminder fires, via a foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application
         android:allowBackup="true"
@@ -43,6 +46,12 @@
             android:taskAffinity=""
             android:theme="@style/Theme.MedReminder"
             android:turnScreenOn="true" />
+
+        <!-- Rings (plays the tone + vibrates) the instant a reminder fires -->
+        <service
+            android:name=".AlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Fired by AlarmManager at each scheduled time (and for each snooze) -->
         <receiver

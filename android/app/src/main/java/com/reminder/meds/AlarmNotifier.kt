@@ -1,5 +1,6 @@
 package com.reminder.meds
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,8 +11,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
 /**
- * Posts the high-priority, full-screen "alarm" notification that launches [AlarmActivity].
- * The full-screen intent is what wakes the screen and pops the reminder over the lock screen.
+ * Builds the high-priority, full-screen "alarm" notification that launches [AlarmActivity].
+ * The notification is posted by [AlarmService] via startForeground, so the tone (played by the
+ * service) and the full-screen screen appear together the instant the reminder fires.
  */
 object AlarmNotifier {
 
@@ -19,7 +21,8 @@ object AlarmNotifier {
 
     fun notifId(slot: Int) = NOTIF_ID_BASE + slot
 
-    fun showReminder(context: Context, slot: Int) {
+    /** Build the alarm notification (and create its channel). */
+    fun buildAlarmNotification(context: Context, slot: Int): Notification {
         createChannel(context)
 
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
@@ -30,7 +33,7 @@ object AlarmNotifier {
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         val fullScreenPi = PendingIntent.getActivity(context, 2000 + slot, fullScreenIntent, flags)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_pill)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(context.getString(R.string.reminder_text))
@@ -41,14 +44,6 @@ object AlarmNotifier {
             .setContentIntent(fullScreenPi)
             .setFullScreenIntent(fullScreenPi, true)
             .build()
-
-        // On Android 13+ the POST_NOTIFICATIONS permission is required; the full-screen
-        // intent still fires even if the user declined the visible notification.
-        try {
-            NotificationManagerCompat.from(context).notify(notifId(slot), notification)
-        } catch (_: SecurityException) {
-            // Notifications not permitted — the AlarmActivity is still launched via the full-screen intent.
-        }
     }
 
     fun cancel(context: Context, slot: Int) {
@@ -65,7 +60,7 @@ object AlarmNotifier {
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
                     description = context.getString(R.string.channel_desc)
-                    // We play our own distinct tone in AlarmActivity, so silence the channel itself
+                    // The tone is played by AlarmService, so keep the channel itself silent
                     // to avoid a second sound on top of it.
                     setSound(null, null)
                     enableVibration(false)
