@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">תזכורת תרופות</string>
+
+    <!-- Home screen -->
+    <string name="turn_on">הפעל</string>
+    <string name="turn_off">כבה</string>
+    <string name="times_hint">התזכורות: 07:30, 13:00, 17:00, 22:00</string>
+
+    <!-- Alarm screen -->
+    <string name="reminder_title">הגיע הזמן לקחת תרופות</string>
+    <string name="meds_button">תרופות</string>
+
+    <!-- Notification -->
+    <string name="reminder_text">הגיע הזמן לקחת תרופות</string>
+    <string name="channel_name">תזכורת תרופות</string>
+    <string name="channel_desc">התראות לקיחת תרופות</string>
+</resources>
