@@ -4,7 +4,7 @@
 
     <!-- Home -->
     <string name="home_title">שומר תוכן</string>
-    <string name="home_subtitle">ניטור הדלפות של התוכן שלך בלבד</string>
+    <string name="home_subtitle">ניטור הדלפות וידאו של התוכן שלך בלבד</string>
     <string name="open_search">פתח חיפוש</string>
 
     <!-- Search -->
@@ -15,14 +15,18 @@
     <string name="handle_required">יש להזין שם חשבון.</string>
 
     <!-- Results -->
-    <string name="results_title">תוצאות ניטור</string>
-    <string name="total_findings">סך הכל ממצאים</string>
+    <string name="results_title">קבצי וידאו שנמצאו</string>
+    <string name="total_videos">סך הכל קבצי וידאו</string>
     <string name="last_12_months">ב־12 החודשים האחרונים</string>
-    <string name="monthly_breakdown">פירוק חודשי</string>
+    <string name="with_duration">עם אורך ידוע</string>
     <string name="data_source">מקור נתונים</string>
-    <string name="download_pdf">הורד דוח PDF לתיקיית ההורדות</string>
+    <string name="duration">אורך</string>
+    <string name="duration_unknown">אורך לא ידוע</string>
+    <string name="date_unknown">תאריך לא ידוע</string>
     <string name="no_source_title">לא הוגדר מקור נתונים</string>
-    <string name="no_source_body">האפליקציה פועלת במצב הדגמה. כדי לקבל נתוני ניטור אמיתיים, הגדר endpoint למקור נתונים בקובץ ההגדרות. לא מוצגים נתונים ממציאים.</string>
+    <string name="no_source_body">האפליקציה פועלת במצב הדגמה ולא בוצע חיפוש. כדי לקבל תוצאות אמיתיות, הגדר מפתח Google Programmable Search בקובץ Config.kt. לא מוצגים נתונים ממציאים.</string>
+    <string name="no_results">לא נמצאו קבצי וידאו.</string>
+    <string name="open_link">פתח קישור</string>
     <string name="back">חזרה</string>
     <string name="searching">מבצע ניטור…</string>
 </resources>
