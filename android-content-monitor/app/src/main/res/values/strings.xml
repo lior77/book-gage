@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Content Guard</string>
+
+    <!-- Home -->
+    <string name="home_title">שומר תוכן</string>
+    <string name="home_subtitle">ניטור הדלפות של התוכן שלך בלבד</string>
+    <string name="open_search">פתח חיפוש</string>
+
+    <!-- Search -->
+    <string name="search_hint">שם החשבון שלך (למשל \@YourHandle)</string>
+    <string name="search_button">חפש</string>
+    <string name="ownership_attestation">אני מאשר/ת שזהו התוכן שלי, או שקיבלתי הרשאה מפורשת מבעל התוכן לנטר עבורו.</string>
+    <string name="ownership_required">יש לאשר את הצהרת הבעלות לפני חיפוש.</string>
+    <string name="handle_required">יש להזין שם חשבון.</string>
+
+    <!-- Results -->
+    <string name="results_title">תוצאות ניטור</string>
+    <string name="total_findings">סך הכל ממצאים</string>
+    <string name="last_12_months">ב־12 החודשים האחרונים</string>
+    <string name="monthly_breakdown">פירוק חודשי</string>
+    <string name="data_source">מקור נתונים</string>
+    <string name="download_pdf">הורד דוח PDF לתיקיית ההורדות</string>
+    <string name="no_source_title">לא הוגדר מקור נתונים</string>
+    <string name="no_source_body">האפליקציה פועלת במצב הדגמה. כדי לקבל נתוני ניטור אמיתיים, הגדר endpoint למקור נתונים בקובץ ההגדרות. לא מוצגים נתונים ממציאים.</string>
+    <string name="back">חזרה</string>
+    <string name="searching">מבצע ניטור…</string>
+</resources>
