@@ -57,6 +57,13 @@ class SrtParserTest {
         assertEquals("Second line\nsecond row", cues[1].text)
     }
 
+    @Test fun stripsAssOverrideBlocks() {
+        val srt = "1\n00:00:01,000 --> 00:00:02,000\n{\\an8}Hola {\\i1}amigo{\\i0}\n"
+        val cues = SrtParser.parse(srt)
+        assertEquals(1, cues.size)
+        assertEquals("Hola amigo", cues[0].text)
+    }
+
     @Test fun handlesBomAndCrlf() {
         val srt = "﻿1\r\n00:00:01,000 --> 00:00:02,000\r\nHi\r\n\r\n"
         val cues = SrtParser.parse(srt)

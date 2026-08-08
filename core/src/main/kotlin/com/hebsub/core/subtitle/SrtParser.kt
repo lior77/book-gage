@@ -13,7 +13,9 @@ object SrtParser {
     private const val ARROW = "-->"
     private val HTML_TAG = Regex("</?[a-zA-Z][^>]*>")
     // SSA/ASS override blocks such as {\an8} or {\pos(1,2)}.
-    private val ASS_OVERRIDE = Regex("""\{\\[^}]*}""")
+    // Both braces are escaped: Android's regex engine rejects an unescaped
+    // literal '}' (desktop JVM tolerates it), which crashed on-device.
+    private val ASS_OVERRIDE = Regex("""\{\\[^}]*\}""")
 
     /**
      * Parse subtitle [content] into cues. [stripFormatting] removes inline
