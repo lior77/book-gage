@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+core/build/
+core/.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+*.apk
+*.aab
+local.properties
+.cxx/
+release/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Keys / secrets — never commit
+*.keystore
+*.jks
+secrets.properties

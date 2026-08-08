@@ -1,0 +1,82 @@
+package com.hebsub.app.media
+
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFprobeKit
+import com.arthenica.ffmpegkit.ReturnCode
+import com.hebsub.core.lang.Language
+import com.hebsub.core.pipeline.EmbeddedSubtitle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
+
+/**
+ * FFmpeg-backed [MediaTool].
+ *
+ * Requires a 16 KB-page-size-compatible FFmpegKit build on the classpath (see
+ * README → "Native dependencies"). The official `ffmpeg-kit` was retired in
+ * Jan 2025 and its binaries removed from Maven, so a community 16KB fork (or a
+ * locally built AAR) must be added for the app to compile and run on Android 15.
+ */
+class FfmpegMediaTool : MediaTool {
+
+    override suspend fun probe(input: File): MediaProbe = withContext(Dispatchers.IO) {
+        val session = FFprobeKit.getMediaInformation(input.absolutePath)
+        val info = session.mediaInformation
+            ?: return@withContext MediaProbe(emptyList(), null, 0)
+
+        val subs = ArrayList<EmbeddedSubtitle>()
+        var audioLang: String? = null
+        val streams = info.streams ?: emptyList()
+        for (stream in streams) {
+            val type = stream.type ?: continue
+            val props = runCatching { stream.allProperties }.getOrNull()
+            val tags = props?.optJSONObject("tags")
+            val lang = tags?.optString("language").takeUnless { it.isNullOrBlank() }
+            val title = tags?.optString("title").takeUnless { it.isNullOrBlank() }
+            val disposition = props?.optJSONObject("disposition")
+            val forced = disposition?.optInt("forced", 0) == 1
+            val index = stream.index?.toInt() ?: continue
+            when (type) {
+                "subtitle" -> subs.add(EmbeddedSubtitle(index, lang, title, forced))
+                "audio" -> if (audioLang == null) audioLang = lang
+            }
+        }
+        val durationMs = (info.duration?.toDoubleOrNull() ?: 0.0).times(1000).toLong()
+        MediaProbe(subs, Language.canonical(audioLang), durationMs)
+    }
+
+    override suspend fun extractSubtitle(input: File, streamIndex: Int, outSrt: File): Boolean =
+        run(
+            "-y", "-i", input.absolutePath,
+            "-map", "0:$streamIndex", "-c:s", "srt", outSrt.absolutePath,
+        )
+
+    override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean =
+        run(
+            "-y", "-i", input.absolutePath,
+            "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", outWav.absolutePath,
+        )
+
+    override suspend fun remuxWithHebrew(
+        input: File,
+        srt: File,
+        existingSubtitleCount: Int,
+        outMkv: File,
+    ): Boolean = run(
+        "-y", "-i", input.absolutePath, "-i", srt.absolutePath,
+        "-map", "0", "-map", "1",
+        "-c", "copy", "-c:s", "srt",
+        "-metadata:s:s:$existingSubtitleCount", "language=heb",
+        "-metadata:s:s:$existingSubtitleCount", "title=עברית",
+        outMkv.absolutePath,
+    )
+
+    private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
+        val session = FFmpegKit.execute(args.joinToString(" ") { quoteIfNeeded(it) })
+        ReturnCode.isSuccess(session.returnCode)
+    }
+
+    private fun quoteIfNeeded(arg: String): String =
+        if (arg.any { it.isWhitespace() }) "\"$arg\"" else arg
+}

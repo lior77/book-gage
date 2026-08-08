@@ -1,0 +1,58 @@
+package com.hebsub.app.io
+
+import android.content.ContentValues
+import android.content.Context
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+/**
+ * Publishes the finished files to shared storage **without any storage
+ * permission**: MediaStore on Android 10+ (the Galaxy A56 is Android 15). The
+ * new MKV goes to Movies/HebSub and the sidecar .srt to Download/HebSub so the
+ * user can load it in any player if their default player lacks MKV sub support.
+ */
+class OutputWriter(private val context: Context) {
+
+    suspend fun publishVideo(source: File, displayName: String): Boolean =
+        copyToMediaStore(source, displayName, "video/x-matroska", MediaStore.Video.Media.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_MOVIES)
+
+    suspend fun publishSrt(source: File, displayName: String): Boolean =
+        copyToMediaStore(source, displayName, "application/x-subrip", MediaStore.Downloads.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_DOWNLOADS)
+
+    private suspend fun copyToMediaStore(
+        source: File,
+        displayName: String,
+        mime: String,
+        collection: android.net.Uri,
+        topDir: String,
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // Fallback for API 26–28: app-scoped external files dir (no permission).
+            val dir = File(context.getExternalFilesDir(topDir), "HebSub").apply { mkdirs() }
+            return@withContext runCatching { source.copyTo(File(dir, displayName), overwrite = true) }.isSuccess
+        }
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "$topDir/HebSub")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(collection, values) ?: return@withContext false
+        try {
+            resolver.openOutputStream(uri)?.use { out -> source.inputStream().use { it.copyTo(out) } }
+                ?: return@withContext false
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            true
+        } catch (_: Exception) {
+            resolver.delete(uri, null, null)
+            false
+        }
+    }
+}
