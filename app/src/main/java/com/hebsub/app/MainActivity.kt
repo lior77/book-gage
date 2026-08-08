@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -24,13 +27,16 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.log.RunLog
+import com.hebsub.app.net.ConnectionTester
 import com.hebsub.app.pipeline.OutputChoice
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.TranslationChoice
 import com.hebsub.app.service.ProcessingService
 import com.hebsub.core.provider.claude.ClaudeApi
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -118,9 +124,13 @@ private fun HomeScreen(onOpenSettings: () -> Unit) {
         modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Title on the right (RTL start); the settings gear sits in the top-left
+        // (RTL end) corner — a tap opens the key-entry screen.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineSmall)
-            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.settings)) }
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+            }
         }
         Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.bodyMedium)
 
@@ -147,15 +157,48 @@ private fun HomeScreen(onOpenSettings: () -> Unit) {
     }
 }
 
+/** Per-field connection-test state. */
+private sealed interface TestStatus {
+    data object Idle : TestStatus
+    data object Testing : TestStatus
+    data class Success(val message: String) : TestStatus
+    data class Failure(val message: String) : TestStatus
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var online by remember { mutableStateOf(settings.onlineSearchEnabled) }
     var osKey by remember { mutableStateOf(settings.openSubtitlesApiKey) }
     var anthropicKey by remember { mutableStateOf(settings.anthropicApiKey) }
     var deepgramKey by remember { mutableStateOf(settings.deepgramApiKey) }
     var model by remember { mutableStateOf(settings.claudeModel) }
     var modelMenu by remember { mutableStateOf(false) }
+
+    var osStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
+    var anthropicStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
+    var deepgramStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
+    // True once any test ran — controls whether a settings log is written on exit.
+    var testsRan by remember { mutableStateOf(false) }
+
+    fun leave() {
+        // Persist the settings log so every connection test is diagnosable
+        // offline. onBack() runs only after the write, so navigating away doesn't
+        // dispose this composition (and cancel the write) mid-flight.
+        if (testsRan) {
+            val dump = RunLog.dump()
+            scope.launch {
+                runCatching {
+                    OutputWriter(context).publishLog(dump, "HebSub-settings-log-${System.currentTimeMillis()}.txt")
+                }
+                onBack()
+            }
+        } else {
+            onBack()
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
@@ -165,28 +208,15 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_online_search))
-            Switch(checked = online, onCheckedChange = { online = it })
+            Switch(checked = online, onCheckedChange = {
+                online = it
+                settings.onlineSearchEnabled = it
+                RunLog.log("settings: online search = $it")
+            })
         }
 
-        OutlinedTextField(
-            value = osKey, onValueChange = { osKey = it },
-            label = { Text(stringResource(R.string.settings_os_key)) },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true, modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = anthropicKey, onValueChange = { anthropicKey = it },
-            label = { Text(stringResource(R.string.settings_anthropic_key)) },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true, modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = deepgramKey, onValueChange = { deepgramKey = it },
-            label = { Text(stringResource(R.string.settings_deepgram_key)) },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true, modifier = Modifier.fillMaxWidth(),
-        )
-
+        // Cloud translation model — picked before the Anthropic test so the test
+        // validates the exact model that will be used.
         ExposedDropdownMenuBox(expanded = modelMenu, onExpandedChange = { modelMenu = it }) {
             OutlinedTextField(
                 value = model, onValueChange = {}, readOnly = true,
@@ -195,26 +225,109 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
             )
             ExposedDropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
                 ClaudeApi.AVAILABLE_MODELS.forEach { m ->
-                    DropdownMenuItem(text = { Text(m) }, onClick = { model = m; modelMenu = false })
+                    DropdownMenuItem(text = { Text(m) }, onClick = {
+                        model = m; modelMenu = false
+                        settings.claudeModel = m
+                        RunLog.log("settings: model = $m")
+                    })
                 }
             }
         }
 
+        KeyField(
+            label = stringResource(R.string.settings_os_key),
+            value = osKey, onValueChange = { osKey = it },
+            status = osStatus,
+            onSave = {
+                settings.openSubtitlesApiKey = osKey
+                RunLog.log("settings: saved OpenSubtitles key (len=${osKey.trim().length})")
+                osStatus = TestStatus.Testing; testsRan = true
+                scope.launch {
+                    val r = ConnectionTester.testOpenSubtitles(settings.openSubtitlesApiKey)
+                    osStatus = if (r.ok) TestStatus.Success(r.message) else TestStatus.Failure(r.message)
+                }
+            },
+        )
+
+        KeyField(
+            label = stringResource(R.string.settings_anthropic_key),
+            value = anthropicKey, onValueChange = { anthropicKey = it },
+            status = anthropicStatus,
+            onSave = {
+                settings.anthropicApiKey = anthropicKey
+                settings.claudeModel = model
+                RunLog.log("settings: saved Anthropic key (len=${anthropicKey.trim().length}) model=$model")
+                anthropicStatus = TestStatus.Testing; testsRan = true
+                scope.launch {
+                    val r = ConnectionTester.testAnthropic(settings.anthropicApiKey, model)
+                    anthropicStatus = if (r.ok) TestStatus.Success(r.message) else TestStatus.Failure(r.message)
+                }
+            },
+        )
+
+        KeyField(
+            label = stringResource(R.string.settings_deepgram_key),
+            value = deepgramKey, onValueChange = { deepgramKey = it },
+            status = deepgramStatus,
+            onSave = {
+                settings.deepgramApiKey = deepgramKey
+                RunLog.log("settings: saved Deepgram key (len=${deepgramKey.trim().length})")
+                deepgramStatus = TestStatus.Testing; testsRan = true
+                scope.launch {
+                    val r = ConnectionTester.testDeepgram(settings.deepgramApiKey)
+                    deepgramStatus = if (r.ok) TestStatus.Success(r.message) else TestStatus.Failure(r.message)
+                }
+            },
+        )
+
         Text(stringResource(R.string.settings_privacy_note), style = MaterialTheme.typography.bodySmall)
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
-                onClick = {
-                    settings.onlineSearchEnabled = online
-                    settings.openSubtitlesApiKey = osKey
-                    settings.anthropicApiKey = anthropicKey
-                    settings.deepgramApiKey = deepgramKey
-                    settings.claudeModel = model
-                    onBack()
-                },
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.save)) }
-            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("ביטול") }
+        Button(onClick = { leave() }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.back))
+        }
+    }
+}
+
+/** A password key field with its own Save button and a live connection-test result. */
+@Composable
+private fun KeyField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    status: TestStatus,
+    onSave: () -> Unit,
+) {
+    val okColor = Color(0xFF2E7D32)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedTextField(
+            value = value, onValueChange = onValueChange,
+            label = { Text(label) },
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true, modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(onClick = onSave, enabled = status !is TestStatus.Testing) {
+                Text(stringResource(R.string.save))
+            }
+            when (status) {
+                is TestStatus.Idle -> Unit
+                is TestStatus.Testing -> {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.conn_testing), style = MaterialTheme.typography.bodySmall)
+                }
+                is TestStatus.Success -> Text(
+                    "✓ ${status.message}", color = okColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                is TestStatus.Failure -> Text(
+                    "✗ ${status.message}", color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

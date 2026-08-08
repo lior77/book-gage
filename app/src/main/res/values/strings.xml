@@ -19,8 +19,10 @@
     <string name="settings_anthropic_key">מפתח Anthropic (Claude) API</string>
     <string name="settings_deepgram_key">מפתח Deepgram API (תמלול פס קול)</string>
     <string name="settings_model">מודל תרגום ענן</string>
-    <string name="settings_privacy_note">המפתחות נשמרים מוצפנים במכשיר בלבד ואינם נכללים בקוד או נחשפים ברשת.</string>
-    <string name="save">שמירה</string>
+    <string name="settings_privacy_note">המפתחות נשמרים מוצפנים במכשיר בלבד ואינם נכללים בקוד או נחשפים ברשת. בעת שמירת מפתח מתבצע ניסיון התחברות לשירות ומוצגת אינדיקציה. כל הפעולות מתועדות ביומן.</string>
+    <string name="save">שמירה ובדיקת חיבור</string>
+    <string name="back">חזרה</string>
+    <string name="conn_testing">בודק חיבור…</string>
 
     <string name="choose_translation">לא נמצאו כתוביות עברית מוכנות. כיצד לתרגם?</string>
     <string name="translate_local">תרגום מקומי (פרטי, ML Kit)</string>
