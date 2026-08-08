@@ -23,6 +23,15 @@ class OutputWriter(private val context: Context) {
     suspend fun publishSrt(source: File, displayName: String): Boolean =
         copyToMediaStore(source, displayName, "application/x-subrip", MediaStore.Downloads.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_DOWNLOADS)
 
+    /** Write a plain-text diagnostic log to Download/HebSub. Local only. */
+    suspend fun publishLog(content: String, displayName: String): Boolean = withContext(Dispatchers.IO) {
+        val tmp = File(context.cacheDir, displayName)
+        runCatching { tmp.writeText(content) }.getOrElse { return@withContext false }
+        val ok = copyToMediaStore(tmp, displayName, "text/plain", MediaStore.Downloads.EXTERNAL_CONTENT_URI, Environment.DIRECTORY_DOWNLOADS)
+        runCatching { tmp.delete() }
+        ok
+    }
+
     private suspend fun copyToMediaStore(
         source: File,
         displayName: String,

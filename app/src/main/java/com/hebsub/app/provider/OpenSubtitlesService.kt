@@ -1,5 +1,6 @@
 package com.hebsub.app.provider
 
+import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.PrivacyHttp
 import com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
 import com.hebsub.core.provider.opensubtitles.OsCandidate
@@ -45,8 +46,12 @@ class OpenSubtitlesService(private val apiKey: String) {
             .build()
 
         PrivacyHttp.client.newCall(request).execute().use { resp ->
-            if (!resp.isSuccessful) return@withContext null
+            if (!resp.isSuccessful) {
+                RunLog.error("OpenSubtitles search HTTP ${resp.code}")
+                return@withContext null
+            }
             val parsed = OpenSubtitlesQuery.parse(resp.body?.string().orEmpty())
+            RunLog.log("OpenSubtitles search results=${parsed.data.size}")
             OpenSubtitlesQuery.selectBest(parsed, languagePriority, excludeHearingImpaired)
         }
     }

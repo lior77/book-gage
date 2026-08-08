@@ -4,6 +4,7 @@ import com.hebsub.core.lang.Language
 import com.hebsub.core.provider.claude.ClaudeApi
 import com.hebsub.core.provider.claude.ClaudeTranslator
 import com.hebsub.core.subtitle.SubtitleCue
+import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.PrivacyHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,10 +36,11 @@ class ClaudeCloudTranslator(
         val sourceName = Language.canonical(sourceLang)
         val system = ClaudeTranslator.systemPrompt(sourceName)
         val batches = ClaudeTranslator.buildBatches(cues)
+        RunLog.log("Claude: model=$model batches=${batches.size} cues=${cues.size}")
 
         val translations = HashMap<Int, String>()
         var done = 0
-        for (batch in batches) {
+        for ((i, batch) in batches.withIndex()) {
             val userContent = ClaudeTranslator.buildUserContent(batch)
             val body = ClaudeTranslator.buildRequestBody(model, system, userContent)
             val request = Request.Builder()
@@ -51,10 +53,13 @@ class ClaudeCloudTranslator(
             PrivacyHttp.client.newCall(request).execute().use { resp ->
                 val respBody = resp.body?.string().orEmpty()
                 if (!resp.isSuccessful) {
+                    RunLog.error("Claude batch $i HTTP ${resp.code}: ${respBody.take(200)}")
                     throw RuntimeException("Claude API error ${resp.code}: ${respBody.take(300)}")
                 }
                 val text = ClaudeTranslator.extractText(respBody)
-                translations.putAll(ClaudeTranslator.parseTranslations(text))
+                val parsed = ClaudeTranslator.parseTranslations(text)
+                translations.putAll(parsed)
+                RunLog.log("Claude batch $i ok: +${parsed.size}")
             }
             done += batch.cues.size
             onProgress(done, cues.size)

@@ -4,6 +4,7 @@ import android.content.Context
 import com.hebsub.app.asr.AsrEngine
 import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.io.OutputWriter
+import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaProbe
 import com.hebsub.app.media.MediaTool
 import com.hebsub.app.provider.OpenSubtitlesService
@@ -42,37 +43,47 @@ class SubtitlePipeline(
             PipelineBus.update(PipelineState.Running("בדיקת הקובץ", null))
             // Probing is best-effort: if the media tool can't read the file we
             // still proceed with the online path rather than failing the run.
+            RunLog.log("mediaTool=${mediaTool::class.java.simpleName} canEmbed=${mediaTool.canEmbed}")
             val probe = runCatching { mediaTool.probe(videoFile) }
-                .getOrElse { MediaProbe(emptyList(), null, 0) }
+                .getOrElse { RunLog.error("probe failed", it); MediaProbe(emptyList(), null, 0) }
+            RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
             val title = originalDisplayName.substringBeforeLast('.').ifBlank { originalDisplayName }
             val onlineEnabled = settings.onlineSearchEnabled && settings.hasOpenSubtitlesKey
             val os = if (onlineEnabled) OpenSubtitlesService(settings.openSubtitlesApiKey) else null
             val movieHash = runCatching { OpenSubtitlesService.computeMovieHash(videoFile) }.getOrNull()
+            RunLog.log("title='$title' onlineEnabled=$onlineEnabled hasOsKey=${settings.hasOpenSubtitlesKey} hasClaudeKey=${settings.hasAnthropicKey} movieHash=${movieHash ?: "-"}")
 
             val plan = SubtitleSourcePlanner.plan(probe.embeddedSubtitles, probe.audioLanguage, onlineEnabled)
+            RunLog.log("plan=${plan.map { it::class.java.simpleName }}")
 
             val source = acquire(plan, videoFile, probe.subtitleCount, os, movieHash, title)
                 ?: run {
+                    RunLog.error("no subtitles acquired from any source")
                     PipelineBus.update(PipelineState.Failed("לא נמצאו כתוביות ולא ניתן היה ליצור אותן."))
                     return
                 }
+            RunLog.log("source acquired: cues=${source.cues.size} lang=${source.language} readyHebrew=${source.readyHebrew}")
 
             // Decide the final Hebrew cues.
             val hebrewCues: List<SubtitleCue> = if (source.readyHebrew) {
                 source.cues
             } else {
+                RunLog.log("no ready Hebrew — asking user to choose translation")
                 when (PipelineBus.awaitTranslationChoice(cloudAvailable = settings.hasAnthropicKey)) {
                     TranslationChoice.STOP -> {
+                        RunLog.log("user chose STOP")
                         PipelineBus.update(PipelineState.Idle)
                         return
                     }
                     TranslationChoice.LOCAL -> {
+                        RunLog.log("translating LOCAL (ML Kit) from ${source.language}")
                         PipelineBus.update(PipelineState.Running("תרגום מקומי", 0f))
                         MlKitTranslator().translate(source.cues, source.language) { d, t ->
                             PipelineBus.update(PipelineState.Running("תרגום מקומי", d.toFloat() / t))
                         }
                     }
                     TranslationChoice.CLOUD -> {
+                        RunLog.log("translating CLOUD (Claude ${settings.claudeModel}) from ${source.language}")
                         PipelineBus.update(PipelineState.Running("תרגום בענן", 0f))
                         ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel)
                             .translate(source.cues, source.language) { d, t ->
@@ -81,6 +92,7 @@ class SubtitlePipeline(
                     }
                 }
             }
+            RunLog.log("translation done: ${hebrewCues.size} Hebrew cues")
 
             PipelineBus.update(PipelineState.Running("עיצוב כתוביות", null))
             val finalCues = SubtitlePostProcessor.process(hebrewCues)
@@ -94,10 +106,12 @@ class SubtitlePipeline(
                 OutputChoice.SAVE_SRT
             }
 
+            RunLog.log("output choice=$choice")
             when (choice) {
                 OutputChoice.SAVE_SRT -> {
                     PipelineBus.update(PipelineState.Running("שמירת כתוביות", null))
-                    outputWriter.publishSrt(srtFile, srtName)
+                    val ok = outputWriter.publishSrt(srtFile, srtName)
+                    RunLog.log("published srt '$srtName' ok=$ok")
                     PipelineBus.update(PipelineState.Success(srtName, srtName, muxed = false))
                 }
                 OutputChoice.EMBED_MEDIA -> {
@@ -105,13 +119,16 @@ class SubtitlePipeline(
                     val outMkv = File(cacheDir, "$title.he.mkv")
                     val muxed = runCatching {
                         mediaTool.remuxWithHebrew(videoFile, srtFile, probe.subtitleCount, outMkv)
-                    }.getOrDefault(false)
-                    outputWriter.publishSrt(srtFile, srtName) // keep a sidecar copy too
-                    if (muxed && outMkv.exists()) outputWriter.publishVideo(outMkv, outMkv.name)
+                    }.getOrElse { RunLog.error("remux failed", it); false }
+                    val srtOk = outputWriter.publishSrt(srtFile, srtName) // keep a sidecar copy too
+                    val vidOk = if (muxed && outMkv.exists()) outputWriter.publishVideo(outMkv, outMkv.name) else false
+                    RunLog.log("remux muxed=$muxed exists=${outMkv.exists()} publishVideo=$vidOk publishSrt=$srtOk")
                     PipelineBus.update(PipelineState.Success(outMkv.name, srtName, muxed && outMkv.exists()))
                 }
             }
+            RunLog.log("run finished OK")
         } catch (t: Throwable) {
+            RunLog.error("run failed", t)
             // Catch Throwable (not just Exception) so native errors such as
             // UnsatisfiedLinkError surface as a message instead of crashing.
             val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
@@ -129,6 +146,7 @@ class SubtitlePipeline(
         title: String,
     ): Source? {
         for (step in plan) {
+            RunLog.log("acquire step: ${step::class.java.simpleName}")
             when (step) {
                 is AcquisitionStep.EmbeddedHebrew -> {
                     PipelineBus.update(PipelineState.Running("חילוץ כתוביות עברית מהקובץ", null))
@@ -173,8 +191,12 @@ class SubtitlePipeline(
 
     private suspend fun parseEmbedded(videoFile: File, streamIndex: Int): List<SubtitleCue>? {
         val out = File(cacheDir, "embedded_$streamIndex.srt")
-        if (!mediaTool.extractSubtitle(videoFile, streamIndex, out)) return null
+        if (!mediaTool.extractSubtitle(videoFile, streamIndex, out)) {
+            RunLog.log("  extract stream $streamIndex failed")
+            return null
+        }
         val cues = SrtParser.parse(out.readText(Charsets.UTF_8))
+        RunLog.log("  extracted stream $streamIndex → ${cues.size} cues")
         return cues.ifEmpty { null }
     }
 
@@ -186,9 +208,14 @@ class SubtitlePipeline(
         title: String,
     ): Pair<List<SubtitleCue>, String?>? {
         if (os == null) return null
-        val best = os.findBest(languagePriority, movieHash, title) ?: return null
-        val srt = os.download(best.fileId) ?: return null
+        RunLog.log("  OpenSubtitles search langs=$languagePriority")
+        val best = os.findBest(languagePriority, movieHash, title)
+        if (best == null) { RunLog.log("  OpenSubtitles: no match"); return null }
+        RunLog.log("  OpenSubtitles best fileId=${best.fileId} lang=${best.language}")
+        val srt = os.download(best.fileId)
+        if (srt == null) { RunLog.error("  OpenSubtitles download failed"); return null }
         val cues = SrtParser.parse(srt)
+        RunLog.log("  OpenSubtitles parsed ${cues.size} cues")
         return if (cues.isEmpty()) null else cues to best.language
     }
 }

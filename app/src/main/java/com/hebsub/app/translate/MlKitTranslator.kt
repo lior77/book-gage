@@ -5,6 +5,7 @@ import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
+import com.hebsub.app.log.RunLog
 import com.hebsub.core.lang.Language
 import com.hebsub.core.subtitle.SubtitleCue
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -34,8 +35,10 @@ class MlKitTranslator : TranslationEngine {
             .build()
         val translator = Translation.getClient(options)
         try {
+            RunLog.log("ML Kit: source=$source target=he — downloading model if needed")
             // Allow cellular download so the flow is not silently blocked off Wi-Fi.
             translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).await()
+            RunLog.log("ML Kit: model ready, translating ${cues.size} cues")
 
             val total = cues.size
             val out = ArrayList<SubtitleCue>(total)

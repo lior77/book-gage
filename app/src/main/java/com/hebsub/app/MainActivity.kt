@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.log.RunLog
 import com.hebsub.app.pipeline.OutputChoice
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
@@ -216,6 +217,7 @@ private fun PipelineOverlay(state: PipelineState) {
         is PipelineState.Idle -> Unit
 
         is PipelineState.Running -> Dialog(dismissable = false) {
+            val tail by RunLog.tail.collectAsStateWithLifecycle()
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(state.stageLabel, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(16.dp))
@@ -223,6 +225,19 @@ private fun PipelineOverlay(state: PipelineState) {
                     LinearProgressIndicator(progress = { state.progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                Spacer(Modifier.height(12.dp))
+                // Behind-the-scenes live log tail.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Column(Modifier.fillMaxWidth()) {
+                        tail.takeLast(6).forEach { line ->
+                            Text(
+                                line,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 2,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -291,6 +306,7 @@ private fun PipelineOverlay(state: PipelineState) {
                 Spacer(Modifier.height(4.dp))
                 if (state.muxed) Text("• Movies/HebSub/${state.videoName}", style = MaterialTheme.typography.bodySmall)
                 Text("• Download/HebSub/${state.srtName}", style = MaterialTheme.typography.bodySmall)
+                Text("• יומן: Download/HebSub/HebSub-log-*.txt", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }
@@ -301,6 +317,8 @@ private fun PipelineOverlay(state: PipelineState) {
                 Text("שגיאה", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
                 Text(state.message)
+                Spacer(Modifier.height(8.dp))
+                Text("יומן מפורט נשמר ב־Download/HebSub/HebSub-log-*.txt", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }

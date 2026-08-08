@@ -14,16 +14,20 @@ import com.hebsub.app.HebSubApp
 import com.hebsub.app.R
 import com.hebsub.app.asr.UnavailableAsrEngine
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.io.VideoDownloader
+import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaToolFactory
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.SubtitlePipeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -44,6 +48,9 @@ class ProcessingService : Service() {
 
         scope.launch {
             val workDir = File(applicationContext.cacheDir, "work").apply { deleteRecursively(); mkdirs() }
+            RunLog.start()
+            RunLog.header(applicationContext)
+            RunLog.log("input=${if (url != null) "URL" else "file"}")
             try {
             val settings = SettingsRepository(applicationContext)
             val downloader = VideoDownloader(workDir)
@@ -95,9 +102,17 @@ class ProcessingService : Service() {
             )
             pipeline.run(videoFile, name)
             } catch (t: Throwable) {
+                RunLog.error("service failed", t)
                 val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
                 PipelineBus.update(PipelineState.Failed("שגיאה — $detail"))
             } finally {
+                // Always write the detailed log to Download/HebSub (local only).
+                runCatching {
+                    withContext(NonCancellable) {
+                        val ts = System.currentTimeMillis() / 1000
+                        OutputWriter(applicationContext).publishLog(RunLog.dump(), "HebSub-log-$ts.txt")
+                    }
+                }
                 workDir.deleteRecursively()
                 stopSelfCleanly()
             }
