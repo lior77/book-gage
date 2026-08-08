@@ -10,6 +10,8 @@ import java.io.File
  * extraction, and lossless MKV remuxing.
  */
 class NoOpMediaTool : MediaTool {
+    override val canEmbed = false
+
     override suspend fun probe(input: File): MediaProbe =
         MediaProbe(embeddedSubtitles = emptyList(), audioLanguage = null, durationMs = 0)
 

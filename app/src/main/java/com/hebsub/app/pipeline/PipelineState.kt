@@ -1,7 +1,10 @@
 package com.hebsub.app.pipeline
 
-/** User's runtime translation decision (spec §3). */
+/** User's runtime translation decision (spec §7). */
 enum class TranslationChoice { LOCAL, CLOUD, STOP }
+
+/** Final output decision (spec §8): a subtitle sidecar, or a new media file with the track embedded. */
+enum class OutputChoice { SAVE_SRT, EMBED_MEDIA }
 
 /** Everything the UI needs to render, driven by the pipeline running in the service. */
 sealed interface PipelineState {
@@ -15,6 +18,9 @@ sealed interface PipelineState {
 
     /** No subtitles found anywhere; ask whether to transcribe the audio. */
     data class NeedAsrConsent(val asrAvailable: Boolean) : PipelineState
+
+    /** Hebrew is ready; ask how to deliver it. [embedMediaAvailable] gates the embed option. */
+    data class NeedOutputChoice(val embedMediaAvailable: Boolean) : PipelineState
 
     data class Success(val videoName: String, val srtName: String, val muxed: Boolean) : PipelineState
 

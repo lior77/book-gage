@@ -18,6 +18,9 @@ data class MediaProbe(
  * (fast, lossless — spec §5/§6 and the chosen MKV output format).
  */
 interface MediaTool {
+    /** True when this tool can create a new media file with an embedded subtitle track (spec §8). */
+    val canEmbed: Boolean
+
     suspend fun probe(input: File): MediaProbe
 
     /** Extract embedded subtitle [streamIndex] to a UTF-8 SRT file. */

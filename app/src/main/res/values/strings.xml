@@ -30,6 +30,10 @@
     <string name="asr_yes">כן, לתמלל</string>
     <string name="asr_no">לא</string>
 
+    <string name="choose_output">התרגום הושלם. כיצד לשמור?</string>
+    <string name="output_srt">שמירת קובץ כתוביות בלבד (.srt)</string>
+    <string name="output_media">יצירת קובץ מדיה חדש עם כתוביות עברית מוטמעות</string>
+
     <string name="processing">מעבד…</string>
     <string name="done">הסתיים בהצלחה</string>
     <string name="output_saved">הקובץ החדש נשמר</string>

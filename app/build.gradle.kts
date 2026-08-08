@@ -15,8 +15,9 @@ android {
         targetSdk = 35       // Android 15 (One UI 7 on the Galaxy A56)
         versionCode = 1
         versionName = "1.0.0"
-        // arm64-v8a is the Galaxy A56's ABI; keep armeabi-v7a for wider install.
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        // The Galaxy A56 is arm64-v8a. The 16KB FFmpeg build ships arm64-v8a only,
+        // so we target that single ABI (also keeps the APK smaller).
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildTypes {
@@ -81,11 +82,11 @@ dependencies {
     implementation("com.google.mlkit:translate:17.0.3")
 
     // --- Optional native media (FFmpeg) --------------------------------------
-    // Enabled only with -PwithFfmpeg. Add a 16KB-page-size-compatible FFmpegKit
-    // AAR to app/libs/ (the official ffmpeg-kit was retired Jan 2025 and its
-    // binaries removed from Maven). See README "Native dependencies".
+    // Enabled with -PwithFfmpeg. Uses a Maven Central 16KB-page-size-compatible
+    // community fork of FFmpegKit (the official one was retired Jan 2025). The
+    // package stays com.arthenica.ffmpegkit, so FfmpegMediaTool is drop-in.
     if (project.hasProperty("withFfmpeg")) {
-        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+        implementation("com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1")
     }
 
     testImplementation("junit:junit:4.13.2")

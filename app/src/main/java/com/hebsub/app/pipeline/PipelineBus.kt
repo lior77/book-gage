@@ -16,12 +16,14 @@ object PipelineBus {
 
     private var translationDecision: CompletableDeferred<TranslationChoice>? = null
     private var asrDecision: CompletableDeferred<Boolean>? = null
+    private var outputDecision: CompletableDeferred<OutputChoice>? = null
 
     fun update(state: PipelineState) { _state.value = state }
 
     fun reset() {
         translationDecision = null
         asrDecision = null
+        outputDecision = null
         _state.value = PipelineState.Idle
     }
 
@@ -47,5 +49,17 @@ object PipelineBus {
     fun submitAsrConsent(consent: Boolean) {
         asrDecision?.complete(consent)
         asrDecision = null
+    }
+
+    suspend fun awaitOutputChoice(embedMediaAvailable: Boolean): OutputChoice {
+        val deferred = CompletableDeferred<OutputChoice>()
+        outputDecision = deferred
+        _state.value = PipelineState.NeedOutputChoice(embedMediaAvailable)
+        return deferred.await()
+    }
+
+    fun submitOutputChoice(choice: OutputChoice) {
+        outputDecision?.complete(choice)
+        outputDecision = null
     }
 }

@@ -81,20 +81,32 @@ class SubtitlePipeline(
             PipelineBus.update(PipelineState.Running("עיצוב כתוביות", null))
             val finalCues = SubtitlePostProcessor.process(hebrewCues)
             val srtFile = File(cacheDir, "hebrew.srt").apply { writeText(SrtWriter.write(finalCues), Charsets.UTF_8) }
-
-            PipelineBus.update(PipelineState.Running("יצירת קובץ MKV", null))
-            val outMkv = File(cacheDir, "$title.he.mkv")
-            val muxed = runCatching {
-                mediaTool.remuxWithHebrew(videoFile, srtFile, probe.subtitleCount, outMkv)
-            }.getOrDefault(false)
-
-            PipelineBus.update(PipelineState.Running("שמירה", null))
             val srtName = "$title.he.srt"
-            outputWriter.publishSrt(srtFile, srtName)
-            val videoName = outMkv.name
-            if (muxed && outMkv.exists()) outputWriter.publishVideo(outMkv, videoName)
 
-            PipelineBus.update(PipelineState.Success(videoName, srtName, muxed && outMkv.exists()))
+            // §8 — the user chooses the deliverable. Embedding requires a media tool.
+            val choice = if (mediaTool.canEmbed) {
+                PipelineBus.awaitOutputChoice(embedMediaAvailable = true)
+            } else {
+                OutputChoice.SAVE_SRT
+            }
+
+            when (choice) {
+                OutputChoice.SAVE_SRT -> {
+                    PipelineBus.update(PipelineState.Running("שמירת כתוביות", null))
+                    outputWriter.publishSrt(srtFile, srtName)
+                    PipelineBus.update(PipelineState.Success(srtName, srtName, muxed = false))
+                }
+                OutputChoice.EMBED_MEDIA -> {
+                    PipelineBus.update(PipelineState.Running("יצירת קובץ מדיה", null))
+                    val outMkv = File(cacheDir, "$title.he.mkv")
+                    val muxed = runCatching {
+                        mediaTool.remuxWithHebrew(videoFile, srtFile, probe.subtitleCount, outMkv)
+                    }.getOrDefault(false)
+                    outputWriter.publishSrt(srtFile, srtName) // keep a sidecar copy too
+                    if (muxed && outMkv.exists()) outputWriter.publishVideo(outMkv, outMkv.name)
+                    PipelineBus.update(PipelineState.Success(outMkv.name, srtName, muxed && outMkv.exists()))
+                }
+            }
         } catch (e: Exception) {
             PipelineBus.update(PipelineState.Failed(e.message ?: "שגיאה בעיבוד"))
         }

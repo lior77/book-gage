@@ -94,12 +94,12 @@ class SubtitleSourcePlannerTest {
             audioLanguage = "en",
             onlineEnabled = true,
         )
-        // Order: OnlineHebrew, EmbeddedSource(en=source), EmbeddedSource(fr), OnlineSource, Transcribe
+        // Spec order: OnlineHebrew → OnlineSource → EmbeddedSource(en=source) → EmbeddedSource(fr) → Transcribe
         assertIs<AcquisitionStep.OnlineHebrew>(plan[0])
-        val embSrc = plan[1] as AcquisitionStep.EmbeddedSource
+        assertIs<AcquisitionStep.OnlineSource>(plan[1])
+        val embSrc = plan[2] as AcquisitionStep.EmbeddedSource
         assertEquals("en", Language.canonical(embSrc.language)) // source-language track prioritised
-        assertIs<AcquisitionStep.EmbeddedSource>(plan[2])
-        assertIs<AcquisitionStep.OnlineSource>(plan[3])
+        assertIs<AcquisitionStep.EmbeddedSource>(plan[3])
         assertIs<AcquisitionStep.Transcribe>(plan[4])
     }
 

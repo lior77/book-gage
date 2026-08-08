@@ -37,8 +37,8 @@ jobs:
           yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" >/dev/null || true
           yes | sdkmanager --licenses >/dev/null || true
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Build debug APK (full — with FFmpeg)
+        run: ./gradlew :app:assembleDebug -PwithFfmpeg --no-daemon --stacktrace
 
       - name: Rename APK
         run: |
@@ -60,5 +60,5 @@ jobs:
           gh release delete "$TAG" --yes --cleanup-tag || true
           gh release create "$TAG" dist/HebSub-debug.apk \
             --target "${{ github.sha }}" \
-            --title "HebSub — installable APK" \
-            --notes "Debug-signed, installable APK built from ${{ github.sha }}. Enable 'install from unknown sources', then install HebSub-debug.apk. Enter your OpenSubtitles and Anthropic API keys in Settings on first run."
+            --title "HebSub — installable APK (full)" \
+            --notes "Debug-signed, installable APK built from ${{ github.sha }} with FFmpeg (probe, embedded-subtitle extraction, and new-media-file creation). arm64-v8a (Galaxy A56). Enable 'install from unknown sources', install HebSub-debug.apk, then enter your OpenSubtitles and Anthropic API keys in Settings on first run."

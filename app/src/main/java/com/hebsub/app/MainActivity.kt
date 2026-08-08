@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.pipeline.OutputChoice
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.TranslationChoice
@@ -263,6 +264,22 @@ private fun PipelineOverlay(state: PipelineState) {
                 OutlinedButton(onClick = { PipelineBus.submitAsrConsent(false) }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.asr_no))
                 }
+            }
+        }
+
+        is PipelineState.NeedOutputChoice -> Dialog(dismissable = false) {
+            Column {
+                Text(stringResource(R.string.choose_output), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = { PipelineBus.submitOutputChoice(OutputChoice.SAVE_SRT) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.output_srt))
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { PipelineBus.submitOutputChoice(OutputChoice.EMBED_MEDIA) },
+                    enabled = state.embedMediaAvailable,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.output_media)) }
             }
         }
 

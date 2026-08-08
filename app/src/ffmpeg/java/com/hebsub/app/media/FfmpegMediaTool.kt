@@ -20,6 +20,8 @@ import java.io.File
  */
 class FfmpegMediaTool : MediaTool {
 
+    override val canEmbed = true
+
     override suspend fun probe(input: File): MediaProbe = withContext(Dispatchers.IO) {
         val session = FFprobeKit.getMediaInformation(input.absolutePath)
         val info = session.mediaInformation
