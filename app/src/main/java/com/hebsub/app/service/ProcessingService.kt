@@ -15,7 +15,7 @@ import com.hebsub.app.R
 import com.hebsub.app.asr.UnavailableAsrEngine
 import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.io.VideoDownloader
-import com.hebsub.app.media.FfmpegMediaTool
+import com.hebsub.app.media.MediaToolFactory
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.SubtitlePipeline
@@ -44,8 +44,8 @@ class ProcessingService : Service() {
 
         scope.launch {
             val settings = SettingsRepository(applicationContext)
-            val cacheDir = File(cacheDir, "work").apply { deleteRecursively(); mkdirs() }
-            val downloader = VideoDownloader(cacheDir)
+            val workDir = File(applicationContext.cacheDir, "work").apply { deleteRecursively(); mkdirs() }
+            val downloader = VideoDownloader(workDir)
 
             val (videoFile, name) = when {
                 url != null -> {
@@ -67,7 +67,7 @@ class ProcessingService : Service() {
                 uri != null -> {
                     PipelineBus.update(PipelineState.Running("טעינת הקובץ", null))
                     val display = queryDisplayName(uri) ?: "video.mp4"
-                    val dest = File(cacheDir, display)
+                    val dest = File(workDir, display)
                     val ok = runCatching {
                         contentResolver.openInputStream(uri)?.use { input ->
                             dest.outputStream().use { input.copyTo(it) }
@@ -88,12 +88,12 @@ class ProcessingService : Service() {
             val pipeline = SubtitlePipeline(
                 context = applicationContext,
                 settings = settings,
-                mediaTool = FfmpegMediaTool(),
+                mediaTool = MediaToolFactory.create(),
                 asrEngine = UnavailableAsrEngine(),
-                cacheDir = cacheDir,
+                cacheDir = workDir,
             )
             pipeline.run(videoFile, name)
-            cacheDir.deleteRecursively()
+            workDir.deleteRecursively()
             stopSelfCleanly()
         }
         return START_NOT_STICKY

@@ -38,6 +38,14 @@ android {
 
     buildFeatures { compose = true }
 
+    // The FFmpeg integration is an opt-in source set + dependency. The default
+    // build (no `-PwithFfmpeg`) compiles with Maven-only dependencies and uses
+    // NoOpMediaTool, so a working APK builds anywhere. Pass -PwithFfmpeg and drop
+    // a 16KB-compatible FFmpegKit AAR into app/libs/ to enable probing + MKV mux.
+    if (project.hasProperty("withFfmpeg")) {
+        sourceSets["main"].java.srcDir("src/ffmpeg/java")
+    }
+
     // Android 15 requires 16 KB page-size alignment. useLegacyPackaging=false keeps
     // the .so files page-aligned in the APK; the native AARs must also be 16KB-built.
     packaging {
@@ -72,20 +80,13 @@ dependencies {
     // On-device translation (offline, private). Hebrew supported.
     implementation("com.google.mlkit:translate:17.0.3")
 
-    // On-device language identification (to detect an embedded track's real language).
-    implementation("com.google.mlkit:language-id:17.0.6")
-
-    // --- Native media + ASR ---------------------------------------------------
-    // FFmpeg for probing streams, extracting audio, and remuxing the Hebrew
-    // subtitle track into a new MKV without re-encoding. The official ffmpeg-kit
-    // was retired (Jan 2025) and its binaries removed from Maven; use a 16KB
-    // page-size-compatible community build. Confirm the coordinates before
-    // building — see README "Native dependencies".
-    // implementation("com.github.<fork>:ffmpeg-kit-android-16KB:<version>")
-
-    // whisper.cpp for on-device speech-to-text (only when no subtitles are found).
-    // Ships a native .so + a small GGML model bundled in assets. Optional for v1.
-    // implementation("com.github.<fork>:whispercpp-android:<version>")
+    // --- Optional native media (FFmpeg) --------------------------------------
+    // Enabled only with -PwithFfmpeg. Add a 16KB-page-size-compatible FFmpegKit
+    // AAR to app/libs/ (the official ffmpeg-kit was retired Jan 2025 and its
+    // binaries removed from Maven). See README "Native dependencies".
+    if (project.hasProperty("withFfmpeg")) {
+        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    }
 
     testImplementation("junit:junit:4.13.2")
 }
