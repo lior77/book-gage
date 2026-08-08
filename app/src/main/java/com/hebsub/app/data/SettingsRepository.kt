@@ -43,18 +43,24 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_ANTHROPIC_KEY, "").orEmpty()
         set(v) = prefs.edit().putString(KEY_ANTHROPIC_KEY, v.trim()).apply()
 
+    var deepgramApiKey: String
+        get() = prefs.getString(KEY_DEEPGRAM_KEY, "").orEmpty()
+        set(v) = prefs.edit().putString(KEY_DEEPGRAM_KEY, v.trim()).apply()
+
     var claudeModel: String
         get() = prefs.getString(KEY_MODEL, ClaudeApi.DEFAULT_MODEL) ?: ClaudeApi.DEFAULT_MODEL
         set(v) = prefs.edit().putString(KEY_MODEL, v).apply()
 
     val hasAnthropicKey: Boolean get() = anthropicApiKey.isNotBlank()
     val hasOpenSubtitlesKey: Boolean get() = openSubtitlesApiKey.isNotBlank()
+    val hasDeepgramKey: Boolean get() = deepgramApiKey.isNotBlank()
 
     private companion object {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_ONLINE = "online_search"
         const val KEY_OS_KEY = "opensubtitles_key"
         const val KEY_ANTHROPIC_KEY = "anthropic_key"
+        const val KEY_DEEPGRAM_KEY = "deepgram_key"
         const val KEY_MODEL = "claude_model"
     }
 }

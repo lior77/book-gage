@@ -12,6 +12,7 @@ import android.provider.OpenableColumns
 import androidx.core.app.NotificationCompat
 import com.hebsub.app.HebSubApp
 import com.hebsub.app.R
+import com.hebsub.app.asr.DeepgramAsrEngine
 import com.hebsub.app.asr.UnavailableAsrEngine
 import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.io.OutputWriter
@@ -97,7 +98,8 @@ class ProcessingService : Service() {
                 context = applicationContext,
                 settings = settings,
                 mediaTool = MediaToolFactory.create(),
-                asrEngine = UnavailableAsrEngine(),
+                asrEngine = if (settings.hasDeepgramKey) DeepgramAsrEngine(settings.deepgramApiKey)
+                            else UnavailableAsrEngine(),
                 cacheDir = workDir,
             )
             pipeline.run(videoFile, name)

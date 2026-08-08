@@ -55,9 +55,12 @@ class FfmpegMediaTool : MediaTool {
         )
 
     override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean =
+        // Compact mono 16 kHz AAC keeps the upload small (a 2h film ≈ tens of MB
+        // instead of hundreds). AAC is an internal FFmpeg encoder, present even
+        // in the minimal build. Deepgram accepts m4a/mp4.
         run(
             "-y", "-i", input.absolutePath,
-            "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", outWav.absolutePath,
+            "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "48k", outWav.absolutePath,
         )
 
     override suspend fun remuxWithHebrew(

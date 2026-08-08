@@ -174,12 +174,20 @@ class SubtitlePipeline(
                     }
                 }
                 is AcquisitionStep.Transcribe -> {
+                    RunLog.log("  asr available=${asrEngine.available}")
                     val consent = PipelineBus.awaitAsrConsent(asrEngine.available)
-                    if (!consent || !asrEngine.available) return null
+                    if (!consent || !asrEngine.available) {
+                        RunLog.log("  transcription skipped (consent=$consent available=${asrEngine.available})")
+                        return null
+                    }
+                    PipelineBus.update(PipelineState.Running("חילוץ פס הקול", null))
+                    val audio = File(cacheDir, "audio.m4a")
+                    if (!mediaTool.extractAudioForAsr(videoFile, audio)) {
+                        RunLog.error("  audio extraction failed")
+                        return null
+                    }
                     PipelineBus.update(PipelineState.Running("תמלול פס הקול", 0f))
-                    val wav = File(cacheDir, "audio.wav")
-                    if (!mediaTool.extractAudioForAsr(videoFile, wav)) return null
-                    val track = asrEngine.transcribe(wav) { p ->
+                    val track = asrEngine.transcribe(audio) { p ->
                         PipelineBus.update(PipelineState.Running("תמלול פס הקול", p))
                     }
                     return Source(track.cues, Language.canonical(track.language), false)

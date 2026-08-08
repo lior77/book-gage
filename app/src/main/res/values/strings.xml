@@ -17,6 +17,7 @@
     <string name="settings_online_search">חיפוש כתוביות ברשת (OpenSubtitles)</string>
     <string name="settings_os_key">מפתח OpenSubtitles API</string>
     <string name="settings_anthropic_key">מפתח Anthropic (Claude) API</string>
+    <string name="settings_deepgram_key">מפתח Deepgram API (תמלול פס קול)</string>
     <string name="settings_model">מודל תרגום ענן</string>
     <string name="settings_privacy_note">המפתחות נשמרים מוצפנים במכשיר בלבד ואינם נכללים בקוד או נחשפים ברשת.</string>
     <string name="save">שמירה</string>

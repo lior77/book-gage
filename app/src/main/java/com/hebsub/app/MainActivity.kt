@@ -153,6 +153,7 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
     var online by remember { mutableStateOf(settings.onlineSearchEnabled) }
     var osKey by remember { mutableStateOf(settings.openSubtitlesApiKey) }
     var anthropicKey by remember { mutableStateOf(settings.anthropicApiKey) }
+    var deepgramKey by remember { mutableStateOf(settings.deepgramApiKey) }
     var model by remember { mutableStateOf(settings.claudeModel) }
     var modelMenu by remember { mutableStateOf(false) }
 
@@ -179,6 +180,12 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true, modifier = Modifier.fillMaxWidth(),
         )
+        OutlinedTextField(
+            value = deepgramKey, onValueChange = { deepgramKey = it },
+            label = { Text(stringResource(R.string.settings_deepgram_key)) },
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true, modifier = Modifier.fillMaxWidth(),
+        )
 
         ExposedDropdownMenuBox(expanded = modelMenu, onExpandedChange = { modelMenu = it }) {
             OutlinedTextField(
@@ -201,6 +208,7 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
                     settings.onlineSearchEnabled = online
                     settings.openSubtitlesApiKey = osKey
                     settings.anthropicApiKey = anthropicKey
+                    settings.deepgramApiKey = deepgramKey
                     settings.claudeModel = model
                     onBack()
                 },
