@@ -4,6 +4,7 @@ import android.content.Context
 import com.hebsub.app.asr.AsrEngine
 import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.io.OutputWriter
+import com.hebsub.app.media.MediaProbe
 import com.hebsub.app.media.MediaTool
 import com.hebsub.app.provider.OpenSubtitlesService
 import com.hebsub.app.translate.ClaudeCloudTranslator
@@ -39,7 +40,10 @@ class SubtitlePipeline(
     suspend fun run(videoFile: File, originalDisplayName: String) {
         try {
             PipelineBus.update(PipelineState.Running("בדיקת הקובץ", null))
-            val probe = mediaTool.probe(videoFile)
+            // Probing is best-effort: if the media tool can't read the file we
+            // still proceed with the online path rather than failing the run.
+            val probe = runCatching { mediaTool.probe(videoFile) }
+                .getOrElse { MediaProbe(emptyList(), null, 0) }
             val title = originalDisplayName.substringBeforeLast('.').ifBlank { originalDisplayName }
             val onlineEnabled = settings.onlineSearchEnabled && settings.hasOpenSubtitlesKey
             val os = if (onlineEnabled) OpenSubtitlesService(settings.openSubtitlesApiKey) else null
@@ -107,8 +111,11 @@ class SubtitlePipeline(
                     PipelineBus.update(PipelineState.Success(outMkv.name, srtName, muxed && outMkv.exists()))
                 }
             }
-        } catch (e: Exception) {
-            PipelineBus.update(PipelineState.Failed(e.message ?: "שגיאה בעיבוד"))
+        } catch (t: Throwable) {
+            // Catch Throwable (not just Exception) so native errors such as
+            // UnsatisfiedLinkError surface as a message instead of crashing.
+            val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
+            PipelineBus.update(PipelineState.Failed("שגיאה בעיבוד — $detail"))
         }
     }
 

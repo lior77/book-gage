@@ -43,8 +43,9 @@ class ProcessingService : Service() {
         val uri = intent?.getStringExtra(EXTRA_URI)?.let(Uri::parse)
 
         scope.launch {
-            val settings = SettingsRepository(applicationContext)
             val workDir = File(applicationContext.cacheDir, "work").apply { deleteRecursively(); mkdirs() }
+            try {
+            val settings = SettingsRepository(applicationContext)
             val downloader = VideoDownloader(workDir)
 
             val (videoFile, name) = when {
@@ -56,11 +57,11 @@ class ProcessingService : Service() {
                         is VideoDownloader.Result.Ok -> r.file to r.file.name
                         is VideoDownloader.Result.Invalid -> {
                             PipelineBus.update(PipelineState.Failed("קישור לא תקין: ${r.reason}"))
-                            return@launch stopSelfCleanly()
+                            return@launch
                         }
                         is VideoDownloader.Result.Failed -> {
                             PipelineBus.update(PipelineState.Failed("הורדה נכשלה: ${r.message}"))
-                            return@launch stopSelfCleanly()
+                            return@launch
                         }
                     }
                 }
@@ -75,13 +76,13 @@ class ProcessingService : Service() {
                     }.getOrDefault(false)
                     if (!ok) {
                         PipelineBus.update(PipelineState.Failed("לא ניתן לקרוא את הקובץ שנבחר"))
-                        return@launch stopSelfCleanly()
+                        return@launch
                     }
                     dest to display
                 }
                 else -> {
                     PipelineBus.update(PipelineState.Failed("לא סופק קלט"))
-                    return@launch stopSelfCleanly()
+                    return@launch
                 }
             }
 
@@ -93,8 +94,13 @@ class ProcessingService : Service() {
                 cacheDir = workDir,
             )
             pipeline.run(videoFile, name)
-            workDir.deleteRecursively()
-            stopSelfCleanly()
+            } catch (t: Throwable) {
+                val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
+                PipelineBus.update(PipelineState.Failed("שגיאה — $detail"))
+            } finally {
+                workDir.deleteRecursively()
+                stopSelfCleanly()
+            }
         }
         return START_NOT_STICKY
     }

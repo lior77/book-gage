@@ -75,8 +75,12 @@ class FfmpegMediaTool : MediaTool {
     )
 
     private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
-        val session = FFmpegKit.execute(args.joinToString(" ") { quoteIfNeeded(it) })
-        ReturnCode.isSuccess(session.returnCode)
+        try {
+            val session = FFmpegKit.execute(args.joinToString(" ") { quoteIfNeeded(it) })
+            ReturnCode.isSuccess(session.returnCode)
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     private fun quoteIfNeeded(arg: String): String =
