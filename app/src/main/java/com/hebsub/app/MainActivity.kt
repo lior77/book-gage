@@ -2,12 +2,19 @@ package com.hebsub.app
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.hebsub.app.storage.HebSubStorage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -81,24 +88,103 @@ private fun AppRoot() {
 
 @Composable
 private fun OnboardingScreen(onDone: () -> Unit) {
+    val context = LocalContext.current
+    val storage = remember { HebSubStorage(context) }
+
+    fun notifOk(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    var filesOk by remember { mutableStateOf(storage.hasAllFilesAccess()) }
+    var notifGranted by remember { mutableStateOf(notifOk()) }
+
+    // Re-check when returning from the system Settings screens.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                filesOk = storage.hasAllFilesAccess()
+                notifGranted = notifOk()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
+
     val notifLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { onDone() }
+    ) { granted -> notifGranted = granted }
+
+    val filesLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { filesOk = storage.hasAllFilesAccess() }
+
+    val legacyStorageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> filesOk = granted }
+
+    fun requestFiles() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val intent = runCatching {
+                Intent(
+                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    Uri.fromParts("package", context.packageName, null),
+                )
+            }.getOrElse { Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION) }
+            runCatching { filesLauncher.launch(intent) }
+                .onFailure { filesLauncher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
+        } else {
+            legacyStorageLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.onboarding_body), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(32.dp))
-        Button(onClick = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else onDone()
-        }) { Text(stringResource(R.string.grant_permissions)) }
+
+        PermissionRow(
+            title = stringResource(R.string.perm_files_title),
+            body = stringResource(R.string.perm_files_body),
+            granted = filesOk,
+            onGrant = { requestFiles() },
+        )
+        PermissionRow(
+            title = stringResource(R.string.perm_notif_title),
+            body = stringResource(R.string.perm_notif_body),
+            granted = notifGranted,
+            onGrant = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            },
+        )
+
+        Button(
+            onClick = onDone,
+            enabled = filesOk,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.grant_permissions)) }
+        if (!filesOk) {
+            Text(stringResource(R.string.perm_files_required), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(title: String, body: String, granted: Boolean, onGrant: () -> Unit) {
+    val okColor = Color(0xFF2E7D32)
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            if (granted) Text("✓ אושר", color = okColor, style = MaterialTheme.typography.labelLarge)
+            else Button(onClick = onGrant) { Text(stringResource(R.string.perm_grant)) }
+        }
+        Text(body, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -425,9 +511,13 @@ private fun PipelineOverlay(state: PipelineState) {
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.output_saved))
                 Spacer(Modifier.height(4.dp))
-                if (state.muxed) Text("• Movies/HebSub/${state.videoName}", style = MaterialTheme.typography.bodySmall)
-                Text("• Download/HebSub/${state.srtName}", style = MaterialTheme.typography.bodySmall)
-                Text("• יומן: Download/HebSub/HebSub-log-*.txt", style = MaterialTheme.typography.bodySmall)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Column(Modifier.fillMaxWidth()) {
+                        Text("📁 ${state.folder}", style = MaterialTheme.typography.bodySmall)
+                        Text("• ${state.srtName}", style = MaterialTheme.typography.bodySmall)
+                        Text("• HebSub-log-*.txt", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }
@@ -439,7 +529,7 @@ private fun PipelineOverlay(state: PipelineState) {
                 Spacer(Modifier.height(8.dp))
                 Text(state.message)
                 Spacer(Modifier.height(8.dp))
-                Text("יומן מפורט נשמר ב־Download/HebSub/HebSub-log-*.txt", style = MaterialTheme.typography.bodySmall)
+                Text("יומן מפורט נשמר בתיקיית הוידאו תחת HebSub (HebSub-log-*.txt)", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }

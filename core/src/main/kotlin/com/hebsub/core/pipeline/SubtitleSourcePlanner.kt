@@ -63,6 +63,13 @@ object SubtitleSourcePlanner {
         embedded: List<EmbeddedSubtitle>,
         audioLanguage: String?,
         onlineEnabled: Boolean,
+        /**
+         * When true, embedded source-language tracks are tried BEFORE searching
+         * online (the updated spec §ב.3: if the file already carries English/
+         * source subtitles, extract and translate those; only search online when
+         * it does not). When false, the original network-first order is kept.
+         */
+        preferEmbeddedSource: Boolean = false,
     ): List<AcquisitionStep> {
         val steps = ArrayList<AcquisitionStep>()
         val sourceLang = Language.canonical(audioLanguage)
@@ -70,26 +77,33 @@ object SubtitleSourcePlanner {
         val hebrewTracks = embedded.filter { Language.isHebrew(it.language) }
         val nonHebrewTracks = embedded.filterNot { Language.isHebrew(it.language) }
 
-        // 2. Embedded Hebrew — prefer a non-forced full track over a forced one.
+        // Embedded Hebrew always comes first — prefer a non-forced full track.
         hebrewTracks
             .sortedBy { it.forced }
             .forEach { steps.add(AcquisitionStep.EmbeddedHebrew(it.index)) }
 
-        // 3. Online Hebrew.
-        if (onlineEnabled) steps.add(AcquisitionStep.OnlineHebrew)
+        // Embedded non-Hebrew, source language first, then the rest in order.
+        val embeddedSource = nonHebrewTracks
+            .sortedByDescending { sourceLang != null && Language.canonical(it.language) == sourceLang }
+            .map { AcquisitionStep.EmbeddedSource(it.index, it.language) }
 
-        // 4. Online non-Hebrew, source language preferred (executor also tries any other).
-        if (onlineEnabled) {
-            val preferred = buildList { sourceLang?.let { if (it != Language.HEBREW) add(it) } }
-            steps.add(AcquisitionStep.OnlineSource(preferred))
+        val online = buildList {
+            if (onlineEnabled) {
+                add(AcquisitionStep.OnlineHebrew)
+                val preferred = buildList { sourceLang?.let { if (it != Language.HEBREW) add(it) } }
+                add(AcquisitionStep.OnlineSource(preferred))
+            }
         }
 
-        // 5. Embedded non-Hebrew, source language first, then the rest in order.
-        nonHebrewTracks
-            .sortedByDescending { sourceLang != null && Language.canonical(it.language) == sourceLang }
-            .forEach { steps.add(AcquisitionStep.EmbeddedSource(it.index, it.language)) }
+        if (preferEmbeddedSource) {
+            steps.addAll(embeddedSource)
+            steps.addAll(online)
+        } else {
+            steps.addAll(online)
+            steps.addAll(embeddedSource)
+        }
 
-        // 6. Transcribe audio (needs user consent when reached).
+        // Last resort: transcribe the audio track.
         steps.add(AcquisitionStep.Transcribe)
 
         return steps

@@ -103,6 +103,21 @@ class SubtitleSourcePlannerTest {
         assertIs<AcquisitionStep.Transcribe>(plan[4])
     }
 
+    @Test fun preferEmbeddedSourcePutsEmbeddedBeforeOnline() {
+        // Updated spec §ב.3: embedded English/source subs are used before any
+        // online search — so EmbeddedSource must precede the Online* steps.
+        val plan = SubtitleSourcePlanner.plan(
+            embedded = listOf(EmbeddedSubtitle(1, "en")),
+            audioLanguage = "en",
+            onlineEnabled = true,
+            preferEmbeddedSource = true,
+        )
+        assertIs<AcquisitionStep.EmbeddedSource>(plan[0])
+        assertIs<AcquisitionStep.OnlineHebrew>(plan[1])
+        assertIs<AcquisitionStep.OnlineSource>(plan[2])
+        assertIs<AcquisitionStep.Transcribe>(plan.last())
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),

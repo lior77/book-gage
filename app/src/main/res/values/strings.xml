@@ -10,8 +10,14 @@
     <string name="settings">הגדרות</string>
 
     <string name="onboarding_title">ברוכים הבאים</string>
-    <string name="onboarding_body">האפליקציה פועלת באופן פרטי. היא אינה שולחת פרטי משתמש או מכשיר לרשת. נדרש אישור אחד בלבד — התראות התקדמות.</string>
-    <string name="grant_permissions">אישור והמשך</string>
+    <string name="onboarding_body">האפליקציה פועלת באופן פרטי — אינה שולחת פרטי משתמש או מכשיר לרשת. כדי לנהל את תיקיית HebSub ולשמור כל וידאו וכתוביות בתיקייה משלו, נדרשות ההרשאות הבאות (חד־פעמי). לאחר האישור האפליקציה תפעל ללא הפרעה.</string>
+    <string name="grant_permissions">המשך</string>
+    <string name="perm_grant">אישור</string>
+    <string name="perm_files_title">גישה לכל הקבצים</string>
+    <string name="perm_files_body">נדרשת ליצירת תיקיית HebSub ותיקייה נפרדת לכל וידאו, ולהעברת/הורדת הוידאו והכתוביות אליה. ייפתח מסך הגדרות — הפעילו את המתג עבור HebSub וחזרו.</string>
+    <string name="perm_notif_title">התראות התקדמות</string>
+    <string name="perm_notif_body">להצגת סטטוס העיבוד בזמן ריצה. מומלץ אך לא חובה.</string>
+    <string name="perm_files_required">כדי להמשיך יש לאשר גישה לכל הקבצים.</string>
 
     <string name="settings_title">הגדרות</string>
     <string name="settings_online_search">חיפוש כתוביות ברשת (OpenSubtitles)</string>

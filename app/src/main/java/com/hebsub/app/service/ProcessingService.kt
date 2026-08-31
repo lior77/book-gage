@@ -15,13 +15,13 @@ import com.hebsub.app.R
 import com.hebsub.app.asr.DeepgramAsrEngine
 import com.hebsub.app.asr.UnavailableAsrEngine
 import com.hebsub.app.data.SettingsRepository
-import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.io.VideoDownloader
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaToolFactory
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.SubtitlePipeline
+import com.hebsub.app.storage.HebSubStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -49,10 +49,21 @@ class ProcessingService : Service() {
 
         scope.launch {
             val workDir = File(applicationContext.cacheDir, "work").apply { deleteRecursively(); mkdirs() }
+            val storage = HebSubStorage(applicationContext)
+            var logDir: File = workDir   // where the run log is finally written (§ב.6)
             RunLog.start()
             RunLog.header(applicationContext)
             RunLog.log("input=${if (url != null) "URL" else "file"}")
             try {
+            // §א.2/§ב.1 — we need All-files access to build the HebSub folder tree.
+            if (!storage.hasAllFilesAccess()) {
+                RunLog.error("missing all-files access")
+                PipelineBus.update(PipelineState.Failed("חסרה הרשאת גישה לכל הקבצים. פתחו את ההגדרות ואשרו את ההרשאה."))
+                return@launch
+            }
+            val root = storage.ensureRoot()
+            RunLog.log("HebSub root=${root.absolutePath} exists=${root.exists()}")
+
             val settings = SettingsRepository(applicationContext)
             val downloader = VideoDownloader(workDir)
 
@@ -94,25 +105,31 @@ class ProcessingService : Service() {
                 }
             }
 
+            // §ב.2.1/§ב.2.2 — move/download the video into its own folder under HebSub.
+            PipelineBus.update(PipelineState.Running("הכנת תיקיית הוידאו", null))
+            val placed = storage.placeVideo(videoFile, name)
+            logDir = placed.dir
+            RunLog.log("video folder=${placed.dir.absolutePath} video=${placed.video.name}")
+
             val pipeline = SubtitlePipeline(
                 context = applicationContext,
                 settings = settings,
                 mediaTool = MediaToolFactory.create(),
                 asrEngine = if (settings.hasDeepgramKey) DeepgramAsrEngine(settings.deepgramApiKey)
                             else UnavailableAsrEngine(),
-                cacheDir = workDir,
+                outputDir = placed.dir,
             )
-            pipeline.run(videoFile, name)
+            pipeline.run(placed.video, placed.base)
             } catch (t: Throwable) {
                 RunLog.error("service failed", t)
                 val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
                 PipelineBus.update(PipelineState.Failed("שגיאה — $detail"))
             } finally {
-                // Always write the detailed log to Download/HebSub (local only).
+                // §ב.6 — write the detailed log into the video's folder (local only).
                 runCatching {
                     withContext(NonCancellable) {
                         val ts = System.currentTimeMillis() / 1000
-                        OutputWriter(applicationContext).publishLog(RunLog.dump(), "HebSub-log-$ts.txt")
+                        File(logDir, "HebSub-log-$ts.txt").writeText(RunLog.dump(), Charsets.UTF_8)
                     }
                 }
                 workDir.deleteRecursively()

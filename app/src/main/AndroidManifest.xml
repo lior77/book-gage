@@ -13,14 +13,20 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
-    <!-- NOTE: no storage permissions. Input uses the Storage Access Framework
-         picker; output is published via MediaStore. -->
+    <!-- All-files access (§ב): the app builds a HebSub/ folder tree at the root of
+         shared storage and moves each video into its own sub-folder, so it needs
+         to create folders and move files freely. Granted via a one-time Settings
+         toggle at onboarding. Legacy READ/WRITE cover Android 10 and below. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
     <application
         android:name=".HebSubApp"
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.HebSub">
 
