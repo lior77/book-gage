@@ -17,22 +17,18 @@ import com.hebsub.core.subtitle.SrtWriter
 import com.hebsub.core.subtitle.SubtitleCue
 import com.hebsub.core.text.SubtitlePostProcessor
 import java.io.File
+import kotlin.math.abs
 
 /**
- * Executes the updated flow (spec §ב.3–§ב.4) for one video, writing every
- * artifact into the video's own folder inside HebSub. Reports progress through
- * [PipelineBus] (§ב.5); the detailed log (§ב.6) is written by the service.
+ * Executes the updated flow for one video, writing every artifact into the
+ * video's own folder inside HebSub. Reports progress through [PipelineBus].
  *
- * Precedence (built by the tested [SubtitleSourcePlanner] with
- * `preferEmbeddedSource = true`):
- *   embedded Hebrew (ready) → embedded source (extract → translate) →
- *   online Hebrew (ready) → online source (download → translate) →
- *   transcribe audio (→ translate).
+ * Naming (spec §2.2): subtitle files are `<lang>-<folder>.srt`; the finished
+ * Hebrew file is `he-<folder>.srt`.
  *
- * Ready-Hebrew paths skip translation; every source path is translated to
- * Hebrew automatically (Claude when a key is set — context-aware per §ב.3.4 —
- * otherwise on-device ML Kit). No mid-run prompts: after onboarding the app
- * "operates without restriction" (§א.2.1).
+ * Online matches are verified against the video's duration (spec §3): a
+ * downloaded subtitle is accepted only if its span is close to the video length,
+ * so an unrelated file (a different movie) is rejected rather than translated.
  */
 class SubtitlePipeline(
     private val context: Context,
@@ -47,18 +43,22 @@ class SubtitlePipeline(
         val readyHebrew: Boolean,
     )
 
-    suspend fun run(videoFile: File, baseName: String) {
+    /** @param base the confirmed folder name; @param year optional 4-digit year for the online search. */
+    suspend fun run(videoFile: File, base: String, year: String?) {
         try {
             PipelineBus.update(PipelineState.Running("קריאת נתוני הקובץ", null))
             RunLog.log("mediaTool=${mediaTool::class.java.simpleName} outputDir=${outputDir.absolutePath}")
             val probe = runCatching { mediaTool.probe(videoFile) }
                 .getOrElse { RunLog.error("probe failed", it); MediaProbe(emptyList(), null, 0) }
-            RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
+            val videoMs = probe.durationMs
+            RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} durationMs=$videoMs embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
 
             val onlineEnabled = settings.onlineSearchEnabled && settings.hasOpenSubtitlesKey
             val os = if (onlineEnabled) OpenSubtitlesService(settings.openSubtitlesApiKey) else null
             val movieHash = runCatching { OpenSubtitlesService.computeMovieHash(videoFile) }.getOrNull()
-            RunLog.log("title='$baseName' onlineEnabled=$onlineEnabled hasClaudeKey=${settings.hasAnthropicKey} hasDeepgram=${settings.hasDeepgramKey} movieHash=${movieHash ?: "-"}")
+            // Search by the confirmed name, without the appended year folder-suffix.
+            val searchTitle = if (!year.isNullOrBlank()) base.removeSuffix("-$year") else base
+            RunLog.log("base='$base' searchTitle='$searchTitle' year='${year ?: "-"}' onlineEnabled=$onlineEnabled hasClaudeKey=${settings.hasAnthropicKey} hasDeepgram=${settings.hasDeepgramKey}")
 
             val plan = SubtitleSourcePlanner.plan(
                 probe.embeddedSubtitles, probe.audioLanguage, onlineEnabled,
@@ -66,15 +66,15 @@ class SubtitlePipeline(
             )
             RunLog.log("plan=${plan.map { it::class.java.simpleName }}")
 
-            val source = acquire(plan, videoFile, os, movieHash, baseName)
+            val source = acquire(plan, videoFile, os, movieHash, searchTitle, year, base, videoMs)
                 ?: run {
-                    RunLog.error("no subtitles acquired from any source")
-                    PipelineBus.update(PipelineState.Failed("לא נמצאו כתוביות ולא ניתן היה ליצור אותן."))
+                    RunLog.error("no matching subtitles from any source")
+                    PipelineBus.update(PipelineState.Failed("לא נמצאו כתוביות תואמות ולא ניתן היה ליצור אותן."))
                     return
                 }
             RunLog.log("source acquired: cues=${source.cues.size} lang=${source.language} readyHebrew=${source.readyHebrew}")
 
-            // §ב.3.4 / §ב.4.1 — translate source subtitles to Hebrew (ready Hebrew skips this).
+            // §ב.3.4 / §ב.4.1 — translate to Hebrew unless it is already Hebrew.
             val hebrewCues: List<SubtitleCue> = if (source.readyHebrew) {
                 source.cues
             } else if (settings.hasAnthropicKey) {
@@ -95,7 +95,7 @@ class SubtitlePipeline(
 
             PipelineBus.update(PipelineState.Running("עיצוב וסנכרון הכתוביות", null))
             val finalCues = SubtitlePostProcessor.process(hebrewCues)
-            val srtName = "$baseName.he.srt"
+            val srtName = "he-$base.srt"
             val srtFile = File(outputDir, srtName)
             srtFile.writeText(SrtWriter.write(finalCues), Charsets.UTF_8)
             RunLog.log("wrote Hebrew subtitles: ${srtFile.absolutePath}")
@@ -109,13 +109,15 @@ class SubtitlePipeline(
         }
     }
 
-    /** Walk the plan until a step yields Hebrew or source text, saving files into the video folder. */
     private suspend fun acquire(
         plan: List<AcquisitionStep>,
         videoFile: File,
         os: OpenSubtitlesService?,
         movieHash: String?,
+        title: String,
+        year: String?,
         base: String,
+        videoMs: Long,
     ): Source? {
         for (step in plan) {
             RunLog.log("acquire step: ${step::class.java.simpleName}")
@@ -125,7 +127,6 @@ class SubtitlePipeline(
                     parseEmbedded(videoFile, step.index, base, "he")?.let { return Source(it, "he", true) }
                 }
                 is AcquisitionStep.EmbeddedSource -> {
-                    // §ב.3.2 — the file has English/source subs; extract an identical file.
                     PipelineBus.update(PipelineState.Running("חילוץ כתוביות מהקובץ", null))
                     val lang = Language.canonical(step.language) ?: "src"
                     parseEmbedded(videoFile, step.index, base, lang)?.let {
@@ -133,22 +134,19 @@ class SubtitlePipeline(
                     }
                 }
                 is AcquisitionStep.OnlineHebrew -> {
-                    // §ב.3.1 — no embedded source subs: look for ready Hebrew online.
                     PipelineBus.update(PipelineState.Running("חיפוש כתוביות עברית ברשת", null))
-                    fetchOnline(os, listOf("he"), movieHash, base, base, "he")?.let { (cues, _) ->
+                    fetchOnline(os, listOf("he"), movieHash, title, year, base, videoMs)?.let { (cues, _) ->
                         return Source(cues, "he", true)
                     }
                 }
                 is AcquisitionStep.OnlineSource -> {
-                    // §ב.3.1 — else source/English online, to be translated.
                     PipelineBus.update(PipelineState.Running("חיפוש כתוביות מקור ברשת", null))
-                    (fetchOnline(os, step.preferredLanguages, movieHash, base, base, "src")
-                        ?: fetchOnline(os, emptyList(), movieHash, base, base, "src"))?.let { (cues, lang) ->
+                    (fetchOnline(os, step.preferredLanguages, movieHash, title, year, base, videoMs)
+                        ?: fetchOnline(os, emptyList(), movieHash, title, year, base, videoMs))?.let { (cues, lang) ->
                         return Source(cues, lang, readyHebrew = Language.isHebrew(lang))
                     }
                 }
                 is AcquisitionStep.Transcribe -> {
-                    // §ב.4 — nothing embedded and nothing online: build audio, then subs.
                     if (!asrEngine.available) {
                         RunLog.log("  transcription unavailable (no Deepgram key)")
                         return null
@@ -171,9 +169,9 @@ class SubtitlePipeline(
         return null
     }
 
-    /** Extract an embedded track to `<base>.<lang>.srt` in the video folder and parse it. */
+    /** Extract an embedded track to `<lang>-<base>.srt` in the video folder and parse it. */
     private suspend fun parseEmbedded(videoFile: File, streamIndex: Int, base: String, lang: String): List<SubtitleCue>? {
-        val out = File(outputDir, "$base.$lang.srt")
+        val out = File(outputDir, "$lang-$base.srt")
         if (!mediaTool.extractSubtitle(videoFile, streamIndex, out)) {
             RunLog.log("  extract stream $streamIndex failed")
             return null
@@ -183,26 +181,51 @@ class SubtitlePipeline(
         return cues.ifEmpty { null }
     }
 
-    /** Download the best online match to `<base>.<tag>.srt` in the video folder. Returns (cues, language). */
+    /**
+     * Search online, then download candidates best-first and keep the FIRST whose
+     * duration matches the video (spec §3). Saves the accepted file as
+     * `<lang>-<base>.srt`. Returns (cues, language) or null.
+     */
     private suspend fun fetchOnline(
         os: OpenSubtitlesService?,
         languagePriority: List<String>,
         movieHash: String?,
         title: String,
+        year: String?,
         base: String,
-        tag: String,
+        videoMs: Long,
     ): Pair<List<SubtitleCue>, String?>? {
         if (os == null) return null
-        RunLog.log("  OpenSubtitles search langs=$languagePriority")
-        val best = os.findBest(languagePriority, movieHash, title)
-        if (best == null) { RunLog.log("  OpenSubtitles: no match"); return null }
-        RunLog.log("  OpenSubtitles best fileId=${best.fileId} lang=${best.language}")
-        val srt = os.download(best.fileId)
-        if (srt == null) { RunLog.error("  OpenSubtitles download failed"); return null }
-        val langTag = best.language?.takeIf { it.isNotBlank() } ?: tag
-        runCatching { File(outputDir, "$base.$langTag.srt").writeText(srt, Charsets.UTF_8) }
-        val cues = SrtParser.parse(srt)
-        RunLog.log("  OpenSubtitles parsed ${cues.size} cues → saved $base.$langTag.srt")
-        return if (cues.isEmpty()) null else cues to best.language
+        RunLog.log("  OpenSubtitles search langs=$languagePriority title='$title' year='${year ?: "-"}'")
+        val candidates = os.findCandidates(languagePriority, movieHash, title, year)
+        if (candidates.isEmpty()) { RunLog.log("  OpenSubtitles: no results"); return null }
+        for (c in candidates.take(MAX_CANDIDATES)) {
+            val srt = os.download(c.fileId) ?: continue
+            val cues = SrtParser.parse(srt)
+            if (cues.isEmpty()) continue
+            val spanMs = cues.maxOf { it.endMs }
+            if (!durationMatches(spanMs, videoMs)) {
+                RunLog.log("  reject fileId=${c.fileId} lang=${c.language} span=${spanMs}ms video=${videoMs}ms (duration mismatch)")
+                continue
+            }
+            val langTag = c.language?.takeIf { it.isNotBlank() } ?: "src"
+            runCatching { File(outputDir, "$langTag-$base.srt").writeText(srt, Charsets.UTF_8) }
+            RunLog.log("  accept fileId=${c.fileId} lang=${c.language} cues=${cues.size} span=${spanMs}ms video=${videoMs}ms → $langTag-$base.srt")
+            return cues to c.language
+        }
+        RunLog.log("  OpenSubtitles: no candidate matched the video duration")
+        return null
+    }
+
+    /** True if the subtitle span is within tolerance of the video length (or the length is unknown). */
+    private fun durationMatches(spanMs: Long, videoMs: Long): Boolean {
+        if (videoMs <= 0L) return true          // unknown duration — can't verify, accept best-effort
+        if (spanMs <= 0L) return false
+        val tolerance = maxOf(120_000L, videoMs * 15 / 100) // 2 min or 15%, whichever is larger
+        return abs(spanMs - videoMs) <= tolerance
+    }
+
+    private companion object {
+        const val MAX_CANDIDATES = 6
     }
 }

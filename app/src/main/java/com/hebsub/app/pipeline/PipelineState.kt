@@ -6,12 +6,18 @@ enum class TranslationChoice { LOCAL, CLOUD, STOP }
 /** Final output decision (spec §8): a subtitle sidecar, or a new media file with the track embedded. */
 enum class OutputChoice { SAVE_SRT, EMBED_MEDIA }
 
+/** The name (user-editable) and optional year the user confirms before the folder is created (spec §2). */
+data class VideoInfo(val name: String, val year: String?)
+
 /** Everything the UI needs to render, driven by the pipeline running in the service. */
 sealed interface PipelineState {
     data object Idle : PipelineState
 
     /** [progress] is 0f..1f, or null for an indeterminate stage. */
     data class Running(val stageLabel: String, val progress: Float?) : PipelineState
+
+    /** Before creating the folder: confirm/edit the name and optionally enter the year (spec §2). */
+    data class NeedVideoInfo(val suggestedName: String) : PipelineState
 
     /** No ready-made Hebrew found; ask how to translate. [cloudAvailable] gates the cloud option. */
     data class NeedTranslationChoice(val cloudAvailable: Boolean) : PipelineState

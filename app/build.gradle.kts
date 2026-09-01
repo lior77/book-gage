@@ -13,8 +13,8 @@ android {
         applicationId = "com.hebsub.app"
         minSdk = 26          // SAF + MediaMuxer + scoped storage
         targetSdk = 35       // Android 15 (One UI 7 on the Galaxy A56)
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 3
+        versionName = "1.2"
         // The Galaxy A56 is arm64-v8a. The 16KB FFmpeg build ships arm64-v8a only,
         // so we target that single ABI (also keeps the APK smaller).
         ndk { abiFilters += "arm64-v8a" }

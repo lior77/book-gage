@@ -32,9 +32,22 @@ class OpenSubtitlesService(private val apiKey: String) {
         movieHash: String?,
         title: String?,
         excludeHearingImpaired: Boolean = true,
-    ): OsCandidate? = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) return@withContext null
-        val params = OpenSubtitlesQuery.buildSearchParams(languagePriority, movieHash, title)
+    ): OsCandidate? = findCandidates(languagePriority, movieHash, title, null, excludeHearingImpaired).firstOrNull()
+
+    /**
+     * Search and return ALL matching candidates ranked best-first, so the caller
+     * can download and verify each against the video's duration (spec §3) and
+     * keep the first that fits, instead of blindly trusting one result.
+     */
+    suspend fun findCandidates(
+        languagePriority: List<String>,
+        movieHash: String?,
+        title: String?,
+        year: String?,
+        excludeHearingImpaired: Boolean = true,
+    ): List<OsCandidate> = withContext(Dispatchers.IO) {
+        if (apiKey.isBlank()) return@withContext emptyList()
+        val params = OpenSubtitlesQuery.buildSearchParams(languagePriority, movieHash, title, year)
         val urlBuilder = "$base/subtitles".toHttpUrl().newBuilder()
         params.forEach { (k, v) -> urlBuilder.addQueryParameter(k, v) }
 
@@ -48,11 +61,11 @@ class OpenSubtitlesService(private val apiKey: String) {
         PrivacyHttp.client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) {
                 RunLog.error("OpenSubtitles search HTTP ${resp.code}")
-                return@withContext null
+                return@withContext emptyList()
             }
             val parsed = OpenSubtitlesQuery.parse(resp.body?.string().orEmpty())
             RunLog.log("OpenSubtitles search results=${parsed.data.size}")
-            OpenSubtitlesQuery.selectBest(parsed, languagePriority, excludeHearingImpaired)
+            OpenSubtitlesQuery.rankCandidates(parsed, languagePriority, excludeHearingImpaired)
         }
     }
 

@@ -44,13 +44,15 @@ class HebSubStorage(private val context: Context) {
 
     /**
      * Move [src] (a temporary copy/download of the video) into a fresh folder
-     * named after the video inside HebSub, and return the new locations.
+     * named [folderName] inside HebSub, storing the video as [videoFileName]
+     * (spec §2.2/§2.3 — folder and video share the confirmed name). Returns the
+     * new locations.
      */
-    fun placeVideo(src: File, displayName: String): Placed {
+    fun placeVideo(src: File, folderName: String, videoFileName: String): Placed {
         ensureRoot()
-        val base = sanitize(displayName.substringBeforeLast('.').ifBlank { displayName })
+        val base = sanitize(folderName)
         val dir = File(rootDir(), base).apply { mkdirs() }
-        val dest = File(dir, sanitize(displayName))
+        val dest = File(dir, sanitize(videoFileName))
         if (src.absolutePath != dest.absolutePath) {
             src.copyTo(dest, overwrite = true)
             runCatching { src.delete() }
@@ -58,7 +60,8 @@ class HebSubStorage(private val context: Context) {
         return Placed(dir, dest, base)
     }
 
-    private fun sanitize(name: String): String =
+    /** Keep spaces and hyphens (the folder is `<name>-<year>`); drop only path-hostile chars. */
+    fun sanitize(name: String): String =
         name.replace(Regex("""[/\\:*?"<>|]"""), "_").trim().ifBlank { "video" }.take(120)
 
     companion object {

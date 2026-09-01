@@ -37,10 +37,12 @@ import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.ConnectionTester
+import androidx.compose.ui.text.input.KeyboardType
 import com.hebsub.app.pipeline.OutputChoice
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.TranslationChoice
+import com.hebsub.app.pipeline.VideoInfo
 import com.hebsub.app.service.ProcessingService
 import com.hebsub.core.provider.claude.ClaudeApi
 import kotlinx.coroutines.launch
@@ -446,6 +448,37 @@ private fun PipelineOverlay(state: PipelineState) {
                         }
                     }
                 }
+            }
+        }
+
+        is PipelineState.NeedVideoInfo -> Dialog(dismissable = false) {
+            var name by remember(state.suggestedName) { mutableStateOf(state.suggestedName) }
+            var year by remember(state.suggestedName) { mutableStateOf("") }
+            Column {
+                Text(stringResource(R.string.video_info_title), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.video_info_body), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.video_info_name)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = year,
+                    onValueChange = { v -> year = v.filter { it.isDigit() }.take(4) },
+                    label = { Text(stringResource(R.string.video_info_year)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { PipelineBus.submitVideoInfo(VideoInfo(name.trim(), year.ifBlank { null })) },
+                    enabled = name.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.video_info_confirm)) }
             }
         }
 

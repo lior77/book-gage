@@ -118,6 +118,26 @@ class SubtitleSourcePlannerTest {
         assertIs<AcquisitionStep.Transcribe>(plan.last())
     }
 
+    @Test fun cleanQueryStripsReleaseTagsAndSeparators() {
+        val cleaned = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
+            .cleanQuery("BBC.Zambezi.1965.1of3.Lord.of.the.Land.WebRip.MVGroup")
+        // Dots become spaces and release tokens (1of3, WebRip, MVGroup) are removed.
+        assertTrue(cleaned.contains("Zambezi"))
+        assertTrue(cleaned.contains("Lord of the Land"))
+        assertTrue(!cleaned.contains("WebRip", ignoreCase = true))
+        assertTrue(!cleaned.contains("MVGroup", ignoreCase = true))
+        assertTrue(!cleaned.contains("1of3", ignoreCase = true))
+    }
+
+    @Test fun buildSearchParamsCleansTitleAndAddsYear() {
+        val p = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
+            .buildSearchParams(listOf("he"), movieHash = null, title = "The.Matrix.1999.1080p.BluRay", year = "1999")
+        assertEquals("he", p["languages"])
+        assertEquals("1999", p["year"])
+        assertTrue(p["query"]!!.contains("Matrix"))
+        assertTrue(!p["query"]!!.contains("1080p"))
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),

@@ -17,6 +17,7 @@ object PipelineBus {
     private var translationDecision: CompletableDeferred<TranslationChoice>? = null
     private var asrDecision: CompletableDeferred<Boolean>? = null
     private var outputDecision: CompletableDeferred<OutputChoice>? = null
+    private var videoInfoDecision: CompletableDeferred<VideoInfo>? = null
 
     fun update(state: PipelineState) { _state.value = state }
 
@@ -24,7 +25,20 @@ object PipelineBus {
         translationDecision = null
         asrDecision = null
         outputDecision = null
+        videoInfoDecision = null
         _state.value = PipelineState.Idle
+    }
+
+    suspend fun awaitVideoInfo(suggestedName: String): VideoInfo {
+        val deferred = CompletableDeferred<VideoInfo>()
+        videoInfoDecision = deferred
+        _state.value = PipelineState.NeedVideoInfo(suggestedName)
+        return deferred.await()
+    }
+
+    fun submitVideoInfo(info: VideoInfo) {
+        videoInfoDecision?.complete(info)
+        videoInfoDecision = null
     }
 
     suspend fun awaitTranslationChoice(cloudAvailable: Boolean): TranslationChoice {

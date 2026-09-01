@@ -105,9 +105,19 @@ class ProcessingService : Service() {
                 }
             }
 
-            // §ב.2.1/§ב.2.2 — move/download the video into its own folder under HebSub.
+            // §2 — before creating the folder, let the user confirm/edit the name
+            // and optionally enter the year.
+            val suggested = name.substringBeforeLast('.').ifBlank { name }
+            val info = PipelineBus.awaitVideoInfo(suggested)
+            val ext = name.substringAfterLast('.', "mp4").ifBlank { "mp4" }
+            val cleanName = storage.sanitize(info.name.ifBlank { suggested })
+            val yr = info.year?.filter { it.isDigit() }?.take(4)
+            val folderName = if (!yr.isNullOrBlank()) "$cleanName-$yr" else cleanName
+            RunLog.log("user confirmed: name='$cleanName' year='${yr ?: "-"}' folder='$folderName'")
+
+            // §2.1/§2.2/§2.3 — folder + video share the confirmed name.
             PipelineBus.update(PipelineState.Running("הכנת תיקיית הוידאו", null))
-            val placed = storage.placeVideo(videoFile, name)
+            val placed = storage.placeVideo(videoFile, folderName, "$folderName.$ext")
             logDir = placed.dir
             RunLog.log("video folder=${placed.dir.absolutePath} video=${placed.video.name}")
 
@@ -119,17 +129,16 @@ class ProcessingService : Service() {
                             else UnavailableAsrEngine(),
                 outputDir = placed.dir,
             )
-            pipeline.run(placed.video, placed.base)
+            pipeline.run(placed.video, placed.base, yr)
             } catch (t: Throwable) {
                 RunLog.error("service failed", t)
                 val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
                 PipelineBus.update(PipelineState.Failed("שגיאה — $detail"))
             } finally {
-                // §ב.6 — write the detailed log into the video's folder (local only).
+                // §2.3/§ב.6 — log file shares the folder name, written into the folder.
                 runCatching {
                     withContext(NonCancellable) {
-                        val ts = System.currentTimeMillis() / 1000
-                        File(logDir, "HebSub-log-$ts.txt").writeText(RunLog.dump(), Charsets.UTF_8)
+                        File(logDir, "${logDir.name}.txt").writeText(RunLog.dump(), Charsets.UTF_8)
                     }
                 }
                 workDir.deleteRecursively()
