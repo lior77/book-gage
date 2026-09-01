@@ -1,14 +1,14 @@
 <resources>
     <string name="app_name">HebSub 1.2 — כתוביות עברית</string>
 
-    <string name="home_title">כתוביות עברית לסרטים · גרסה 1.2</string>
+    <string name="home_title">כתוביות עברית לסרטים</string>
 
     <string name="video_info_title">פרטי הוידאו</string>
     <string name="video_info_body">בדקו/ערכו את שם הקובץ, והזינו שנת הפקה אם ידועה. תיקייה בשם זה תיווצר בתוך HebSub.</string>
     <string name="video_info_name">שם הקובץ</string>
     <string name="video_info_year">שנה (לא חובה)</string>
     <string name="video_info_confirm">אישור והמשך</string>
-    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים</string>
+    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 1.2</string>
     <string name="pick_file">בחירת קובץ וידאו מהמכשיר</string>
     <string name="paste_link">הוספת קישור להורדת וידאו</string>
     <string name="link_hint">הדביקו או הקלידו כתובת וידאו (https://…)</string>

@@ -215,7 +215,14 @@ private fun HomeScreen(onOpenSettings: () -> Unit) {
         // Title on the right (RTL start); the settings gear sits in the top-left
         // (RTL end) corner — a tap opens the key-entry screen.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineSmall)
+            // weight(1f) reserves space for the gear so a long title can never push
+            // it off-screen; the gear stays pinned in the top-left (RTL end) corner.
+            Text(
+                stringResource(R.string.home_title),
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 2,
+                modifier = Modifier.weight(1f),
+            )
             IconButton(onClick = onOpenSettings) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
             }
