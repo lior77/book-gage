@@ -68,14 +68,19 @@ class FfmpegMediaTool : MediaTool {
         srt: File,
         existingSubtitleCount: Int,
         outMkv: File,
-    ): Boolean = run(
-        "-y", "-i", input.absolutePath, "-i", srt.absolutePath,
-        "-map", "0", "-map", "1",
-        "-c", "copy", "-c:s", "srt",
-        "-metadata:s:s:$existingSubtitleCount", "language=heb",
-        "-metadata:s:s:$existingSubtitleCount", "title=עברית",
-        outMkv.absolutePath,
-    )
+    ): Boolean {
+        // Pick the subtitle codec from the file: ASS (styled box for burned-in
+        // cover) stays ASS; everything else is written as SRT.
+        val subCodec = if (srt.extension.equals("ass", ignoreCase = true)) "ass" else "srt"
+        return run(
+            "-y", "-i", input.absolutePath, "-i", srt.absolutePath,
+            "-map", "0", "-map", "1",
+            "-c", "copy", "-c:s", subCodec,
+            "-metadata:s:s:$existingSubtitleCount", "language=heb",
+            "-metadata:s:s:$existingSubtitleCount", "title=עברית",
+            outMkv.absolutePath,
+        )
+    }
 
     private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
         try {

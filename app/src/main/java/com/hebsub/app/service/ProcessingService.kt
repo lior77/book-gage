@@ -129,7 +129,7 @@ class ProcessingService : Service() {
                             else UnavailableAsrEngine(),
                 outputDir = placed.dir,
             )
-            pipeline.run(placed.video, placed.base, yr)
+            pipeline.run(placed.video, placed.base, yr, info.hideBurnedIn)
             } catch (t: Throwable) {
                 RunLog.error("service failed", t)
                 val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)

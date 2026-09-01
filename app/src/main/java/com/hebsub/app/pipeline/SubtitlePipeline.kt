@@ -12,6 +12,7 @@ import com.hebsub.app.translate.MlKitTranslator
 import com.hebsub.core.lang.Language
 import com.hebsub.core.pipeline.AcquisitionStep
 import com.hebsub.core.pipeline.SubtitleSourcePlanner
+import com.hebsub.core.subtitle.AssWriter
 import com.hebsub.core.subtitle.SrtParser
 import com.hebsub.core.subtitle.SrtWriter
 import com.hebsub.core.subtitle.SubtitleCue
@@ -43,8 +44,12 @@ class SubtitlePipeline(
         val readyHebrew: Boolean,
     )
 
-    /** @param base the confirmed folder name; @param year optional 4-digit year for the online search. */
-    suspend fun run(videoFile: File, base: String, year: String?) {
+    /**
+     * @param base the confirmed folder name; @param year optional 4-digit year for the online search.
+     * @param hideBurnedIn when true, the embedded Hebrew track is ASS with a gray
+     *   semi-transparent box behind each line, to cover burned-in foreign subtitles.
+     */
+    suspend fun run(videoFile: File, base: String, year: String?, hideBurnedIn: Boolean = false) {
         try {
             PipelineBus.update(PipelineState.Running("קריאת נתוני הקובץ", null))
             RunLog.log("mediaTool=${mediaTool::class.java.simpleName} outputDir=${outputDir.absolutePath}")
@@ -105,6 +110,15 @@ class SubtitlePipeline(
             // pick it up without the (crash-prone) manual external-subtitle picker.
             runCatching { File(outputDir, "$base.he.srt").writeText(srtText, Charsets.UTF_8) }
 
+            // When the film has burned-in foreign subtitles, produce an ASS track
+            // whose lines sit on a gray semi-transparent box that covers them.
+            val subForMux: File = if (hideBurnedIn) {
+                val ass = File(outputDir, "$base.he.ass")
+                ass.writeText(AssWriter.write(finalCues, backgroundBox = true), Charsets.UTF_8)
+                RunLog.log("wrote ASS with cover box: ${ass.absolutePath}")
+                ass
+            } else srtFile
+
             // Create a media file with the Hebrew as a selectable embedded track
             // (fast lossless remux to MKV). Avoids external-subtitle selection.
             var mediaName: String? = null
@@ -112,7 +126,7 @@ class SubtitlePipeline(
                 PipelineBus.update(PipelineState.Running("יצירת קובץ מדיה עם מסלול עברית", null))
                 val outMkv = File(outputDir, "$base.he.mkv")
                 val muxed = runCatching {
-                    mediaTool.remuxWithHebrew(videoFile, srtFile, probe.subtitleCount, outMkv)
+                    mediaTool.remuxWithHebrew(videoFile, subForMux, probe.subtitleCount, outMkv)
                 }.getOrElse { RunLog.error("remux failed", it); false }
                 if (muxed && outMkv.exists()) {
                     mediaName = outMkv.name

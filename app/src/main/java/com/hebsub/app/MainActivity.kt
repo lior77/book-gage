@@ -461,6 +461,7 @@ private fun PipelineOverlay(state: PipelineState) {
         is PipelineState.NeedVideoInfo -> Dialog(dismissable = false) {
             var name by remember(state.suggestedName) { mutableStateOf(state.suggestedName) }
             var year by remember(state.suggestedName) { mutableStateOf("") }
+            var burnedIn by remember(state.suggestedName) { mutableStateOf(false) }
             Column {
                 Text(stringResource(R.string.video_info_title), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
@@ -480,9 +481,18 @@ private fun PipelineOverlay(state: PipelineState) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = burnedIn, onCheckedChange = { burnedIn = it })
+                    Spacer(Modifier.width(4.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.burned_in_label), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.burned_in_hint), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { PipelineBus.submitVideoInfo(VideoInfo(name.trim(), year.ifBlank { null })) },
+                    onClick = { PipelineBus.submitVideoInfo(VideoInfo(name.trim(), year.ifBlank { null }, burnedIn)) },
                     enabled = name.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.video_info_confirm)) }

@@ -156,6 +156,27 @@ class SubtitleSourcePlannerTest {
         assertEquals(false, ranked[0].fromTrusted) // null coerced to the default
     }
 
+    @Test fun assWriterEmitsCoverBoxStyleAndDialogue() {
+        val cues = listOf(
+            com.hebsub.core.subtitle.SubtitleCue(1, 2480, 3699, listOf("שלום", "עולם")),
+        )
+        val ass = com.hebsub.core.subtitle.AssWriter.write(cues, backgroundBox = true)
+        // BorderStyle 3 = opaque box; a semi-transparent gray BackColour is set.
+        assertTrue(ass.contains("Style: Default,"))
+        assertTrue(Regex(""",3,\d+,0,2,""").containsMatchIn(ass)) // BorderStyle=3
+        assertTrue(ass.contains("&H60303030"))                    // gray, alpha 0x60
+        assertTrue(ass.contains("Dialogue: 0,0:00:02.48,0:00:03.69,Default"))
+        assertTrue(ass.contains("שלום\\Nעולם"))                    // lines joined with \N
+    }
+
+    @Test fun assWriterPlainWhenNoBox() {
+        val ass = com.hebsub.core.subtitle.AssWriter.write(
+            listOf(com.hebsub.core.subtitle.SubtitleCue(1, 0, 1000, listOf("א"))),
+            backgroundBox = false,
+        )
+        assertTrue(Regex(""",1,\d+,0,2,""").containsMatchIn(ass)) // BorderStyle=1 (outline)
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),

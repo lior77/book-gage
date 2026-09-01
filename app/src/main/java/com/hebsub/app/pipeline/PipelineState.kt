@@ -6,8 +6,12 @@ enum class TranslationChoice { LOCAL, CLOUD, STOP }
 /** Final output decision (spec §8): a subtitle sidecar, or a new media file with the track embedded. */
 enum class OutputChoice { SAVE_SRT, EMBED_MEDIA }
 
-/** The name (user-editable) and optional year the user confirms before the folder is created (spec §2). */
-data class VideoInfo(val name: String, val year: String?)
+/**
+ * What the user confirms before the folder is created (spec §2): the (editable)
+ * name, an optional year, and whether the film has burned-in foreign subtitles
+ * that the Hebrew track should cover with a gray plate ([hideBurnedIn]).
+ */
+data class VideoInfo(val name: String, val year: String?, val hideBurnedIn: Boolean = false)
 
 /** Everything the UI needs to render, driven by the pipeline running in the service. */
 sealed interface PipelineState {
