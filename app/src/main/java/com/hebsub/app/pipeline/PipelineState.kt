@@ -28,8 +28,9 @@ sealed interface PipelineState {
     /** Hebrew is ready; ask how to deliver it. [embedMediaAvailable] gates the embed option. */
     data class NeedOutputChoice(val embedMediaAvailable: Boolean) : PipelineState
 
-    /** Hebrew subtitles written. [folder] is the video's HebSub folder, [srtName] the Hebrew .srt. */
-    data class Success(val folder: String, val srtName: String) : PipelineState
+    /** Hebrew subtitles written. [folder] is the video's HebSub folder, [srtName] the Hebrew .srt,
+     *  [mediaName] the new MKV with the embedded Hebrew track (null if not created). */
+    data class Success(val folder: String, val srtName: String, val mediaName: String? = null) : PipelineState
 
     data class Failed(val message: String) : PipelineState
 }

@@ -554,9 +554,13 @@ private fun PipelineOverlay(state: PipelineState) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Column(Modifier.fillMaxWidth()) {
                         Text("📁 ${state.folder}", style = MaterialTheme.typography.bodySmall)
+                        state.mediaName?.let { Text("🎬 $it", style = MaterialTheme.typography.bodySmall) }
                         Text("• ${state.srtName}", style = MaterialTheme.typography.bodySmall)
-                        Text("• HebSub-log-*.txt", style = MaterialTheme.typography.bodySmall)
                     }
+                }
+                if (state.mediaName != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("פתחו את קובץ ה־MKV בנגן ובחרו את מסלול העברית.", style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }

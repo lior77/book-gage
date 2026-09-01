@@ -97,10 +97,32 @@ class SubtitlePipeline(
             val finalCues = SubtitlePostProcessor.process(hebrewCues)
             val srtName = "he-$base.srt"
             val srtFile = File(outputDir, srtName)
-            srtFile.writeText(SrtWriter.write(finalCues), Charsets.UTF_8)
+            val srtText = SrtWriter.write(finalCues)
+            srtFile.writeText(srtText, Charsets.UTF_8)
             RunLog.log("wrote Hebrew subtitles: ${srtFile.absolutePath}")
 
-            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, srtName))
+            // Also save a player-auto-load sidecar named after the video, so VLC/MX
+            // pick it up without the (crash-prone) manual external-subtitle picker.
+            runCatching { File(outputDir, "$base.he.srt").writeText(srtText, Charsets.UTF_8) }
+
+            // Create a media file with the Hebrew as a selectable embedded track
+            // (fast lossless remux to MKV). Avoids external-subtitle selection.
+            var mediaName: String? = null
+            if (mediaTool.canEmbed) {
+                PipelineBus.update(PipelineState.Running("יצירת קובץ מדיה עם מסלול עברית", null))
+                val outMkv = File(outputDir, "$base.he.mkv")
+                val muxed = runCatching {
+                    mediaTool.remuxWithHebrew(videoFile, srtFile, probe.subtitleCount, outMkv)
+                }.getOrElse { RunLog.error("remux failed", it); false }
+                if (muxed && outMkv.exists()) {
+                    mediaName = outMkv.name
+                    RunLog.log("wrote media file: ${outMkv.absolutePath} (${outMkv.length()} bytes)")
+                } else {
+                    RunLog.log("media file not created (muxed=$muxed exists=${outMkv.exists()})")
+                }
+            }
+
+            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, srtName, mediaName))
             RunLog.log("run finished OK")
         } catch (t: Throwable) {
             RunLog.error("run failed", t)
