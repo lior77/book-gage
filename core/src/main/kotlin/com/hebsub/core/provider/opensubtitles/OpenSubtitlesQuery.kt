@@ -13,7 +13,12 @@ import kotlinx.serialization.json.Json
  */
 object OpenSubtitlesQuery {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    // coerceInputValues: OpenSubtitles sometimes sends an explicit null for a
+    // boolean/number field (e.g. "from_trusted": null). Without this, a non-null
+    // property with a default throws JsonDecodingException on that null; with it,
+    // the property falls back to its default. ignoreUnknownKeys lets the API add
+    // fields without breaking us.
+    private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     /**
      * Build the query parameters for `GET /api/v1/subtitles`.

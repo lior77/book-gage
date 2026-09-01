@@ -138,6 +138,24 @@ class SubtitleSourcePlannerTest {
         assertTrue(!p["query"]!!.contains("1080p"))
     }
 
+    @Test fun parseToleratesNullBooleanFields() {
+        // OpenSubtitles can return an explicit null for from_trusted/hearing_impaired;
+        // parsing must not throw (regression: JsonDecodingException crashed a run).
+        val raw = """
+            {"total_count":1,"data":[{"id":"1","attributes":{
+              "language":"en","download_count":7,
+              "from_trusted":null,"hearing_impaired":null,"machine_translated":null,
+              "foreign_parts_only":false,
+              "files":[{"file_id":123,"file_name":"movie.en.srt"}]
+            }}]}
+        """.trimIndent()
+        val resp = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery.parse(raw)
+        val ranked = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery.rankCandidates(resp, listOf("en"))
+        assertEquals(1, ranked.size)
+        assertEquals(123L, ranked[0].fileId)
+        assertEquals(false, ranked[0].fromTrusted) // null coerced to the default
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),

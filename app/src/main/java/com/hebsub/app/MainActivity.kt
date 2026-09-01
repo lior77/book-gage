@@ -569,7 +569,7 @@ private fun PipelineOverlay(state: PipelineState) {
                 Spacer(Modifier.height(8.dp))
                 Text(state.message)
                 Spacer(Modifier.height(8.dp))
-                Text("יומן מפורט נשמר בתיקיית הוידאו תחת HebSub (HebSub-log-*.txt)", style = MaterialTheme.typography.bodySmall)
+                Text("יומן מפורט נשמר בתיקיית הוידאו (קובץ בשם התיקייה, ‎.txt‎), וקובץ crash-*.txt בתיקיית HebSub אם היתה קריסה.", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }
