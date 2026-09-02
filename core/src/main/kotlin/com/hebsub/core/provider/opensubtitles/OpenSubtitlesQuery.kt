@@ -30,6 +30,7 @@ object OpenSubtitlesQuery {
         movieHash: String? = null,
         title: String? = null,
         year: String? = null,
+        imdbId: String? = null,
     ): Map<String, String> {
         val params = LinkedHashMap<String, String>()
         val langs = languages.mapNotNull { Language.canonical(it) }.distinct()
@@ -38,10 +39,17 @@ object OpenSubtitlesQuery {
             params["languages"] = langs.sorted().joinToString(",")
         }
         if (!movieHash.isNullOrBlank()) params["moviehash"] = movieHash.lowercase()
-        val cleaned = title?.let { cleanQuery(it) }
-        if (!cleaned.isNullOrBlank()) params["query"] = cleaned
-        val yr = year?.filter { it.isDigit() }?.take(4)
-        if (!yr.isNullOrBlank()) params["year"] = yr
+        // imdb_id pins the exact film (numeric, no "tt") — the most reliable match.
+        val imdb = imdbId?.filter { it.isDigit() }?.trimStart('0')
+        if (!imdb.isNullOrBlank()) {
+            params["imdb_id"] = imdb
+        } else {
+            // Fall back to a cleaned title + year only when there is no imdb id.
+            val cleaned = title?.let { cleanQuery(it) }
+            if (!cleaned.isNullOrBlank()) params["query"] = cleaned
+            val yr = year?.filter { it.isDigit() }?.take(4)
+            if (!yr.isNullOrBlank()) params["year"] = yr
+        }
         return params
     }
 

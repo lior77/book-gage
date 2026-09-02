@@ -44,10 +44,11 @@ class OpenSubtitlesService(private val apiKey: String) {
         movieHash: String?,
         title: String?,
         year: String?,
+        imdbId: String? = null,
         excludeHearingImpaired: Boolean = true,
     ): List<OsCandidate> = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) return@withContext emptyList()
-        val params = OpenSubtitlesQuery.buildSearchParams(languagePriority, movieHash, title, year)
+        val params = OpenSubtitlesQuery.buildSearchParams(languagePriority, movieHash, title, year, imdbId)
         val urlBuilder = "$base/subtitles".toHttpUrl().newBuilder()
         params.forEach { (k, v) -> urlBuilder.addQueryParameter(k, v) }
 

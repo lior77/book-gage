@@ -110,12 +110,25 @@ class ProcessingService : Service() {
             val suggested = name.substringBeforeLast('.').ifBlank { name }
             val info = PipelineBus.awaitVideoInfo(suggested)
             val ext = name.substringAfterLast('.', "mp4").ifBlank { "mp4" }
-            val cleanName = storage.sanitize(info.name.ifBlank { suggested })
-            val yr = info.year?.filter { it.isDigit() }?.take(4)
-            val folderName = if (!yr.isNullOrBlank()) "$cleanName-$yr" else cleanName
-            RunLog.log("user confirmed: name='$cleanName' year='${yr ?: "-"}' folder='$folderName'")
 
-            // §2.1/§2.2/§2.3 — folder + video share the confirmed name.
+            // §2.2 — if an IMDb link + OMDb key are present, fetch the record BEFORE
+            // creating the folder so the folder/files get the canonical name+year.
+            val imdbId = com.hebsub.core.provider.omdb.Omdb.imdbId(info.imdbUrl)
+            val movie = if (imdbId != null && settings.hasOmdbKey) {
+                PipelineBus.update(PipelineState.Running("שליפת נתוני הסרט מ‑IMDb", null))
+                com.hebsub.app.provider.OmdbService(settings.omdbApiKey).fetch(imdbId)
+            } else null
+            if (imdbId != null && movie == null && settings.hasOmdbKey) RunLog.log("OMDb: no data for tt$imdbId")
+
+            val typedName = storage.sanitize(info.name.ifBlank { suggested })
+            val typedYear = info.year?.filter { it.isDigit() }?.take(4)
+            // Prefer the canonical OMDb title/year for naming when available.
+            val cleanName = movie?.title?.takeIf { it.isNotBlank() && it != "N/A" }?.let { storage.sanitize(it) } ?: typedName
+            val yr = movie?.year?.filter { it.isDigit() }?.take(4)?.ifBlank { null } ?: typedYear
+            val folderName = if (!yr.isNullOrBlank()) "$cleanName-$yr" else cleanName
+            RunLog.log("naming: name='$cleanName' year='${yr ?: "-"}' folder='$folderName' fromOmdb=${movie != null}")
+
+            // §2.1/§2.3 — folder + video share the confirmed name.
             PipelineBus.update(PipelineState.Running("הכנת תיקיית הוידאו", null))
             val placed = storage.placeVideo(videoFile, folderName, "$folderName.$ext")
             logDir = placed.dir
@@ -133,7 +146,8 @@ class ProcessingService : Service() {
                 videoFile = placed.video,
                 base = placed.base,
                 year = yr,
-                imdbUrl = info.imdbUrl,
+                imdbId = imdbId,
+                movie = movie,
                 subtitlePath = info.subtitlePath,
                 bgTransparency = info.bgTransparency,
                 deleteData = info.deleteData,

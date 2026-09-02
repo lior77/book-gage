@@ -195,6 +195,14 @@ class SubtitleSourcePlannerTest {
         assertTrue(m.hasPoster)
     }
 
+    @Test fun buildSearchParamsUsesImdbIdWhenPresent() {
+        val p = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
+            .buildSearchParams(listOf("he"), movieHash = null, title = "The Matrix", year = "1999", imdbId = "tt0133093")
+        assertEquals("133093", p["imdb_id"]) // "tt" and leading zeros stripped
+        assertEquals(null, p["query"])        // imdb id replaces the title/year query
+        assertEquals(null, p["year"])
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),
