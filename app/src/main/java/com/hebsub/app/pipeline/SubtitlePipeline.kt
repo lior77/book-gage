@@ -89,8 +89,13 @@ class SubtitlePipeline(
             if (mediaTool.canEmbed) {
                 PipelineBus.update(PipelineState.Running("יצירת קובץ מדיה עם מסלול עברית", null))
                 val outMkv = File(outputDir, "$base.he.mkv")
+                // When the primary track is a styled ASS plate, also mux the plain
+                // SRT sidecar as a second, universally-selectable Hebrew track.
+                val srtSidecar = File(outputDir, "he-$base.srt")
+                val secondary = if (built.extension.equals("ass", ignoreCase = true) && srtSidecar.exists())
+                    srtSidecar else null
                 val muxed = runCatching {
-                    mediaTool.remuxWithHebrewAndMeta(videoFile, built, probe.subtitleCount, outMkv, metadata, poster)
+                    mediaTool.remuxWithHebrewAndMeta(videoFile, built, secondary, probe.subtitleCount, outMkv, metadata, poster)
                 }.getOrElse { RunLog.error("remux failed", it); false }
                 if (muxed && outMkv.exists()) {
                     mediaName = outMkv.name

@@ -40,10 +40,19 @@ interface MediaTool {
      * Like [remuxWithHebrew], plus writes global [metadata] tags (title, year,
      * Hebrew description, …) and attaches [poster] as MKV cover art. Used for the
      * IMDb-enriched output (spec §2).
+     *
+     * [sub] is the primary Hebrew track (an ASS plate when a background is wanted,
+     * otherwise a plain SRT). [secondarySub], when given, is muxed as a **second,
+     * parallel** Hebrew track — used to add a universally-selectable plain SRT
+     * alongside a styled ASS, so every player exposes a Hebrew track. Both are
+     * copied with `-c:s copy` (no re-encode; the video/audio are always copied
+     * losslessly). The container is read back with ffprobe afterwards to confirm
+     * the Hebrew tracks are really present.
      */
     suspend fun remuxWithHebrewAndMeta(
         input: File,
         sub: File,
+        secondarySub: File?,
         existingSubtitleCount: Int,
         outMkv: File,
         metadata: Map<String, String>,

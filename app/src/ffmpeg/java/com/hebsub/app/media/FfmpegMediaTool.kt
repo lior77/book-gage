@@ -3,6 +3,7 @@ package com.hebsub.app.media
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFprobeKit
 import com.arthenica.ffmpegkit.ReturnCode
+import com.hebsub.app.log.RunLog
 import com.hebsub.core.lang.Language
 import com.hebsub.core.pipeline.EmbeddedSubtitle
 import kotlinx.coroutines.Dispatchers
@@ -85,21 +86,42 @@ class FfmpegMediaTool : MediaTool {
     override suspend fun remuxWithHebrewAndMeta(
         input: File,
         sub: File,
+        secondarySub: File?,
         existingSubtitleCount: Int,
         outMkv: File,
         metadata: Map<String, String>,
         poster: File?,
     ): Boolean {
-        val subCodec = if (sub.extension.equals("ass", ignoreCase = true)) "ass" else "srt"
+        // Upgrade (a): copy every subtitle stream verbatim (`-c:s copy`) — never
+        // re-encode. The styled ASS keeps its background plate, and when one is
+        // present we also mux the plain SRT sidecar as a SECOND parallel Hebrew
+        // track (input 2) so every player exposes a selectable Hebrew subtitle.
+        // Video and audio are always `-c copy` (lossless), so film quality is
+        // untouched regardless of the subtitle handling.
+        val hasSecondary = secondarySub != null && secondarySub.exists() &&
+            secondarySub.absolutePath != sub.absolutePath
         val args = ArrayList<String>()
         args += listOf("-y", "-i", input.absolutePath, "-i", sub.absolutePath)
+        if (hasSecondary) args += listOf("-i", secondarySub!!.absolutePath)
         val hasPoster = poster != null && poster.exists()
         if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
-        args += listOf("-map", "0", "-map", "1", "-c", "copy", "-c:s", subCodec)
+        args += listOf("-map", "0", "-map", "1")
+        if (hasSecondary) args += listOf("-map", "2")
+        args += listOf("-c", "copy", "-c:s", "copy")
+
+        // Primary Hebrew track (the muxed `sub` — ASS plate or plain SRT).
         args += listOf(
             "-metadata:s:s:$existingSubtitleCount", "language=heb",
             "-metadata:s:s:$existingSubtitleCount", "title=עברית",
         )
+        // Second, universally-selectable plain-text Hebrew track.
+        if (hasSecondary) {
+            val i = existingSubtitleCount + 1
+            args += listOf(
+                "-metadata:s:s:$i", "language=heb",
+                "-metadata:s:s:$i", "title=עברית (טקסט)",
+            )
+        }
         if (hasPoster) {
             val mime = if (poster!!.extension.equals("png", true)) "image/png" else "image/jpeg"
             val fname = if (mime == "image/png") "cover.png" else "cover.jpg"
@@ -110,7 +132,37 @@ class FfmpegMediaTool : MediaTool {
             if (clean.isNotEmpty()) args += listOf("-metadata", "$k=$clean")
         }
         args += outMkv.absolutePath
-        return run(*args.toTypedArray())
+        val ok = run(*args.toTypedArray())
+        // Upgrade (b): read the file back and prove the Hebrew tracks are there.
+        if (ok) verifySubtitleTracks(outMkv)
+        return ok
+    }
+
+    /**
+     * Upgrade (b): re-probe the freshly written MKV and log every subtitle stream
+     * it actually contains (codec, language, title), turning "wrote media file"
+     * into a verified fact. Purely diagnostic — never fails the run.
+     */
+    private suspend fun verifySubtitleTracks(outMkv: File) = withContext(Dispatchers.IO) {
+        try {
+            val info = FFprobeKit.getMediaInformation(outMkv.absolutePath).mediaInformation
+            if (info == null) { RunLog.log("verify: ffprobe returned no media info for ${outMkv.name}"); return@withContext }
+            val subs = ArrayList<String>()
+            for (stream in info.streams ?: emptyList()) {
+                if (stream.type != "subtitle") continue
+                val props = runCatching { stream.allProperties }.getOrNull()
+                val tags = props?.optJSONObject("tags")
+                val lang = tags?.optString("language").takeUnless { it.isNullOrBlank() } ?: "?"
+                val title = tags?.optString("title").takeUnless { it.isNullOrBlank() } ?: "?"
+                val codec = stream.codec ?: "?"
+                subs += "s:${stream.index}[$codec/$lang/\"$title\"]"
+            }
+            val heb = subs.count { it.contains("/heb/") || it.contains("/he/") }
+            RunLog.log("verify: ${outMkv.name} subtitleStreams=${subs.size} hebrew=$heb ${subs.joinToString(" ")}")
+            if (heb == 0) RunLog.error("verify: NO Hebrew subtitle track found in ${outMkv.name}")
+        } catch (t: Throwable) {
+            RunLog.error("verify failed", t)
+        }
     }
 
     private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
