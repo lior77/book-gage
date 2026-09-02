@@ -32,7 +32,8 @@ class OpenSubtitlesService(private val apiKey: String) {
         movieHash: String?,
         title: String?,
         excludeHearingImpaired: Boolean = true,
-    ): OsCandidate? = findCandidates(languagePriority, movieHash, title, null, excludeHearingImpaired).firstOrNull()
+    ): OsCandidate? =
+        findCandidates(languagePriority, movieHash, title, year = null, excludeHearingImpaired = excludeHearingImpaired).firstOrNull()
 
     /**
      * Search and return ALL matching candidates ranked best-first, so the caller
