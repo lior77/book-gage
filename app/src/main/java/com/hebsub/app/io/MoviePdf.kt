@@ -8,6 +8,7 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.text.Layout
 import android.text.StaticLayout
+import android.text.TextDirectionHeuristic
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
 import com.hebsub.core.provider.omdb.OmdbMovie
@@ -108,7 +109,7 @@ object MoviePdf {
     private fun drawWrapped(
         ctx: PageCtx, text: String, paint: TextPaint,
         x: Float, startY: Float, width: Float,
-        align: Layout.Alignment, dir: TextDirectionHeuristics,
+        align: Layout.Alignment, dir: TextDirectionHeuristic,
     ): Float {
         if (text.isBlank() || text == "N/A") return startY
         val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width.toInt())
