@@ -4,25 +4,29 @@ package com.hebsub.core.subtitle
  * Writes cues as an ASS/SSA subtitle. Unlike SRT, ASS can draw a filled box
  * behind the text (BorderStyle 3 + a semi-transparent BackColour), which is used
  * to cover burned-in ("hardcoded") foreign subtitles that can't be turned off:
- * when [backgroundBox] is on, each Hebrew line sits on a gray, half-transparent
- * plate that hides the subtitle burned into the picture beneath it.
+ * with a plate, each Hebrew line sits on a gray, semi-transparent plate that
+ * hides the subtitle burned into the picture beneath it.
  *
  * ASS colours are &HAABBGGRR with INVERTED alpha (00 = opaque, FF = transparent).
  */
 object AssWriter {
 
-    // Gray plate, partly opaque (alpha 0x60 ≈ 62% opaque) — visible as a
-    // semi-transparent gray while still obscuring text underneath.
-    private const val BOX_BACK_COLOUR = "&H60303030"
-
+    /**
+     * @param bgTransparencyPercent 0 = fully opaque gray plate (hides burned-in
+     *   subs best), 100 = no plate at all. ASS alpha is inverted, so
+     *   transparency% maps directly to the alpha byte (0→00 opaque, 100→FF).
+     */
     fun write(
         cues: List<SubtitleCue>,
-        backgroundBox: Boolean,
+        bgTransparencyPercent: Int = 100,
         fontSize: Int = 26,
     ): String {
-        val borderStyle = if (backgroundBox) 3 else 1   // 3 = opaque box, 1 = outline
-        val outline = if (backgroundBox) 8 else 2        // box padding / text outline
-        val backColour = if (backgroundBox) BOX_BACK_COLOUR else "&H00000000"
+        val t = bgTransparencyPercent.coerceIn(0, 100)
+        val box = t < 100
+        val borderStyle = if (box) 3 else 1   // 3 = opaque box, 1 = outline
+        val outline = if (box) 8 else 2        // box padding / text outline
+        val alphaHex = "%02X".format(t * 255 / 100)
+        val backColour = if (box) "&H${alphaHex}303030" else "&H00000000"
 
         val sb = StringBuilder()
         sb.append(

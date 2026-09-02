@@ -83,7 +83,8 @@ object OpenSubtitlesQuery {
             val i = priority.indexOf(c.language)
             return if (i >= 0) i else Int.MAX_VALUE
         }
-        val comparator = compareBy<OsCandidate> { langRank(it) }
+        val comparator = compareByDescending<OsCandidate> { it.hashMatch } // exact file match wins
+            .thenBy { langRank(it) }
             .thenByDescending { if (excludeHearingImpaired) !it.hearingImpaired else false }
             .thenByDescending { !it.machineTranslated }
             .thenByDescending { it.fromTrusted }
@@ -103,6 +104,7 @@ object OpenSubtitlesQuery {
                     machineTranslated = a.machineTranslated,
                     fromTrusted = a.fromTrusted,
                     release = a.release,
+                    hashMatch = a.movieHashMatch,
                 )
             }
         }
@@ -133,6 +135,7 @@ object OpenSubtitlesQuery {
                     machineTranslated = a.machineTranslated,
                     fromTrusted = a.fromTrusted,
                     release = a.release,
+                    hashMatch = a.movieHashMatch,
                 )
             }
         }

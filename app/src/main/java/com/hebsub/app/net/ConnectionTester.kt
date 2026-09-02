@@ -112,6 +112,32 @@ object ConnectionTester {
         }.getOrElse { networkError("Deepgram", it) }
     }
 
+    /** OMDb: look up a known title — 200 with Response:True means the key works. */
+    suspend fun testOmdb(apiKey: String): Result = withContext(Dispatchers.IO) {
+        if (apiKey.isBlank()) return@withContext Result(false, "לא הוזן מפתח")
+        RunLog.log("conn-test OMDb: start")
+        val url = "https://www.omdbapi.com/".toHttpUrl().newBuilder()
+            .addQueryParameter("apikey", apiKey)
+            .addQueryParameter("i", "tt1375666")
+            .build()
+        val req = Request.Builder().url(url).header("Accept", "application/json").get().build()
+        runCatching {
+            PrivacyHttp.client.newCall(req).execute().use { resp ->
+                val body = resp.body?.string().orEmpty()
+                val trueResp = runCatching { JSONObject(body).optString("Response") }.getOrNull()
+                if (resp.isSuccessful && trueResp.equals("True", ignoreCase = true)) {
+                    RunLog.log("conn-test OMDb: OK ${resp.code}")
+                    Result(true, "החיבור הצליח — המפתח תקין")
+                } else {
+                    val detail = runCatching { JSONObject(body).optString("Error") }.getOrNull()
+                    val msg = if (!detail.isNullOrBlank()) "מפתח לא תקין — $detail" else failureMessage("OMDb", resp.code, body)
+                    RunLog.error("conn-test OMDb: $msg")
+                    Result(false, msg)
+                }
+            }
+        }.getOrElse { networkError("OMDb", it) }
+    }
+
     private fun failureMessage(service: String, code: Int, body: String): String {
         val base = when (code) {
             401 -> "מפתח לא תקין או לא מורשה (401)"

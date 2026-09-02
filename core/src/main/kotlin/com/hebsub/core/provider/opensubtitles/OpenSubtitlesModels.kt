@@ -29,6 +29,7 @@ data class OsAttributes(
     @SerialName("hearing_impaired") val hearingImpaired: Boolean = false,
     @SerialName("machine_translated") val machineTranslated: Boolean = false,
     @SerialName("from_trusted") val fromTrusted: Boolean = false,
+    @SerialName("moviehash_match") val movieHashMatch: Boolean = false,
     val release: String? = null,
     val ratings: Double = 0.0,
     val files: List<OsFile> = emptyList(),
@@ -49,4 +50,5 @@ data class OsCandidate(
     val machineTranslated: Boolean,
     val fromTrusted: Boolean,
     val release: String?,
+    val hashMatch: Boolean = false,
 )

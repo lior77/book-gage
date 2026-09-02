@@ -160,8 +160,8 @@ class SubtitleSourcePlannerTest {
         val cues = listOf(
             com.hebsub.core.subtitle.SubtitleCue(1, 2480, 3699, listOf("שלום", "עולם")),
         )
-        val ass = com.hebsub.core.subtitle.AssWriter.write(cues, backgroundBox = true)
-        // BorderStyle 3 = opaque box; a semi-transparent gray BackColour is set.
+        // 38% transparency → alpha 0x60 (38*255/100 = 96).
+        val ass = com.hebsub.core.subtitle.AssWriter.write(cues, bgTransparencyPercent = 38)
         assertTrue(ass.contains("Style: Default,"))
         assertTrue(Regex(""",3,\d+,0,2,""").containsMatchIn(ass)) // BorderStyle=3
         assertTrue(ass.contains("&H60303030"))                    // gray, alpha 0x60
@@ -169,12 +169,30 @@ class SubtitleSourcePlannerTest {
         assertTrue(ass.contains("שלום\\Nעולם"))                    // lines joined with \N
     }
 
-    @Test fun assWriterPlainWhenNoBox() {
+    @Test fun assWriterPlainWhenFullyTransparent() {
         val ass = com.hebsub.core.subtitle.AssWriter.write(
             listOf(com.hebsub.core.subtitle.SubtitleCue(1, 0, 1000, listOf("א"))),
-            backgroundBox = false,
+            bgTransparencyPercent = 100,
         )
-        assertTrue(Regex(""",1,\d+,0,2,""").containsMatchIn(ass)) // BorderStyle=1 (outline)
+        assertTrue(Regex(""",1,\d+,0,2,""").containsMatchIn(ass)) // BorderStyle=1 (no box)
+    }
+
+    @Test fun omdbImdbIdExtraction() {
+        val o = com.hebsub.core.provider.omdb.Omdb
+        assertEquals("tt1375666", o.imdbId("https://www.imdb.com/title/tt1375666/"))
+        assertEquals("tt1375666", o.imdbId("tt1375666"))
+        assertEquals(null, o.imdbId("https://example.com/no-id"))
+    }
+
+    @Test fun omdbParsesRecordAndRuntime() {
+        val raw = """{"Title":"Inception","Year":"2010","Runtime":"148 min","Genre":"Action",
+            "Director":"Christopher Nolan","Actors":"Leonardo DiCaprio","Plot":"A thief...",
+            "Poster":"https://x/y.jpg","imdbRating":"8.8","imdbID":"tt1375666","Response":"True"}"""
+        val m = com.hebsub.core.provider.omdb.Omdb.parse(raw)
+        assertTrue(m.ok)
+        assertEquals("Inception", m.title)
+        assertEquals(148, m.runtimeMinutes)
+        assertTrue(m.hasPoster)
     }
 
     @Test fun offlineOnlyOmitsOnlineSteps() {

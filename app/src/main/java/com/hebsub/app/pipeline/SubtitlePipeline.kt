@@ -3,33 +3,33 @@ package com.hebsub.app.pipeline
 import android.content.Context
 import com.hebsub.app.asr.AsrEngine
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.io.MoviePdf
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaProbe
 import com.hebsub.app.media.MediaTool
+import com.hebsub.app.provider.OmdbService
 import com.hebsub.app.provider.OpenSubtitlesService
 import com.hebsub.app.translate.ClaudeCloudTranslator
+import com.hebsub.app.translate.ClaudeText
 import com.hebsub.app.translate.MlKitTranslator
 import com.hebsub.core.lang.Language
-import com.hebsub.core.pipeline.AcquisitionStep
-import com.hebsub.core.pipeline.SubtitleSourcePlanner
+import com.hebsub.core.provider.omdb.Omdb
+import com.hebsub.core.provider.omdb.OmdbMovie
 import com.hebsub.core.subtitle.AssWriter
 import com.hebsub.core.subtitle.SrtParser
 import com.hebsub.core.subtitle.SrtWriter
 import com.hebsub.core.subtitle.SubtitleCue
 import com.hebsub.core.text.SubtitlePostProcessor
 import java.io.File
-import kotlin.math.abs
 
 /**
- * Executes the updated flow for one video, writing every artifact into the
- * video's own folder inside HebSub. Reports progress through [PipelineBus].
- *
- * Naming (spec §2.2): subtitle files are `<lang>-<folder>.srt`; the finished
- * Hebrew file is `he-<folder>.srt`.
- *
- * Online matches are verified against the video's duration (spec §3): a
- * downloaded subtitle is accepted only if its span is close to the video length,
- * so an unrelated file (a different movie) is rejected rather than translated.
+ * Executes the full flow for one video (updated spec §1–§5):
+ *   chosen subtitle → embedded Hebrew → online Hebrew (hash) → embedded/online
+ *   source (hash, translated) → transcribe (translated). Online matches now
+ *   require an OpenSubtitles moviehash match (exact file), which stops unrelated
+ *   subtitles being picked. Optionally enriches with OMDb (metadata + poster +
+ *   bilingual PDF), embeds the Hebrew track in an MKV with a configurable
+ *   background plate, and deletes intermediate files.
  */
 class SubtitlePipeline(
     private val context: Context,
@@ -38,105 +38,77 @@ class SubtitlePipeline(
     private val asrEngine: AsrEngine,
     private val outputDir: File,
 ) {
-    private data class Source(
-        val cues: List<SubtitleCue>,
-        val language: String?,
-        val readyHebrew: Boolean,
-    )
+    private data class Acq(val cues: List<SubtitleCue>, val language: String?, val readyHebrew: Boolean)
 
-    /**
-     * @param base the confirmed folder name; @param year optional 4-digit year for the online search.
-     * @param hideBurnedIn when true, the embedded Hebrew track is ASS with a gray
-     *   semi-transparent box behind each line, to cover burned-in foreign subtitles.
-     */
-    suspend fun run(videoFile: File, base: String, year: String?, hideBurnedIn: Boolean = false) {
+    suspend fun run(
+        videoFile: File,
+        base: String,
+        year: String?,
+        imdbUrl: String? = null,
+        subtitlePath: String? = null,
+        bgTransparency: Int = 100,
+        deleteData: Boolean = true,
+    ) {
         try {
             PipelineBus.update(PipelineState.Running("קריאת נתוני הקובץ", null))
-            RunLog.log("mediaTool=${mediaTool::class.java.simpleName} outputDir=${outputDir.absolutePath}")
             val probe = runCatching { mediaTool.probe(videoFile) }
                 .getOrElse { RunLog.error("probe failed", it); MediaProbe(emptyList(), null, 0) }
-            val videoMs = probe.durationMs
-            RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} durationMs=$videoMs embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
+            RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} durationMs=${probe.durationMs} embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
+            RunLog.log("options: imdb=${imdbUrl ?: "-"} chosenSub=${subtitlePath ?: "-"} bgTransparency=$bgTransparency deleteData=$deleteData")
 
-            val onlineEnabled = settings.onlineSearchEnabled && settings.hasOpenSubtitlesKey
-            val os = if (onlineEnabled) OpenSubtitlesService(settings.openSubtitlesApiKey) else null
-            val movieHash = runCatching { OpenSubtitlesService.computeMovieHash(videoFile) }.getOrNull()
-            // Search by the confirmed name, without the appended year folder-suffix.
-            val searchTitle = if (!year.isNullOrBlank()) base.removeSuffix("-$year") else base
-            RunLog.log("base='$base' searchTitle='$searchTitle' year='${year ?: "-"}' onlineEnabled=$onlineEnabled hasClaudeKey=${settings.hasAnthropicKey} hasDeepgram=${settings.hasDeepgramKey}")
-
-            val plan = SubtitleSourcePlanner.plan(
-                probe.embeddedSubtitles, probe.audioLanguage, onlineEnabled,
-                preferEmbeddedSource = true,
-            )
-            RunLog.log("plan=${plan.map { it::class.java.simpleName }}")
-
-            val source = acquire(plan, videoFile, os, movieHash, searchTitle, year, base, videoMs)
+            // Build the subtitle file that will be muxed, plus a sidecar .srt.
+            val built = buildSubtitle(videoFile, base, probe, subtitlePath, bgTransparency)
                 ?: run {
-                    RunLog.error("no matching subtitles from any source")
+                    RunLog.error("no subtitle produced")
                     PipelineBus.update(PipelineState.Failed("לא נמצאו כתוביות תואמות ולא ניתן היה ליצור אותן."))
                     return
                 }
-            RunLog.log("source acquired: cues=${source.cues.size} lang=${source.language} readyHebrew=${source.readyHebrew}")
 
-            // §ב.3.4 / §ב.4.1 — translate to Hebrew unless it is already Hebrew.
-            val hebrewCues: List<SubtitleCue> = if (source.readyHebrew) {
-                source.cues
-            } else if (settings.hasAnthropicKey) {
-                RunLog.log("translating with Claude (${settings.claudeModel}) from ${source.language}")
-                PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", 0f))
-                ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel)
-                    .translate(source.cues, source.language) { d, t ->
-                        PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", d.toFloat() / t))
+            // §2 — IMDb/OMDb enrichment (best-effort).
+            var poster: File? = null
+            val metadata = LinkedHashMap<String, String>()
+            var pdf: File? = null
+            val imdbId = Omdb.imdbId(imdbUrl)
+            if (imdbId != null && settings.hasOmdbKey) {
+                PipelineBus.update(PipelineState.Running("שליפת נתוני הסרט מ‑IMDb", null))
+                val movie = OmdbService(settings.omdbApiKey).fetch(imdbId)
+                if (movie != null) {
+                    RunLog.log("OMDb: ${movie.title} (${movie.year}) runtime=${movie.runtime}")
+                    val hebrewPlot = if (settings.hasAnthropicKey)
+                        ClaudeText.toHebrew(settings.anthropicApiKey, settings.claudeModel, movie.plot)
+                    else null
+                    if (movie.hasPoster) {
+                        val pf = File(outputDir, "$base.poster.jpg")
+                        if (OmdbService(settings.omdbApiKey).downloadPoster(movie.poster, pf)) poster = pf
                     }
-            } else {
-                RunLog.log("translating with ML Kit (on-device) from ${source.language}")
-                PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", 0f))
-                MlKitTranslator().translate(source.cues, source.language) { d, t ->
-                    PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", d.toFloat() / t))
-                }
+                    fillMetadata(metadata, movie, hebrewPlot, year)
+                    val pf = File(outputDir, "$base.pdf")
+                    if (MoviePdf.create(pf, movie, hebrewPlot, poster)) pdf = pf
+                    RunLog.log("OMDb enrich: poster=${poster != null} pdf=${pdf != null} hebrewPlot=${hebrewPlot != null}")
+                } else RunLog.error("OMDb: no data for $imdbId")
+            } else if (imdbId != null) {
+                RunLog.log("IMDb link given but no OMDb key — skipping enrichment")
             }
-            RunLog.log("translation done: ${hebrewCues.size} Hebrew cues")
 
-            PipelineBus.update(PipelineState.Running("עיצוב וסנכרון הכתוביות", null))
-            val finalCues = SubtitlePostProcessor.process(hebrewCues)
-            val srtName = "he-$base.srt"
-            val srtFile = File(outputDir, srtName)
-            val srtText = SrtWriter.write(finalCues)
-            srtFile.writeText(srtText, Charsets.UTF_8)
-            RunLog.log("wrote Hebrew subtitles: ${srtFile.absolutePath}")
-
-            // Also save a player-auto-load sidecar named after the video, so VLC/MX
-            // pick it up without the (crash-prone) manual external-subtitle picker.
-            runCatching { File(outputDir, "$base.he.srt").writeText(srtText, Charsets.UTF_8) }
-
-            // When the film has burned-in foreign subtitles, produce an ASS track
-            // whose lines sit on a gray semi-transparent box that covers them.
-            val subForMux: File = if (hideBurnedIn) {
-                val ass = File(outputDir, "$base.he.ass")
-                ass.writeText(AssWriter.write(finalCues, backgroundBox = true), Charsets.UTF_8)
-                RunLog.log("wrote ASS with cover box: ${ass.absolutePath}")
-                ass
-            } else srtFile
-
-            // Create a media file with the Hebrew as a selectable embedded track
-            // (fast lossless remux to MKV). Avoids external-subtitle selection.
+            // Build the MKV with the Hebrew track (+ metadata + poster).
             var mediaName: String? = null
             if (mediaTool.canEmbed) {
                 PipelineBus.update(PipelineState.Running("יצירת קובץ מדיה עם מסלול עברית", null))
                 val outMkv = File(outputDir, "$base.he.mkv")
                 val muxed = runCatching {
-                    mediaTool.remuxWithHebrew(videoFile, subForMux, probe.subtitleCount, outMkv)
+                    mediaTool.remuxWithHebrewAndMeta(videoFile, built, probe.subtitleCount, outMkv, metadata, poster)
                 }.getOrElse { RunLog.error("remux failed", it); false }
                 if (muxed && outMkv.exists()) {
                     mediaName = outMkv.name
                     RunLog.log("wrote media file: ${outMkv.absolutePath} (${outMkv.length()} bytes)")
+                    // §5 — keep only the MKV and the PDF (+ the run log, written later).
+                    if (deleteData) cleanIntermediates(keep = setOfNotNull(outMkv.name, pdf?.name), video = videoFile)
                 } else {
                     RunLog.log("media file not created (muxed=$muxed exists=${outMkv.exists()})")
                 }
             }
 
-            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, srtName, mediaName))
+            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, "he-$base.srt", mediaName))
             RunLog.log("run finished OK")
         } catch (t: Throwable) {
             RunLog.error("run failed", t)
@@ -145,123 +117,151 @@ class SubtitlePipeline(
         }
     }
 
-    private suspend fun acquire(
-        plan: List<AcquisitionStep>,
-        videoFile: File,
-        os: OpenSubtitlesService?,
-        movieHash: String?,
-        title: String,
-        year: String?,
-        base: String,
-        videoMs: Long,
-    ): Source? {
-        for (step in plan) {
-            RunLog.log("acquire step: ${step::class.java.simpleName}")
-            when (step) {
-                is AcquisitionStep.EmbeddedHebrew -> {
-                    PipelineBus.update(PipelineState.Running("חילוץ כתוביות עברית מהקובץ", null))
-                    parseEmbedded(videoFile, step.index, base, "he")?.let { return Source(it, "he", true) }
-                }
-                is AcquisitionStep.EmbeddedSource -> {
-                    PipelineBus.update(PipelineState.Running("חילוץ כתוביות מהקובץ", null))
-                    val lang = Language.canonical(step.language) ?: "src"
-                    parseEmbedded(videoFile, step.index, base, lang)?.let {
-                        return Source(it, Language.canonical(step.language), false)
-                    }
-                }
-                is AcquisitionStep.OnlineHebrew -> {
-                    PipelineBus.update(PipelineState.Running("חיפוש כתוביות עברית ברשת", null))
-                    fetchOnline(os, listOf("he"), movieHash, title, year, base, videoMs)?.let { (cues, _) ->
-                        return Source(cues, "he", true)
-                    }
-                }
-                is AcquisitionStep.OnlineSource -> {
-                    PipelineBus.update(PipelineState.Running("חיפוש כתוביות מקור ברשת", null))
-                    (fetchOnline(os, step.preferredLanguages, movieHash, title, year, base, videoMs)
-                        ?: fetchOnline(os, emptyList(), movieHash, title, year, base, videoMs))?.let { (cues, lang) ->
-                        return Source(cues, lang, readyHebrew = Language.isHebrew(lang))
-                    }
-                }
-                is AcquisitionStep.Transcribe -> {
-                    if (!asrEngine.available) {
-                        RunLog.log("  transcription unavailable (no Deepgram key)")
-                        return null
-                    }
-                    PipelineBus.update(PipelineState.Running("חילוץ פס הקול מהקובץ", null))
-                    val audio = File(outputDir, "$base.audio.m4a")
-                    if (!mediaTool.extractAudioForAsr(videoFile, audio)) {
-                        RunLog.error("  audio extraction failed")
-                        return null
-                    }
-                    RunLog.log("  audio extracted: ${audio.absolutePath}")
-                    PipelineBus.update(PipelineState.Running("תמלול פס הקול", 0f))
-                    val track = asrEngine.transcribe(audio) { p ->
-                        PipelineBus.update(PipelineState.Running("תמלול פס הקול", p))
-                    }
-                    return Source(track.cues, Language.canonical(track.language), Language.isHebrew(track.language))
-                }
+    /**
+     * Produce the subtitle file to mux (ASS with a plate when [bgTransparency] < 100,
+     * else SRT) plus a `he-<base>.srt` sidecar. Returns null if nothing could be made.
+     */
+    private suspend fun buildSubtitle(
+        videoFile: File, base: String, probe: MediaProbe, subtitlePath: String?, bgTransparency: Int,
+    ): File? {
+        // §4 — the user picked a subtitle: attach it as-is (parse to apply a plate if requested).
+        if (subtitlePath != null) {
+            val chosen = File(subtitlePath)
+            RunLog.log("using chosen subtitle: ${chosen.name}")
+            val ext = chosen.extension.lowercase()
+            if (bgTransparency < 100 && (ext == "srt" || ext == "vtt")) {
+                val cues = runCatching { SrtParser.parse(chosen.readText(Charsets.UTF_8)) }.getOrDefault(emptyList())
+                if (cues.isNotEmpty()) return writeSubs(cues, base, bgTransparency)
             }
+            // Copy verbatim into the folder and mux that.
+            val dest = File(outputDir, "chosen-$base.${ext.ifBlank { "srt" }}")
+            runCatching { chosen.copyTo(dest, overwrite = true) }
+            if (ext == "srt") runCatching { chosen.copyTo(File(outputDir, "he-$base.srt"), overwrite = true) }
+            return if (dest.exists()) dest else null
         }
-        return null
+
+        val acq = acquire(videoFile, base, probe) ?: return null
+        RunLog.log("source acquired: cues=${acq.cues.size} lang=${acq.language} readyHebrew=${acq.readyHebrew}")
+        val hebrewCues = if (acq.readyHebrew) acq.cues else translate(acq)
+        val finalCues = SubtitlePostProcessor.process(hebrewCues)
+        return writeSubs(finalCues, base, bgTransparency)
     }
 
-    /** Extract an embedded track to `<lang>-<base>.srt` in the video folder and parse it. */
+    /** Writes the Hebrew sidecar + returns the file to mux (ASS if a plate is wanted). */
+    private fun writeSubs(cues: List<SubtitleCue>, base: String, bgTransparency: Int): File {
+        val srtText = SrtWriter.write(cues)
+        File(outputDir, "he-$base.srt").writeText(srtText, Charsets.UTF_8)
+        return if (bgTransparency < 100) {
+            File(outputDir, "$base.he.ass").apply {
+                writeText(AssWriter.write(cues, bgTransparency), Charsets.UTF_8)
+                RunLog.log("wrote ASS plate (transparency=$bgTransparency%)")
+            }
+        } else {
+            File(outputDir, "he-$base.srt")
+        }
+    }
+
+    /** §4.1–§4.3: embedded Hebrew → online-hash Hebrew → embedded source → online-hash English → transcribe. */
+    private suspend fun acquire(videoFile: File, base: String, probe: MediaProbe): Acq? {
+        val onlineEnabled = settings.onlineSearchEnabled && settings.hasOpenSubtitlesKey
+        val os = if (onlineEnabled) OpenSubtitlesService(settings.openSubtitlesApiKey) else null
+        val hash = runCatching { OpenSubtitlesService.computeMovieHash(videoFile) }.getOrNull()
+        RunLog.log("acquire: onlineEnabled=$onlineEnabled movieHash=${hash ?: "-"}")
+
+        val hebrew = probe.embeddedSubtitles.filter { Language.isHebrew(it.language) }
+        val source = probe.embeddedSubtitles.filterNot { Language.isHebrew(it.language) }
+
+        // 1. Embedded Hebrew.
+        for (t in hebrew) {
+            PipelineBus.update(PipelineState.Running("חילוץ כתוביות עברית מהקובץ", null))
+            parseEmbedded(videoFile, t.index, base, "he")?.let { return Acq(it, "he", true) }
+        }
+        // 2. Online Hebrew — hash match only.
+        PipelineBus.update(PipelineState.Running("חיפוש כתוביות עברית (התאמת hash)", null))
+        fetchHashMatch(os, listOf("he"), hash, base, base)?.let { return Acq(it.first, "he", true) }
+        // 3. Embedded source (translate).
+        for (t in source) {
+            PipelineBus.update(PipelineState.Running("חילוץ כתוביות מהקובץ", null))
+            val lang = Language.canonical(t.language) ?: "src"
+            parseEmbedded(videoFile, t.index, base, lang)?.let { return Acq(it, Language.canonical(t.language), false) }
+        }
+        // 4. Online English — hash match only (translate).
+        PipelineBus.update(PipelineState.Running("חיפוש כתוביות אנגלית (התאמת hash)", null))
+        fetchHashMatch(os, listOf("en"), hash, base, base)?.let { return Acq(it.first, it.second, Language.isHebrew(it.second)) }
+        // 5. Transcribe.
+        if (!asrEngine.available) { RunLog.log("transcription unavailable (no Deepgram key)"); return null }
+        PipelineBus.update(PipelineState.Running("חילוץ פס הקול מהקובץ", null))
+        val audio = File(outputDir, "$base.audio.m4a")
+        if (!mediaTool.extractAudioForAsr(videoFile, audio)) { RunLog.error("audio extraction failed"); return null }
+        PipelineBus.update(PipelineState.Running("תמלול פס הקול", 0f))
+        val track = asrEngine.transcribe(audio) { p -> PipelineBus.update(PipelineState.Running("תמלול פס הקול", p)) }
+        return Acq(track.cues, Language.canonical(track.language), Language.isHebrew(track.language))
+    }
+
+    private suspend fun translate(acq: Acq): List<SubtitleCue> =
+        if (settings.hasAnthropicKey) {
+            RunLog.log("translating with Claude (${settings.claudeModel}) from ${acq.language}")
+            PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", 0f))
+            ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel)
+                .translate(acq.cues, acq.language) { d, t -> PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", d.toFloat() / t)) }
+        } else {
+            RunLog.log("translating with ML Kit (on-device) from ${acq.language}")
+            PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", 0f))
+            MlKitTranslator().translate(acq.cues, acq.language) { d, t -> PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", d.toFloat() / t)) }
+        }
+
     private suspend fun parseEmbedded(videoFile: File, streamIndex: Int, base: String, lang: String): List<SubtitleCue>? {
         val out = File(outputDir, "$lang-$base.srt")
-        if (!mediaTool.extractSubtitle(videoFile, streamIndex, out)) {
-            RunLog.log("  extract stream $streamIndex failed")
-            return null
-        }
+        if (!mediaTool.extractSubtitle(videoFile, streamIndex, out)) { RunLog.log("  extract stream $streamIndex failed"); return null }
         val cues = SrtParser.parse(out.readText(Charsets.UTF_8))
         RunLog.log("  extracted stream $streamIndex → ${cues.size} cues (${out.name})")
         return cues.ifEmpty { null }
     }
 
-    /**
-     * Search online, then download candidates best-first and keep the FIRST whose
-     * duration matches the video (spec §3). Saves the accepted file as
-     * `<lang>-<base>.srt`. Returns (cues, language) or null.
-     */
-    private suspend fun fetchOnline(
-        os: OpenSubtitlesService?,
-        languagePriority: List<String>,
-        movieHash: String?,
-        title: String,
-        year: String?,
-        base: String,
-        videoMs: Long,
+    /** Download the best HASH-MATCHED candidate for the languages, or null (spec §4.1). */
+    private suspend fun fetchHashMatch(
+        os: OpenSubtitlesService?, langs: List<String>, hash: String?, title: String, base: String,
     ): Pair<List<SubtitleCue>, String?>? {
-        if (os == null) return null
-        RunLog.log("  OpenSubtitles search langs=$languagePriority title='$title' year='${year ?: "-"}'")
-        val candidates = os.findCandidates(languagePriority, movieHash, title, year)
-        if (candidates.isEmpty()) { RunLog.log("  OpenSubtitles: no results"); return null }
-        for (c in candidates.take(MAX_CANDIDATES)) {
+        if (os == null || hash == null) return null
+        val candidates = os.findCandidates(langs, hash, title, null).filter { it.hashMatch }
+        RunLog.log("  hash-match candidates for $langs: ${candidates.size}")
+        for (c in candidates.take(4)) {
             val srt = os.download(c.fileId) ?: continue
             val cues = SrtParser.parse(srt)
             if (cues.isEmpty()) continue
-            val spanMs = cues.maxOf { it.endMs }
-            if (!durationMatches(spanMs, videoMs)) {
-                RunLog.log("  reject fileId=${c.fileId} lang=${c.language} span=${spanMs}ms video=${videoMs}ms (duration mismatch)")
-                continue
-            }
             val langTag = c.language?.takeIf { it.isNotBlank() } ?: "src"
             runCatching { File(outputDir, "$langTag-$base.srt").writeText(srt, Charsets.UTF_8) }
-            RunLog.log("  accept fileId=${c.fileId} lang=${c.language} cues=${cues.size} span=${spanMs}ms video=${videoMs}ms → $langTag-$base.srt")
+            RunLog.log("  accept hash-match fileId=${c.fileId} lang=${c.language} cues=${cues.size}")
             return cues to c.language
         }
-        RunLog.log("  OpenSubtitles: no candidate matched the video duration")
         return null
     }
 
-    /** True if the subtitle span is within tolerance of the video length (or the length is unknown). */
-    private fun durationMatches(spanMs: Long, videoMs: Long): Boolean {
-        if (videoMs <= 0L) return true          // unknown duration — can't verify, accept best-effort
-        if (spanMs <= 0L) return false
-        val tolerance = maxOf(120_000L, videoMs * 15 / 100) // 2 min or 15%, whichever is larger
-        return abs(spanMs - videoMs) <= tolerance
+    private fun fillMetadata(meta: MutableMap<String, String>, movie: OmdbMovie, hebrewPlot: String?, year: String?) {
+        fun put(k: String, v: String) { if (v.isNotBlank() && v != "N/A") meta[k] = v }
+        put("title", movie.title)
+        put("date", (year ?: movie.year))
+        put("description", hebrewPlot ?: movie.plot)   // §2.1 Hebrew description
+        put("synopsis", hebrewPlot ?: movie.plot)
+        put("comment", movie.plot)                      // original (English) plot
+        put("genre", movie.genre)
+        put("IMDB", movie.imdbId)
+        put("DIRECTOR", movie.director)
+        put("ACTORS", movie.actors)
+        put("IMDB_RATING", movie.imdbRating)
     }
 
-    private companion object {
-        const val MAX_CANDIDATES = 6
+    /** §5 — remove everything the run created except [keep] (and the video, replaced by the MKV). */
+    private fun cleanIntermediates(keep: Set<String>, video: File) {
+        runCatching {
+            outputDir.listFiles()?.forEach { f ->
+                val isLog = f.name.endsWith(".txt")
+                if (f.name !in keep && !isLog) {
+                    if (f.delete()) RunLog.log("deleted intermediate: ${f.name}")
+                }
+            }
+            // The original video is superseded by the MKV.
+            if (video.exists() && video.name !in keep) { if (video.delete()) RunLog.log("deleted original video: ${video.name}") }
+        }
     }
 }

@@ -35,4 +35,18 @@ interface MediaTool {
      * on the newly added track. Streams are copied, never re-encoded.
      */
     suspend fun remuxWithHebrew(input: File, srt: File, existingSubtitleCount: Int, outMkv: File): Boolean
+
+    /**
+     * Like [remuxWithHebrew], plus writes global [metadata] tags (title, year,
+     * Hebrew description, …) and attaches [poster] as MKV cover art. Used for the
+     * IMDb-enriched output (spec §2).
+     */
+    suspend fun remuxWithHebrewAndMeta(
+        input: File,
+        sub: File,
+        existingSubtitleCount: Int,
+        outMkv: File,
+        metadata: Map<String, String>,
+        poster: File?,
+    ): Boolean
 }

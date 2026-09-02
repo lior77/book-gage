@@ -269,12 +269,14 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
     var osKey by remember { mutableStateOf(settings.openSubtitlesApiKey) }
     var anthropicKey by remember { mutableStateOf(settings.anthropicApiKey) }
     var deepgramKey by remember { mutableStateOf(settings.deepgramApiKey) }
+    var omdbKey by remember { mutableStateOf(settings.omdbApiKey) }
     var model by remember { mutableStateOf(settings.claudeModel) }
     var modelMenu by remember { mutableStateOf(false) }
 
     var osStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
     var anthropicStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
     var deepgramStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
+    var omdbStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
     // True once any test ran — controls whether a settings log is written on exit.
     var testsRan by remember { mutableStateOf(false) }
 
@@ -375,6 +377,21 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
             },
         )
 
+        KeyField(
+            label = stringResource(R.string.settings_omdb_key),
+            value = omdbKey, onValueChange = { omdbKey = it },
+            status = omdbStatus,
+            onSave = {
+                settings.omdbApiKey = omdbKey
+                RunLog.log("settings: saved OMDb key (len=${omdbKey.trim().length})")
+                omdbStatus = TestStatus.Testing; testsRan = true
+                scope.launch {
+                    val r = ConnectionTester.testOmdb(settings.omdbApiKey)
+                    omdbStatus = if (r.ok) TestStatus.Success(r.message) else TestStatus.Failure(r.message)
+                }
+            },
+        )
+
         Text(stringResource(R.string.settings_privacy_note), style = MaterialTheme.typography.bodySmall)
 
         Button(onClick = { leave() }, modifier = Modifier.fillMaxWidth()) {
@@ -459,14 +476,41 @@ private fun PipelineOverlay(state: PipelineState) {
         }
 
         is PipelineState.NeedVideoInfo -> Dialog(dismissable = false) {
+            val ctx = LocalContext.current
+            var imdb by remember(state.suggestedName) { mutableStateOf("") }
             var name by remember(state.suggestedName) { mutableStateOf(state.suggestedName) }
             var year by remember(state.suggestedName) { mutableStateOf("") }
-            var burnedIn by remember(state.suggestedName) { mutableStateOf(false) }
-            Column {
+            var transparency by remember(state.suggestedName) { mutableStateOf(100f) }
+            var deleteData by remember(state.suggestedName) { mutableStateOf(true) }
+            var subPath by remember(state.suggestedName) { mutableStateOf<String?>(null) }
+            var subName by remember(state.suggestedName) { mutableStateOf<String?>(null) }
+
+            val subPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) {
+                    val nm = pickedFileName(ctx, uri) ?: "subtitle.srt"
+                    val dest = java.io.File(ctx.cacheDir, "picked_$nm")
+                    val ok = runCatching {
+                        ctx.contentResolver.openInputStream(uri)?.use { i -> dest.outputStream().use { i.copyTo(it) } } != null
+                    }.getOrDefault(false)
+                    if (ok) { subPath = dest.absolutePath; subName = nm }
+                }
+            }
+
+            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.video_info_title), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.video_info_body), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = imdb, onValueChange = { imdb = it },
+                    label = { Text(stringResource(R.string.video_info_imdb)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { runCatching { subPicker.launch(arrayOf("*/*")) } }, modifier = Modifier.fillMaxWidth()) {
+                    Text(subName?.let { stringResource(R.string.video_info_sub_chosen) + " " + it } ?: stringResource(R.string.video_info_pick_sub))
+                }
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = name, onValueChange = { name = it },
                     label = { Text(stringResource(R.string.video_info_name)) },
@@ -481,18 +525,33 @@ private fun PipelineOverlay(state: PipelineState) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.video_info_transparency, transparency.toInt()), style = MaterialTheme.typography.bodyMedium)
+                Slider(value = transparency, onValueChange = { transparency = it }, valueRange = 0f..100f)
+                Text(stringResource(R.string.video_info_transparency_hint), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = burnedIn, onCheckedChange = { burnedIn = it })
+                    Checkbox(checked = deleteData, onCheckedChange = { deleteData = it })
                     Spacer(Modifier.width(4.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.burned_in_label), style = MaterialTheme.typography.bodyMedium)
-                        Text(stringResource(R.string.burned_in_hint), style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.video_info_delete), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.video_info_delete_hint), style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { PipelineBus.submitVideoInfo(VideoInfo(name.trim(), year.ifBlank { null }, burnedIn)) },
+                    onClick = {
+                        PipelineBus.submitVideoInfo(
+                            VideoInfo(
+                                name = name.trim(),
+                                year = year.ifBlank { null },
+                                imdbUrl = imdb.ifBlank { null },
+                                subtitlePath = subPath,
+                                bgTransparency = transparency.toInt(),
+                                deleteData = deleteData,
+                            ),
+                        )
+                    },
                     enabled = name.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.video_info_confirm)) }
@@ -607,3 +666,12 @@ private fun Dialog(
 
 @Composable
 private fun stringResource(id: Int): String = androidx.compose.ui.res.stringResource(id)
+
+@Composable
+private fun stringResource(id: Int, vararg args: Any): String =
+    androidx.compose.ui.res.stringResource(id, *args)
+
+/** Display name of a picked document Uri, or null. */
+private fun pickedFileName(context: android.content.Context, uri: android.net.Uri): String? =
+    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+        ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
