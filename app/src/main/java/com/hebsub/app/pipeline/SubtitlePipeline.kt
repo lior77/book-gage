@@ -39,6 +39,13 @@ class SubtitlePipeline(
 ) {
     private data class Acq(val cues: List<SubtitleCue>, val language: String?, val readyHebrew: Boolean)
 
+    private companion object {
+        // Bundled Hebrew font embedded into the MKV for the ASS plate track.
+        // The family name must match the TTF's internal name-table family (nameID 1).
+        const val HEBREW_FONT_FAMILY = "Alef"
+        const val HEBREW_FONT_FILE = "Alef-Regular.ttf"
+    }
+
     suspend fun run(
         videoFile: File,
         base: String,
@@ -90,12 +97,14 @@ class SubtitlePipeline(
                 PipelineBus.update(PipelineState.Running("יצירת קובץ מדיה עם מסלול עברית", null))
                 val outMkv = File(outputDir, "$base.he.mkv")
                 // When the primary track is a styled ASS plate, also mux the plain
-                // SRT sidecar as a second, universally-selectable Hebrew track.
+                // SRT sidecar as a second, universally-selectable Hebrew track, and
+                // embed the bundled Hebrew font so libass renders the ASS correctly.
+                val isAss = built.extension.equals("ass", ignoreCase = true)
                 val srtSidecar = File(outputDir, "he-$base.srt")
-                val secondary = if (built.extension.equals("ass", ignoreCase = true) && srtSidecar.exists())
-                    srtSidecar else null
+                val secondary = if (isAss && srtSidecar.exists()) srtSidecar else null
+                val font = if (isAss) ensureHebrewFont() else null
                 val muxed = runCatching {
-                    mediaTool.remuxWithHebrewAndMeta(videoFile, built, secondary, probe.subtitleCount, outMkv, metadata, poster)
+                    mediaTool.remuxWithHebrewAndMeta(videoFile, built, secondary, probe.subtitleCount, outMkv, metadata, poster, font)
                 }.getOrElse { RunLog.error("remux failed", it); false }
                 if (muxed && outMkv.exists()) {
                     mediaName = outMkv.name
@@ -152,13 +161,31 @@ class SubtitlePipeline(
         File(outputDir, "he-$base.srt").writeText(srtText, Charsets.UTF_8)
         return if (bgTransparency < 100) {
             File(outputDir, "$base.he.ass").apply {
-                writeText(AssWriter.write(cues, bgTransparency), Charsets.UTF_8)
-                RunLog.log("wrote ASS plate (transparency=$bgTransparency%)")
+                // Name the embedded Hebrew font in the style so libass uses it.
+                writeText(AssWriter.write(cues, bgTransparency, fontName = HEBREW_FONT_FAMILY), Charsets.UTF_8)
+                RunLog.log("wrote ASS plate (transparency=$bgTransparency%, font=$HEBREW_FONT_FAMILY)")
             }
         } else {
             File(outputDir, "he-$base.srt")
         }
     }
+
+    /**
+     * Copy the bundled Hebrew TTF out of assets into the app cache so FFmpeg can
+     * attach it to the MKV. Returns the file, or null if the asset is missing.
+     * The ASS style names [HEBREW_FONT_FAMILY]; embedding this font guarantees the
+     * player's ASS renderer has real Hebrew glyphs (no tofu boxes).
+     */
+    private fun ensureHebrewFont(): File? = runCatching {
+        val out = File(context.cacheDir, HEBREW_FONT_FILE)
+        if (!out.exists() || out.length() == 0L) {
+            context.assets.open("fonts/$HEBREW_FONT_FILE").use { input ->
+                out.outputStream().use { input.copyTo(it) }
+            }
+        }
+        RunLog.log("hebrew font ready: ${out.name} (${out.length()} bytes)")
+        out.takeIf { it.exists() && it.length() > 0 }
+    }.getOrElse { RunLog.error("hebrew font extract failed", it); null }
 
     /** §4.1–§4.3: embedded Hebrew → online Hebrew → embedded source → online English → transcribe. */
     private suspend fun acquire(videoFile: File, base: String, probe: MediaProbe, imdbId: String?): Acq? {

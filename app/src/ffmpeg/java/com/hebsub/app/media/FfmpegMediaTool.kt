@@ -91,6 +91,7 @@ class FfmpegMediaTool : MediaTool {
         outMkv: File,
         metadata: Map<String, String>,
         poster: File?,
+        font: File?,
     ): Boolean {
         // Upgrade (a): copy every subtitle stream verbatim (`-c:s copy`) — never
         // re-encode. The styled ASS keeps its background plate, and when one is
@@ -98,11 +99,18 @@ class FfmpegMediaTool : MediaTool {
         // track (input 2) so every player exposes a selectable Hebrew subtitle.
         // Video and audio are always `-c copy` (lossless), so film quality is
         // untouched regardless of the subtitle handling.
+        val isAss = sub.extension.equals("ass", ignoreCase = true)
         val hasSecondary = secondarySub != null && secondarySub.exists() &&
             secondarySub.absolutePath != sub.absolutePath
+        // A Hebrew font is embedded only for the styled ASS track, so libass has
+        // real Hebrew glyphs instead of substituting a box-only font.
+        val hasFont = isAss && font != null && font.exists()
         val args = ArrayList<String>()
         args += listOf("-y", "-i", input.absolutePath, "-i", sub.absolutePath)
         if (hasSecondary) args += listOf("-i", secondarySub!!.absolutePath)
+        // Attachments (font first, then poster) become attachment streams t:0,t:1…
+        // in the order the -attach options appear here.
+        if (hasFont) args += listOf("-attach", font!!.absolutePath)
         val hasPoster = poster != null && poster.exists()
         if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
         args += listOf("-map", "0", "-map", "1")
@@ -122,10 +130,20 @@ class FfmpegMediaTool : MediaTool {
                 "-metadata:s:s:$i", "title=עברית (טקסט)",
             )
         }
+        // Attachment metadata, indexed in the same order as the -attach options.
+        var t = 0
+        if (hasFont) {
+            args += listOf(
+                "-metadata:s:t:$t", "mimetype=application/x-truetype-font",
+                "-metadata:s:t:$t", "filename=${font!!.name}",
+            )
+            t++
+        }
         if (hasPoster) {
             val mime = if (poster!!.extension.equals("png", true)) "image/png" else "image/jpeg"
             val fname = if (mime == "image/png") "cover.png" else "cover.jpg"
-            args += listOf("-metadata:s:t:0", "mimetype=$mime", "-metadata:s:t:0", "filename=$fname")
+            args += listOf("-metadata:s:t:$t", "mimetype=$mime", "-metadata:s:t:$t", "filename=$fname")
+            t++
         }
         metadata.forEach { (k, v) ->
             val clean = v.replace("\n", " ").replace("\"", "'").trim()

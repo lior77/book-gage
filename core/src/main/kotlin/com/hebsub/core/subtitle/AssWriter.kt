@@ -20,6 +20,7 @@ object AssWriter {
         cues: List<SubtitleCue>,
         bgTransparencyPercent: Int = 100,
         fontSize: Int = 26,
+        fontName: String = "Arial",
     ): String {
         val t = bgTransparencyPercent.coerceIn(0, 100)
         val box = t < 100
@@ -40,7 +41,7 @@ object AssWriter {
 
             [V4+ Styles]
             Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-            Style: Default,Arial,$fontSize,&H00FFFFFF,&H000000FF,&H00000000,$backColour,0,0,0,0,100,100,0,0,$borderStyle,$outline,0,2,20,20,20,1
+            Style: Default,$fontName,$fontSize,&H00FFFFFF,&H000000FF,&H00000000,$backColour,0,0,0,0,100,100,0,0,$borderStyle,$outline,0,2,20,20,20,1
 
             [Events]
             Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

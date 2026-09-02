@@ -34,5 +34,6 @@ class NoOpMediaTool : MediaTool {
         outMkv: File,
         metadata: Map<String, String>,
         poster: File?,
+        font: File?,
     ): Boolean = false
 }

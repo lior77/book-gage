@@ -169,6 +169,17 @@ class SubtitleSourcePlannerTest {
         assertTrue(ass.contains("שלום\\Nעולם"))                    // lines joined with \N
     }
 
+    @Test fun assWriterNamesRequestedFont() {
+        // The embedded-font family must appear in the style so libass uses it
+        // (fixes Hebrew rendering as boxes when Arial has no Hebrew glyphs).
+        val ass = com.hebsub.core.subtitle.AssWriter.write(
+            listOf(com.hebsub.core.subtitle.SubtitleCue(1, 0, 1000, listOf("שלום"))),
+            bgTransparencyPercent = 50,
+            fontName = "Alef",
+        )
+        assertTrue(ass.contains("Style: Default,Alef,"))
+    }
+
     @Test fun assWriterPlainWhenFullyTransparent() {
         val ass = com.hebsub.core.subtitle.AssWriter.write(
             listOf(com.hebsub.core.subtitle.SubtitleCue(1, 0, 1000, listOf("א"))),

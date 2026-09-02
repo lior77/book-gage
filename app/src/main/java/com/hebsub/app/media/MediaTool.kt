@@ -48,6 +48,10 @@ interface MediaTool {
      * copied with `-c:s copy` (no re-encode; the video/audio are always copied
      * losslessly). The container is read back with ffprobe afterwards to confirm
      * the Hebrew tracks are really present.
+     *
+     * [font] (when the primary track is a styled ASS) is embedded as an MKV font
+     * attachment so the player's ASS renderer (libass) has real Hebrew glyphs and
+     * does not fall back to a font that renders Hebrew as boxes.
      */
     suspend fun remuxWithHebrewAndMeta(
         input: File,
@@ -57,5 +61,6 @@ interface MediaTool {
         outMkv: File,
         metadata: Map<String, String>,
         poster: File?,
+        font: File?,
     ): Boolean
 }
