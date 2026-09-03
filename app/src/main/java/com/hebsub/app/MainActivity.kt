@@ -1142,7 +1142,7 @@ private fun PreviewFrame(image: java.io.File) {
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = stringResource(R.string.edit_preview),
-            contentScale = ContentScale.FitWidth,
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
         )
     }

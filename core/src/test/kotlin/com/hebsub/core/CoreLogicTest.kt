@@ -324,6 +324,21 @@ class SubtitleCoreTest {
         assertTrue(out[1].endMs < out[2].startMs)
     }
 
+    @Test fun minimumDurationKeepsTheInputOrder() {
+        // Fed out of order, the result must come back in the SAME order — the
+        // pipeline compares the two lists position by position to prove no start
+        // time moved, and a quietly re-sorted result would fail that check.
+        val late = com.hebsub.core.subtitle.SubtitleCue(2, 10_000, 10_400, listOf("later"))
+        val early = com.hebsub.core.subtitle.SubtitleCue(1, 1_000, 1_200, listOf("earlier"))
+        val timing = com.hebsub.core.subtitle.SubtitleTiming
+        val out = timing.ensureMinimumDuration(listOf(late, early), minMs = 2_000)
+        assertEquals(listOf(2, 1), out.map { it.index })
+        assertTrue(timing.startTimesUnchanged(listOf(late, early), out))
+        // Both had open silence after them, so both were extended to the floor.
+        assertEquals(3_000L, out[1].endMs)
+        assertEquals(12_000L, out[0].endMs)
+    }
+
     @Test fun minimumDurationOfZeroKeepsSourceTimingExactly() {
         val t = com.hebsub.core.subtitle.SubtitleTiming
         val cues = (1..5).map { com.hebsub.core.subtitle.SubtitleCue(it, it * 1000L, it * 1000L + 200, listOf("x")) }

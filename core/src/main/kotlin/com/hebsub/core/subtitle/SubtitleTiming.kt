@@ -21,6 +21,10 @@ object SubtitleTiming {
      * [GUARD_MS] — so during rapid back-and-forth dialogue nothing changes, and
      * during pauses the line lingers long enough to read. [minMs] of 0 disables
      * the whole thing and returns the cues untouched.
+     *
+     * The result is in the SAME ORDER as [cues], so callers can compare the two
+     * lists position by position; "the next cue" is worked out on a sorted copy,
+     * so an out-of-order input still gets the right ceiling.
      */
     fun ensureMinimumDuration(
         cues: List<SubtitleCue>,
@@ -28,11 +32,17 @@ object SubtitleTiming {
         guardMs: Long = GUARD_MS,
     ): List<SubtitleCue> {
         if (minMs <= 0L || cues.isEmpty()) return cues
-        val ordered = cues.sortedBy { it.startMs }
-        return ordered.mapIndexed { i, cue ->
+        // start time → the next later start anywhere in the track (cues that begin
+        // together share one answer, which is what "the next cue" means for them).
+        val starts = cues.map { it.startMs }.sorted()
+        val nextStart = HashMap<Long, Long>(starts.size)
+        for (i in 0 until starts.size - 1) {
+            if (starts[i] != starts[i + 1]) nextStart[starts[i]] = starts[i + 1]
+        }
+        return cues.map { cue ->
             val wanted = cue.startMs + minMs
             // The latest we may run to: just before the next cue, or freely at the end.
-            val ceiling = ordered.getOrNull(i + 1)?.let { it.startMs - guardMs } ?: Long.MAX_VALUE
+            val ceiling = nextStart[cue.startMs]?.minus(guardMs) ?: Long.MAX_VALUE
             val end = minOf(maxOf(cue.endMs, wanted), maxOf(ceiling, cue.endMs))
             if (end == cue.endMs) cue else cue.copy(endMs = end)
         }
