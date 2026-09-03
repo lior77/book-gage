@@ -56,9 +56,34 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
           TAG="hebsub-latest"
+          NOTES="Debug-signed, installable APK built from ${{ github.sha }} with FFmpeg (probe, embedded-subtitle extraction, and new-media-file creation). arm64-v8a (Galaxy A56). Enable 'install from unknown sources', install HebSub-debug.apk, then enter your OpenSubtitles and Anthropic API keys in Settings on first run."
+          # Remove any previous release (published OR a leftover untagged draft) and
+          # its tag, then wait for the tag-ref deletion to propagate. Deleting and
+          # immediately recreating races GitHub's ref cache and can otherwise leave
+          # an untagged DRAFT release, whose asset URL 404s.
           gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" dist/HebSub-debug.apk \
-            --target "${{ github.sha }}" \
-            --title "HebSub — installable APK (full)" \
-            --notes "Debug-signed, installable APK built from ${{ github.sha }} with FFmpeg (probe, embedded-subtitle extraction, and new-media-file creation). arm64-v8a (Galaxy A56). Enable 'install from unknown sources', install HebSub-debug.apk, then enter your OpenSubtitles and Anthropic API keys in Settings on first run."
+          # Also drop any stray draft releases that point at this tag name.
+          for id in $(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.tag_name==\"$TAG\") | .id"); do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id" || true
+          done
+          git push --delete origin "refs/tags/$TAG" 2>/dev/null || true
+          sleep 8
+          # Create a fresh, PUBLISHED release; retry to ride out propagation races.
+          ok=""
+          for i in 1 2 3 4; do
+            if gh release create "$TAG" dist/HebSub-debug.apk \
+                --target "${{ github.sha }}" \
+                --title "HebSub — installable APK (full)" \
+                --notes "$NOTES"; then
+              ok=1; break
+            fi
+            echo "release create attempt $i failed; retrying in 8s"; sleep 8
+          done
+          [ -n "$ok" ] || { echo "release create failed after retries"; exit 1; }
+          # Force it public (never a draft) and verify the asset is attached.
+          gh release edit "$TAG" --draft=false --latest || true
+          echo "--- release state ---"
+          gh release view "$TAG" --json isDraft,tagName,assets \
+            -q '"isDraft=\(.isDraft) tag=\(.tagName) assets=\([.assets[].name]|join(","))"'
