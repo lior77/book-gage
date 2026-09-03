@@ -117,10 +117,14 @@ class FfmpegMediaTool : MediaTool {
         if (hasSecondary) args += listOf("-map", "2")
         args += listOf("-c", "copy", "-c:s", "copy")
 
-        // Primary Hebrew track (the muxed `sub` — ASS plate or plain SRT).
+        // Primary Hebrew track (the muxed `sub`). Name it by kind so the player's
+        // picker shows the right option, and mark it DEFAULT so the player
+        // auto-enables and displays it (VLC otherwise may leave it off).
+        val primaryTitle = if (isAss) "עברית עם רקע" else "עברית"
         args += listOf(
             "-metadata:s:s:$existingSubtitleCount", "language=heb",
-            "-metadata:s:s:$existingSubtitleCount", "title=עברית",
+            "-metadata:s:s:$existingSubtitleCount", "title=$primaryTitle",
+            "-disposition:s:$existingSubtitleCount", "default",
         )
         // Second, universally-selectable plain-text Hebrew track.
         if (hasSecondary) {

@@ -683,7 +683,10 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
 
         is PipelineState.Success -> Dialog(onDismiss = { PipelineBus.reset() }) {
             val ctx = LocalContext.current
-            val activity = ctx as? android.app.Activity
+            // Inside a Compose Dialog the context is a ContextWrapper, so a direct
+            // cast to Activity returns null; walk the chain to find the Activity so
+            // the close buttons actually finish the app (not just the dialog).
+            val activity = ctx.findActivity()
             Column {
                 Text(stringResource(R.string.done), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
@@ -777,6 +780,16 @@ private fun openHebSubFolder(context: android.content.Context) {
     for (i in tries) {
         if (runCatching { context.startActivity(i); true }.getOrDefault(false)) return
     }
+}
+
+/** Unwrap the ContextWrapper chain (e.g. a Compose Dialog context) to the Activity. */
+private fun android.content.Context.findActivity(): android.app.Activity? {
+    var c: android.content.Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
 }
 
 /** Display name of a picked document Uri, or null. */
