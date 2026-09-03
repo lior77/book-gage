@@ -31,8 +31,6 @@ data class OsAttributes(
     @SerialName("from_trusted") val fromTrusted: Boolean = false,
     @SerialName("moviehash_match") val movieHashMatch: Boolean = false,
     val release: String? = null,
-    /** Frame rate the subtitle was timed for (0 when the uploader didn't set it). */
-    val fps: Double = 0.0,
     val ratings: Double = 0.0,
     val files: List<OsFile> = emptyList(),
 )
@@ -52,7 +50,6 @@ data class OsCandidate(
     val machineTranslated: Boolean,
     val fromTrusted: Boolean,
     val release: String?,
+    /** True only when this subtitle was uploaded for exactly this file. */
     val hashMatch: Boolean = false,
-    /** Frame rate the subtitle was timed for, or 0 when unknown. */
-    val fps: Double = 0.0,
 )

@@ -67,14 +67,15 @@ object ClaudeTranslator {
     }
 
     /**
-     * @param filmContext optional description of the film (title, year, synopsis)
-     *   so the model understands who the characters are and what is going on —
-     *   this is what turns line-by-line MT into context-aware translation.
+     * @param glossary agreed Hebrew spellings for names that recur in this film,
+     *   as `Name = שם` lines. These come from the subtitle itself, not from a film
+     *   database: a cast list names the ACTORS, not the characters, so feeding it
+     *   in misleads the model instead of helping it.
      */
-    fun systemPrompt(sourceLanguageName: String?, filmContext: String? = null): String {
+    fun systemPrompt(sourceLanguageName: String?, glossary: String? = null): String {
         val src = sourceLanguageName?.takeIf { it.isNotBlank() } ?: "the source language"
-        val film = filmContext?.takeIf { it.isNotBlank() }?.let {
-            "\n\nAbout the film you are translating (use it to understand characters, relationships, setting and tone):\n$it"
+        val film = glossary?.takeIf { it.isNotBlank() }?.let {
+            "\n\nUse EXACTLY these Hebrew spellings every time these names appear:\n$it"
         } ?: ""
         return """
             You are a professional film subtitle translator. Translate film/TV subtitles from $src into natural, fluent Modern Hebrew that reads like a real Israeli cinema/TV subtitle.
@@ -82,7 +83,7 @@ object ClaudeTranslator {
             Principles:
             - Translate MEANING and INTENT in context, never word-for-word. Read each line in light of the surrounding dialogue and the film's story; resolve ambiguity from context (who is speaking to whom, sarcasm, threats, jokes, flirting, formality).
             - Preserve tone, register, humour, sarcasm, slang and idiom — render idioms with the closest natural Hebrew equivalent, never a literal gloss.
-            - Keep characters consistent: the same name, nickname, gendered forms and level of formality every time. Hebrew verbs/adjectives must agree with the speaker's and addressee's gender as implied by the story.
+            - Keep characters consistent: the same name, nickname, gendered forms and level of formality every time. Hebrew verbs/adjectives must agree with the speaker's and addressee's gender as implied by the dialogue.
             - Keep each subtitle concise and readable at a glance, as real subtitles are. Prefer everyday spoken Hebrew over stilted or overly formal phrasing.
             - Preserve proper nouns and established Hebrew renderings of names/places where they exist.
             - Do NOT merge, split, reorder, add, or omit lines. Return exactly one Hebrew translation per input id, and translate EVERY id you are given.

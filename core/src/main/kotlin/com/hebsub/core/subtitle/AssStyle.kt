@@ -24,6 +24,47 @@ data class AssStyleOptions(
     val fontSize: Int = 26,
 ) {
     val hasPlate: Boolean get() = bgTransparencyPercent < 100
+
+    /** `a=1;b=2` form — small enough to keep in preferences, and easy to read in a log. */
+    fun serialize(): String = listOf(
+        "t=$bgTransparencyPercent", "p=$platePadding", "s=$plateSidePadding",
+        "m=$marginV", "g=$extraLineSpacing", "f=$fontSize",
+    ).joinToString(";")
+
+    companion object {
+        /**
+         * What a styled track looks like unless the user saved their own defaults:
+         * a nearly opaque plate that covers burned-in subtitles, sitting low in
+         * the frame. (Spec §9.1.)
+         */
+        val STYLED_DEFAULT = AssStyleOptions(
+            bgTransparencyPercent = 10,
+            platePadding = 3,
+            plateSidePadding = 12,
+            marginV = 5,
+            extraLineSpacing = 4,
+            fontSize = 28,
+        )
+
+        /** Read back [serialize]; unknown or malformed parts fall back to [STYLED_DEFAULT]. */
+        fun deserialize(raw: String?): AssStyleOptions? {
+            if (raw.isNullOrBlank()) return null
+            val map = raw.split(';').mapNotNull {
+                val kv = it.split('=', limit = 2)
+                if (kv.size == 2) kv[0].trim() to kv[1].trim().toIntOrNull() else null
+            }.mapNotNull { (k, v) -> v?.let { k to it } }.toMap()
+            if (map.isEmpty()) return null
+            val d = STYLED_DEFAULT
+            return AssStyleOptions(
+                bgTransparencyPercent = map["t"] ?: d.bgTransparencyPercent,
+                platePadding = map["p"] ?: d.platePadding,
+                plateSidePadding = map["s"] ?: d.plateSidePadding,
+                marginV = map["m"] ?: d.marginV,
+                extraLineSpacing = map["g"] ?: d.extraLineSpacing,
+                fontSize = map["f"] ?: d.fontSize,
+            )
+        }
+    }
 }
 
 /**

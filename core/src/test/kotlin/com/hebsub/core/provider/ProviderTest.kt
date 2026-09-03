@@ -10,52 +10,44 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OpenSubtitlesQueryTest {
-    @Test fun buildsSortedLanguageParam() {
-        val params = OpenSubtitlesQuery.buildSearchParams(
-            languages = listOf("he", "en"),
-            movieHash = "ABC123",
-            title = "The Movie",
-        )
+    @Test fun searchesByHashOnly() {
+        val params = OpenSubtitlesQuery.buildSearchParams(listOf("he", "en"), movieHash = "ABC123")
         assertEquals("en,he", params["languages"])   // canonical + alphabetical
         assertEquals("abc123", params["moviehash"])   // lowercased
-        assertEquals("The Movie", params["query"])
+        // Title/year/imdb lookups are gone: they find the right film, not the right cut.
+        assertNull(params["query"])
+        assertNull(params["imdb_id"])
+        assertNull(params["year"])
     }
 
     private val response = """
-        {"total_count":3,"data":[
+        {"total_count":4,"data":[
           {"id":"1","attributes":{"language":"he","download_count":100,"hearing_impaired":true,
-            "machine_translated":false,"from_trusted":true,"files":[{"file_id":11}]}},
+            "machine_translated":false,"from_trusted":true,"moviehash_match":true,"files":[{"file_id":11}]}},
           {"id":"2","attributes":{"language":"he","download_count":50,"hearing_impaired":false,
-            "machine_translated":false,"from_trusted":false,"files":[{"file_id":22}]}},
+            "machine_translated":false,"from_trusted":false,"moviehash_match":true,"files":[{"file_id":22}]}},
           {"id":"3","attributes":{"language":"en","download_count":9999,"hearing_impaired":false,
-            "machine_translated":false,"from_trusted":true,"files":[{"file_id":33}]}}
+            "machine_translated":false,"from_trusted":true,"moviehash_match":true,"files":[{"file_id":33}]}},
+          {"id":"4","attributes":{"language":"he","download_count":99999,"hearing_impaired":false,
+            "machine_translated":false,"from_trusted":true,"moviehash_match":false,"files":[{"file_id":44}]}}
         ]}
     """.trimIndent()
 
-    @Test fun selectsNonHearingImpairedHebrewOverPopularHi() {
-        val parsed = OpenSubtitlesQuery.parse(response)
-        val best = OpenSubtitlesQuery.selectBest(parsed, listOf("he"), excludeHearingImpaired = true)
-        assertNotNull(best)
-        assertEquals(22L, best.fileId) // non-HI Hebrew wins even though the HI one has more downloads
+    @Test fun keepsOnlyHashMatches() {
+        val ranked = OpenSubtitlesQuery.rankCandidates(OpenSubtitlesQuery.parse(response), listOf("he"))
+        // The wildly popular non-hash match is dropped, however attractive it looks.
+        assertTrue(ranked.none { it.fileId == 44L }, "a non-hash match must never be offered")
+        assertTrue(ranked.all { it.hashMatch })
+    }
+
+    @Test fun ranksNonHearingImpairedHebrewFirst() {
+        val ranked = OpenSubtitlesQuery.rankCandidates(OpenSubtitlesQuery.parse(response), listOf("he"))
+        assertEquals(22L, ranked.first().fileId) // non-SDH Hebrew beats the more popular SDH one
     }
 
     @Test fun honoursLanguagePriorityOrder() {
-        val parsed = OpenSubtitlesQuery.parse(response)
-        val best = OpenSubtitlesQuery.selectBest(parsed, listOf("en", "he"))
-        assertNotNull(best)
-        assertEquals(33L, best.fileId)
-    }
-
-    @Test fun returnsNullWhenPriorityLanguageAbsent() {
-        val parsed = OpenSubtitlesQuery.parse(response)
-        assertNull(OpenSubtitlesQuery.selectBest(parsed, listOf("de")))
-    }
-
-    @Test fun emptyPriorityPicksGlobalBest() {
-        val parsed = OpenSubtitlesQuery.parse(response)
-        val best = OpenSubtitlesQuery.selectBest(parsed, emptyList())
-        assertNotNull(best)
-        assertEquals(33L, best.fileId) // highest downloads among non-HI
+        val ranked = OpenSubtitlesQuery.rankCandidates(OpenSubtitlesQuery.parse(response), listOf("en", "he"))
+        assertEquals(33L, ranked.first().fileId)
     }
 }
 

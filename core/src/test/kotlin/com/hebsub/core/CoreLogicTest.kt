@@ -2,9 +2,6 @@ package com.hebsub.core
 
 import com.hebsub.core.lang.Language
 import com.hebsub.core.net.UrlValidator
-import com.hebsub.core.pipeline.AcquisitionStep
-import com.hebsub.core.pipeline.EmbeddedSubtitle
-import com.hebsub.core.pipeline.SubtitleSourcePlanner
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -72,78 +69,15 @@ class UrlValidatorTest {
     }
 }
 
-class SubtitleSourcePlannerTest {
-    @Test fun embeddedHebrewComesFirst() {
-        val plan = SubtitleSourcePlanner.plan(
-            embedded = listOf(
-                EmbeddedSubtitle(0, "en"),
-                EmbeddedSubtitle(1, "he"),
-            ),
-            audioLanguage = "en",
-            onlineEnabled = true,
-        )
-        assertIs<AcquisitionStep.EmbeddedHebrew>(plan.first())
-    }
-
-    @Test fun fullPrecedenceWhenNoHebrew() {
-        val plan = SubtitleSourcePlanner.plan(
-            embedded = listOf(
-                EmbeddedSubtitle(0, "fr"),   // other
-                EmbeddedSubtitle(1, "en"),   // source (audio=en)
-            ),
-            audioLanguage = "en",
-            onlineEnabled = true,
-        )
-        // Spec order: OnlineHebrew → OnlineSource → EmbeddedSource(en=source) → EmbeddedSource(fr) → Transcribe
-        assertIs<AcquisitionStep.OnlineHebrew>(plan[0])
-        assertIs<AcquisitionStep.OnlineSource>(plan[1])
-        val embSrc = plan[2] as AcquisitionStep.EmbeddedSource
-        assertEquals("en", Language.canonical(embSrc.language)) // source-language track prioritised
-        assertIs<AcquisitionStep.EmbeddedSource>(plan[3])
-        assertIs<AcquisitionStep.Transcribe>(plan[4])
-    }
-
-    @Test fun preferEmbeddedSourcePutsEmbeddedBeforeOnline() {
-        // Updated spec §ב.3: embedded English/source subs are used before any
-        // online search — so EmbeddedSource must precede the Online* steps.
-        val plan = SubtitleSourcePlanner.plan(
-            embedded = listOf(EmbeddedSubtitle(1, "en")),
-            audioLanguage = "en",
-            onlineEnabled = true,
-            preferEmbeddedSource = true,
-        )
-        assertIs<AcquisitionStep.EmbeddedSource>(plan[0])
-        assertIs<AcquisitionStep.OnlineHebrew>(plan[1])
-        assertIs<AcquisitionStep.OnlineSource>(plan[2])
-        assertIs<AcquisitionStep.Transcribe>(plan.last())
-    }
-
-    @Test fun cleanQueryStripsReleaseTagsAndSeparators() {
-        val cleaned = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
-            .cleanQuery("BBC.Zambezi.1965.1of3.Lord.of.the.Land.WebRip.MVGroup")
-        // Dots become spaces and release tokens (1of3, WebRip, MVGroup) are removed.
-        assertTrue(cleaned.contains("Zambezi"))
-        assertTrue(cleaned.contains("Lord of the Land"))
-        assertTrue(!cleaned.contains("WebRip", ignoreCase = true))
-        assertTrue(!cleaned.contains("MVGroup", ignoreCase = true))
-        assertTrue(!cleaned.contains("1of3", ignoreCase = true))
-    }
-
-    @Test fun buildSearchParamsCleansTitleAndAddsYear() {
-        val p = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
-            .buildSearchParams(listOf("he"), movieHash = null, title = "The.Matrix.1999.1080p.BluRay", year = "1999")
-        assertEquals("he", p["languages"])
-        assertEquals("1999", p["year"])
-        assertTrue(p["query"]!!.contains("Matrix"))
-        assertTrue(!p["query"]!!.contains("1080p"))
-    }
+/** Subtitle parsing, styling, timing and translation-support logic. */
+class SubtitleCoreTest {
 
     @Test fun parseToleratesNullBooleanFields() {
         // OpenSubtitles can return an explicit null for from_trusted/hearing_impaired;
         // parsing must not throw (regression: JsonDecodingException crashed a run).
         val raw = """
             {"total_count":1,"data":[{"id":"1","attributes":{
-              "language":"en","download_count":7,
+              "language":"en","download_count":7,"moviehash_match":true,
               "from_trusted":null,"hearing_impaired":null,"machine_translated":null,
               "foreign_parts_only":false,
               "files":[{"file_id":123,"file_name":"movie.en.srt"}]
@@ -209,14 +143,6 @@ class SubtitleSourcePlannerTest {
         assertTrue(m.hasPoster)
     }
 
-    @Test fun buildSearchParamsUsesImdbIdWhenPresent() {
-        val p = com.hebsub.core.provider.opensubtitles.OpenSubtitlesQuery
-            .buildSearchParams(listOf("he"), movieHash = null, title = "The Matrix", year = "1999", imdbId = "tt0133093")
-        assertEquals("133093", p["imdb_id"]) // "tt" and leading zeros stripped
-        assertEquals(null, p["query"])        // imdb id replaces the title/year query
-        assertEquals(null, p["year"])
-    }
-
     @Test fun alignerRecoversOffsetAndScale() {
         // Build an hour of random speech segments (audio time), then derive subtitles
         // that are offset by 12 s and time-scaled by 25/23.976 — a typical wrong-release
@@ -270,29 +196,6 @@ class SubtitleSourcePlannerTest {
         val user = p.buildUserContent(batch, onlyIds = missing)
         assertTrue(user.contains("\"id\":2") && user.contains("\"id\":4") && !user.contains("\"id\":1"))
         assertTrue(p.systemPrompt("en", "Title: X\nSynopsis: Y").contains("Synopsis: Y"))
-    }
-
-    @Test fun matchRejectsWrongLengthAndFps() {
-        val m = com.hebsub.core.subtitle.SubtitleMatch
-        val video = 87 * 60_000L
-        assertTrue(m.durationFits(85 * 60_000L, video))          // ends before the credits — fine
-        assertTrue(!m.durationFits(95 * 60_000L, video))         // runs past the video — longer cut
-        assertTrue(!m.durationFits(30 * 60_000L, video))         // covers a third — partial/wrong
-        assertTrue(m.durationFits(1000L, 0L))                    // unknown duration → no opinion
-        // fps
-        assertTrue(m.fpsConflict(25.0, 23.976))                  // classic PAL/NTSC transfer
-        assertTrue(!m.fpsConflict(23.976, 24.0))                 // within rounding tolerance
-        assertTrue(!m.fpsConflict(0.0, 25.0))                    // unknown → no opinion
-    }
-
-    @Test fun releaseSimilarityPrefersTheMatchingRelease() {
-        val m = com.hebsub.core.subtitle.SubtitleMatch
-        val video = "Absent.2011.1080p.BluRay.x264-AMIABLE"
-        val same = m.releaseSimilarity(video, "Absent 2011 1080p BluRay x264-AMIABLE")
-        val other = m.releaseSimilarity(video, "Absent 2011 DVDRip XviD-NoGroup")
-        assertTrue(same > other, "same release ($same) must outrank a different one ($other)")
-        assertTrue(same > 0.7, "near-identical release should score high, was $same")
-        assertEquals(-1.0, m.releaseSimilarity(video, null))     // unknown → no opinion
     }
 
     @Test fun alignerFitRejectsAnUnrelatedSubtitle() {
@@ -402,19 +305,67 @@ class SubtitleSourcePlannerTest {
         assertEquals(listOf("hello", "world"), back[0].lines)  // spacer + override removed
     }
 
-    @Test fun offlineOnlyOmitsOnlineSteps() {
-        val plan = SubtitleSourcePlanner.plan(
-            embedded = emptyList(),
-            audioLanguage = null,
-            onlineEnabled = false,
+    @Test fun minimumDurationExtendsOnlyIntoSilence() {
+        val t = com.hebsub.core.subtitle.SubtitleTiming
+        fun cue(i: Int, s: Long, e: Long) = com.hebsub.core.subtitle.SubtitleCue(i, s, e, listOf("x"))
+        val cues = listOf(
+            cue(1, 1_000, 1_400),    // short, followed by a long pause → may grow
+            cue(2, 10_000, 10_300),  // short, but cue 3 starts right after → capped
+            cue(3, 10_900, 11_500),  // last one → free to grow
         )
-        assertTrue(plan.none { it is AcquisitionStep.OnlineHebrew || it is AcquisitionStep.OnlineSource })
-        assertIs<AcquisitionStep.Transcribe>(plan.last())
+        val out = t.ensureMinimumDuration(cues, minMs = 2_000)
+
+        // Start times are never touched — this is what keeps a translated track in sync.
+        assertTrue(t.startTimesUnchanged(cues, out))
+        assertEquals(3_000L, out[0].endMs)                       // full 2s granted
+        assertEquals(10_900L - 80L, out[1].endMs)                // stops before cue 3 (guard)
+        assertEquals(12_900L, out[2].endMs)                      // nothing after it
+        // Nothing overlaps.
+        assertTrue(out[1].endMs < out[2].startMs)
     }
 
-    @Test fun onlineSourcePrefersSourceLanguage() {
-        val plan = SubtitleSourcePlanner.plan(emptyList(), audioLanguage = "fr", onlineEnabled = true)
-        val onlineSrc = plan.filterIsInstance<AcquisitionStep.OnlineSource>().first()
-        assertEquals(listOf("fr"), onlineSrc.preferredLanguages)
+    @Test fun minimumDurationOfZeroKeepsSourceTimingExactly() {
+        val t = com.hebsub.core.subtitle.SubtitleTiming
+        val cues = (1..5).map { com.hebsub.core.subtitle.SubtitleCue(it, it * 1000L, it * 1000L + 200, listOf("x")) }
+        assertEquals(cues, t.ensureMinimumDuration(cues, minMs = 0))
+        // A cue that already runs long enough is left alone.
+        val long = listOf(com.hebsub.core.subtitle.SubtitleCue(1, 0, 9_000, listOf("x")))
+        assertEquals(long, t.ensureMinimumDuration(long, minMs = 2_000))
     }
+
+    @Test fun styledDefaultsMatchTheSpecAndRoundTrip() {
+        val d = com.hebsub.core.subtitle.AssStyleOptions.STYLED_DEFAULT
+        assertEquals(10, d.bgTransparencyPercent)
+        assertEquals(28, d.fontSize)
+        assertEquals(3, d.platePadding)
+        assertEquals(12, d.plateSidePadding)
+        assertEquals(5, d.marginV)
+        assertEquals(4, d.extraLineSpacing)
+        // Saved as the user's default and read back unchanged.
+        val mine = d.copy(fontSize = 34, marginV = 40)
+        assertEquals(mine, com.hebsub.core.subtitle.AssStyleOptions.deserialize(mine.serialize()))
+        assertEquals(null, com.hebsub.core.subtitle.AssStyleOptions.deserialize(null))
+        assertEquals(null, com.hebsub.core.subtitle.AssStyleOptions.deserialize("   "))
+    }
+
+    @Test fun glossaryFindsRecurringNamesNotCommonWords() {
+        val g = com.hebsub.core.text.Glossary
+        fun c(i: Int, vararg l: String) = com.hebsub.core.subtitle.SubtitleCue(i, i * 1000L, i * 1000L + 500, l.toList())
+        val cues = listOf(
+            c(1, "Where is Martin?"),
+            c(2, "I told Martin to wait."),
+            c(3, "That was Martin's idea."),
+            c(4, "Ana and Martin left."),
+            c(5, "Did Ana call you?"),
+            c(6, "Tell Ana the truth."),
+            c(7, "The house is quiet."),
+        )
+        val terms = g.extractTerms(cues, minOccurrences = 3)
+        assertTrue(terms.contains("Martin"), "recurring character name expected, got $terms")
+        assertTrue(!terms.contains("The"), "sentence-case words must not be pinned: $terms")
+        assertTrue(!terms.contains("Where"), "sentence-initial words must not be pinned: $terms")
+        assertEquals("Martin = מרטין", g.render(mapOf("Martin" to "מרטין")))
+        assertEquals("", g.render(emptyMap()))
+    }
+
 }
