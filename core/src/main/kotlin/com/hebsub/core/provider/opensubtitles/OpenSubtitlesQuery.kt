@@ -113,6 +113,7 @@ object OpenSubtitlesQuery {
                     fromTrusted = a.fromTrusted,
                     release = a.release,
                     hashMatch = a.movieHashMatch,
+                    fps = a.fps,
                 )
             }
         }
@@ -144,6 +145,7 @@ object OpenSubtitlesQuery {
                     fromTrusted = a.fromTrusted,
                     release = a.release,
                     hashMatch = a.movieHashMatch,
+                    fps = a.fps,
                 )
             }
         }

@@ -151,6 +151,10 @@ class ProcessingService : Service() {
                 subtitlePath = info.subtitlePath,
                 bgTransparency = info.bgTransparency,
                 deleteData = info.deleteData,
+                // The ORIGINAL file name still carries the release tags (1080p,
+                // BluRay, group…) that the canonical folder name drops; the
+                // pipeline matches it against each subtitle's `release`.
+                releaseName = suggested,
             )
             } catch (t: Throwable) {
                 RunLog.error("service failed", t)

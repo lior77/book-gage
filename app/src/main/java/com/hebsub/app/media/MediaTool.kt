@@ -8,6 +8,9 @@ data class MediaProbe(
     val embeddedSubtitles: List<EmbeddedSubtitle>,
     val audioLanguage: String?,
     val durationMs: Long,
+    /** Frame rate of the video stream, or 0 when unknown — used to reject
+     *  subtitles timed for a different transfer (23.976 vs 25 fps). */
+    val videoFps: Double = 0.0,
 ) {
     val subtitleCount: Int get() = embeddedSubtitles.size
 }

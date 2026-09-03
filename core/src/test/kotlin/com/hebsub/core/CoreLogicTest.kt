@@ -272,6 +272,49 @@ class SubtitleSourcePlannerTest {
         assertTrue(p.systemPrompt("en", "Title: X\nSynopsis: Y").contains("Synopsis: Y"))
     }
 
+    @Test fun matchRejectsWrongLengthAndFps() {
+        val m = com.hebsub.core.subtitle.SubtitleMatch
+        val video = 87 * 60_000L
+        assertTrue(m.durationFits(85 * 60_000L, video))          // ends before the credits — fine
+        assertTrue(!m.durationFits(95 * 60_000L, video))         // runs past the video — longer cut
+        assertTrue(!m.durationFits(30 * 60_000L, video))         // covers a third — partial/wrong
+        assertTrue(m.durationFits(1000L, 0L))                    // unknown duration → no opinion
+        // fps
+        assertTrue(m.fpsConflict(25.0, 23.976))                  // classic PAL/NTSC transfer
+        assertTrue(!m.fpsConflict(23.976, 24.0))                 // within rounding tolerance
+        assertTrue(!m.fpsConflict(0.0, 25.0))                    // unknown → no opinion
+    }
+
+    @Test fun releaseSimilarityPrefersTheMatchingRelease() {
+        val m = com.hebsub.core.subtitle.SubtitleMatch
+        val video = "Absent.2011.1080p.BluRay.x264-AMIABLE"
+        val same = m.releaseSimilarity(video, "Absent 2011 1080p BluRay x264-AMIABLE")
+        val other = m.releaseSimilarity(video, "Absent 2011 DVDRip XviD-NoGroup")
+        assertTrue(same > other, "same release ($same) must outrank a different one ($other)")
+        assertTrue(same > 0.7, "near-identical release should score high, was $same")
+        assertEquals(-1.0, m.releaseSimilarity(video, null))     // unknown → no opinion
+    }
+
+    @Test fun alignerFitRejectsAnUnrelatedSubtitle() {
+        // Speech every 6 s; a subtitle from a different film lands at random times
+        // and must not be trusted, however we shift or scale it.
+        val speech = (0 until 400).map { com.hebsub.core.subtitle.SubtitleAligner.Speech(it * 6000L + 1000, it * 6000L + 3000) }
+        val rnd = java.util.Random(11)
+        val unrelated = (1..300).map {
+            val s = (rnd.nextDouble() * 2_400_000L).toLong()
+            com.hebsub.core.subtitle.SubtitleCue(it, s, s + 1500, listOf("x"))
+        }.sortedBy { it.startMs }.mapIndexed { i, c -> c.copy(index = i + 1) }
+        val bad = com.hebsub.core.subtitle.SubtitleAligner.align(unrelated, speech)
+        assertTrue(!bad.isTrustworthy, "unrelated subtitle must be rejected, fit=${bad.fit}")
+
+        // A correctly-timed subtitle for the same audio must be trusted.
+        val good = com.hebsub.core.subtitle.SubtitleAligner.align(
+            speech.mapIndexed { i, s -> com.hebsub.core.subtitle.SubtitleCue(i + 1, s.startMs, s.endMs, listOf("x")) },
+            speech,
+        )
+        assertTrue(good.isTrustworthy, "matching subtitle must be trusted, fit=${good.fit}")
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),

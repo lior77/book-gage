@@ -30,6 +30,7 @@ class FfmpegMediaTool : MediaTool {
 
         val subs = ArrayList<EmbeddedSubtitle>()
         var audioLang: String? = null
+        var videoFps = 0.0
         val streams = info.streams ?: emptyList()
         for (stream in streams) {
             val type = stream.type ?: continue
@@ -43,10 +44,31 @@ class FfmpegMediaTool : MediaTool {
             when (type) {
                 "subtitle" -> subs.add(EmbeddedSubtitle(index, lang, title, forced))
                 "audio" -> if (audioLang == null) audioLang = lang
+                "video" -> if (videoFps <= 0.0) {
+                    // ffprobe reports rates as a rational string, e.g. "24000/1001".
+                    val raw = listOf("avg_frame_rate", "r_frame_rate")
+                        .firstNotNullOfOrNull { props?.optString(it)?.takeUnless { s -> s.isBlank() } }
+                    videoFps = parseRate(raw)
+                }
             }
         }
         val durationMs = (info.duration?.toDoubleOrNull() ?: 0.0).times(1000).toLong()
-        MediaProbe(subs, Language.canonical(audioLang), durationMs)
+        MediaProbe(subs, Language.canonical(audioLang), durationMs, videoFps)
+    }
+
+    /** "24000/1001" or "25" → frames per second; 0.0 when unparseable. */
+    private fun parseRate(raw: String?): Double {
+        val s = raw?.trim().orEmpty()
+        if (s.isEmpty()) return 0.0
+        val parts = s.split('/')
+        return when {
+            parts.size == 2 -> {
+                val n = parts[0].toDoubleOrNull() ?: return 0.0
+                val d = parts[1].toDoubleOrNull() ?: return 0.0
+                if (d == 0.0) 0.0 else n / d
+            }
+            else -> s.toDoubleOrNull() ?: 0.0
+        }
     }
 
     override suspend fun extractSubtitle(input: File, streamIndex: Int, outSrt: File): Boolean =

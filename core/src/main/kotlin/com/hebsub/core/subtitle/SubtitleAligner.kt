@@ -26,6 +26,13 @@ object SubtitleAligner {
     /** A span of speech in the audio (from ASR utterances), in milliseconds. */
     data class Speech(val startMs: Long, val endMs: Long)
 
+    /**
+     * Fraction of subtitle time landing on speech, from −1 (all on silence) to
+     * +1 (all on speech), below which we consider the subtitle to be for a
+     * different film/version entirely rather than merely mistimed.
+     */
+    const val MIN_FIT = 0.20
+
     data class Result(
         val offsetMs: Long,
         val scale: Double,
@@ -33,12 +40,19 @@ object SubtitleAligner {
         val score: Long,
         /** Score of leaving the subtitles untouched (offset 0, scale 1). */
         val baselineScore: Long,
+        /** [score] normalised to −1..+1 — how well the re-timed cues sit on speech. */
+        val fit: Double = 0.0,
+        /** [baselineScore] normalised the same way — the fit before re-timing. */
+        val baselineFit: Double = 0.0,
     ) {
         val isIdentity: Boolean get() = offsetMs == 0L && scale == 1.0
 
         /** Apply only when it is a real improvement, not noise. */
         val shouldApply: Boolean
             get() = !isIdentity && score > 0 && score > baselineScore + (baselineScore.coerceAtLeast(0) / 10)
+
+        /** True when the cues genuinely line up with the speech after alignment. */
+        val isTrustworthy: Boolean get() = fit >= MIN_FIT
     }
 
     const val RESOLUTION_MS = 100L
@@ -93,6 +107,19 @@ object SubtitleAligner {
             return total
         }
 
+        // Total samples covered by the cues at a given scale — the normaliser that
+        // turns a raw score into a comparable −1..+1 fit.
+        fun samplesFor(scale: Double): Long {
+            var total = 0L
+            for (c in cues) {
+                val a = ((c.startMs * scale) / res).roundToLong()
+                var b = ((c.endMs * scale) / res).roundToLong()
+                if (b <= a) b = a + 1
+                total += b - a
+            }
+            return total.coerceAtLeast(1L)
+        }
+
         val baseline = scoreOf(1.0, 0L)
         var bestScore = Long.MIN_VALUE
         var bestOffset = 0L
@@ -105,7 +132,14 @@ object SubtitleAligner {
                 if (s > bestScore) { bestScore = s; bestOffset = offset; bestScale = scale }
             }
         }
-        return Result(bestOffset, bestScale, bestScore, baseline)
+        return Result(
+            offsetMs = bestOffset,
+            scale = bestScale,
+            score = bestScore,
+            baselineScore = baseline,
+            fit = bestScore.toDouble() / samplesFor(bestScale),
+            baselineFit = baseline.toDouble() / samplesFor(1.0),
+        )
     }
 
     /** Re-time [cues] with [result]; order and indices are preserved. */
