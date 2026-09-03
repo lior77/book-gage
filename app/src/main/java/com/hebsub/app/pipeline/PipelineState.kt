@@ -47,10 +47,8 @@ data class SourceStepState(
  *  - [imdbUrl]: optional IMDb link; when set, movie data is pulled from OMDb,
  *    embedded into the MKV, and written to a bilingual PDF (spec §2).
  *  - [subtitlePath]: a subtitle file the user chose for this video ([SourceStep.ChosenFile]).
- *  - [syncUploaded]/[syncEmbedded]: the two sources whose timing the user may ask to
- *    align to the soundtrack — their own file, and a foreign track already in the
- *    container. Both default to OFF, i.e. the source's own timing is kept. Every
- *    other source is always used at exactly its own timing.
+ *    Whatever the source, its own timing is used exactly; a track that turns out to
+ *    be a few seconds off is corrected by hand afterwards, in the style editor.
  *  - [styled]: spec §9 — an ASS track with a plate, or plain SRT.
  *  - [style]: the ASS look to use when [styled]; defaults to §9.1.
  *  - [saveStyleAsDefaults]: spec §10 — remember [style] for future films.
@@ -63,8 +61,6 @@ data class VideoInfo(
     val year: String?,
     val imdbUrl: String? = null,
     val subtitlePath: String? = null,
-    val syncUploaded: Boolean = false,
-    val syncEmbedded: Boolean = false,
     val styled: Boolean = false,
     val style: AssStyleOptions = AssStyleOptions.STYLED_DEFAULT,
     val saveStyleAsDefaults: Boolean = false,

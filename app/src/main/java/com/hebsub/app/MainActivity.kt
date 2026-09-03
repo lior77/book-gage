@@ -474,6 +474,7 @@ private fun EditAssScreen(onHome: () -> Unit) {
     // Editable settings, seeded from the track once it is loaded.
     var style by remember { mutableStateOf(settings.assStyleDefaults) }
     var saveDefaults by remember { mutableStateOf(false) }
+    var offsetMs by remember { mutableStateOf(0L) }
     var preview by remember { mutableStateOf<java.io.File?>(null) }
     var previewing by remember { mutableStateOf(false) }
     var previewFailed by remember { mutableStateOf(false) }
@@ -499,6 +500,7 @@ private fun EditAssScreen(onHome: () -> Unit) {
                             } else {
                                 style = l.options
                                 loaded = l
+                                offsetMs = 0L
                                 preview = null; previewFailed = false
                             }
                         }
@@ -513,6 +515,20 @@ private fun EditAssScreen(onHome: () -> Unit) {
                 Text(stringResource(R.string.edit_from_srt), style = MaterialTheme.typography.bodySmall)
             }
 
+            // Manual sync. The person watching the film knows how far out the
+            // subtitles are; deriving it from the audio was tried and removed,
+            // because ASR reads background music as speech and anchored on it.
+            HorizontalDivider()
+            Text(stringResource(R.string.edit_offset_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (offsetMs == 0L) stringResource(R.string.edit_offset_none)
+                else stringResource(R.string.edit_offset_value, formatOffset(offsetMs)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OffsetControls(offsetMs, enabled = !busy) { offsetMs = it }
+            Text(stringResource(R.string.edit_offset_hint), style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider()
+
             StyleSliders(style) { style = it }
 
             // A frame of the actual film with these settings on it, so the choice is
@@ -521,7 +537,7 @@ private fun EditAssScreen(onHome: () -> Unit) {
                 onClick = {
                     previewing = true; previewFailed = false
                     scope.launch {
-                        val img = editor.preview(current, style)
+                        val img = editor.preview(current, style, offsetMs)
                         previewing = false
                         if (img == null) { previewFailed = true; preview = null } else preview = img
                     }
@@ -564,7 +580,7 @@ private fun EditAssScreen(onHome: () -> Unit) {
                         RunLog.log("edit: saved ASS defaults ${style.serialize()}")
                     }
                     scope.launch {
-                        val ok = editor.apply(current, style)
+                        val ok = editor.apply(current, style, offsetMs)
                         busy = false
                         val outcome = context.getString(if (ok) R.string.edit_done else R.string.edit_failed)
                         val defaults = if (saveDefaults) " " + context.getString(R.string.edit_defaults_saved) else ""
@@ -577,7 +593,7 @@ private fun EditAssScreen(onHome: () -> Unit) {
             ) { Text(stringResource(R.string.edit_apply)) }
 
             OutlinedButton(
-                onClick = { loaded = null; message = null; preview = null; previewFailed = false },
+                onClick = { loaded = null; message = null; offsetMs = 0L; preview = null; previewFailed = false },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -877,9 +893,6 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
             // §9 — plain or styled; §9.1/§10 supply what "styled" starts from.
             var styled by remember(state.suggestedName) { mutableStateOf(false) }
             var style by remember(state.suggestedName) { mutableStateOf(settings.assStyleDefaults) }
-            // §7.1 — only ever offered for a subtitle the user chose themselves.
-            var syncUploaded by remember(state.suggestedName) { mutableStateOf(false) }
-            var syncEmbedded by remember(state.suggestedName) { mutableStateOf(false) }
             var minDisplay by remember(state.suggestedName) { mutableStateOf(settings.minDisplayMs.toFloat()) }
             var saveDefaults by remember(state.suggestedName) { mutableStateOf(false) }
 
@@ -923,30 +936,12 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                // §2 — the two sources whose timing may be aligned to the soundtrack.
-                // Everything else is always used at exactly its own timing.
+                // Every source keeps its own timing. A track that turns out to be a
+                // few seconds off is corrected afterwards, by hand, in the style editor.
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
-
-                // §2.1 — only worth asking about once a file has actually been picked.
-                if (subPath != null) {
-                    Text(stringResource(R.string.video_info_sync_title), style = MaterialTheme.typography.titleSmall)
-                    RadioRow(stringResource(R.string.video_info_sync_keep), !syncUploaded) { syncUploaded = false }
-                    RadioRow(stringResource(R.string.video_info_sync_do), syncUploaded) { syncUploaded = true }
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                // §2.2 — an embedded foreign track. Whether the film has one is only
-                // known after the probe, which runs later, so the choice is offered now.
-                Text(stringResource(R.string.video_info_sync_embedded_title), style = MaterialTheme.typography.titleSmall)
-                RadioRow(stringResource(R.string.video_info_sync_keep), !syncEmbedded) { syncEmbedded = false }
-                RadioRow(stringResource(R.string.video_info_sync_do), syncEmbedded) { syncEmbedded = true }
-
-                Text(stringResource(R.string.video_info_sync_hint), style = MaterialTheme.typography.bodySmall)
-                if (syncUploaded || syncEmbedded) {
-                    Text(stringResource(R.string.video_info_sync_cost), style = MaterialTheme.typography.bodySmall)
-                }
+                Text(stringResource(R.string.video_info_timing_note), style = MaterialTheme.typography.bodySmall)
 
                 // §9 — plain subtitles or a styled ASS track.
                 Spacer(Modifier.height(12.dp))
@@ -1003,8 +998,6 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                                 year = year.ifBlank { null },
                                 imdbUrl = imdb.ifBlank { null },
                                 subtitlePath = subPath,
-                                syncUploaded = subPath != null && syncUploaded,
-                                syncEmbedded = syncEmbedded,
                                 styled = styled,
                                 style = style,
                                 saveStyleAsDefaults = saveDefaults,
@@ -1074,6 +1067,47 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }
+        }
+    }
+}
+
+/** Largest manual sync offset offered, in milliseconds (±2 minutes). */
+private const val MAX_OFFSET_MS = 120_000L
+
+/** `+2.5` / `−1` seconds — a signed, minimal rendering of a subtitle offset. */
+private fun formatOffset(ms: Long): String {
+    val sign = if (ms < 0) "−" else "+"
+    val abs = kotlin.math.abs(ms)
+    val whole = abs / 1000
+    val half = (abs % 1000) / 500
+    return if (half == 0L) "$sign$whole" else "$sign$whole.5"
+}
+
+/**
+ * The manual sync stepper: whole seconds and half seconds, in both directions,
+ * plus a reset. Buttons rather than a slider because the correction is a specific
+ * number the user arrives at by watching, not a value to sweep through.
+ */
+@Composable
+private fun OffsetControls(offsetMs: Long, enabled: Boolean, onChange: (Long) -> Unit) {
+    // Kept in one list so the row is symmetric by construction.
+    val steps = listOf(-5_000L, -1_000L, -500L, 500L, 1_000L, 5_000L)
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        steps.forEach { delta ->
+            OutlinedButton(
+                onClick = { onChange((offsetMs + delta).coerceIn(-MAX_OFFSET_MS, MAX_OFFSET_MS)) },
+                enabled = enabled,
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+            ) { Text(formatOffset(delta), style = MaterialTheme.typography.labelLarge) }
+        }
+    }
+    if (offsetMs != 0L) {
+        TextButton(onClick = { onChange(0L) }, enabled = enabled) {
+            Text(stringResource(R.string.edit_offset_reset))
         }
     }
 }

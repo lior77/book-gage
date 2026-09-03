@@ -10,6 +10,7 @@ import com.hebsub.core.subtitle.AssStyleOptions
 import com.hebsub.core.subtitle.AssStyler
 import com.hebsub.core.subtitle.AssWriter
 import com.hebsub.core.subtitle.SrtParser
+import com.hebsub.core.subtitle.SubtitleTiming
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -92,19 +93,13 @@ class AssEditor(
      * Write the new style and rebuild the MKV, replacing the original file.
      * Returns true when the replacement is on disk.
      */
-    suspend fun apply(loaded: Loaded, options: AssStyleOptions): Boolean = withContext(Dispatchers.IO) {
+    suspend fun apply(loaded: Loaded, options: AssStyleOptions, offsetMs: Long = 0L): Boolean = withContext(Dispatchers.IO) {
         val target = loaded.target
         val base = target.mkv.name.removeSuffix(".he.mkv")
 
-        // Build the restyled ASS. Converting from SRT also needs the font attached.
+        val ass = buildAss(loaded, options, offsetMs)
+            ?: run { RunLog.error("edit: could not build the styled track"); return@withContext false }
         val convertingFromSrt = loaded.ass == null
-        val ass = if (convertingFromSrt) {
-            val cues = SrtParser.parse(loaded.srt.orEmpty())
-            if (cues.isEmpty()) { RunLog.error("edit: SRT track had no cues"); return@withContext false }
-            AssWriter.write(cues, fontName = HEBREW_FONT_FAMILY, options = options)
-        } else {
-            AssStyler.restyle(loaded.ass!!, options, fontName = AssStyler.fontOf(loaded.ass) ?: HEBREW_FONT_FAMILY)
-        }
 
         val assFile = File(target.dir, "$base.he.ass")
         runCatching { assFile.writeText(ass, Charsets.UTF_8) }
@@ -121,7 +116,7 @@ class AssEditor(
         val tmpOut = File(target.dir, "$base.he.restyled.mkv")
         runCatching { tmpOut.delete() }
 
-        RunLog.log("edit: rebuilding ${target.mkv.name} with $options (convertFromSrt=$convertingFromSrt font=${font?.name ?: "-"} poster=${poster?.name ?: "-"})")
+        RunLog.log("edit: rebuilding ${target.mkv.name} with $options offsetMs=$offsetMs (convertFromSrt=$convertingFromSrt font=${font?.name ?: "-"} poster=${poster?.name ?: "-"})")
         val ok = runCatching {
             mediaTool.replaceSubtitleTrack(
                 inputMkv = target.mkv,
@@ -157,14 +152,8 @@ class AssEditor(
      * the image, or null when this FFmpeg build cannot burn subtitles in — the
      * editor then simply carries on without a preview.
      */
-    suspend fun preview(loaded: Loaded, options: AssStyleOptions): File? = withContext(Dispatchers.IO) {
-        val ass = if (loaded.ass != null) {
-            AssStyler.restyle(loaded.ass, options, fontName = AssStyler.fontOf(loaded.ass) ?: HEBREW_FONT_FAMILY)
-        } else {
-            val cues = SrtParser.parse(loaded.srt.orEmpty())
-            if (cues.isEmpty()) return@withContext null
-            AssWriter.write(cues, fontName = HEBREW_FONT_FAMILY, options = options)
-        }
+    suspend fun preview(loaded: Loaded, options: AssStyleOptions, offsetMs: Long = 0L): File? = withContext(Dispatchers.IO) {
+        val ass = buildAss(loaded, options, offsetMs) ?: return@withContext null
         val at = previewTimeMs(ass) ?: return@withContext null
 
         val font = ensureHebrewFont()
@@ -181,6 +170,27 @@ class AssEditor(
         // unchanged path and the preview appears not to update.
         val stamped = File(context.cacheDir, "preview-${System.currentTimeMillis()}.jpg")
         if (out.renameTo(stamped)) stamped else out
+    }
+
+    /**
+     * The styled ASS for [options], shifted by [offsetMs]. Shared by the preview and
+     * the rebuild so what the user sees is exactly what gets written.
+     *
+     * An existing ASS is restyled and time-shifted in place rather than parsed and
+     * re-written, so anything the document carries beyond our own styling survives.
+     * A track that is still SRT has no styling to lose, so it is simply shifted as
+     * cues and written out as a new ASS.
+     */
+    private fun buildAss(loaded: Loaded, options: AssStyleOptions, offsetMs: Long): String? {
+        if (loaded.ass != null) {
+            val restyled = AssStyler.restyle(
+                loaded.ass, options, fontName = AssStyler.fontOf(loaded.ass) ?: HEBREW_FONT_FAMILY,
+            )
+            return AssStyler.shiftTimes(restyled, offsetMs)
+        }
+        val cues = SrtParser.parse(loaded.srt.orEmpty())
+        if (cues.isEmpty()) { RunLog.error("edit: SRT track had no cues"); return null }
+        return AssWriter.write(SubtitleTiming.shift(cues, offsetMs), fontName = HEBREW_FONT_FAMILY, options = options)
     }
 
     /**

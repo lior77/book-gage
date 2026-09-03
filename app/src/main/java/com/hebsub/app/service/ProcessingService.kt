@@ -174,8 +174,6 @@ class ProcessingService : Service() {
                 movie = movie,
                 options = SubtitlePipeline.RunOptions(
                     subtitlePath = info.subtitlePath,
-                    syncUploaded = info.syncUploaded,
-                    syncEmbedded = info.syncEmbedded,
                     styled = info.styled,
                     style = info.style,
                     minDisplayMs = info.minDisplayMs,

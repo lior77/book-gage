@@ -194,16 +194,70 @@ object AssStyler {
      */
     fun restyle(ass: String, o: AssStyleOptions, fontName: String? = null): String {
         val font = fontName ?: fontOf(ass) ?: "Arial"
-        val out = StringBuilder(ass.length + 64)
-        for (line in ass.lineSequence()) {
+        // Same line-ending discipline as shiftTimes: a document restyled ten times
+        // must not have gained ten blank lines at the end.
+        return ass.lineSequence().joinToString("\n") { line ->
             when {
-                line.startsWith("Style:") -> out.append(styleLine(font, o))
-                line.startsWith("Dialogue:") -> out.append(restyleDialogue(line, o))
-                else -> out.append(line)
+                line.startsWith("Style:") -> styleLine(font, o)
+                line.startsWith("Dialogue:") -> restyleDialogue(line, o)
+                else -> line
             }
-            out.append('\n')
         }
-        return out.toString()
+    }
+
+    /**
+     * Move every dialogue line in [ass] by [deltaMs], leaving the rest of the
+     * document — styles, script info, text, overrides — exactly as it was.
+     *
+     * This rewrites only the Start and End fields, so it is lossless in a way that
+     * parsing to cues and writing the file back out would not be: a third-party ASS
+     * keeps whatever styling it came with.
+     */
+    fun shiftTimes(ass: String, deltaMs: Long): String {
+        if (deltaMs == 0L) return ass
+        // joinToString("\n") over lineSequence reproduces the original line endings
+        // exactly, including whether the file ended with a newline. Appending '\n'
+        // per line instead would add one every time the document is rewritten.
+        return ass.lineSequence().joinToString("\n") { line ->
+            if (line.startsWith("Dialogue:")) shiftDialogue(line, deltaMs) else line
+        }
+    }
+
+    private fun shiftDialogue(line: String, deltaMs: Long): String {
+        val body = line.removePrefix("Dialogue:")
+        val parts = body.split(',', limit = 10)
+        if (parts.size < 10) return line
+        val start = parseTime(parts[1]) ?: return line
+        val end = parseTime(parts[2]) ?: return line
+        val newStart = (start + deltaMs).coerceAtLeast(0L)
+        val newEnd = (end + deltaMs).coerceAtLeast(newStart)
+        val shifted = parts.toMutableList()
+        shifted[1] = formatTime(newStart)
+        shifted[2] = formatTime(newEnd)
+        return "Dialogue:" + shifted.joinToString(",")
+    }
+
+    /** `H:MM:SS.cc` → milliseconds, or null when the field is not a timestamp. */
+    fun parseTime(field: String): Long? {
+        val s = field.trim()
+        val parts = s.split(':')
+        if (parts.size != 3) return null
+        val h = parts[0].toLongOrNull() ?: return null
+        val m = parts[1].toLongOrNull() ?: return null
+        val secParts = parts[2].split('.')
+        val sec = secParts[0].toLongOrNull() ?: return null
+        // ASS writes centiseconds ("02.48" = 2480 ms), but pad to milliseconds so a
+        // file with one or three fraction digits reads correctly too.
+        val millis = secParts.getOrNull(1)
+            ?.filter { it.isDigit() }?.take(3)?.padEnd(3, '0')
+            ?.toLongOrNull() ?: 0L
+        return ((h * 3600 + m * 60 + sec) * 1000) + millis
+    }
+
+    /** Milliseconds → the ASS `H:MM:SS.cc` form. */
+    fun formatTime(ms: Long): String {
+        val cs = (if (ms < 0) 0 else ms) / 10
+        return "%d:%02d:%02d.%02d".format(cs / 360000, (cs / 6000) % 60, (cs / 100) % 60, cs % 100)
     }
 
     /** A dialogue line is 9 comma-separated fields followed by the free-form text. */

@@ -49,6 +49,26 @@ object SubtitleTiming {
     }
 
     /**
+     * Move every cue by [deltaMs] — positive makes the subtitles appear later,
+     * negative earlier. Durations are preserved exactly; a cue pushed before zero
+     * is clamped to the start of the film, which is the only case where a shift
+     * can change a duration.
+     *
+     * This is the manual sync: the user watches the film, sees the subtitles are
+     * a few seconds out, and says so. Deriving the same number from the audio was
+     * tried and abandoned — background music reads as speech, so the automatic
+     * alignment anchored on the wrong moments.
+     */
+    fun shift(cues: List<SubtitleCue>, deltaMs: Long): List<SubtitleCue> {
+        if (deltaMs == 0L) return cues
+        return cues.map { cue ->
+            val start = (cue.startMs + deltaMs).coerceAtLeast(0L)
+            val end = (cue.endMs + deltaMs).coerceAtLeast(start)
+            cue.copy(startMs = start, endMs = end)
+        }
+    }
+
+    /**
      * True when [after] shows every cue at exactly the same moment as [before].
      * Used to prove that translating a track never disturbs its timing (a
      * translated embedded track must stay in step with the film).

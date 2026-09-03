@@ -143,40 +143,6 @@ class SubtitleCoreTest {
         assertTrue(m.hasPoster)
     }
 
-    @Test fun alignerRecoversOffsetAndScale() {
-        // Build an hour of random speech segments (audio time), then derive subtitles
-        // that are offset by 12 s and time-scaled by 25/23.976 — a typical wrong-release
-        // situation. The aligner must recover both and re-time the cues onto the speech.
-        val rnd = java.util.Random(7)
-        val speech = ArrayList<com.hebsub.core.subtitle.SubtitleAligner.Speech>()
-        var t = 5_000L
-        while (t < 60 * 60_000L) {
-            val len = 1000L + rnd.nextInt(3000)
-            speech.add(com.hebsub.core.subtitle.SubtitleAligner.Speech(t, t + len))
-            t += len + 1000L + rnd.nextInt(6000)
-        }
-        val scale = 25.0 / 23.976
-        val offset = 12_000L
-        // audio = sub * scale + offset  →  sub = (audio − offset) / scale
-        val subs = speech.mapIndexed { i, s ->
-            com.hebsub.core.subtitle.SubtitleCue(i + 1, ((s.startMs - offset) / scale).toLong(), ((s.endMs - offset) / scale).toLong(), listOf("x"))
-        }
-        val r = com.hebsub.core.subtitle.SubtitleAligner.align(subs, speech)
-        assertTrue(r.shouldApply, "expected an improvement, got $r")
-        assertTrue(kotlin.math.abs(r.offsetMs - offset) <= 200, "offset=${r.offsetMs}")
-        assertEquals(scale, r.scale, 1e-9)
-        val fixed = com.hebsub.core.subtitle.SubtitleAligner.apply(subs, r)
-        assertTrue(kotlin.math.abs(fixed[0].startMs - speech[0].startMs) <= 200)
-        assertTrue(kotlin.math.abs(fixed.last().endMs - speech.last().endMs) <= 300)
-    }
-
-    @Test fun alignerLeavesSyncedSubtitlesAlone() {
-        val speech = (0 until 300).map { com.hebsub.core.subtitle.SubtitleAligner.Speech(it * 6000L + 1000, it * 6000L + 3500) }
-        val subs = speech.mapIndexed { i, s -> com.hebsub.core.subtitle.SubtitleCue(i + 1, s.startMs, s.endMs, listOf("x")) }
-        val r = com.hebsub.core.subtitle.SubtitleAligner.align(subs, speech)
-        assertTrue(!r.shouldApply, "already-synced subtitles must not be re-timed: $r")
-    }
-
     @Test fun claudeParserAcceptsArrayFormAndRawNewlines() {
         val p = com.hebsub.core.provider.claude.ClaudeTranslator
         val arr = """[{"id":1,"text":"שלום"},{"id":2,"hebrew":"עולם"}]"""
@@ -196,26 +162,6 @@ class SubtitleCoreTest {
         val user = p.buildUserContent(batch, onlyIds = missing)
         assertTrue(user.contains("\"id\":2") && user.contains("\"id\":4") && !user.contains("\"id\":1"))
         assertTrue(p.systemPrompt("en", "Title: X\nSynopsis: Y").contains("Synopsis: Y"))
-    }
-
-    @Test fun alignerFitRejectsAnUnrelatedSubtitle() {
-        // Speech every 6 s; a subtitle from a different film lands at random times
-        // and must not be trusted, however we shift or scale it.
-        val speech = (0 until 400).map { com.hebsub.core.subtitle.SubtitleAligner.Speech(it * 6000L + 1000, it * 6000L + 3000) }
-        val rnd = java.util.Random(11)
-        val unrelated = (1..300).map {
-            val s = (rnd.nextDouble() * 2_400_000L).toLong()
-            com.hebsub.core.subtitle.SubtitleCue(it, s, s + 1500, listOf("x"))
-        }.sortedBy { it.startMs }.mapIndexed { i, c -> c.copy(index = i + 1) }
-        val bad = com.hebsub.core.subtitle.SubtitleAligner.align(unrelated, speech)
-        assertTrue(!bad.isTrustworthy, "unrelated subtitle must be rejected, fit=${bad.fit}")
-
-        // A correctly-timed subtitle for the same audio must be trusted.
-        val good = com.hebsub.core.subtitle.SubtitleAligner.align(
-            speech.mapIndexed { i, s -> com.hebsub.core.subtitle.SubtitleCue(i + 1, s.startMs, s.endMs, listOf("x")) },
-            speech,
-        )
-        assertTrue(good.isTrustworthy, "matching subtitle must be trusted, fit=${good.fit}")
     }
 
     @Test fun assStylerRoundTripsTheFourSettings() {
@@ -322,6 +268,53 @@ class SubtitleCoreTest {
         assertEquals(12_900L, out[2].endMs)                      // nothing after it
         // Nothing overlaps.
         assertTrue(out[1].endMs < out[2].startMs)
+    }
+
+    @Test fun shiftMovesEveryCueAndKeepsDurations() {
+        val timing = com.hebsub.core.subtitle.SubtitleTiming
+        val cues = listOf(
+            com.hebsub.core.subtitle.SubtitleCue(1, 10_000, 12_000, listOf("א")),
+            com.hebsub.core.subtitle.SubtitleCue(2, 20_000, 21_500, listOf("ב")),
+        )
+        val later = timing.shift(cues, 2_500)
+        assertEquals(listOf(12_500L, 22_500L), later.map { it.startMs })
+        assertEquals(cues.map { it.endMs - it.startMs }, later.map { it.endMs - it.startMs })
+
+        val earlier = timing.shift(cues, -2_500)
+        assertEquals(listOf(7_500L, 17_500L), earlier.map { it.startMs })
+        // A zero shift must return the very same list, not a rebuilt copy.
+        assertTrue(timing.shift(cues, 0) === cues)
+    }
+
+    @Test fun shiftClampsAtTheStartOfTheFilm() {
+        val timing = com.hebsub.core.subtitle.SubtitleTiming
+        val cue = com.hebsub.core.subtitle.SubtitleCue(1, 1_000, 3_000, listOf("א"))
+        val out = timing.shift(listOf(cue), -5_000).single()
+        assertEquals(0L, out.startMs)          // cannot appear before the film starts
+        assertTrue(out.endMs >= out.startMs)   // and never ends before it begins
+    }
+
+    @Test fun assShiftRewritesOnlyTheTimestamps() {
+        val styler = com.hebsub.core.subtitle.AssStyler
+        val cues = listOf(com.hebsub.core.subtitle.SubtitleCue(1, 2_480, 3_690, listOf("שלום", "עולם")))
+        val ass = com.hebsub.core.subtitle.AssWriter.write(cues, bgTransparencyPercent = 50, fontName = "Alef")
+        val shifted = styler.shiftTimes(ass, 1_500)
+
+        assertTrue(shifted.contains("Dialogue: 0,0:00:03.98,0:00:05.19,Default"))
+        // Everything that is not a timestamp survives untouched — this is why the
+        // shift rewrites fields instead of re-writing the file from parsed cues.
+        assertTrue(shifted.contains("Style: Default,Alef,"))
+        assertTrue(shifted.contains("שלום"))
+        assertEquals(ass.lineSequence().count(), shifted.lineSequence().count())
+    }
+
+    @Test fun assTimeRoundTripsThroughMilliseconds() {
+        val styler = com.hebsub.core.subtitle.AssStyler
+        assertEquals(2_480L, styler.parseTime("0:00:02.48"))
+        assertEquals(3_723_450L, styler.parseTime("1:02:03.45"))
+        assertEquals(500L, styler.parseTime("0:00:00.5"))   // one fraction digit
+        assertEquals(null, styler.parseTime("Default"))     // not a timestamp at all
+        assertEquals("0:00:02.48", styler.formatTime(2_480))
     }
 
     @Test fun minimumDurationKeepsTheInputOrder() {
