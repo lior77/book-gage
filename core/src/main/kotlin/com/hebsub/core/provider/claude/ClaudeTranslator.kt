@@ -31,10 +31,11 @@ import kotlinx.serialization.json.put
 object ClaudeTranslator {
 
     const val DEFAULT_BATCH_SIZE = 40
-    const val DEFAULT_CONTEXT_SIZE = 3
+    const val DEFAULT_CONTEXT_SIZE = 6
     const val DEFAULT_MAX_TOKENS = 8192
 
-    private val json = Json { ignoreUnknownKeys = true }
+    // Lenient: the model occasionally emits relaxed JSON; we still want the map.
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     data class Batch(
         val cues: List<SubtitleCue>,
@@ -65,31 +66,58 @@ object ClaudeTranslator {
         return batches
     }
 
-    fun systemPrompt(sourceLanguageName: String?): String {
+    /**
+     * @param filmContext optional description of the film (title, year, synopsis)
+     *   so the model understands who the characters are and what is going on —
+     *   this is what turns line-by-line MT into context-aware translation.
+     */
+    fun systemPrompt(sourceLanguageName: String?, filmContext: String? = null): String {
         val src = sourceLanguageName?.takeIf { it.isNotBlank() } ?: "the source language"
+        val film = filmContext?.takeIf { it.isNotBlank() }?.let {
+            "\n\nAbout the film you are translating (use it to understand characters, relationships, setting and tone):\n$it"
+        } ?: ""
         return """
-            You are a professional subtitle translator. Translate film/TV subtitles from $src into natural, fluent Modern Hebrew.
+            You are a professional film subtitle translator. Translate film/TV subtitles from $src into natural, fluent Modern Hebrew that reads like a real Israeli cinema/TV subtitle.
 
             Principles:
-            - Translate meaning and intent, not word-for-word. Preserve tone, register, humour, sarcasm, and idiom — render idioms with the closest natural Hebrew equivalent, never a literal gloss.
+            - Translate MEANING and INTENT in context, never word-for-word. Read each line in light of the surrounding dialogue and the film's story; resolve ambiguity from context (who is speaking to whom, sarcasm, threats, jokes, flirting, formality).
+            - Preserve tone, register, humour, sarcasm, slang and idiom — render idioms with the closest natural Hebrew equivalent, never a literal gloss.
+            - Keep characters consistent: the same name, nickname, gendered forms and level of formality every time. Hebrew verbs/adjectives must agree with the speaker's and addressee's gender as implied by the story.
             - Keep each subtitle concise and readable at a glance, as real subtitles are. Prefer everyday spoken Hebrew over stilted or overly formal phrasing.
             - Preserve proper nouns and established Hebrew renderings of names/places where they exist.
-            - Do NOT merge, split, reorder, add, or omit lines. Return exactly one Hebrew translation per input id.
-            - Use the preceding-context lines only to stay consistent; do not translate them.
+            - Do NOT merge, split, reorder, add, or omit lines. Return exactly one Hebrew translation per input id, and translate EVERY id you are given.
+            - The preceding-context lines (and their Hebrew, when given) are for continuity only; do not translate them again.
             - Output Hebrew text only — no transliteration, no notes, no romanization.
 
-            Return ONLY a single JSON object mapping each input id (as a string) to its Hebrew translation, e.g. {"12":"…","13":"…"}. No markdown, no code fences, no extra text.
+            Return ONLY a single JSON object mapping each input id (as a string) to its Hebrew translation, e.g. {"12":"…","13":"…"}. Escape newlines inside a translation as \n. No markdown, no code fences, no extra text.$film
         """.trimIndent()
     }
 
-    /** The user-turn content: preceding context plus the id/text lines to translate, as JSON. */
-    fun buildUserContent(batch: Batch): String {
+    /**
+     * The user-turn content as JSON: preceding source context (with its Hebrew
+     * when already translated, for continuity), then the id/text lines to
+     * translate. [onlyIds] restricts the lines to a subset — used to re-request
+     * ids the model skipped.
+     */
+    fun buildUserContent(
+        batch: Batch,
+        precedingHebrew: List<String> = emptyList(),
+        onlyIds: Set<Int>? = null,
+    ): String {
         val obj = buildJsonObject {
             put("context_preceding", buildJsonArray {
-                batch.contextBefore.forEach { add(JsonPrimitive(it.text)) }
+                batch.contextBefore.forEachIndexed { i, cue ->
+                    val he = precedingHebrew.getOrNull(i)
+                    if (he != null) {
+                        add(buildJsonObject { put("text", cue.text); put("hebrew", he) })
+                    } else {
+                        add(JsonPrimitive(cue.text))
+                    }
+                }
             })
             put("lines", buildJsonArray {
                 batch.cues.forEach { cue ->
+                    if (onlyIds != null && cue.index !in onlyIds) return@forEach
                     add(buildJsonObject {
                         put("id", cue.index)
                         put("text", cue.text)
@@ -99,6 +127,10 @@ object ClaudeTranslator {
         }
         return json.encodeToString(JsonObject.serializer(), obj)
     }
+
+    /** Ids in [batch] that have no translation yet. */
+    fun missingIds(batch: Batch, translations: Map<Int, String>): Set<Int> =
+        batch.cues.map { it.index }.filter { it !in translations || translations[it].isNullOrBlank() }.toSet()
 
     /** Build the full Messages API request body as a JSON string. */
     fun buildRequestBody(
@@ -138,30 +170,72 @@ object ClaudeTranslator {
      * fences around it. Returns id→Hebrew text for every id it could recover.
      */
     fun parseTranslations(modelText: String): Map<Int, String> {
-        val jsonSlice = extractJsonObject(modelText) ?: return emptyMap()
-        val obj = try {
-            json.parseToJsonElement(jsonSlice).jsonObject
-        } catch (_: Exception) {
-            return emptyMap()
+        // Raw newlines inside string values are the most common way the model
+        // produces invalid JSON; escape them before parsing.
+        val cleaned = escapeControlCharsInStrings(modelText)
+
+        // 1) {"12":"…","13":"…"}
+        extractBlock(cleaned, '{', '}')?.let { slice ->
+            runCatching { json.parseToJsonElement(slice).jsonObject }.getOrNull()?.let { obj ->
+                val result = LinkedHashMap<Int, String>()
+                for ((key, value) in obj) {
+                    val id = key.toIntOrNull() ?: continue
+                    val text = (value as? JsonPrimitive)?.contentOrNull ?: continue
+                    result[id] = text
+                }
+                if (result.isNotEmpty()) return result
+            }
         }
-        val result = LinkedHashMap<Int, String>()
-        for ((key, value) in obj) {
-            val id = key.toIntOrNull() ?: continue
-            val text = value.jsonPrimitive.contentOrNull ?: continue
-            result[id] = text
+        // 2) [{"id":12,"text":"…"}, …]  (also accepts "hebrew"/"he"/"translation")
+        extractBlock(cleaned, '[', ']')?.let { slice ->
+            runCatching { json.parseToJsonElement(slice).jsonArray }.getOrNull()?.let { arr ->
+                val result = LinkedHashMap<Int, String>()
+                for (el in arr) {
+                    val o = el as? JsonObject ?: continue
+                    val id = (o["id"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: continue
+                    val text = listOf("text", "hebrew", "he", "translation")
+                        .firstNotNullOfOrNull { (o[it] as? JsonPrimitive)?.contentOrNull } ?: continue
+                    result[id] = text
+                }
+                if (result.isNotEmpty()) return result
+            }
         }
-        return result
+        return emptyMap()
     }
 
     /** Apply id→translation onto cues, keeping timing. Untranslated cues are kept as-is. */
     fun applyTranslations(cues: List<SubtitleCue>, translations: Map<Int, String>): List<SubtitleCue> =
         cues.map { cue -> translations[cue.index]?.let { cue.withText(it) } ?: cue }
 
-    /** Extract the outermost {...} block from arbitrary text (handles code fences / preamble). */
-    private fun extractJsonObject(text: String): String? {
-        val start = text.indexOf('{')
-        val end = text.lastIndexOf('}')
+    /** Extract the outermost open…close block from arbitrary text (handles code fences / preamble). */
+    private fun extractBlock(text: String, open: Char, close: Char): String? {
+        val start = text.indexOf(open)
+        val end = text.lastIndexOf(close)
         if (start < 0 || end <= start) return null
         return text.substring(start, end + 1)
+    }
+
+    /** Escape raw newline/tab characters that appear INSIDE JSON string literals. */
+    private fun escapeControlCharsInStrings(s: String): String {
+        val sb = StringBuilder(s.length + 16)
+        var inStr = false
+        var esc = false
+        for (ch in s) {
+            if (inStr) {
+                when {
+                    esc -> { sb.append(ch); esc = false }
+                    ch == '\\' -> { sb.append(ch); esc = true }
+                    ch == '"' -> { sb.append(ch); inStr = false }
+                    ch == '\n' -> sb.append("\\n")
+                    ch == '\r' -> sb.append("\\r")
+                    ch == '\t' -> sb.append("\\t")
+                    else -> sb.append(ch)
+                }
+            } else {
+                sb.append(ch)
+                if (ch == '"') inStr = true
+            }
+        }
+        return sb.toString()
     }
 }

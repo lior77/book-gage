@@ -15,6 +15,7 @@ import com.hebsub.app.translate.MlKitTranslator
 import com.hebsub.core.lang.Language
 import com.hebsub.core.provider.omdb.OmdbMovie
 import com.hebsub.core.subtitle.AssWriter
+import com.hebsub.core.subtitle.SubtitleAligner
 import com.hebsub.core.subtitle.SrtParser
 import com.hebsub.core.subtitle.SrtWriter
 import com.hebsub.core.subtitle.SubtitleCue
@@ -39,6 +40,12 @@ class SubtitlePipeline(
 ) {
     private data class Acq(val cues: List<SubtitleCue>, val language: String?, val readyHebrew: Boolean)
 
+    /** An online subtitle match; [hashMatch] = verified against this exact file. */
+    private data class Fetched(val cues: List<SubtitleCue>, val language: String?, val hashMatch: Boolean)
+
+    /** Title/synopsis of the film for context-aware translation (from OMDb), if known. */
+    private var filmContext: String? = null
+
     private companion object {
         // Bundled Hebrew font embedded into the MKV for the ASS plate track.
         // The family name must match the TTF's internal name-table family (nameID 1).
@@ -62,6 +69,7 @@ class SubtitlePipeline(
                 .getOrElse { RunLog.error("probe failed", it); MediaProbe(emptyList(), null, 0) }
             RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} durationMs=${probe.durationMs} embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
             RunLog.log("options: imdbId=${imdbId ?: "-"} omdb=${movie != null} chosenSub=${subtitlePath ?: "-"} bgTransparency=$bgTransparency deleteData=$deleteData")
+            filmContext = buildFilmContext(movie, year)
 
             // Build the subtitle file that will be muxed, plus a sidecar .srt.
             // The IMDb id (when present) makes the online search pin the exact film.
@@ -209,7 +217,7 @@ class SubtitlePipeline(
         }
         // 2. Online Hebrew — by IMDb id (exact film) or hash match.
         PipelineBus.update(PipelineState.Running("חיפוש כתוביות עברית ברשת", null))
-        fetchMatch(os, listOf("he"), hash, imdbId, base, probe.durationMs)?.let { return Acq(it.first, "he", true) }
+        fetchMatch(os, listOf("he"), hash, imdbId, base, probe.durationMs)?.let { f -> return Acq(syncIfNeeded(videoFile, base, f), "he", true) }
         // 3. Embedded source (translate).
         for (t in source) {
             PipelineBus.update(PipelineState.Running("חילוץ כתוביות מהקובץ", null))
@@ -218,7 +226,7 @@ class SubtitlePipeline(
         }
         // 4. Online English — by IMDb id or hash match (translate).
         PipelineBus.update(PipelineState.Running("חיפוש כתוביות אנגלית ברשת", null))
-        fetchMatch(os, listOf("en"), hash, imdbId, base, probe.durationMs)?.let { return Acq(it.first, it.second, Language.isHebrew(it.second)) }
+        fetchMatch(os, listOf("en"), hash, imdbId, base, probe.durationMs)?.let { f -> return Acq(syncIfNeeded(videoFile, base, f), f.language, Language.isHebrew(f.language)) }
         // 5. Transcribe.
         if (!asrEngine.available) { RunLog.log("transcription unavailable (no Deepgram key)"); return null }
         PipelineBus.update(PipelineState.Running("חילוץ פס הקול מהקובץ", null))
@@ -233,7 +241,7 @@ class SubtitlePipeline(
         if (settings.hasAnthropicKey) {
             RunLog.log("translating with Claude (${settings.claudeModel}) from ${acq.language}")
             PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", 0f))
-            ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel)
+            ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel, filmContext)
                 .translate(acq.cues, acq.language) { d, t -> PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", d.toFloat() / t)) }
         } else {
             RunLog.log("translating with ML Kit (on-device) from ${acq.language}")
@@ -256,7 +264,7 @@ class SubtitlePipeline(
      */
     private suspend fun fetchMatch(
         os: OpenSubtitlesService?, langs: List<String>, hash: String?, imdbId: String?, base: String, videoMs: Long,
-    ): Pair<List<SubtitleCue>, String?>? {
+    ): Fetched? {
         if (os == null || (hash == null && imdbId == null)) return null
         val candidates = os.findCandidates(langs, hash, null, null, imdbId)
         RunLog.log("  candidates for $langs (imdbId=${imdbId ?: "-"} hash=${hash ?: "-"}): ${candidates.size}")
@@ -272,9 +280,50 @@ class SubtitlePipeline(
             val langTag = c.language?.takeIf { it.isNotBlank() } ?: "src"
             runCatching { File(outputDir, "$langTag-$base.srt").writeText(srt, Charsets.UTF_8) }
             RunLog.log("  accept fileId=${c.fileId} lang=${c.language} hash=${c.hashMatch} cues=${cues.size}")
-            return cues to c.language
+            return Fetched(cues, c.language, c.hashMatch)
         }
         return null
+    }
+
+    /**
+     * Sync an online subtitle to THIS video's audio. A hash-matched subtitle was
+     * made for this exact file, so its timing is trusted. Anything else (an
+     * IMDb-id match) may come from a different cut/release and be offset or
+     * drifting, so we build a speech timeline from the audio (Deepgram) and let
+     * [SubtitleAligner] find and apply the best offset + time scale.
+     */
+    private suspend fun syncIfNeeded(videoFile: File, base: String, f: Fetched): List<SubtitleCue> {
+        if (f.hashMatch) { RunLog.log("sync: hash-matched subtitles — timing trusted"); return f.cues }
+        if (!asrEngine.available) {
+            RunLog.log("sync: SKIPPED — subtitles are not hash-matched and no Deepgram key is set, so timing is unverified")
+            return f.cues
+        }
+        PipelineBus.update(PipelineState.Running("סנכרון הכתוביות לפס הקול", null))
+        val audio = File(outputDir, "$base.audio.m4a")
+        if (!audio.exists() && !mediaTool.extractAudioForAsr(videoFile, audio)) {
+            RunLog.error("sync: audio extraction failed — keeping original timing"); return f.cues
+        }
+        val track = runCatching { asrEngine.transcribe(audio) { } }
+            .getOrElse { RunLog.error("sync: transcription failed — keeping original timing", it); return f.cues }
+        val speech = track.cues.map { SubtitleAligner.Speech(it.startMs, it.endMs) }
+        val r = SubtitleAligner.align(f.cues, speech)
+        RunLog.log("sync: speechSegments=${speech.size} best offset=${r.offsetMs}ms scale=${"%.5f".format(r.scale)} score=${r.score} baseline=${r.baselineScore} apply=${r.shouldApply}")
+        return if (r.shouldApply) SubtitleAligner.apply(f.cues, r) else f.cues
+    }
+
+    /** Film description for the translator (title, year, genre, people, synopsis) — null when OMDb is absent. */
+    private fun buildFilmContext(movie: OmdbMovie?, year: String?): String? {
+        if (movie == null) return null
+        fun ok(v: String) = v.isNotBlank() && v != "N/A"
+        val sb = StringBuilder()
+        if (ok(movie.title)) sb.append("Title: ").append(movie.title)
+        (year ?: movie.year).takeIf { ok(it) }?.let { sb.append(" (").append(it).append(')') }
+        sb.append('\n')
+        if (ok(movie.genre)) sb.append("Genre: ").append(movie.genre).append('\n')
+        if (ok(movie.director)) sb.append("Director: ").append(movie.director).append('\n')
+        if (ok(movie.actors)) sb.append("Cast: ").append(movie.actors).append('\n')
+        if (ok(movie.plot)) sb.append("Synopsis: ").append(movie.plot).append('\n')
+        return sb.toString().trim().ifBlank { null }
     }
 
     private fun durationMatches(spanMs: Long, videoMs: Long): Boolean {

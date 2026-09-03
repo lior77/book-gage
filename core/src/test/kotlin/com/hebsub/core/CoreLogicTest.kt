@@ -217,6 +217,61 @@ class SubtitleSourcePlannerTest {
         assertEquals(null, p["year"])
     }
 
+    @Test fun alignerRecoversOffsetAndScale() {
+        // Build an hour of random speech segments (audio time), then derive subtitles
+        // that are offset by 12 s and time-scaled by 25/23.976 — a typical wrong-release
+        // situation. The aligner must recover both and re-time the cues onto the speech.
+        val rnd = java.util.Random(7)
+        val speech = ArrayList<com.hebsub.core.subtitle.SubtitleAligner.Speech>()
+        var t = 5_000L
+        while (t < 60 * 60_000L) {
+            val len = 1000L + rnd.nextInt(3000)
+            speech.add(com.hebsub.core.subtitle.SubtitleAligner.Speech(t, t + len))
+            t += len + 1000L + rnd.nextInt(6000)
+        }
+        val scale = 25.0 / 23.976
+        val offset = 12_000L
+        // audio = sub * scale + offset  →  sub = (audio − offset) / scale
+        val subs = speech.mapIndexed { i, s ->
+            com.hebsub.core.subtitle.SubtitleCue(i + 1, ((s.startMs - offset) / scale).toLong(), ((s.endMs - offset) / scale).toLong(), listOf("x"))
+        }
+        val r = com.hebsub.core.subtitle.SubtitleAligner.align(subs, speech)
+        assertTrue(r.shouldApply, "expected an improvement, got $r")
+        assertTrue(kotlin.math.abs(r.offsetMs - offset) <= 200, "offset=${r.offsetMs}")
+        assertEquals(scale, r.scale, 1e-9)
+        val fixed = com.hebsub.core.subtitle.SubtitleAligner.apply(subs, r)
+        assertTrue(kotlin.math.abs(fixed[0].startMs - speech[0].startMs) <= 200)
+        assertTrue(kotlin.math.abs(fixed.last().endMs - speech.last().endMs) <= 300)
+    }
+
+    @Test fun alignerLeavesSyncedSubtitlesAlone() {
+        val speech = (0 until 300).map { com.hebsub.core.subtitle.SubtitleAligner.Speech(it * 6000L + 1000, it * 6000L + 3500) }
+        val subs = speech.mapIndexed { i, s -> com.hebsub.core.subtitle.SubtitleCue(i + 1, s.startMs, s.endMs, listOf("x")) }
+        val r = com.hebsub.core.subtitle.SubtitleAligner.align(subs, speech)
+        assertTrue(!r.shouldApply, "already-synced subtitles must not be re-timed: $r")
+    }
+
+    @Test fun claudeParserAcceptsArrayFormAndRawNewlines() {
+        val p = com.hebsub.core.provider.claude.ClaudeTranslator
+        val arr = """[{"id":1,"text":"שלום"},{"id":2,"hebrew":"עולם"}]"""
+        val m1 = p.parseTranslations(arr)
+        assertEquals("שלום", m1[1]); assertEquals("עולם", m1[2])
+        // A raw newline inside a string value is invalid JSON; it must still parse.
+        val raw = "{\"3\": \"שורה\nשנייה\"}"
+        assertEquals("שורה\nשנייה", p.parseTranslations(raw)[3])
+    }
+
+    @Test fun claudeMissingIdsAndSubsetRequest() {
+        val p = com.hebsub.core.provider.claude.ClaudeTranslator
+        val cues = (1..5).map { com.hebsub.core.subtitle.SubtitleCue(it, it * 1000L, it * 1000L + 500, listOf("l$it")) }
+        val batch = p.buildBatches(cues).first()
+        val missing = p.missingIds(batch, mapOf(1 to "א", 2 to "", 3 to "ג"))
+        assertEquals(setOf(2, 4, 5), missing)
+        val user = p.buildUserContent(batch, onlyIds = missing)
+        assertTrue(user.contains("\"id\":2") && user.contains("\"id\":4") && !user.contains("\"id\":1"))
+        assertTrue(p.systemPrompt("en", "Title: X\nSynopsis: Y").contains("Synopsis: Y"))
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),
