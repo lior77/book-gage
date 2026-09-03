@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,6 +63,9 @@ class MainActivity : ComponentActivity() {
 
 private enum class Screen { Onboarding, Home, Settings }
 
+/** Fixed name of the keys-backup file inside the HebSub folder (§4.1). */
+private const val KEYS_FILE_NAME = "HebSub-keys.json"
+
 @Composable
 private fun AppRoot() {
     val context = LocalContext.current
@@ -70,6 +74,18 @@ private fun AppRoot() {
         mutableStateOf(if (settings.onboardingComplete) Screen.Home else Screen.Onboarding)
     }
     val pipelineState by PipelineBus.state.collectAsStateWithLifecycle()
+
+    // Picker used by the "process another video" button on the success screen.
+    val newVideoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            ProcessingService.startWithUri(context, uri)
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (screen) {
@@ -85,7 +101,10 @@ private fun AppRoot() {
     }
 
     // Overlays for progress and decisions, on top of any screen.
-    PipelineOverlay(pipelineState)
+    PipelineOverlay(
+        pipelineState,
+        onNewVideo = { PipelineBus.reset(); screen = Screen.Home; newVideoPicker.launch(arrayOf("video/*")) },
+    )
 }
 
 @Composable
@@ -280,31 +299,24 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
     // True once any test ran — controls whether a settings log is written on exit.
     var testsRan by remember { mutableStateOf(false) }
     var backupMsg by remember { mutableStateOf<String?>(null) }
+    // §4 — the keys backup always lives at a fixed path inside HebSub, so there is
+    // no location to pick: save writes it (overwriting any existing one, §4.2) and
+    // load reads it back.
+    val keysFile = remember { java.io.File(HebSubStorage(context).rootDir(), KEYS_FILE_NAME) }
 
-    // Save the keys to a JSON file the user picks (survives reinstalls).
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
+    fun doExportKeys() {
         val ok = runCatching {
-            context.contentResolver.openOutputStream(uri)?.use {
-                it.write(settings.exportKeysJson().toByteArray(Charsets.UTF_8))
-            } != null
+            HebSubStorage(context).ensureRoot()
+            keysFile.writeText(settings.exportKeysJson(), Charsets.UTF_8) // overwrites (§4.2)
+            true
         }.getOrDefault(false)
         backupMsg = context.getString(if (ok) R.string.keys_export_ok else R.string.keys_backup_fail)
-        RunLog.log("settings: export keys ok=$ok")
+        RunLog.log("settings: export keys -> ${keysFile.absolutePath} ok=$ok")
     }
 
-    // Load keys from a JSON file the user picks, then refresh the fields.
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val n = runCatching {
-            val text = context.contentResolver.openInputStream(uri)
-                ?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
-            settings.importKeysJson(text)
-        }.getOrDefault(-1)
+    fun doImportKeys() {
+        if (!keysFile.exists()) { backupMsg = context.getString(R.string.keys_none); return }
+        val n = runCatching { settings.importKeysJson(keysFile.readText(Charsets.UTF_8)) }.getOrDefault(-1)
         if (n >= 0) {
             osKey = settings.openSubtitlesApiKey
             anthropicKey = settings.anthropicApiKey
@@ -316,7 +328,7 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
         } else {
             backupMsg = context.getString(R.string.keys_backup_fail)
         }
-        RunLog.log("settings: import keys applied=$n")
+        RunLog.log("settings: import keys <- ${keysFile.absolutePath} applied=$n")
     }
 
     fun leave() {
@@ -438,13 +450,10 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
         Text(stringResource(R.string.keys_backup_title), style = MaterialTheme.typography.titleSmall)
         Text(stringResource(R.string.keys_backup_note), style = MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { exportLauncher.launch("HebSub-keys.json") }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { doExportKeys() }, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.keys_export))
             }
-            OutlinedButton(
-                onClick = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
-                modifier = Modifier.weight(1f),
-            ) {
+            OutlinedButton(onClick = { doImportKeys() }, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.keys_import))
             }
         }
@@ -503,7 +512,7 @@ private fun KeyField(
 }
 
 @Composable
-private fun PipelineOverlay(state: PipelineState) {
+private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
     when (state) {
         is PipelineState.Idle -> Unit
 
@@ -673,6 +682,8 @@ private fun PipelineOverlay(state: PipelineState) {
         }
 
         is PipelineState.Success -> Dialog(onDismiss = { PipelineBus.reset() }) {
+            val ctx = LocalContext.current
+            val activity = ctx as? android.app.Activity
             Column {
                 Text(stringResource(R.string.done), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
@@ -690,7 +701,19 @@ private fun PipelineOverlay(state: PipelineState) {
                     Text("פתחו את קובץ ה־MKV בנגן ובחרו את מסלול העברית.", style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
+                // §2 — three next-step choices at the end of a run.
+                Button(onClick = { onNewVideo() }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.success_new_video))
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { PipelineBus.reset(); activity?.finishAffinity() }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.success_close))
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { openHebSubFolder(ctx); PipelineBus.reset(); activity?.finishAffinity() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.success_open_folder)) }
             }
         }
 
@@ -728,6 +751,33 @@ private fun stringResource(id: Int): String = androidx.compose.ui.res.stringReso
 @Composable
 private fun stringResource(id: Int, vararg args: Any): String =
     androidx.compose.ui.res.stringResource(id, *args)
+
+/**
+ * Best-effort open of the HebSub folder in a file manager (§2.3). Folder-opening
+ * intents are device-specific, so try the DocumentsUI folder view, then fall
+ * back to the storage root; failures are swallowed (the app still closes).
+ */
+private fun openHebSubFolder(context: android.content.Context) {
+    val tries = listOf(
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(
+                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:${HebSubStorage.ROOT_NAME}"),
+                DocumentsContract.Document.MIME_TYPE_DIR,
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(
+                DocumentsContract.buildRootUri("com.android.externalstorage.documents", "primary"),
+                DocumentsContract.Root.MIME_TYPE_ITEM,
+            )
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+    )
+    for (i in tries) {
+        if (runCatching { context.startActivity(i); true }.getOrDefault(false)) return
+    }
+}
 
 /** Display name of a picked document Uri, or null. */
 private fun pickedFileName(context: android.content.Context, uri: android.net.Uri): String? =

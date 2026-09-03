@@ -109,14 +109,15 @@ class SubtitlePipeline(
                 if (muxed && outMkv.exists()) {
                     mediaName = outMkv.name
                     RunLog.log("wrote media file: ${outMkv.absolutePath} (${outMkv.length()} bytes)")
-                    // §5 — keep only the MKV and the PDF (+ the run log, written later).
-                    if (deleteData) cleanIntermediates(keep = setOfNotNull(outMkv.name, pdf?.name), video = videoFile)
+                    // §5 — keep the MKV, the PDF and the poster image (+ the run log,
+                    // written later); the poster file is preserved for the user (§1.1).
+                    if (deleteData) cleanIntermediates(keep = setOfNotNull(outMkv.name, pdf?.name, poster?.name), video = videoFile)
                 } else {
                     RunLog.log("media file not created (muxed=$muxed exists=${outMkv.exists()})")
                 }
             }
 
-            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, "he-$base.srt", mediaName))
+            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, built.name, mediaName))
             RunLog.log("run finished OK")
         } catch (t: Throwable) {
             RunLog.error("run failed", t)
@@ -155,18 +156,22 @@ class SubtitlePipeline(
         return writeSubs(finalCues, base, bgTransparency)
     }
 
-    /** Writes the Hebrew sidecar + returns the file to mux (ASS if a plate is wanted). */
+    /**
+     * Writes the Hebrew subtitle to mux. When a plate is requested we emit ONLY
+     * the styled ASS (no parallel SRT file/track) — the ASS renders Hebrew
+     * correctly thanks to the embedded font. Without a plate we emit the plain SRT.
+     */
     private fun writeSubs(cues: List<SubtitleCue>, base: String, bgTransparency: Int): File {
-        val srtText = SrtWriter.write(cues)
-        File(outputDir, "he-$base.srt").writeText(srtText, Charsets.UTF_8)
         return if (bgTransparency < 100) {
             File(outputDir, "$base.he.ass").apply {
                 // Name the embedded Hebrew font in the style so libass uses it.
                 writeText(AssWriter.write(cues, bgTransparency, fontName = HEBREW_FONT_FAMILY), Charsets.UTF_8)
-                RunLog.log("wrote ASS plate (transparency=$bgTransparency%, font=$HEBREW_FONT_FAMILY)")
+                RunLog.log("wrote ASS plate (transparency=$bgTransparency%, font=$HEBREW_FONT_FAMILY) — SRT sidecar skipped")
             }
         } else {
-            File(outputDir, "he-$base.srt")
+            File(outputDir, "he-$base.srt").apply {
+                writeText(SrtWriter.write(cues), Charsets.UTF_8)
+            }
         }
     }
 
