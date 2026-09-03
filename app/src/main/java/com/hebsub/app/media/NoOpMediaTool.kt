@@ -17,6 +17,16 @@ class NoOpMediaTool : MediaTool {
 
     override suspend fun extractSubtitle(input: File, streamIndex: Int, outSrt: File): Boolean = false
 
+    override suspend fun extractSubtitleRaw(input: File, out: File): Boolean = false
+
+    override suspend fun replaceSubtitleTrack(
+        inputMkv: File,
+        sub: File,
+        outMkv: File,
+        title: String,
+        font: File?,
+    ): Boolean = false
+
     override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean = false
 
     override suspend fun remuxWithHebrew(

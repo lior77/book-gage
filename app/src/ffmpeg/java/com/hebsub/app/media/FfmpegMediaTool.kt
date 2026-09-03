@@ -77,6 +77,44 @@ class FfmpegMediaTool : MediaTool {
             "-map", "0:$streamIndex", "-c:s", "srt", outSrt.absolutePath,
         )
 
+    override suspend fun extractSubtitleRaw(input: File, out: File): Boolean =
+        // `-c:s copy` keeps ASS as ASS (the default would transcode it to SRT and
+        // throw away exactly the styling the editor needs to read).
+        run("-y", "-i", input.absolutePath, "-map", "0:s:0", "-c:s", "copy", out.absolutePath)
+
+    override suspend fun replaceSubtitleTrack(
+        inputMkv: File,
+        sub: File,
+        outMkv: File,
+        title: String,
+        font: File?,
+    ): Boolean {
+        val attachFont = font != null && font.exists()
+        val args = ArrayList<String>()
+        args += listOf("-y", "-i", inputMkv.absolutePath, "-i", sub.absolutePath)
+        if (attachFont) args += listOf("-attach", font!!.absolutePath)
+        // Video + audio verbatim, the NEW subtitle, and the source's attachments
+        // (font/cover) unless we are attaching a font ourselves.
+        args += listOf("-map", "0:v", "-map", "0:a?")
+        if (!attachFont) args += listOf("-map", "0:t?")
+        args += listOf("-map", "1", "-c", "copy", "-c:s", "copy")
+        args += listOf(
+            "-metadata:s:s:0", "language=heb",
+            "-metadata:s:s:0", "title=$title",
+            "-disposition:s:0", "default",
+        )
+        if (attachFont) {
+            args += listOf(
+                "-metadata:s:t:0", "mimetype=application/x-truetype-font",
+                "-metadata:s:t:0", "filename=${font!!.name}",
+            )
+        }
+        args += outMkv.absolutePath
+        val ok = run(*args.toTypedArray())
+        if (ok) verifySubtitleTracks(outMkv)
+        return ok
+    }
+
     override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean =
         // Compact mono 16 kHz AAC keeps the upload small (a 2h film ≈ tens of MB
         // instead of hundreds). AAC is an internal FFmpeg encoder, present even

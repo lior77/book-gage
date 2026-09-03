@@ -29,6 +29,28 @@ interface MediaTool {
     /** Extract embedded subtitle [streamIndex] to a UTF-8 SRT file. */
     suspend fun extractSubtitle(input: File, streamIndex: Int, outSrt: File): Boolean
 
+    /**
+     * Extract the first subtitle track VERBATIM (`-c:s copy`), so an ASS track
+     * keeps its styling instead of being flattened to SRT. Used by the style
+     * editor to read back a track it is about to restyle.
+     */
+    suspend fun extractSubtitleRaw(input: File, out: File): Boolean
+
+    /**
+     * Rebuild [inputMkv] with its subtitle track replaced by [sub], copying video
+     * and audio untouched. When [font] is given it is attached (and the source's
+     * own attachments are dropped, because there were none worth keeping); when it
+     * is null the source's attachments — the Hebrew font and the cover — are
+     * preserved as-is.
+     */
+    suspend fun replaceSubtitleTrack(
+        inputMkv: File,
+        sub: File,
+        outMkv: File,
+        title: String,
+        font: File?,
+    ): Boolean
+
     /** Extract mono 16 kHz PCM WAV for on-device ASR. */
     suspend fun extractAudioForAsr(input: File, outWav: File): Boolean
 

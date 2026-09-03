@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.edit.AssEditor
+import com.hebsub.app.media.MediaToolFactory
+import com.hebsub.core.subtitle.AssStyleOptions
 import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.ConnectionTester
@@ -61,7 +64,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { Onboarding, Home, Settings }
+private enum class Screen { Onboarding, Mode, Home, Settings, EditAss }
 
 /** Fixed name of the keys-backup file inside the HebSub folder (§4.1). */
 private const val KEYS_FILE_NAME = "HebSub-keys.json"
@@ -71,7 +74,7 @@ private fun AppRoot() {
     val context = LocalContext.current
     val settings = remember { SettingsRepository(context) }
     var screen by remember {
-        mutableStateOf(if (settings.onboardingComplete) Screen.Home else Screen.Onboarding)
+        mutableStateOf(if (settings.onboardingComplete) Screen.Mode else Screen.Onboarding)
     }
     val pipelineState by PipelineBus.state.collectAsStateWithLifecycle()
 
@@ -91,12 +94,19 @@ private fun AppRoot() {
         when (screen) {
             Screen.Onboarding -> OnboardingScreen {
                 settings.onboardingComplete = true
-                screen = Screen.Home
+                screen = Screen.Mode
             }
-            Screen.Home -> HomeScreen(
+            Screen.Mode -> ModeScreen(
+                onAddSubtitles = { screen = Screen.Home },
+                onEditAss = { screen = Screen.EditAss },
                 onOpenSettings = { screen = Screen.Settings },
             )
-            Screen.Settings -> SettingsScreen(settings) { screen = Screen.Home }
+            Screen.Home -> HomeScreen(
+                onOpenSettings = { screen = Screen.Settings },
+                onBack = { screen = Screen.Mode },
+            )
+            Screen.Settings -> SettingsScreen(settings) { screen = Screen.Mode }
+            Screen.EditAss -> EditAssScreen(onBack = { screen = Screen.Mode })
         }
     }
 
@@ -209,8 +219,46 @@ private fun PermissionRow(title: String, body: String, granted: Boolean, onGrant
     }
 }
 
+/** First screen after onboarding: pick what this run should do (§1). */
 @Composable
-private fun HomeScreen(onOpenSettings: () -> Unit) {
+private fun ModeScreen(
+    onAddSubtitles: () -> Unit,
+    onEditAss: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.home_title),
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 2,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+            }
+        }
+        Text(stringResource(R.string.mode_prompt), style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+
+        Button(onClick = onAddSubtitles, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.mode_add_subs))
+        }
+        Text(stringResource(R.string.mode_add_subs_hint), style = MaterialTheme.typography.bodySmall)
+
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onEditAss, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.mode_edit_ass))
+        }
+        Text(stringResource(R.string.mode_edit_ass_hint), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun HomeScreen(onOpenSettings: () -> Unit, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     var link by remember { mutableStateOf("") }
 
@@ -268,6 +316,131 @@ private fun HomeScreen(onOpenSettings: () -> Unit) {
             enabled = link.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.paste_link) + " — " + stringResource(R.string.start)) }
+
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.back))
+        }
+    }
+}
+
+/**
+ * §1.2 — restyle the Hebrew track of a movie HebSub already produced: pick the
+ * movie, adjust the four display settings, and rebuild the MKV in place.
+ */
+@Composable
+private fun EditAssScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val editor = remember { AssEditor(context, MediaToolFactory.create()) }
+
+    var targets by remember { mutableStateOf<List<AssEditor.Target>>(emptyList()) }
+    var loaded by remember { mutableStateOf<AssEditor.Loaded?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    // Editable settings, seeded from the track once it is loaded.
+    var transparency by remember { mutableStateOf(50f) }
+    var padding by remember { mutableStateOf(4f) }
+    var marginV by remember { mutableStateOf(20f) }
+    var lineGap by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(Unit) { targets = editor.findTargets() }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(stringResource(R.string.edit_title), style = MaterialTheme.typography.headlineSmall)
+
+        val current = loaded
+        if (current == null) {
+            Text(stringResource(R.string.edit_pick_movie), style = MaterialTheme.typography.bodyMedium)
+            if (targets.isEmpty()) {
+                Text(stringResource(R.string.edit_none), style = MaterialTheme.typography.bodySmall)
+            }
+            targets.forEach { t ->
+                OutlinedButton(
+                    onClick = {
+                        busy = true; message = null
+                        scope.launch {
+                            val l = editor.load(t)
+                            busy = false
+                            if (l == null) {
+                                message = context.getString(R.string.edit_load_failed)
+                            } else {
+                                transparency = l.options.bgTransparencyPercent.toFloat()
+                                padding = l.options.platePadding.toFloat()
+                                marginV = l.options.marginV.toFloat()
+                                lineGap = l.options.extraLineSpacing.toFloat()
+                                loaded = l
+                            }
+                        }
+                    },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(t.title) }
+            }
+        } else {
+            Text(current.target.title, style = MaterialTheme.typography.titleMedium)
+            if (current.ass == null) {
+                Text(stringResource(R.string.edit_from_srt), style = MaterialTheme.typography.bodySmall)
+            }
+
+            Text(stringResource(R.string.edit_transparency, transparency.toInt()), style = MaterialTheme.typography.bodyMedium)
+            Slider(value = transparency, onValueChange = { transparency = it }, valueRange = 0f..100f)
+            Text(stringResource(R.string.edit_transparency_hint), style = MaterialTheme.typography.bodySmall)
+
+            Text(stringResource(R.string.edit_padding, padding.toInt()), style = MaterialTheme.typography.bodyMedium)
+            Slider(value = padding, onValueChange = { padding = it }, valueRange = 0f..20f)
+
+            Text(stringResource(R.string.edit_margin, marginV.toInt()), style = MaterialTheme.typography.bodyMedium)
+            Slider(value = marginV, onValueChange = { marginV = it }, valueRange = 0f..120f)
+            Text(stringResource(R.string.edit_margin_hint), style = MaterialTheme.typography.bodySmall)
+
+            Text(stringResource(R.string.edit_linegap, lineGap.toInt()), style = MaterialTheme.typography.bodyMedium)
+            Slider(value = lineGap, onValueChange = { lineGap = it }, valueRange = 0f..40f)
+            Text(stringResource(R.string.edit_linegap_hint), style = MaterialTheme.typography.bodySmall)
+
+            if (busy) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.edit_working), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            Button(
+                onClick = {
+                    busy = true; message = null
+                    scope.launch {
+                        val ok = editor.apply(
+                            current,
+                            AssStyleOptions(
+                                bgTransparencyPercent = transparency.toInt(),
+                                platePadding = padding.toInt(),
+                                marginV = marginV.toInt(),
+                                extraLineSpacing = lineGap.toInt(),
+                                fontSize = current.options.fontSize,
+                            ),
+                        )
+                        busy = false
+                        message = context.getString(if (ok) R.string.edit_done else R.string.edit_failed)
+                        if (ok) targets = editor.findTargets()
+                    }
+                },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.edit_apply)) }
+
+            OutlinedButton(onClick = { loaded = null; message = null }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.edit_pick_other))
+            }
+        }
+
+        message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+
+        OutlinedButton(onClick = onBack, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.back))
+        }
     }
 }
 

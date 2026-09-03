@@ -315,6 +315,43 @@ class SubtitleSourcePlannerTest {
         assertTrue(good.isTrustworthy, "matching subtitle must be trusted, fit=${good.fit}")
     }
 
+    @Test fun assStylerRoundTripsTheFourSettings() {
+        val styler = com.hebsub.core.subtitle.AssStyler
+        val cues = listOf(com.hebsub.core.subtitle.SubtitleCue(1, 1000, 2000, listOf("שורה", "שנייה")))
+        val original = com.hebsub.core.subtitle.AssWriter.write(cues, bgTransparencyPercent = 50, fontName = "Alef")
+
+        val wanted = com.hebsub.core.subtitle.AssStyleOptions(
+            bgTransparencyPercent = 30, platePadding = 9, marginV = 64, extraLineSpacing = 12, fontSize = 26,
+        )
+        val restyled = styler.restyle(original, wanted)
+        val read = styler.read(restyled)!!
+
+        assertEquals(30, read.bgTransparencyPercent)
+        assertEquals(9, read.platePadding)
+        assertEquals(64, read.marginV)
+        assertEquals(12, read.extraLineSpacing)
+        assertEquals("Alef", styler.fontOf(restyled))            // font preserved
+        assertTrue(restyled.contains("Dialogue: 0,0:00:01.00,0:00:02.00,Default"))  // timing untouched
+
+        // Re-editing replaces the previous spacer rather than stacking another one.
+        val again = styler.restyle(restyled, wanted.copy(extraLineSpacing = 4))
+        assertEquals(4, styler.read(again)!!.extraLineSpacing)
+        assertTrue(!again.contains("{\\fs12}"), "the old spacer must be gone")
+        // …and removing it entirely returns the plain two-line form.
+        val none = styler.restyle(again, wanted.copy(extraLineSpacing = 0))
+        assertEquals(0, styler.read(none)!!.extraLineSpacing)
+        assertTrue(none.contains("שורה\\Nשנייה"))
+    }
+
+    @Test fun assStylerReadsAPlainNoPlateStyleAsFullyTransparent() {
+        val styler = com.hebsub.core.subtitle.AssStyler
+        val plain = com.hebsub.core.subtitle.AssWriter.write(
+            listOf(com.hebsub.core.subtitle.SubtitleCue(1, 0, 1000, listOf("א"))),
+            bgTransparencyPercent = 100,
+        )
+        assertEquals(100, styler.read(plain)!!.bgTransparencyPercent)   // BorderStyle 1 → no plate
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),
