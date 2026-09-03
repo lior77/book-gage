@@ -8,11 +8,11 @@
     <string name="video_info_name">שם הקובץ</string>
     <string name="video_info_year">שנה (לא חובה)</string>
     <string name="video_info_confirm">אישור והמשך</string>
+    <string name="video_info_cancel">ביטול — לא לעבד את הקובץ</string>
+    <string name="run_cancel">עצירת העיבוד</string>
     <string name="video_info_imdb">קישור ל‑IMDb (לא חובה)</string>
     <string name="video_info_pick_sub">בחירת קובץ כתוביות (לא חובה)</string>
     <string name="video_info_sub_chosen">נבחר:</string>
-    <string name="video_info_transparency">שקיפות רקע הכתוביות: %1$d%%</string>
-    <string name="video_info_transparency_hint">‏0%% = רקע אטום (מסתיר כתוביות צרובות) · 100%% = ללא רקע כלל.</string>
     <string name="video_info_delete">מחיקת קבצי ביניים בסיום</string>
     <string name="video_info_delete_hint">להשאיר רק את קובץ ה‑MKV (עם מסלול העברית ונתוני הסרט), את קובץ ה‑PDF ואת תמונת הסרט.</string>
 
@@ -112,7 +112,6 @@
     <string name="settings_model">מודל תרגום ענן</string>
     <string name="settings_privacy_note">המפתחות נשמרים מוצפנים במכשיר בלבד ואינם נכללים בקוד או נחשפים ברשת. בעת שמירת מפתח מתבצע ניסיון התחברות לשירות ומוצגת אינדיקציה. כל הפעולות מתועדות ביומן.</string>
     <string name="save">שמירה ובדיקת חיבור</string>
-    <string name="back">חזרה</string>
     <string name="conn_testing">בודק חיבור…</string>
 
     <string name="keys_backup_title">גיבוי מפתחות לקובץ</string>

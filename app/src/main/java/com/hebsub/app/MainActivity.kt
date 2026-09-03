@@ -816,6 +816,7 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
 
         is PipelineState.Running -> Dialog(dismissable = false) {
             val tail by RunLog.tail.collectAsStateWithLifecycle()
+            val ctx = LocalContext.current
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(state.stageLabel, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(16.dp))
@@ -837,6 +838,13 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                         }
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                // §5 — a long run must be stoppable. What was produced so far stays
+                // in the movie's folder rather than being silently thrown away.
+                OutlinedButton(
+                    onClick = { ProcessingService.cancel(ctx); PipelineBus.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.run_cancel)) }
             }
         }
 
@@ -974,8 +982,14 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                         )
                     },
                     enabled = name.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 ) { Text(stringResource(R.string.video_info_confirm)) }
+                Spacer(Modifier.height(8.dp))
+                // §5 — a way out of this screen too. Nothing has been written yet.
+                OutlinedButton(
+                    onClick = { PipelineBus.cancelVideoInfo(); PipelineBus.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.video_info_cancel)) }
             }
         }
 

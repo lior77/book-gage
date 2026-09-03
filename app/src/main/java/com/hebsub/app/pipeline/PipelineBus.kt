@@ -14,7 +14,7 @@ object PipelineBus {
     private val _state = MutableStateFlow<PipelineState>(PipelineState.Idle)
     val state = _state.asStateFlow()
 
-    private var videoInfoDecision: CompletableDeferred<VideoInfo>? = null
+    private var videoInfoDecision: CompletableDeferred<VideoInfo?>? = null
 
     fun update(state: PipelineState) { _state.value = state }
 
@@ -23,8 +23,9 @@ object PipelineBus {
         _state.value = PipelineState.Idle
     }
 
-    suspend fun awaitVideoInfo(suggestedName: String): VideoInfo {
-        val deferred = CompletableDeferred<VideoInfo>()
+    /** Null when the user backed out instead of confirming (§5 — every screen has a way out). */
+    suspend fun awaitVideoInfo(suggestedName: String): VideoInfo? {
+        val deferred = CompletableDeferred<VideoInfo?>()
         videoInfoDecision = deferred
         _state.value = PipelineState.NeedVideoInfo(suggestedName)
         return deferred.await()
@@ -32,6 +33,12 @@ object PipelineBus {
 
     fun submitVideoInfo(info: VideoInfo) {
         videoInfoDecision?.complete(info)
+        videoInfoDecision = null
+    }
+
+    /** The user closed the pre-run screen: the run never starts. */
+    fun cancelVideoInfo() {
+        videoInfoDecision?.complete(null)
         videoInfoDecision = null
     }
 }

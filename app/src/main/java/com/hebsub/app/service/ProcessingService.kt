@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -43,6 +44,16 @@ class ProcessingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // §5 — the progress screen can stop a run in flight. Cancelling the scope
+        // unwinds whatever stage is running; the partial files stay in the movie's
+        // folder for the user to look at, which is why nothing is deleted here.
+        if (intent?.action == ACTION_CANCEL) {
+            RunLog.log("run cancelled by the user")
+            scope.coroutineContext.cancelChildren()
+            PipelineBus.update(PipelineState.Idle)
+            stopSelfCleanly()
+            return START_NOT_STICKY
+        }
         startInForeground(getString(R.string.processing))
         val url = intent?.getStringExtra(EXTRA_URL)
         val uri = intent?.getStringExtra(EXTRA_URI)?.let(Uri::parse)
@@ -108,7 +119,13 @@ class ProcessingService : Service() {
             // §2 — before creating the folder, let the user confirm/edit the name
             // and optionally enter the year.
             val suggested = name.substringBeforeLast('.').ifBlank { name }
-            val info = PipelineBus.awaitVideoInfo(suggested)
+            val info = PipelineBus.awaitVideoInfo(suggested) ?: run {
+                // §5 — the user backed out of the pre-run screen. Nothing was written
+                // to HebSub yet, so there is nothing to undo; just stand down.
+                RunLog.log("cancelled before the run started")
+                PipelineBus.update(PipelineState.Idle)
+                return@launch
+            }
             val ext = name.substringAfterLast('.', "mp4").ifBlank { "mp4" }
 
             // §2.2 — if an IMDb link + OMDb key are present, fetch the record BEFORE
@@ -215,6 +232,13 @@ class ProcessingService : Service() {
         private const val NOTIF_ID = 42
         const val EXTRA_URL = "extra_url"
         const val EXTRA_URI = "extra_uri"
+        private const val ACTION_CANCEL = "com.hebsub.app.CANCEL"
+
+        /** Stop a run in progress (§5). Safe to call when nothing is running. */
+        fun cancel(context: Context) {
+            val i = Intent(context, ProcessingService::class.java).setAction(ACTION_CANCEL)
+            runCatching { context.startService(i) }
+        }
 
         fun startWithUri(context: Context, uri: Uri) {
             val i = Intent(context, ProcessingService::class.java).putExtra(EXTRA_URI, uri.toString())
