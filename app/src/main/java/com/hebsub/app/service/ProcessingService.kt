@@ -63,6 +63,7 @@ class ProcessingService : Service() {
             val storage = HebSubStorage(applicationContext)
             var logDir: File = workDir   // where the run log is finally written (§ב.6)
             RunLog.start()
+            PipelineBus.resetSteps()
             RunLog.header(applicationContext)
             RunLog.log("input=${if (url != null) "URL" else "file"}")
             try {
@@ -174,6 +175,7 @@ class ProcessingService : Service() {
                 options = SubtitlePipeline.RunOptions(
                     subtitlePath = info.subtitlePath,
                     syncUploaded = info.syncUploaded,
+                    syncEmbedded = info.syncEmbedded,
                     styled = info.styled,
                     style = info.style,
                     minDisplayMs = info.minDisplayMs,

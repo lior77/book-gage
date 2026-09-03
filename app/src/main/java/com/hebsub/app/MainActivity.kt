@@ -52,6 +52,8 @@ import com.hebsub.app.net.ConnectionTester
 import androidx.compose.ui.text.input.KeyboardType
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
+import com.hebsub.app.pipeline.SourceStepState
+import com.hebsub.app.pipeline.StepStatus
 import com.hebsub.app.pipeline.VideoInfo
 import com.hebsub.app.service.ProcessingService
 import com.hebsub.app.ui.HebSubTheme
@@ -814,6 +816,7 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
 
         is PipelineState.Running -> Dialog(dismissable = false) {
             val tail by RunLog.tail.collectAsStateWithLifecycle()
+            val steps by PipelineBus.steps.collectAsStateWithLifecycle()
             val ctx = LocalContext.current
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(state.stageLabel, style = MaterialTheme.typography.titleMedium)
@@ -823,6 +826,22 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
+
+                // §4 — the six-step search for a subtitle source, with the state of each.
+                if (steps.any { it.status != StepStatus.Pending }) {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.steps_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Column(Modifier.fillMaxWidth()) { steps.forEach { StepRow(it) } }
+                    HorizontalDivider()
+                }
+
                 Spacer(Modifier.height(12.dp))
                 // Behind-the-scenes live log tail.
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -860,6 +879,7 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
             var style by remember(state.suggestedName) { mutableStateOf(settings.assStyleDefaults) }
             // §7.1 — only ever offered for a subtitle the user chose themselves.
             var syncUploaded by remember(state.suggestedName) { mutableStateOf(false) }
+            var syncEmbedded by remember(state.suggestedName) { mutableStateOf(false) }
             var minDisplay by remember(state.suggestedName) { mutableStateOf(settings.minDisplayMs.toFloat()) }
             var saveDefaults by remember(state.suggestedName) { mutableStateOf(false) }
 
@@ -903,16 +923,29 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                // §7.1 — the timing question exists only for a file the user picked;
-                // every other source is used at exactly its own timing (§7).
+                // §2 — the two sources whose timing may be aligned to the soundtrack.
+                // Everything else is always used at exactly its own timing.
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                // §2.1 — only worth asking about once a file has actually been picked.
                 if (subPath != null) {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(8.dp))
                     Text(stringResource(R.string.video_info_sync_title), style = MaterialTheme.typography.titleSmall)
                     RadioRow(stringResource(R.string.video_info_sync_keep), !syncUploaded) { syncUploaded = false }
                     RadioRow(stringResource(R.string.video_info_sync_do), syncUploaded) { syncUploaded = true }
-                    Text(stringResource(R.string.video_info_sync_hint), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // §2.2 — an embedded foreign track. Whether the film has one is only
+                // known after the probe, which runs later, so the choice is offered now.
+                Text(stringResource(R.string.video_info_sync_embedded_title), style = MaterialTheme.typography.titleSmall)
+                RadioRow(stringResource(R.string.video_info_sync_keep), !syncEmbedded) { syncEmbedded = false }
+                RadioRow(stringResource(R.string.video_info_sync_do), syncEmbedded) { syncEmbedded = true }
+
+                Text(stringResource(R.string.video_info_sync_hint), style = MaterialTheme.typography.bodySmall)
+                if (syncUploaded || syncEmbedded) {
+                    Text(stringResource(R.string.video_info_sync_cost), style = MaterialTheme.typography.bodySmall)
                 }
 
                 // §9 — plain subtitles or a styled ASS track.
@@ -971,6 +1004,7 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                                 imdbUrl = imdb.ifBlank { null },
                                 subtitlePath = subPath,
                                 syncUploaded = subPath != null && syncUploaded,
+                                syncEmbedded = syncEmbedded,
                                 styled = styled,
                                 style = style,
                                 saveStyleAsDefaults = saveDefaults,
@@ -1040,6 +1074,43 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }
+        }
+    }
+}
+
+/**
+ * One row of the source-search list on the progress screen (§4): the step's number
+ * and name, a marker for how it ended, and — where there is one — a short note such
+ * as the cue count or why the step did not apply.
+ */
+@Composable
+private fun StepRow(state: SourceStepState) {
+    val done = MaterialTheme.colorScheme.primary
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val (mark, tint) = when (state.status) {
+        StepStatus.Pending -> "○" to muted
+        StepStatus.Running -> "▶" to done
+        StepStatus.Skipped -> "–" to muted
+        StepStatus.NotFound -> "✕" to muted
+        StepStatus.Failed -> "✕" to MaterialTheme.colorScheme.error
+        StepStatus.Used -> "✓" to done
+    }
+    // A running step is the one the user is waiting on, so it is the only one
+    // emphasised; the rest stay quiet enough to scan past.
+    val emphasis = if (state.status == StepStatus.Running || state.status == StepStatus.Used) done else muted
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(mark, color = tint, style = MaterialTheme.typography.labelLarge)
+        Column(Modifier.weight(1f)) {
+            Text(
+                "${state.step.number}  ${state.step.label}",
+                color = emphasis,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            state.detail?.let { Text(it, color = muted, style = MaterialTheme.typography.labelSmall) }
         }
     }
 }

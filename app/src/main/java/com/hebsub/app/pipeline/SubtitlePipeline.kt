@@ -5,6 +5,7 @@ import com.hebsub.app.asr.AsrEngine
 import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.io.MoviePdf
 import com.hebsub.app.log.RunLog
+import com.hebsub.app.media.EmbeddedSubtitle
 import com.hebsub.app.media.MediaProbe
 import com.hebsub.app.media.MediaTool
 import com.hebsub.app.provider.OmdbService
@@ -27,26 +28,26 @@ import com.hebsub.core.text.SubtitlePostProcessor
 import java.io.File
 
 /**
- * Everything that happens to one video, in the order spec §6 lays down.
+ * Everything that happens to one video.
  *
- * **Where the Hebrew comes from**, first hit wins:
- *  1. a Hebrew track already inside the file;
- *  2. an OpenSubtitles Hebrew subtitle that hash-matches this exact file;
- *  3. the subtitle file the user chose for this video;
- *  4. a foreign track inside the file, translated;
- *  5. an OpenSubtitles English subtitle that hash-matches this exact file, translated;
- *  6. a transcript of the audio, translated.
+ * **Where the Hebrew comes from** — [SourceStep], tried in order, first hit wins:
+ * an embedded Hebrew track, a Hebrew hash match, an English hash match, the file the
+ * user uploaded, an embedded foreign track, then the soundtrack itself.
  *
- * The app no longer *searches* for subtitles by title or IMDb id — that finds the
- * right film but not the right cut, which is how it once produced subtitles minutes
- * out of step. What is left is a hash lookup, which is an identity check, not a search.
+ * The app never *searches* for subtitles by title or IMDb id — that finds the right
+ * film but not the right cut, which is how it once produced subtitles minutes out of
+ * step. What is left is a hash lookup, which is an identity check, not a search.
  *
- * **Timing** (spec §7): every source above is used at exactly its own timing. The
- * one exception is the user's own file, which they may ask to align to the audio
- * ([RunOptions.syncUploaded]) — they chose it, so it may well be for another
- * release. The display-duration floor (§8) only ever extends a cue into the silence
- * that follows it, never moves a start; [SubtitleTiming.startTimesUnchanged] asserts
- * that before anything is written.
+ * **Timing**: every source is used at exactly its own timing. The two exceptions are
+ * the ones the user can opt into — their own uploaded file ([RunOptions.syncUploaded])
+ * and an embedded foreign track ([RunOptions.syncEmbedded]) — and even then an
+ * alignment that does not convince is discarded rather than applied. The
+ * display-duration floor only ever extends a cue into the silence that follows it,
+ * never moves a start; [SubtitleTiming.startTimesUnchanged] asserts that before
+ * anything is written.
+ *
+ * Each step reports its outcome to [PipelineBus], so the progress screen shows which
+ * of the six is being tried and how the earlier ones ended.
  */
 class SubtitlePipeline(
     private val context: Context,
@@ -58,7 +59,10 @@ class SubtitlePipeline(
     /** Everything the user chose on the "add subtitles" screen. */
     data class RunOptions(
         val subtitlePath: String? = null,
+        /** §2.1 — align the uploaded file to the soundtrack. */
         val syncUploaded: Boolean = false,
+        /** §2.2 — align an embedded foreign track to the soundtrack. */
+        val syncEmbedded: Boolean = false,
         val styled: Boolean = false,
         val style: AssStyleOptions = AssStyleOptions.STYLED_DEFAULT,
         val minDisplayMs: Long = 0L,
@@ -99,7 +103,7 @@ class SubtitlePipeline(
             RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} durationMs=${probe.durationMs} embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
             RunLog.log(
                 "options: imdbId=${imdbId ?: "-"} omdb=${movie != null} chosenSub=${options.subtitlePath ?: "-"} " +
-                    "syncUploaded=${options.syncUploaded} styled=${options.styled} " +
+                    "syncUploaded=${options.syncUploaded} syncEmbedded=${options.syncEmbedded} styled=${options.styled} " +
                     "style=${if (options.styled) options.style.serialize() else "-"} " +
                     "minDisplayMs=${options.minDisplayMs} deleteData=${options.deleteData}"
             )
@@ -232,7 +236,11 @@ class SubtitlePipeline(
         out.takeIf { it.exists() && it.length() > 0 }
     }.getOrElse { RunLog.error("hebrew font extract failed", it); null }
 
-    /** The §6 source order. Returns the first source that yielded cues, or null. */
+    /**
+     * The §1 source order, tried top to bottom; the first step that yields cues wins
+     * and everything below it is left untried. Each step reports its own outcome to
+     * [PipelineBus] so the progress screen can show where the search is (§4).
+     */
     private suspend fun acquire(videoFile: File, base: String, probe: MediaProbe, options: RunOptions): Acq? {
         val os = if (settings.hasOpenSubtitlesKey) OpenSubtitlesService(settings.openSubtitlesApiKey) else null
         val hash = runCatching { OpenSubtitlesService.computeMovieHash(videoFile) }.getOrNull()
@@ -241,69 +249,156 @@ class SubtitlePipeline(
         val hebrew = probe.embeddedSubtitles.filter { Language.isHebrew(it.language) }
         val foreign = probe.embeddedSubtitles.filterNot { Language.isHebrew(it.language) }
 
-        // 1. A Hebrew track already in the file — nothing to translate, nothing to time.
-        for (t in hebrew) {
-            PipelineBus.update(PipelineState.Running("חילוץ כתוביות עברית מהקובץ", null))
-            parseEmbedded(videoFile, t.index, base, "he")?.let {
-                return Acq(it, "he", readyHebrew = true, source = "embedded Hebrew (stream ${t.index})")
-            }
-        }
-        // 2. Hebrew uploaded for this exact file. A hash match is an identity check:
-        //    the timing is right by construction, so it is used untouched.
-        fetchHashMatch(os, hash, listOf("he"), base)?.let { (cues, lang) ->
+        // 1.1 — a Hebrew track already in the file. Nothing to translate, nothing to time.
+        embeddedTrack(videoFile, base, hebrew, SourceStep.EmbeddedHebrew, hebrewSource = true, options)
+            ?.let { return it }
+
+        // 1.2 / 1.3 — subtitles uploaded for a file with exactly this hash. A hash
+        // match is an identity check, not a search: the timing is right by
+        // construction, so both are used untouched.
+        hashStep(os, hash, "he", base, SourceStep.HashHebrew)?.let { (cues, lang) ->
             return Acq(cues, lang, readyHebrew = true, source = "OpenSubtitles hash match (he)")
         }
-        // 3. The file the user chose for this video (§6.2).
-        chosenSubtitle(videoFile, base, options)?.let { return it }
-        // 4. A foreign track in the file — its timing belongs to this very cut (§7).
-        for (t in foreign) {
-            PipelineBus.update(PipelineState.Running("חילוץ כתוביות מהקובץ", null))
-            val lang = Language.canonical(t.language) ?: "src"
-            parseEmbedded(videoFile, t.index, base, lang)?.let {
-                return Acq(it, Language.canonical(t.language), readyHebrew = false, source = "embedded $lang (stream ${t.index})")
-            }
-        }
-        // 5. English uploaded for this exact file, translated.
-        fetchHashMatch(os, hash, listOf("en"), base)?.let { (cues, lang) ->
+        hashStep(os, hash, "en", base, SourceStep.HashEnglish)?.let { (cues, lang) ->
             return Acq(cues, lang, readyHebrew = Language.isHebrew(lang), source = "OpenSubtitles hash match ($lang)")
         }
-        // 6. The audio itself (§6.3) — derived from this file, so already in step (§7.2).
-        val track = speechTrack(videoFile, base)
-            ?: run { RunLog.log("transcription unavailable (no Deepgram key or it failed)"); return null }
-        if (track.cues.isEmpty()) { RunLog.error("transcription produced no cues"); return null }
-        return Acq(
-            track.cues, Language.canonical(track.language),
-            readyHebrew = Language.isHebrew(track.language), source = "audio transcription",
-        )
+
+        // 1.4 — the file the user chose for this video.
+        chosenSubtitle(videoFile, base, options)?.let { return it }
+
+        // 1.5 — a foreign track already in the container.
+        embeddedTrack(videoFile, base, foreign, SourceStep.EmbeddedForeign, hebrewSource = false, options)
+            ?.let { return it }
+
+        // 1.6 — the audio itself. Derived from this very file, so already in step.
+        return transcriptionStep(videoFile, base)
     }
 
     /**
-     * §6.2 — the subtitle file the user picked. It gets the same treatment as any
-     * other source: parsed, translated when it is not already Hebrew, written in the
-     * requested form. Its timing is kept as-is unless the user asked to sync (§7.1),
-     * which is the only place in the pipeline that re-times anything.
+     * 1.1 / 1.5 — pull a subtitle track out of the container. A Hebrew track is used
+     * as-is; a foreign one is translated, and (§2.2) may be aligned to the soundtrack
+     * if the user asked for that. Returns null when there is no such track, or none
+     * of them could be extracted.
+     */
+    private suspend fun embeddedTrack(
+        videoFile: File,
+        base: String,
+        tracks: List<EmbeddedSubtitle>,
+        step: SourceStep,
+        hebrewSource: Boolean,
+        options: RunOptions,
+    ): Acq? {
+        if (tracks.isEmpty()) {
+            PipelineBus.step(step, StepStatus.Skipped, "אין רצועה כזו בקובץ")
+            return null
+        }
+        PipelineBus.step(step, StepStatus.Running)
+        PipelineBus.update(PipelineState.Running("${step.number} ${step.label}", null))
+        for (t in tracks) {
+            val lang = if (hebrewSource) "he" else (Language.canonical(t.language) ?: "src")
+            val cues = parseEmbedded(videoFile, t.index, base, lang) ?: continue
+
+            // §2.2 — the one thing that may re-time an embedded track, and only when asked.
+            val synced = if (!hebrewSource && options.syncEmbedded) syncToAudio(videoFile, base, cues) else cues
+            val timing = if (!hebrewSource && options.syncEmbedded) " (synced)" else " (source timing)"
+            val detail = "${synced.size} שורות · $lang" + if (!hebrewSource && options.syncEmbedded) " · מסונכרן" else ""
+            PipelineBus.stepUsed(step, detail)
+            return Acq(
+                synced,
+                if (hebrewSource) "he" else Language.canonical(t.language),
+                readyHebrew = hebrewSource,
+                source = "embedded $lang (stream ${t.index})$timing",
+            )
+        }
+        PipelineBus.step(step, StepStatus.Failed, "החילוץ נכשל")
+        return null
+    }
+
+    /** 1.2 / 1.3 — one hash lookup, with its outcome reported to the progress screen. */
+    private suspend fun hashStep(
+        os: OpenSubtitlesService?, hash: String?, lang: String, base: String, step: SourceStep,
+    ): Pair<List<SubtitleCue>, String?>? {
+        if (os == null || hash == null) {
+            PipelineBus.step(step, StepStatus.Skipped, if (os == null) "אין מפתח OpenSubtitles" else "לא ניתן לחשב hash")
+            return null
+        }
+        PipelineBus.step(step, StepStatus.Running)
+        PipelineBus.update(PipelineState.Running("${step.number} ${step.label}", null))
+        val found = fetchHashMatch(os, hash, listOf(lang), base)
+        if (found == null) {
+            PipelineBus.step(step, StepStatus.NotFound, "אין התאמה לקובץ הזה")
+            return null
+        }
+        PipelineBus.stepUsed(step, "${found.first.size} שורות · ${found.second ?: lang}")
+        return found
+    }
+
+    /**
+     * 1.4 — the subtitle file the user picked. It gets the same treatment as any other
+     * source: parsed, translated when it is not already Hebrew, written in the
+     * requested form. Its timing is kept as-is unless the user asked to sync (§2.1).
      */
     private suspend fun chosenSubtitle(videoFile: File, base: String, options: RunOptions): Acq? {
-        val path = options.subtitlePath ?: return null
+        val path = options.subtitlePath
+        if (path == null) {
+            PipelineBus.step(SourceStep.ChosenFile, StepStatus.Skipped, "לא נבחר קובץ")
+            return null
+        }
+        PipelineBus.step(SourceStep.ChosenFile, StepStatus.Running)
+        PipelineBus.update(PipelineState.Running("${SourceStep.ChosenFile.number} ${SourceStep.ChosenFile.label}", null))
+
         val chosen = File(path)
         val ext = chosen.extension.lowercase()
         RunLog.log("using chosen subtitle: ${chosen.name}")
         val raw = runCatching { chosen.readText(Charsets.UTF_8) }.getOrNull()
-        if (raw.isNullOrBlank()) { RunLog.error("chosen subtitle is empty or unreadable"); return null }
+        if (raw.isNullOrBlank()) {
+            RunLog.error("chosen subtitle is empty or unreadable")
+            PipelineBus.step(SourceStep.ChosenFile, StepStatus.Failed, "הקובץ ריק או לא קריא")
+            return null
+        }
 
         // Keep the original alongside the outputs for reference.
         runCatching { chosen.copyTo(File(outputDir, "chosen-$base.${ext.ifBlank { "srt" }}"), overwrite = true) }
 
         val parsed = if (ext == "ass" || ext == "ssa" || AssParser.looksLikeAss(raw)) AssParser.parse(raw)
                      else SrtParser.parse(raw)
-        if (parsed.isEmpty()) { RunLog.error("chosen subtitle produced no cues"); return null }
+        if (parsed.isEmpty()) {
+            RunLog.error("chosen subtitle produced no cues")
+            PipelineBus.step(SourceStep.ChosenFile, StepStatus.Failed, "לא נמצאו שורות בקובץ")
+            return null
+        }
 
         val lang = Language.detectScript(parsed.joinToString("\n") { it.text })
         val cues = if (options.syncUploaded) syncToAudio(videoFile, base, parsed) else parsed
+        PipelineBus.stepUsed(
+            SourceStep.ChosenFile,
+            "${cues.size} שורות · ${chosen.name.take(30)}" + if (options.syncUploaded) " · מסונכרן" else "",
+        )
         return Acq(
             cues, lang,
             readyHebrew = Language.isHebrew(lang),
             source = "chosen file ${chosen.name}" + if (options.syncUploaded) " (synced)" else " (source timing)",
+        )
+    }
+
+    /** 1.6 — transcribe the soundtrack. The last resort, and derived from this file. */
+    private suspend fun transcriptionStep(videoFile: File, base: String): Acq? {
+        PipelineBus.step(SourceStep.Transcription, StepStatus.Running)
+        val track = speechTrack(videoFile, base)
+        if (track == null) {
+            RunLog.log("transcription unavailable (no Deepgram key or it failed)")
+            PipelineBus.step(SourceStep.Transcription, StepStatus.Skipped, "אין מפתח Deepgram או שהתמלול נכשל")
+            return null
+        }
+        if (track.cues.isEmpty()) {
+            RunLog.error("transcription produced no cues")
+            PipelineBus.step(SourceStep.Transcription, StepStatus.Failed, "התמלול לא החזיר שורות")
+            return null
+        }
+        PipelineBus.stepUsed(SourceStep.Transcription, "${track.cues.size} שורות · ${track.language ?: "?"}")
+        return Acq(
+            track.cues, Language.canonical(track.language),
+            readyHebrew = Language.isHebrew(track.language), source = "audio transcription",
         )
     }
 
@@ -331,9 +426,13 @@ class SubtitlePipeline(
     }
 
     /**
-     * §7.1 — align the user's own subtitle to this film's speech. If there is no
-     * transcript, or the alignment is not convincing, the file is used at its own
-     * timing rather than being pushed somewhere the evidence does not support.
+     * §2 — align a subtitle to this film's speech, for the two sources where the user
+     * may ask for it. If there is no transcript, or the alignment is not convincing,
+     * the cues are used at their own timing rather than being pushed somewhere the
+     * evidence does not support.
+     *
+     * Note this needs a transcript, so asking for a sync costs one Deepgram call even
+     * when the alignment is ultimately rejected.
      */
     private suspend fun syncToAudio(videoFile: File, base: String, cues: List<SubtitleCue>): List<SubtitleCue> {
         val track = speechTrack(videoFile, base)
@@ -385,7 +484,6 @@ class SubtitlePipeline(
         os: OpenSubtitlesService?, hash: String?, langs: List<String>, base: String,
     ): Pair<List<SubtitleCue>, String?>? {
         if (os == null || hash == null) return null
-        PipelineBus.update(PipelineState.Running("חיפוש כתוביות תואמות לקובץ", null))
         val candidates = os.findCandidates(langs, hash)
         RunLog.log("  hash candidates for $langs: ${candidates.size}")
         for (c in candidates.take(3)) {

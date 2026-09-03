@@ -54,6 +54,7 @@ class ClaudeCloudTranslator(
 
         val translations = HashMap<Int, String>()
         var done = 0
+        var untranslated = 0
         for ((i, batch) in batches.withIndex()) {
             // Hebrew of the preceding-context cues (translated in the previous batch),
             // so the model keeps continuity of names, gender and tone.
@@ -64,21 +65,52 @@ class ClaudeCloudTranslator(
                 attempt++
                 val onlyIds = if (attempt == 1) null else missing
                 val userContent = ClaudeTranslator.buildUserContent(batch, precedingHebrew, onlyIds)
-                val text = post(system, userContent, i, attempt)
+                val text = runCatching { post(system, userContent, i, attempt) }
+                    .getOrElse { e ->
+                        // A request that never came back at all is itself a finding.
+                        RunLog.error("Claude batch $i attempt $attempt: request failed — ${e.message.orEmpty().take(200)}")
+                        ""
+                    }
                 // Keep only ids of this batch — never let a stray id pollute another batch.
                 val parsed = ClaudeTranslator.parseTranslations(text).filterKeys { it in missing }
                 translations.putAll(parsed)
                 missing = ClaudeTranslator.missingIds(batch, translations)
                 RunLog.log("Claude batch $i attempt $attempt: +${parsed.size} missing=${missing.size}")
+
+                // §3 — when an attempt yields nothing, record what actually came back.
+                // Without this a repeated "+0" is undiagnosable after the fact: an empty
+                // reply, a refusal and unparseable JSON all look identical in the log.
+                if (parsed.isEmpty()) {
+                    RunLog.error(
+                        "Claude batch $i attempt $attempt: no usable translations. " +
+                            "reply=${text.length} chars: ${sample(text)}"
+                    )
+                }
             }
             if (missing.isNotEmpty()) {
+                untranslated += missing.size
                 RunLog.error("Claude batch $i: ${missing.size} lines still untranslated after $MAX_ATTEMPTS attempts (ids ${missing.take(10)})")
+                // The source text of the first few, so the log shows WHAT failed and not
+                // only that something did — a refusal usually has a visible cause.
+                batch.cues.filter { it.index in missing }.take(3).forEach {
+                    RunLog.error("  untranslated id=${it.index}: ${it.text.replace('\n', ' ').take(120)}")
+                }
             }
             done += batch.cues.size
             onProgress(done, cues.size)
         }
+        if (untranslated > 0) {
+            RunLog.error("TRANSLATION INCOMPLETE: $untranslated of ${cues.size} lines stayed in the source language")
+        } else {
+            RunLog.log("translation complete: ${cues.size}/${cues.size} lines")
+        }
         ClaudeTranslator.applyTranslations(cues, translations)
     }
+
+    /** A single-line, length-capped excerpt of a model reply, safe to put in a log. */
+    private fun sample(text: String): String =
+        if (text.isBlank()) "<empty>"
+        else text.replace('\n', ' ').replace('\r', ' ').trim().take(300)
 
     /**
      * Agree the Hebrew spelling of this film's recurring names up front. A failure

@@ -3,14 +3,54 @@ package com.hebsub.app.pipeline
 import com.hebsub.core.subtitle.AssStyleOptions
 
 /**
+ * The six places Hebrew subtitles can come from, in the order they are tried.
+ * The app walks this list top to bottom and stops at the first one that yields
+ * cues; [number] is what the progress screen shows so the user can see exactly
+ * where in the search the run currently is.
+ */
+enum class SourceStep(val number: String, val label: String) {
+    EmbeddedHebrew("1.1", "רצועה עברית מוטמעת"),
+    HashHebrew("1.2", "התאמת hash בעברית"),
+    HashEnglish("1.3", "התאמת hash באנגלית"),
+    ChosenFile("1.4", "קובץ כתוביות שהעליתם"),
+    EmbeddedForeign("1.5", "רצועה זרה מוטמעת"),
+    Transcription("1.6", "תמלול פס הקול"),
+}
+
+/** How a [SourceStep] ended (or that it has not been reached yet). */
+enum class StepStatus {
+    /** Not reached yet. */
+    Pending,
+    /** Being tried right now. */
+    Running,
+    /** Not applicable to this run — no such track, no key, no file chosen. */
+    Skipped,
+    /** Tried and came back empty. */
+    NotFound,
+    /** Tried and errored. */
+    Failed,
+    /** This is the source the run used; everything below it is left untried. */
+    Used,
+}
+
+/** One row of the progress screen's source-search list. */
+data class SourceStepState(
+    val step: SourceStep,
+    val status: StepStatus = StepStatus.Pending,
+    /** Short Hebrew note shown beside the row (cue count, reason it was skipped…). */
+    val detail: String? = null,
+)
+
+/**
  * What the user confirms before the run starts:
  *  - [name]/[year]: editable, default from the file name.
  *  - [imdbUrl]: optional IMDb link; when set, movie data is pulled from OMDb,
  *    embedded into the MKV, and written to a bilingual PDF (spec §2).
- *  - [subtitlePath]: a subtitle file the user chose for this video (spec §6.2).
- *  - [syncUploaded]: only meaningful with [subtitlePath] — spec §7.1 lets the user
- *    say whether that file should be aligned to the audio. Every other source keeps
- *    its own timing untouched (§7).
+ *  - [subtitlePath]: a subtitle file the user chose for this video ([SourceStep.ChosenFile]).
+ *  - [syncUploaded]/[syncEmbedded]: the two sources whose timing the user may ask to
+ *    align to the soundtrack — their own file, and a foreign track already in the
+ *    container. Both default to OFF, i.e. the source's own timing is kept. Every
+ *    other source is always used at exactly its own timing.
  *  - [styled]: spec §9 — an ASS track with a plate, or plain SRT.
  *  - [style]: the ASS look to use when [styled]; defaults to §9.1.
  *  - [saveStyleAsDefaults]: spec §10 — remember [style] for future films.
@@ -24,6 +64,7 @@ data class VideoInfo(
     val imdbUrl: String? = null,
     val subtitlePath: String? = null,
     val syncUploaded: Boolean = false,
+    val syncEmbedded: Boolean = false,
     val styled: Boolean = false,
     val style: AssStyleOptions = AssStyleOptions.STYLED_DEFAULT,
     val saveStyleAsDefaults: Boolean = false,

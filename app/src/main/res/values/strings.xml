@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HebSub 3.0 — כתוביות עברית</string>
+    <string name="app_name">HebSub 3.1 — כתוביות עברית</string>
 
     <string name="home_title">כתוביות עברית לסרטים</string>
 
@@ -23,9 +23,13 @@
     <string name="video_info_style_title">עיצוב המסלול</string>
 
     <string name="video_info_sync_title">תזמון קובץ הכתוביות שבחרתם</string>
-    <string name="video_info_sync_keep">לשמור על התזמון שבקובץ</string>
+    <string name="video_info_sync_embedded_title">תזמון רצועה זרה מוטמעת</string>
+    <string name="video_info_sync_keep">לשמור על התזמון המקורי</string>
     <string name="video_info_sync_do">לסנכרן לפס הקול של הסרט</string>
-    <string name="video_info_sync_hint">רלוונטי רק לקובץ כתוביות שבחרתם. מסלול מוטמע וכתוביות מפס הקול נשמרים תמיד בתזמון המקורי המדויק.</string>
+    <string name="video_info_sync_hint">רק שני המקורות האלה ניתנים לסנכרון. רצועה עברית מוטמעת, כתוביות שהותאמו לפי hash וכתוביות מפס הקול נשמרות תמיד בתזמון המקורי המדויק.</string>
+    <string name="video_info_sync_cost">סנכרון דורש תמלול של פס הקול — נדרש מפתח Deepgram, והאודיו יועלה לשירות. אם היישור לא יימצא משכנע, התזמון המקורי יישמר.</string>
+
+    <string name="steps_title">חיפוש מקור לכתוביות</string>
 
     <string name="video_info_min_display">זמן הצגה מזערי לכתובית: %1$s שניות</string>
     <string name="video_info_min_display_off">זמן הצגה מזערי: לפי התזמון המקורי</string>
@@ -34,7 +38,7 @@
     <string name="video_info_save_defaults">לשמור את ההגדרות האלה כברירת מחדל</string>
     <string name="video_info_save_defaults_hint">העיצוב וזמן ההצגה ישמשו כברירת מחדל לסרטים הבאים.</string>
 
-    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 3.0</string>
+    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 3.1</string>
     <string name="pick_file">בחירת קובץ וידאו מהמכשיר</string>
     <string name="paste_link">הוספת קישור להורדת וידאו</string>
     <string name="link_hint">הדביקו או הקלידו כתובת וידאו (https://…)</string>
