@@ -25,9 +25,15 @@ object AssWriter {
         val t = bgTransparencyPercent.coerceIn(0, 100)
         val box = t < 100
         val borderStyle = if (box) 3 else 1   // 3 = opaque box, 1 = outline
-        val outline = if (box) 8 else 2        // box padding / text outline
+        val outline = if (box) 4 else 2        // box padding / text outline
         val alphaHex = "%02X".format(t * 255 / 100)
-        val backColour = if (box) "&H${alphaHex}303030" else "&H00000000"
+        // For an opaque box (BorderStyle 3) libass fills the plate with the
+        // OUTLINE colour, not the BackColour (which is only the shadow). Put the
+        // gray + transparency in both so the plate is gray/semi-transparent on
+        // every renderer, and keep the shadow at 0.
+        val plate = "&H${alphaHex}303030"
+        val outlineColour = if (box) plate else "&H00000000"
+        val backColour = if (box) plate else "&H00000000"
 
         val sb = StringBuilder()
         sb.append(
@@ -41,7 +47,7 @@ object AssWriter {
 
             [V4+ Styles]
             Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-            Style: Default,$fontName,$fontSize,&H00FFFFFF,&H000000FF,&H00000000,$backColour,0,0,0,0,100,100,0,0,$borderStyle,$outline,0,2,20,20,20,1
+            Style: Default,$fontName,$fontSize,&H00FFFFFF,&H000000FF,$outlineColour,$backColour,0,0,0,0,100,100,0,0,$borderStyle,$outline,0,2,20,20,20,1
 
             [Events]
             Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

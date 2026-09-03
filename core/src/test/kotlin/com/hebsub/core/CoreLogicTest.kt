@@ -164,7 +164,10 @@ class SubtitleSourcePlannerTest {
         val ass = com.hebsub.core.subtitle.AssWriter.write(cues, bgTransparencyPercent = 38)
         assertTrue(ass.contains("Style: Default,"))
         assertTrue(Regex(""",3,\d+,0,2,""").containsMatchIn(ass)) // BorderStyle=3
-        assertTrue(ass.contains("&H60303030"))                    // gray, alpha 0x60
+        // The plate colour must sit in the OutlineColour slot (libass fills the
+        // opaque box from OutlineColour, not BackColour) — regression: the plate
+        // was in BackColour only, so the box rendered opaque black.
+        assertTrue(ass.contains("&H000000FF,&H60303030,")) // secondary, then plate as OutlineColour
         assertTrue(ass.contains("Dialogue: 0,0:00:02.48,0:00:03.69,Default"))
         assertTrue(ass.contains("שלום\\Nעולם"))                    // lines joined with \N
     }
