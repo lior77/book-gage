@@ -8,9 +8,6 @@ data class MediaProbe(
     val embeddedSubtitles: List<EmbeddedSubtitle>,
     val audioLanguage: String?,
     val durationMs: Long,
-    /** Frame rate of the video stream, or 0 when unknown — used to reject
-     *  subtitles timed for a different transfer (23.976 vs 25 fps). */
-    val videoFps: Double = 0.0,
 ) {
     val subtitleCount: Int get() = embeddedSubtitles.size
 }
@@ -67,22 +64,18 @@ interface MediaTool {
      * Hebrew description, …) and attaches [poster] as MKV cover art. Used for the
      * IMDb-enriched output (spec §2).
      *
-     * [sub] is the primary Hebrew track (an ASS plate when a background is wanted,
-     * otherwise a plain SRT). [secondarySub], when given, is muxed as a **second,
-     * parallel** Hebrew track — used to add a universally-selectable plain SRT
-     * alongside a styled ASS, so every player exposes a Hebrew track. Both are
-     * copied with `-c:s copy` (no re-encode; the video/audio are always copied
-     * losslessly). The container is read back with ffprobe afterwards to confirm
-     * the Hebrew tracks are really present.
+     * [sub] is the Hebrew track — a styled ASS or a plain SRT, whichever the user
+     * asked for — copied with `-c:s copy` (no re-encode; the video and audio are
+     * always copied losslessly). The container is read back with ffprobe afterwards
+     * to confirm the Hebrew track is really present.
      *
-     * [font] (when the primary track is a styled ASS) is embedded as an MKV font
-     * attachment so the player's ASS renderer (libass) has real Hebrew glyphs and
-     * does not fall back to a font that renders Hebrew as boxes.
+     * [font] (when the track is a styled ASS) is embedded as an MKV font attachment
+     * so the player's ASS renderer (libass) has real Hebrew glyphs and does not fall
+     * back to a font that renders Hebrew as boxes — or, worse, as nothing at all.
      */
     suspend fun remuxWithHebrewAndMeta(
         input: File,
         sub: File,
-        secondarySub: File?,
         existingSubtitleCount: Int,
         outMkv: File,
         metadata: Map<String, String>,

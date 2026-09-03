@@ -40,7 +40,6 @@ class NoOpMediaTool : MediaTool {
     override suspend fun remuxWithHebrewAndMeta(
         input: File,
         sub: File,
-        secondarySub: File?,
         existingSubtitleCount: Int,
         outMkv: File,
         metadata: Map<String, String>,

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HebSub 2.9 — כתוביות עברית</string>
+    <string name="app_name">HebSub 3.0 — כתוביות עברית</string>
 
     <string name="home_title">כתוביות עברית לסרטים</string>
 
@@ -14,8 +14,27 @@
     <string name="video_info_transparency">שקיפות רקע הכתוביות: %1$d%%</string>
     <string name="video_info_transparency_hint">‏0%% = רקע אטום (מסתיר כתוביות צרובות) · 100%% = ללא רקע כלל.</string>
     <string name="video_info_delete">מחיקת קבצי ביניים בסיום</string>
-    <string name="video_info_delete_hint">להשאיר רק את קובץ ה‑MKV (עם מסלול העברית ונתוני הסרט) ואת קובץ ה‑PDF.</string>
-    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 2.9</string>
+    <string name="video_info_delete_hint">להשאיר רק את קובץ ה‑MKV (עם מסלול העברית ונתוני הסרט), את קובץ ה‑PDF ואת תמונת הסרט.</string>
+
+    <string name="video_info_kind_title">סוג מסלול הכתוביות</string>
+    <string name="video_info_kind_srt">כתוביות רגילות</string>
+    <string name="video_info_kind_ass">כתוביות מעוצבות עם רקע (ASS)</string>
+    <string name="video_info_kind_hint">מסלול מעוצב מאפשר רקע שמסתיר כתוביות צרובות, שליטה בגודל הפונט ובמיקום. מסלול רגיל מוצג לפי הגדרות הנגן.</string>
+    <string name="video_info_style_title">עיצוב המסלול</string>
+
+    <string name="video_info_sync_title">תזמון קובץ הכתוביות שבחרתם</string>
+    <string name="video_info_sync_keep">לשמור על התזמון שבקובץ</string>
+    <string name="video_info_sync_do">לסנכרן לפס הקול של הסרט</string>
+    <string name="video_info_sync_hint">רלוונטי רק לקובץ כתוביות שבחרתם. מסלול מוטמע וכתוביות מפס הקול נשמרים תמיד בתזמון המקורי המדויק.</string>
+
+    <string name="video_info_min_display">זמן הצגה מזערי לכתובית: %1$s שניות</string>
+    <string name="video_info_min_display_off">זמן הצגה מזערי: לפי התזמון המקורי</string>
+    <string name="video_info_min_display_hint">מאריך כתובית קצרה מדי אל תוך השקט שאחריה בלבד — זמן ההופעה של כל שורה נשאר בדיוק כמו במקור.</string>
+
+    <string name="video_info_save_defaults">לשמור את ההגדרות האלה כברירת מחדל</string>
+    <string name="video_info_save_defaults_hint">העיצוב וזמן ההצגה ישמשו כברירת מחדל לסרטים הבאים.</string>
+
+    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 3.0</string>
     <string name="pick_file">בחירת קובץ וידאו מהמכשיר</string>
     <string name="paste_link">הוספת קישור להורדת וידאו</string>
     <string name="link_hint">הדביקו או הקלידו כתובת וידאו (https://…)</string>
@@ -27,6 +46,11 @@
     <string name="mode_add_subs_hint">בחירת קובץ וידאו (או קישור), איתור/יצירת כתוביות ותרגומן לעברית, ויצירת קובץ MKV עם מסלול עברית.</string>
     <string name="mode_edit_ass">עריכת עיצוב הכתוביות (קובץ ASS)</string>
     <string name="mode_edit_ass_hint">שינוי הרקע, המיקום והמרווחים של הכתוביות בסרט שכבר עובד — בלי לתרגם מחדש. קובץ ה‑MKV ייבנה מחדש במקום הקיים.</string>
+    <string name="mode_add_data">הוספת נתוני סרט</string>
+    <string name="mode_add_data_hint">הזנת קישור IMDb לסרט קיים: יצירת קובץ PDF ותמונת הסרט, שמות קבצים לפי שם הסרט והטמעת הנתונים בקובץ — בלי לגעת במסלול הכתוביות.</string>
+
+    <string name="exit_app">סגירת האפליקציה</string>
+    <string name="go_home">מסך הבית</string>
 
     <string name="edit_title">עריכת עיצוב הכתוביות</string>
     <string name="edit_pick_movie">בחרו את הסרט לעריכה:</string>
@@ -44,6 +68,9 @@
     <string name="edit_margin_hint">הערך יחסי לגובה הפריים (ברירת מחדל 20), כך שהמראה זהה בכל רזולוציה.</string>
     <string name="edit_linegap">מרווח נוסף בין שתי שורות: %1$d</string>
     <string name="edit_linegap_hint">‏0 = המרווח הטבעי של הגופן. הערך מוסיף רווח בין השורות (אי אפשר לצמצם מתחת לטבעי).</string>
+    <string name="edit_save_defaults">לסמן את כל הפרמטרים כברירת מחדל</string>
+    <string name="edit_save_defaults_hint">כל קובץ ASS שייווצר מכאן ואילך יתחיל מההגדרות שכאן.</string>
+    <string name="edit_defaults_saved">ההגדרות נשמרו כברירת מחדל.</string>
     <string name="edit_apply">אישור — בניית ה‑MKV מחדש</string>
     <string name="edit_pick_other">בחירת סרט אחר</string>
     <string name="edit_working">בונה את קובץ הוידאו מחדש…</string>
@@ -61,7 +88,6 @@
     <string name="perm_files_required">כדי להמשיך יש לאשר גישה לכל הקבצים.</string>
 
     <string name="settings_title">הגדרות</string>
-    <string name="settings_online_search">חיפוש כתוביות ברשת (OpenSubtitles)</string>
     <string name="settings_os_key">מפתח OpenSubtitles API</string>
     <string name="settings_anthropic_key">מפתח Anthropic (Claude) API</string>
     <string name="settings_deepgram_key">מפתח Deepgram API (תמלול פס קול)</string>
@@ -84,19 +110,6 @@
     <string name="success_new_video">יצירת כתוביות לקובץ וידאו נוסף</string>
     <string name="success_close">סגירת האפליקציה</string>
     <string name="success_open_folder">סגירה ופתיחת תיקיית HebSub</string>
-
-    <string name="choose_translation">לא נמצאו כתוביות עברית מוכנות. כיצד לתרגם?</string>
-    <string name="translate_local">תרגום מקומי (פרטי, ML Kit)</string>
-    <string name="translate_cloud">תרגום בענן (איכות גבוהה, Claude)</string>
-    <string name="translate_stop">עצירה — לא לתרגם</string>
-
-    <string name="asr_offer">לא נמצאו כתוביות כלל. ליצור כתוביות מתוך פס הקול (תמלול על המכשיר)?</string>
-    <string name="asr_yes">כן, לתמלל</string>
-    <string name="asr_no">לא</string>
-
-    <string name="choose_output">התרגום הושלם. כיצד לשמור?</string>
-    <string name="output_srt">שמירת קובץ כתוביות בלבד (.srt)</string>
-    <string name="output_media">יצירת קובץ מדיה חדש עם כתוביות עברית מוטמעות</string>
 
     <string name="processing">מעבד…</string>
     <string name="done">הסתיים בהצלחה</string>

@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.hebsub.core.provider.claude.ClaudeApi
+import com.hebsub.core.subtitle.AssStyleOptions
 import org.json.JSONObject
 
 /**
@@ -32,10 +33,6 @@ class SettingsRepository(context: Context) {
         get() = prefs.getBoolean(KEY_ONBOARDED, false)
         set(v) = prefs.edit().putBoolean(KEY_ONBOARDED, v).apply()
 
-    var onlineSearchEnabled: Boolean
-        get() = prefs.getBoolean(KEY_ONLINE, true)
-        set(v) = prefs.edit().putBoolean(KEY_ONLINE, v).apply()
-
     var openSubtitlesApiKey: String
         get() = prefs.getString(KEY_OS_KEY, "").orEmpty()
         set(v) = prefs.edit().putString(KEY_OS_KEY, v.trim()).apply()
@@ -56,6 +53,29 @@ class SettingsRepository(context: Context) {
         get() = prefs.getString(KEY_MODEL, ClaudeApi.DEFAULT_MODEL) ?: ClaudeApi.DEFAULT_MODEL
         set(v) = prefs.edit().putString(KEY_MODEL, v).apply()
 
+    /**
+     * The ASS look the user saved as their own default (spec §10). Null until they
+     * tick "make these the defaults", after which every new styled track and every
+     * newly opened editor starts from it instead of [AssStyleOptions.STYLED_DEFAULT].
+     */
+    var assDefaults: AssStyleOptions?
+        get() = AssStyleOptions.deserialize(prefs.getString(KEY_ASS_DEFAULTS, null))
+        set(v) = prefs.edit().apply {
+            if (v == null) remove(KEY_ASS_DEFAULTS) else putString(KEY_ASS_DEFAULTS, v.serialize())
+        }.apply()
+
+    /** What a styled track starts from: the user's saved defaults, else the spec's. */
+    val assStyleDefaults: AssStyleOptions get() = assDefaults ?: AssStyleOptions.STYLED_DEFAULT
+
+    /**
+     * Minimum time a subtitle stays on screen, in milliseconds (spec §8); 0 leaves
+     * every cue exactly as its source timed it. A cue is only ever extended into
+     * the silence before the next one — its start is never moved.
+     */
+    var minDisplayMs: Long
+        get() = prefs.getLong(KEY_MIN_DISPLAY, 0L)
+        set(v) = prefs.edit().putLong(KEY_MIN_DISPLAY, v.coerceIn(0L, MAX_MIN_DISPLAY_MS)).apply()
+
     val hasAnthropicKey: Boolean get() = anthropicApiKey.isNotBlank()
     val hasOpenSubtitlesKey: Boolean get() = openSubtitlesApiKey.isNotBlank()
     val hasDeepgramKey: Boolean get() = deepgramApiKey.isNotBlank()
@@ -74,7 +94,8 @@ class SettingsRepository(context: Context) {
         put(F_DEEPGRAM, deepgramApiKey)
         put(F_OMDB, omdbApiKey)
         put(F_MODEL, claudeModel)
-        put(F_ONLINE, onlineSearchEnabled)
+        assDefaults?.let { put(F_ASS, it.serialize()) }
+        put(F_MIN_DISPLAY, minDisplayMs)
     }.toString(2)
 
     /**
@@ -94,26 +115,32 @@ class SettingsRepository(context: Context) {
         apply(F_DEEPGRAM) { deepgramApiKey = it }
         apply(F_OMDB) { omdbApiKey = it }
         o.optString(F_MODEL, "").trim().takeIf { it.isNotEmpty() }?.let { claudeModel = it }
-        if (o.has(F_ONLINE)) onlineSearchEnabled = o.optBoolean(F_ONLINE, onlineSearchEnabled)
+        AssStyleOptions.deserialize(o.optString(F_ASS, "").trim())?.let { assDefaults = it }
+        if (o.has(F_MIN_DISPLAY)) minDisplayMs = o.optLong(F_MIN_DISPLAY, minDisplayMs)
         return applied
     }
 
-    private companion object {
-        const val KEY_ONBOARDED = "onboarded"
-        const val KEY_ONLINE = "online_search"
-        const val KEY_OS_KEY = "opensubtitles_key"
-        const val KEY_ANTHROPIC_KEY = "anthropic_key"
-        const val KEY_DEEPGRAM_KEY = "deepgram_key"
-        const val KEY_OMDB_KEY = "omdb_key"
-        const val KEY_MODEL = "claude_model"
+    companion object {
+        /** Upper bound for the §8 display-duration control (10 s). */
+        const val MAX_MIN_DISPLAY_MS = 10_000L
+
+        private const val KEY_ONBOARDED = "onboarded"
+        private const val KEY_OS_KEY = "opensubtitles_key"
+        private const val KEY_ANTHROPIC_KEY = "anthropic_key"
+        private const val KEY_DEEPGRAM_KEY = "deepgram_key"
+        private const val KEY_OMDB_KEY = "omdb_key"
+        private const val KEY_MODEL = "claude_model"
+        private const val KEY_ASS_DEFAULTS = "ass_defaults"
+        private const val KEY_MIN_DISPLAY = "min_display_ms"
 
         // JSON field names for the keys backup file.
-        const val F_VERSION = "hebsub_keys_version"
-        const val F_OS = "opensubtitles"
-        const val F_ANTHROPIC = "anthropic"
-        const val F_DEEPGRAM = "deepgram"
-        const val F_OMDB = "omdb"
-        const val F_MODEL = "model"
-        const val F_ONLINE = "online_search"
+        private const val F_VERSION = "hebsub_keys_version"
+        private const val F_OS = "opensubtitles"
+        private const val F_ANTHROPIC = "anthropic"
+        private const val F_DEEPGRAM = "deepgram"
+        private const val F_OMDB = "omdb"
+        private const val F_MODEL = "model"
+        private const val F_ASS = "ass_defaults"
+        private const val F_MIN_DISPLAY = "min_display_ms"
     }
 }

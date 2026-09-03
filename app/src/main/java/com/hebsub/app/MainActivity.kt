@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.hebsub.app.storage.HebSubStorage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -42,10 +43,8 @@ import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.ConnectionTester
 import androidx.compose.ui.text.input.KeyboardType
-import com.hebsub.app.pipeline.OutputChoice
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
-import com.hebsub.app.pipeline.TranslationChoice
 import com.hebsub.app.pipeline.VideoInfo
 import com.hebsub.app.service.ProcessingService
 import com.hebsub.core.provider.claude.ClaudeApi
@@ -332,6 +331,7 @@ private fun EditAssScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val editor = remember { AssEditor(context, MediaToolFactory.create()) }
+    val settings = remember { SettingsRepository(context) }
 
     var targets by remember { mutableStateOf<List<AssEditor.Target>>(emptyList()) }
     var loaded by remember { mutableStateOf<AssEditor.Loaded?>(null) }
@@ -339,12 +339,8 @@ private fun EditAssScreen(onBack: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
 
     // Editable settings, seeded from the track once it is loaded.
-    var transparency by remember { mutableStateOf(50f) }
-    var padding by remember { mutableStateOf(4f) }
-    var sidePadding by remember { mutableStateOf(8f) }
-    var marginV by remember { mutableStateOf(20f) }
-    var lineGap by remember { mutableStateOf(0f) }
-    var fontSize by remember { mutableStateOf(26f) }
+    var style by remember { mutableStateOf(settings.assStyleDefaults) }
+    var saveDefaults by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { targets = editor.findTargets() }
 
@@ -370,12 +366,7 @@ private fun EditAssScreen(onBack: () -> Unit) {
                             if (l == null) {
                                 message = context.getString(R.string.edit_load_failed)
                             } else {
-                                transparency = l.options.bgTransparencyPercent.toFloat()
-                                padding = l.options.platePadding.toFloat()
-                                sidePadding = l.options.plateSidePadding.toFloat()
-                                marginV = l.options.marginV.toFloat()
-                                lineGap = l.options.extraLineSpacing.toFloat()
-                                fontSize = l.options.fontSize.toFloat()
+                                style = l.options
                                 loaded = l
                             }
                         }
@@ -390,28 +381,15 @@ private fun EditAssScreen(onBack: () -> Unit) {
                 Text(stringResource(R.string.edit_from_srt), style = MaterialTheme.typography.bodySmall)
             }
 
-            Text(stringResource(R.string.edit_transparency, transparency.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = transparency, onValueChange = { transparency = it }, valueRange = 0f..100f)
-            Text(stringResource(R.string.edit_transparency_hint), style = MaterialTheme.typography.bodySmall)
+            StyleSliders(style) { style = it }
 
-            Text(stringResource(R.string.edit_fontsize, fontSize.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = fontSize, onValueChange = { fontSize = it }, valueRange = 12f..60f)
-            Text(stringResource(R.string.edit_fontsize_hint), style = MaterialTheme.typography.bodySmall)
-
-            Text(stringResource(R.string.edit_padding, padding.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = padding, onValueChange = { padding = it }, valueRange = 0f..30f)
-
-            Text(stringResource(R.string.edit_side_padding, sidePadding.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = sidePadding, onValueChange = { sidePadding = it }, valueRange = 0f..60f)
-            Text(stringResource(R.string.edit_side_padding_hint), style = MaterialTheme.typography.bodySmall)
-
-            Text(stringResource(R.string.edit_margin, marginV.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = marginV, onValueChange = { marginV = it }, valueRange = 0f..120f)
-            Text(stringResource(R.string.edit_margin_hint), style = MaterialTheme.typography.bodySmall)
-
-            Text(stringResource(R.string.edit_linegap, lineGap.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = lineGap, onValueChange = { lineGap = it }, valueRange = 0f..40f)
-            Text(stringResource(R.string.edit_linegap_hint), style = MaterialTheme.typography.bodySmall)
+            // §10 — one tick makes every parameter here the default for future ASS files.
+            CheckRow(
+                checked = saveDefaults,
+                onChange = { saveDefaults = it },
+                title = stringResource(R.string.edit_save_defaults),
+                hint = stringResource(R.string.edit_save_defaults_hint),
+            )
 
             if (busy) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -423,20 +401,15 @@ private fun EditAssScreen(onBack: () -> Unit) {
             Button(
                 onClick = {
                     busy = true; message = null
+                    if (saveDefaults) {
+                        settings.assDefaults = style
+                        RunLog.log("edit: saved ASS defaults ${style.serialize()}")
+                    }
                     scope.launch {
-                        val ok = editor.apply(
-                            current,
-                            AssStyleOptions(
-                                bgTransparencyPercent = transparency.toInt(),
-                                platePadding = padding.toInt(),
-                                plateSidePadding = sidePadding.toInt(),
-                                marginV = marginV.toInt(),
-                                extraLineSpacing = lineGap.toInt(),
-                                fontSize = fontSize.toInt(),
-                            ),
-                        )
+                        val ok = editor.apply(current, style)
                         busy = false
-                        message = context.getString(if (ok) R.string.edit_done else R.string.edit_failed)
+                        message = context.getString(if (ok) R.string.edit_done else R.string.edit_failed) +
+                            if (saveDefaults) " " + context.getString(R.string.edit_defaults_saved) else ""
                         if (ok) targets = editor.findTargets()
                     }
                 },
@@ -470,7 +443,6 @@ private sealed interface TestStatus {
 private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var online by remember { mutableStateOf(settings.onlineSearchEnabled) }
     var osKey by remember { mutableStateOf(settings.openSubtitlesApiKey) }
     var anthropicKey by remember { mutableStateOf(settings.anthropicApiKey) }
     var deepgramKey by remember { mutableStateOf(settings.deepgramApiKey) }
@@ -509,7 +481,6 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
             deepgramKey = settings.deepgramApiKey
             omdbKey = settings.omdbApiKey
             model = settings.claudeModel
-            online = settings.onlineSearchEnabled
             backupMsg = context.getString(R.string.keys_import_ok, n)
         } else {
             backupMsg = context.getString(R.string.keys_backup_fail)
@@ -539,15 +510,6 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall)
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.settings_online_search))
-            Switch(checked = online, onCheckedChange = {
-                online = it
-                settings.onlineSearchEnabled = it
-                RunLog.log("settings: online search = $it")
-            })
-        }
 
         // Cloud translation model — picked before the Anthropic test so the test
         // validates the exact model that will be used.
@@ -730,13 +692,20 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
 
         is PipelineState.NeedVideoInfo -> Dialog(dismissable = false) {
             val ctx = LocalContext.current
+            val settings = remember { SettingsRepository(ctx) }
             var imdb by remember(state.suggestedName) { mutableStateOf("") }
             var name by remember(state.suggestedName) { mutableStateOf(state.suggestedName) }
             var year by remember(state.suggestedName) { mutableStateOf("") }
-            var transparency by remember(state.suggestedName) { mutableStateOf(100f) }
             var deleteData by remember(state.suggestedName) { mutableStateOf(true) }
             var subPath by remember(state.suggestedName) { mutableStateOf<String?>(null) }
             var subName by remember(state.suggestedName) { mutableStateOf<String?>(null) }
+            // §9 — plain or styled; §9.1/§10 supply what "styled" starts from.
+            var styled by remember(state.suggestedName) { mutableStateOf(false) }
+            var style by remember(state.suggestedName) { mutableStateOf(settings.assStyleDefaults) }
+            // §7.1 — only ever offered for a subtitle the user chose themselves.
+            var syncUploaded by remember(state.suggestedName) { mutableStateOf(false) }
+            var minDisplay by remember(state.suggestedName) { mutableStateOf(settings.minDisplayMs.toFloat()) }
+            var saveDefaults by remember(state.suggestedName) { mutableStateOf(false) }
 
             val subPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 if (uri != null) {
@@ -778,19 +747,64 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(12.dp))
-                Text(stringResource(R.string.video_info_transparency, transparency.toInt()), style = MaterialTheme.typography.bodyMedium)
-                Slider(value = transparency, onValueChange = { transparency = it }, valueRange = 0f..100f)
-                Text(stringResource(R.string.video_info_transparency_hint), style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = deleteData, onCheckedChange = { deleteData = it })
-                    Spacer(Modifier.width(4.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.video_info_delete), style = MaterialTheme.typography.bodyMedium)
-                        Text(stringResource(R.string.video_info_delete_hint), style = MaterialTheme.typography.bodySmall)
-                    }
+                // §7.1 — the timing question exists only for a file the user picked;
+                // every other source is used at exactly its own timing (§7).
+                if (subPath != null) {
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.video_info_sync_title), style = MaterialTheme.typography.titleSmall)
+                    RadioRow(stringResource(R.string.video_info_sync_keep), !syncUploaded) { syncUploaded = false }
+                    RadioRow(stringResource(R.string.video_info_sync_do), syncUploaded) { syncUploaded = true }
+                    Text(stringResource(R.string.video_info_sync_hint), style = MaterialTheme.typography.bodySmall)
                 }
+
+                // §9 — plain subtitles or a styled ASS track.
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.video_info_kind_title), style = MaterialTheme.typography.titleSmall)
+                RadioRow(stringResource(R.string.video_info_kind_srt), !styled) { styled = false }
+                RadioRow(stringResource(R.string.video_info_kind_ass), styled) { styled = true }
+                Text(stringResource(R.string.video_info_kind_hint), style = MaterialTheme.typography.bodySmall)
+
+                if (styled) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(stringResource(R.string.video_info_style_title), style = MaterialTheme.typography.titleSmall)
+                    StyleSliders(style) { style = it }
+                }
+
+                // §8 — how long a line stays up, at minimum.
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (minDisplay < 1f) stringResource(R.string.video_info_min_display_off)
+                    else stringResource(R.string.video_info_min_display, "%.1f".format(minDisplay / 1000f)),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Slider(
+                    value = minDisplay,
+                    onValueChange = { minDisplay = it },
+                    valueRange = 0f..SettingsRepository.MAX_MIN_DISPLAY_MS.toFloat(),
+                    steps = 19,   // half-second stops
+                )
+                Text(stringResource(R.string.video_info_min_display_hint), style = MaterialTheme.typography.bodySmall)
+
+                // §10 — keep this look for the next films.
+                Spacer(Modifier.height(8.dp))
+                CheckRow(
+                    checked = saveDefaults,
+                    onChange = { saveDefaults = it },
+                    title = stringResource(R.string.video_info_save_defaults),
+                    hint = stringResource(R.string.video_info_save_defaults_hint),
+                )
+                CheckRow(
+                    checked = deleteData,
+                    onChange = { deleteData = it },
+                    title = stringResource(R.string.video_info_delete),
+                    hint = stringResource(R.string.video_info_delete_hint),
+                )
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
@@ -800,7 +814,11 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                                 year = year.ifBlank { null },
                                 imdbUrl = imdb.ifBlank { null },
                                 subtitlePath = subPath,
-                                bgTransparency = transparency.toInt(),
+                                syncUploaded = subPath != null && syncUploaded,
+                                styled = styled,
+                                style = style,
+                                saveStyleAsDefaults = saveDefaults,
+                                minDisplayMs = (minDisplay / 500f).toLong() * 500L,
                                 deleteData = deleteData,
                             ),
                         )
@@ -808,62 +826,6 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                     enabled = name.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.video_info_confirm)) }
-            }
-        }
-
-        is PipelineState.NeedTranslationChoice -> Dialog(dismissable = false) {
-            Column {
-                Text(stringResource(R.string.choose_translation), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = { PipelineBus.submitTranslationChoice(TranslationChoice.LOCAL) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.translate_local))
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { PipelineBus.submitTranslationChoice(TranslationChoice.CLOUD) },
-                    enabled = state.cloudAvailable,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.translate_cloud)) }
-                if (!state.cloudAvailable) {
-                    Text("להוספת מפתח Claude בהגדרות", style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { PipelineBus.submitTranslationChoice(TranslationChoice.STOP) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.translate_stop))
-                }
-            }
-        }
-
-        is PipelineState.NeedAsrConsent -> Dialog(dismissable = false) {
-            Column {
-                Text(stringResource(R.string.asr_offer), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { PipelineBus.submitAsrConsent(true) },
-                    enabled = state.asrAvailable,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.asr_yes)) }
-                if (!state.asrAvailable) Text("תמלול אינו זמין בגרסה זו", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { PipelineBus.submitAsrConsent(false) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.asr_no))
-                }
-            }
-        }
-
-        is PipelineState.NeedOutputChoice -> Dialog(dismissable = false) {
-            Column {
-                Text(stringResource(R.string.choose_output), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = { PipelineBus.submitOutputChoice(OutputChoice.SAVE_SRT) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.output_srt))
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { PipelineBus.submitOutputChoice(OutputChoice.EMBED_MEDIA) },
-                    enabled = state.embedMediaAvailable,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.output_media)) }
             }
         }
 
@@ -917,6 +879,88 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                 Button(onClick = { PipelineBus.reset() }, modifier = Modifier.fillMaxWidth()) { Text("סגירה") }
             }
         }
+    }
+}
+
+/** One option of a radio group; the whole row is the target, not just the dot. */
+@Composable
+private fun RadioRow(label: String, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().selectable(selected = selected, onClick = onSelect).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** A checkbox with a title and an explanatory second line. */
+@Composable
+private fun CheckRow(checked: Boolean, onChange: (Boolean) -> Unit, title: String, hint: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = onChange)
+        Spacer(Modifier.width(4.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(hint, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/**
+ * The six ASS display settings, in one place so the pre-run screen and the style
+ * editor cannot drift apart. Defaults come from §9.1 or from what the user saved.
+ */
+@Composable
+private fun StyleSliders(options: AssStyleOptions, onChange: (AssStyleOptions) -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.edit_transparency, options.bgTransparencyPercent), style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = options.bgTransparencyPercent.toFloat(),
+            onValueChange = { onChange(options.copy(bgTransparencyPercent = it.toInt())) },
+            valueRange = 0f..100f,
+        )
+        Text(stringResource(R.string.edit_transparency_hint), style = MaterialTheme.typography.bodySmall)
+
+        Text(stringResource(R.string.edit_fontsize, options.fontSize), style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = options.fontSize.toFloat(),
+            onValueChange = { onChange(options.copy(fontSize = it.toInt())) },
+            valueRange = 12f..60f,
+        )
+        Text(stringResource(R.string.edit_fontsize_hint), style = MaterialTheme.typography.bodySmall)
+
+        Text(stringResource(R.string.edit_padding, options.platePadding), style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = options.platePadding.toFloat(),
+            onValueChange = { onChange(options.copy(platePadding = it.toInt())) },
+            valueRange = 0f..30f,
+        )
+
+        Text(stringResource(R.string.edit_side_padding, options.plateSidePadding), style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = options.plateSidePadding.toFloat(),
+            onValueChange = { onChange(options.copy(plateSidePadding = it.toInt())) },
+            valueRange = 0f..60f,
+        )
+        Text(stringResource(R.string.edit_side_padding_hint), style = MaterialTheme.typography.bodySmall)
+
+        Text(stringResource(R.string.edit_margin, options.marginV), style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = options.marginV.toFloat(),
+            onValueChange = { onChange(options.copy(marginV = it.toInt())) },
+            valueRange = 0f..120f,
+        )
+        Text(stringResource(R.string.edit_margin_hint), style = MaterialTheme.typography.bodySmall)
+
+        Text(stringResource(R.string.edit_linegap, options.extraLineSpacing), style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = options.extraLineSpacing.toFloat(),
+            onValueChange = { onChange(options.copy(extraLineSpacing = it.toInt())) },
+            valueRange = 0f..40f,
+        )
+        Text(stringResource(R.string.edit_linegap_hint), style = MaterialTheme.typography.bodySmall)
     }
 }
 

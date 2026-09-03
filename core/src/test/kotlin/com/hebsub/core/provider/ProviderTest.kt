@@ -86,6 +86,21 @@ class ClaudeTranslatorTest {
         assertEquals("עולם", map[2])
     }
 
+    @Test fun glossaryPinsSpellingsInTheSystemPrompt() {
+        val prompt = ClaudeTranslator.systemPrompt("en", "Martin = מרטין\nQuinn = קווין")
+        assertTrue(prompt.contains("Martin = מרטין"))
+        assertTrue(prompt.contains("EXACTLY"), "the model must be told these are binding")
+        // Without a glossary the prompt carries no film blurb at all — the cast list
+        // names the actors, not the characters, so it only misleads.
+        assertTrue(!ClaudeTranslator.systemPrompt("en").contains("EXACTLY these Hebrew spellings"))
+    }
+
+    @Test fun parsesGlossaryToleratingFences() {
+        val map = ClaudeTranslator.parseGlossary("```json\n{\"Martin\": \"מרטין\", \"Quinn\": \"\"}\n```")
+        assertEquals("מרטין", map["Martin"])
+        assertTrue("Quinn" !in map, "an empty rendering pins nothing")
+    }
+
     @Test fun appliesTranslationsKeepingTiming() {
         val out = ClaudeTranslator.applyTranslations(
             cues.take(2),

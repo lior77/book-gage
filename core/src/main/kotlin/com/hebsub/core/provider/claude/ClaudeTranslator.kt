@@ -129,6 +129,44 @@ object ClaudeTranslator {
         return json.encodeToString(JsonObject.serializer(), obj)
     }
 
+    /**
+     * One small request, made before the batches, that fixes the Hebrew spelling
+     * of the names recurring in this film. Pinning them up front is what stops
+     * batch 3 and batch 11 spelling the same character differently.
+     */
+    fun glossarySystemPrompt(sourceLanguageName: String?): String {
+        val src = sourceLanguageName?.takeIf { it.isNotBlank() } ?: "the source language"
+        return """
+            You transliterate and translate proper nouns from film subtitles ($src) into Hebrew.
+
+            For each term decide what it is and render it accordingly:
+            - Personal and place names: transliterate into Hebrew script the way Israeli subtitles conventionally write them, keeping any established Hebrew form.
+            - Words that are not proper nouns after all (a common noun that happened to be capitalised): translate them normally.
+
+            Return ONLY a JSON object mapping each input term to its Hebrew form, e.g. {"Martin":"מרטין"}. No markdown, no notes.
+        """.trimIndent()
+    }
+
+    fun buildGlossaryContent(terms: List<String>): String {
+        val obj = buildJsonObject {
+            put("terms", buildJsonArray { terms.forEach { add(JsonPrimitive(it)) } })
+        }
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    /** Parse the term→Hebrew map; tolerates fences and stray prose like [parseTranslations]. */
+    fun parseGlossary(modelText: String): Map<String, String> {
+        val cleaned = escapeControlCharsInStrings(modelText)
+        val slice = extractBlock(cleaned, '{', '}') ?: return emptyMap()
+        val obj = runCatching { json.parseToJsonElement(slice).jsonObject }.getOrNull() ?: return emptyMap()
+        val out = LinkedHashMap<String, String>()
+        for ((k, v) in obj) {
+            val hebrew = (v as? JsonPrimitive)?.contentOrNull?.trim() ?: continue
+            if (k.isNotBlank() && hebrew.isNotEmpty()) out[k] = hebrew
+        }
+        return out
+    }
+
     /** Ids in [batch] that have no translation yet. */
     fun missingIds(batch: Batch, translations: Map<Int, String>): Set<Int> =
         batch.cues.map { it.index }.filter { it !in translations || translations[it].isNullOrBlank() }.toSet()

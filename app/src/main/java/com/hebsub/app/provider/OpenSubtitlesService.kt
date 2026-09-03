@@ -16,40 +16,29 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * OpenSubtitles REST v1 client. Query building and best-match selection live in
- * the tested :core module; this class performs the HTTP and computes the movie
- * hash. Privacy (spec §12): the only identifying value sent is the movie hash
- * and/or a title the user is processing — never a device or user identifier.
+ * OpenSubtitles REST v1 client. Query building and ranking live in the tested
+ * :core module; this class performs the HTTP and computes the movie hash.
+ * Privacy (spec §12): the only value ever sent is the hash of the file being
+ * processed — never a device or user identifier, and never a title.
  */
 class OpenSubtitlesService(private val apiKey: String) {
 
     private val base = "https://api.opensubtitles.com/api/v1"
     private val jsonMedia = "application/json".toMediaType()
 
-    /** Search and return the best downloadable candidate for the language priority, or null. */
-    suspend fun findBest(
-        languagePriority: List<String>,
-        movieHash: String?,
-        title: String?,
-        excludeHearingImpaired: Boolean = true,
-    ): OsCandidate? =
-        findCandidates(languagePriority, movieHash, title, year = null, excludeHearingImpaired = excludeHearingImpaired).firstOrNull()
-
     /**
-     * Search and return ALL matching candidates ranked best-first, so the caller
-     * can download and verify each against the video's duration (spec §3) and
-     * keep the first that fits, instead of blindly trusting one result.
+     * Subtitles uploaded for the file with exactly this [movieHash], ranked
+     * best-first. Results that are not hash matches are discarded: a lookup by
+     * title or IMDb id returns the right film in the wrong cut, whose timing is
+     * then quietly wrong, so only the identity check is left.
      */
     suspend fun findCandidates(
         languagePriority: List<String>,
-        movieHash: String?,
-        title: String?,
-        year: String?,
-        imdbId: String? = null,
+        movieHash: String,
         excludeHearingImpaired: Boolean = true,
     ): List<OsCandidate> = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) return@withContext emptyList()
-        val params = OpenSubtitlesQuery.buildSearchParams(languagePriority, movieHash, title, year, imdbId)
+        if (apiKey.isBlank() || movieHash.isBlank()) return@withContext emptyList()
+        val params = OpenSubtitlesQuery.buildSearchParams(languagePriority, movieHash)
         val urlBuilder = "$base/subtitles".toHttpUrl().newBuilder()
         params.forEach { (k, v) -> urlBuilder.addQueryParameter(k, v) }
 

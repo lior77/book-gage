@@ -14,17 +14,11 @@ object PipelineBus {
     private val _state = MutableStateFlow<PipelineState>(PipelineState.Idle)
     val state = _state.asStateFlow()
 
-    private var translationDecision: CompletableDeferred<TranslationChoice>? = null
-    private var asrDecision: CompletableDeferred<Boolean>? = null
-    private var outputDecision: CompletableDeferred<OutputChoice>? = null
     private var videoInfoDecision: CompletableDeferred<VideoInfo>? = null
 
     fun update(state: PipelineState) { _state.value = state }
 
     fun reset() {
-        translationDecision = null
-        asrDecision = null
-        outputDecision = null
         videoInfoDecision = null
         _state.value = PipelineState.Idle
     }
@@ -39,41 +33,5 @@ object PipelineBus {
     fun submitVideoInfo(info: VideoInfo) {
         videoInfoDecision?.complete(info)
         videoInfoDecision = null
-    }
-
-    suspend fun awaitTranslationChoice(cloudAvailable: Boolean): TranslationChoice {
-        val deferred = CompletableDeferred<TranslationChoice>()
-        translationDecision = deferred
-        _state.value = PipelineState.NeedTranslationChoice(cloudAvailable)
-        return deferred.await()
-    }
-
-    fun submitTranslationChoice(choice: TranslationChoice) {
-        translationDecision?.complete(choice)
-        translationDecision = null
-    }
-
-    suspend fun awaitAsrConsent(asrAvailable: Boolean): Boolean {
-        val deferred = CompletableDeferred<Boolean>()
-        asrDecision = deferred
-        _state.value = PipelineState.NeedAsrConsent(asrAvailable)
-        return deferred.await()
-    }
-
-    fun submitAsrConsent(consent: Boolean) {
-        asrDecision?.complete(consent)
-        asrDecision = null
-    }
-
-    suspend fun awaitOutputChoice(embedMediaAvailable: Boolean): OutputChoice {
-        val deferred = CompletableDeferred<OutputChoice>()
-        outputDecision = deferred
-        _state.value = PipelineState.NeedOutputChoice(embedMediaAvailable)
-        return deferred.await()
-    }
-
-    fun submitOutputChoice(choice: OutputChoice) {
-        outputDecision?.complete(choice)
-        outputDecision = null
     }
 }

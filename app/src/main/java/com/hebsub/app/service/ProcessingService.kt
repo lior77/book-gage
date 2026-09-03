@@ -142,19 +142,26 @@ class ProcessingService : Service() {
                             else UnavailableAsrEngine(),
                 outputDir = placed.dir,
             )
+            // §10 — the user can make this film's look the default for the next ones.
+            if (info.saveStyleAsDefaults) {
+                settings.assDefaults = info.style
+                settings.minDisplayMs = info.minDisplayMs
+                RunLog.log("saved ASS defaults: ${info.style.serialize()} minDisplayMs=${info.minDisplayMs}")
+            }
             pipeline.run(
                 videoFile = placed.video,
                 base = placed.base,
                 year = yr,
                 imdbId = imdbId,
                 movie = movie,
-                subtitlePath = info.subtitlePath,
-                bgTransparency = info.bgTransparency,
-                deleteData = info.deleteData,
-                // The ORIGINAL file name still carries the release tags (1080p,
-                // BluRay, group…) that the canonical folder name drops; the
-                // pipeline matches it against each subtitle's `release`.
-                releaseName = suggested,
+                options = SubtitlePipeline.RunOptions(
+                    subtitlePath = info.subtitlePath,
+                    syncUploaded = info.syncUploaded,
+                    styled = info.styled,
+                    style = info.style,
+                    minDisplayMs = info.minDisplayMs,
+                    deleteData = info.deleteData,
+                ),
             )
             } catch (t: Throwable) {
                 RunLog.error("service failed", t)

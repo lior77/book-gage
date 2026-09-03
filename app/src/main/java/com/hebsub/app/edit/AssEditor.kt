@@ -1,6 +1,7 @@
 package com.hebsub.app.edit
 
 import android.content.Context
+import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaTool
 import com.hebsub.app.storage.HebSubStorage
@@ -72,15 +73,17 @@ class AssEditor(
             return@withContext null
         }
 
+        // What an unstyled or unreadable track starts from: the user's saved
+        // defaults (§10) if they have any, else the §9.1 look.
+        val fallback = SettingsRepository(context).assStyleDefaults
         val isAss = text.contains("[V4+ Styles]") || text.contains("[Script Info]")
         if (isAss) {
-            val opts = AssStyler.read(text) ?: AssStyleOptions()
+            val opts = AssStyler.read(text) ?: fallback
             RunLog.log("edit: loaded ASS from ${target.mkv.name} — $opts")
             Loaded(target, opts, ass = text, srt = null)
         } else {
-            // A plain SRT track: offer sensible defaults and convert on apply.
             RunLog.log("edit: track in ${target.mkv.name} is SRT — it will be converted to a styled ASS")
-            Loaded(target, AssStyleOptions(bgTransparencyPercent = 50), ass = null, srt = text)
+            Loaded(target, fallback, ass = null, srt = text)
         }
     }
 

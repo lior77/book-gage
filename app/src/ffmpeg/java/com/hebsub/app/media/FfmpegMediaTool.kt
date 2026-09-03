@@ -30,7 +30,6 @@ class FfmpegMediaTool : MediaTool {
 
         val subs = ArrayList<EmbeddedSubtitle>()
         var audioLang: String? = null
-        var videoFps = 0.0
         val streams = info.streams ?: emptyList()
         for (stream in streams) {
             val type = stream.type ?: continue
@@ -44,31 +43,10 @@ class FfmpegMediaTool : MediaTool {
             when (type) {
                 "subtitle" -> subs.add(EmbeddedSubtitle(index, lang, title, forced))
                 "audio" -> if (audioLang == null) audioLang = lang
-                "video" -> if (videoFps <= 0.0) {
-                    // ffprobe reports rates as a rational string, e.g. "24000/1001".
-                    val raw = listOf("avg_frame_rate", "r_frame_rate")
-                        .firstNotNullOfOrNull { props?.optString(it)?.takeUnless { s -> s.isBlank() } }
-                    videoFps = parseRate(raw)
-                }
             }
         }
         val durationMs = (info.duration?.toDoubleOrNull() ?: 0.0).times(1000).toLong()
-        MediaProbe(subs, Language.canonical(audioLang), durationMs, videoFps)
-    }
-
-    /** "24000/1001" or "25" → frames per second; 0.0 when unparseable. */
-    private fun parseRate(raw: String?): Double {
-        val s = raw?.trim().orEmpty()
-        if (s.isEmpty()) return 0.0
-        val parts = s.split('/')
-        return when {
-            parts.size == 2 -> {
-                val n = parts[0].toDoubleOrNull() ?: return 0.0
-                val d = parts[1].toDoubleOrNull() ?: return 0.0
-                if (d == 0.0) 0.0 else n / d
-            }
-            else -> s.toDoubleOrNull() ?: 0.0
-        }
+        MediaProbe(subs, Language.canonical(audioLang), durationMs)
     }
 
     override suspend fun extractSubtitle(input: File, streamIndex: Int, outSrt: File): Boolean =
@@ -159,54 +137,38 @@ class FfmpegMediaTool : MediaTool {
     override suspend fun remuxWithHebrewAndMeta(
         input: File,
         sub: File,
-        secondarySub: File?,
         existingSubtitleCount: Int,
         outMkv: File,
         metadata: Map<String, String>,
         poster: File?,
         font: File?,
     ): Boolean {
-        // Upgrade (a): copy every subtitle stream verbatim (`-c:s copy`) — never
-        // re-encode. The styled ASS keeps its background plate, and when one is
-        // present we also mux the plain SRT sidecar as a SECOND parallel Hebrew
-        // track (input 2) so every player exposes a selectable Hebrew subtitle.
-        // Video and audio are always `-c copy` (lossless), so film quality is
-        // untouched regardless of the subtitle handling.
+        // Every subtitle stream is copied verbatim (`-c:s copy`), never re-encoded,
+        // so a styled ASS keeps its background plate. Video and audio are always
+        // `-c copy` (lossless), so film quality is untouched either way.
         val isAss = sub.extension.equals("ass", ignoreCase = true)
-        val hasSecondary = secondarySub != null && secondarySub.exists() &&
-            secondarySub.absolutePath != sub.absolutePath
         // A Hebrew font is embedded only for the styled ASS track, so libass has
         // real Hebrew glyphs instead of substituting a box-only font.
         val hasFont = isAss && font != null && font.exists()
         val args = ArrayList<String>()
         args += listOf("-y", "-i", input.absolutePath, "-i", sub.absolutePath)
-        if (hasSecondary) args += listOf("-i", secondarySub!!.absolutePath)
         // Attachments (font first, then poster) become attachment streams t:0,t:1…
         // in the order the -attach options appear here.
         if (hasFont) args += listOf("-attach", font!!.absolutePath)
         val hasPoster = poster != null && poster.exists()
         if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
         args += listOf("-map", "0", "-map", "1")
-        if (hasSecondary) args += listOf("-map", "2")
         args += listOf("-c", "copy", "-c:s", "copy")
 
-        // Primary Hebrew track (the muxed `sub`). Name it by kind so the player's
-        // picker shows the right option, and mark it DEFAULT so the player
-        // auto-enables and displays it (VLC otherwise may leave it off).
+        // Name the Hebrew track by kind so the player's picker shows the right
+        // option, and mark it DEFAULT so the player auto-enables and displays it
+        // (VLC otherwise may leave it off).
         val primaryTitle = if (isAss) "עברית עם רקע" else "עברית"
         args += listOf(
             "-metadata:s:s:$existingSubtitleCount", "language=heb",
             "-metadata:s:s:$existingSubtitleCount", "title=$primaryTitle",
             "-disposition:s:$existingSubtitleCount", "default",
         )
-        // Second, universally-selectable plain-text Hebrew track.
-        if (hasSecondary) {
-            val i = existingSubtitleCount + 1
-            args += listOf(
-                "-metadata:s:s:$i", "language=heb",
-                "-metadata:s:s:$i", "title=עברית (טקסט)",
-            )
-        }
         // Attachment metadata, indexed in the same order as the -attach options.
         var t = 0
         if (hasFont) {
