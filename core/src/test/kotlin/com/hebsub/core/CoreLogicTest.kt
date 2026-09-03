@@ -167,7 +167,7 @@ class SubtitleSourcePlannerTest {
         // The plate colour must sit in the OutlineColour slot (libass fills the
         // opaque box from OutlineColour, not BackColour) — regression: the plate
         // was in BackColour only, so the box rendered opaque black.
-        assertTrue(ass.contains("&H000000FF,&H60303030,")) // secondary, then plate as OutlineColour
+        assertTrue(ass.contains("&H000000FF,&H601A1A1A,")) // secondary, then plate as OutlineColour
         assertTrue(ass.contains("Dialogue: 0,0:00:02.48,0:00:03.69,Default"))
         assertTrue(ass.contains("שלום\\Nעולם"))                    // lines joined with \N
     }
@@ -321,22 +321,28 @@ class SubtitleSourcePlannerTest {
         val original = com.hebsub.core.subtitle.AssWriter.write(cues, bgTransparencyPercent = 50, fontName = "Alef")
 
         val wanted = com.hebsub.core.subtitle.AssStyleOptions(
-            bgTransparencyPercent = 30, platePadding = 9, marginV = 64, extraLineSpacing = 12, fontSize = 26,
+            bgTransparencyPercent = 30, platePadding = 9, plateSidePadding = 22,
+            marginV = 64, extraLineSpacing = 12, fontSize = 34,
         )
         val restyled = styler.restyle(original, wanted)
         val read = styler.read(restyled)!!
 
         assertEquals(30, read.bgTransparencyPercent)
         assertEquals(9, read.platePadding)
+        assertEquals(22, read.plateSidePadding)      // horizontal extent, independent
         assertEquals(64, read.marginV)
         assertEquals(12, read.extraLineSpacing)
+        assertEquals(34, read.fontSize)              // font size is editable
         assertEquals("Alef", styler.fontOf(restyled))            // font preserved
         assertTrue(restyled.contains("Dialogue: 0,0:00:01.00,0:00:02.00,Default"))  // timing untouched
 
-        // Re-editing replaces the previous spacer rather than stacking another one.
-        val again = styler.restyle(restyled, wanted.copy(extraLineSpacing = 4))
+        // Re-editing replaces the previous spacer/override rather than stacking them.
+        val again = styler.restyle(restyled, wanted.copy(extraLineSpacing = 4, plateSidePadding = 5))
         assertEquals(4, styler.read(again)!!.extraLineSpacing)
+        assertEquals(5, styler.read(again)!!.plateSidePadding)
         assertTrue(!again.contains("{\\fs12}"), "the old spacer must be gone")
+        assertEquals(1, com.hebsub.core.subtitle.AssStyler.XBORD.findAll(again).count(),
+            "exactly one xbord override per cue — they must not stack")
         // …and removing it entirely returns the plain two-line form.
         val none = styler.restyle(again, wanted.copy(extraLineSpacing = 0))
         assertEquals(0, styler.read(none)!!.extraLineSpacing)

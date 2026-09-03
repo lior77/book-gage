@@ -56,7 +56,7 @@ object AssWriter {
                 .append(time(cue.startMs)).append(',')
                 .append(time(cue.endMs)).append(',')
                 .append("Default,,0,0,0,,")
-                .append(AssStyler.applySpacing(escape(cue.text), o.extraLineSpacing))
+                .append(AssStyler.applyText(escape(cue.text), o))
                 .append('\n')
         }
         return sb.toString()

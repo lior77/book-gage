@@ -9,8 +9,14 @@ package com.hebsub.core.subtitle
 data class AssStyleOptions(
     /** 0 = fully opaque plate (hides burned-in subs), 100 = no plate at all. */
     val bgTransparencyPercent: Int = 100,
-    /** Padding around the text inside the plate (ASS `Outline` with BorderStyle 3). */
+    /** Plate padding ABOVE and BELOW the text (ASS `Outline` / `\ybord`). */
     val platePadding: Int = 4,
+    /**
+     * How far the plate extends to the RIGHT and LEFT of the text (`\xbord`).
+     * A style line has only one padding field, so the two axes are separated with
+     * libass's `\xbord`/`\ybord` override tags.
+     */
+    val plateSidePadding: Int = 8,
     /** Distance of the subtitles from the bottom edge of the frame (ASS `MarginV`). */
     val marginV: Int = 20,
     /** Extra gap between two subtitle lines; 0 = the font's natural line height. */
@@ -30,7 +36,9 @@ data class AssStyleOptions(
  */
 object AssStyler {
 
-    private const val PLATE_RGB = "303030"          // dark grey, as BBGGRR
+    private const val PLATE_RGB = "1A1A1A"          // dark grey (BBGGRR) — deliberately
+                                                    // darker than the original 303030 so
+                                                    // white text reads better on it
     private const val STYLE_PREFIX = "Style: Default,"
 
     /** Number of fields in a V4+ style line. */
@@ -68,9 +76,14 @@ object AssStyler {
         val alpha = alphaOf(parts[I_OUTLINE_COLOUR].trim())
         // BorderStyle 1 means there is no plate at all, whatever the colour says.
         val transparency = if (borderStyle == 3) (alpha * 100 + 127) / 255 else 100
+        // The style has a single padding field; the per-axis values live in the
+        // dialogue overrides. Fall back to the style's value for older files that
+        // have no overrides, so they read back looking exactly as they do now.
+        val outline = parts[I_OUTLINE].trim().toDoubleOrNull()?.toInt() ?: 4
         return AssStyleOptions(
             bgTransparencyPercent = transparency.coerceIn(0, 100),
-            platePadding = parts[I_OUTLINE].trim().toDoubleOrNull()?.toInt() ?: 4,
+            platePadding = YBORD.find(ass)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt() ?: outline,
+            plateSidePadding = XBORD.find(ass)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt() ?: outline,
             marginV = parts[I_MARGIN_V].trim().toIntOrNull() ?: 20,
             extraLineSpacing = spacingOf(ass),
             fontSize = parts[I_SIZE].trim().toDoubleOrNull()?.toInt() ?: 26,
@@ -111,6 +124,29 @@ object AssStyler {
         return plain.replace("""\N""", """\N{\fs$extra}$ZWSP\N""")
     }
 
+    // A style line carries one padding value for all four sides, so the separate
+    // horizontal/vertical plate sizes are expressed with libass's per-axis border
+    // overrides, prepended to each dialogue event.
+    private val OVERRIDE = Regex("""^\{\\xbord[\d.]+\\ybord[\d.]+\}""")
+    val XBORD = Regex("""\\xbord([\d.]+)""")
+    val YBORD = Regex("""\\ybord([\d.]+)""")
+
+    /** Drop a previously prepended `{\xbord…\ybord…}` block. */
+    fun stripOverride(text: String): String = OVERRIDE.replace(text, "")
+
+    /**
+     * Full text transform for one cue: clear anything a previous edit added, then
+     * re-apply the line spacing and the per-axis plate padding. Idempotent, so
+     * editing repeatedly never stacks overrides or spacers.
+     */
+    fun applyText(text: String, o: AssStyleOptions): String {
+        val spaced = applySpacing(stripOverride(text), o.extraLineSpacing)
+        if (!o.hasPlate) return spaced
+        val x = o.plateSidePadding.coerceIn(0, 100)
+        val y = o.platePadding.coerceIn(0, 100)
+        return """{\xbord$x\ybord$y}""" + spaced
+    }
+
     /**
      * Rewrite [ass] with the settings in [o]: replaces the style line and re-applies
      * the line spacing to every dialogue event. Timing and text are untouched.
@@ -121,7 +157,7 @@ object AssStyler {
         for (line in ass.lineSequence()) {
             when {
                 line.startsWith("Style:") -> out.append(styleLine(font, o))
-                line.startsWith("Dialogue:") -> out.append(restyleDialogue(line, o.extraLineSpacing))
+                line.startsWith("Dialogue:") -> out.append(restyleDialogue(line, o))
                 else -> out.append(line)
             }
             out.append('\n')
@@ -130,11 +166,10 @@ object AssStyler {
     }
 
     /** A dialogue line is 9 comma-separated fields followed by the free-form text. */
-    private fun restyleDialogue(line: String, extra: Int): String {
+    private fun restyleDialogue(line: String, o: AssStyleOptions): String {
         val body = line.removePrefix("Dialogue:")
         val parts = body.split(',', limit = 10)
         if (parts.size < 10) return line
-        val text = applySpacing(parts[9], extra)
-        return "Dialogue:" + parts.take(9).joinToString(",") + "," + text
+        return "Dialogue:" + parts.take(9).joinToString(",") + "," + applyText(parts[9], o)
     }
 }

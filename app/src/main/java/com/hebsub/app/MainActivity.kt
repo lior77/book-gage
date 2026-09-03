@@ -341,8 +341,10 @@ private fun EditAssScreen(onBack: () -> Unit) {
     // Editable settings, seeded from the track once it is loaded.
     var transparency by remember { mutableStateOf(50f) }
     var padding by remember { mutableStateOf(4f) }
+    var sidePadding by remember { mutableStateOf(8f) }
     var marginV by remember { mutableStateOf(20f) }
     var lineGap by remember { mutableStateOf(0f) }
+    var fontSize by remember { mutableStateOf(26f) }
 
     LaunchedEffect(Unit) { targets = editor.findTargets() }
 
@@ -370,8 +372,10 @@ private fun EditAssScreen(onBack: () -> Unit) {
                             } else {
                                 transparency = l.options.bgTransparencyPercent.toFloat()
                                 padding = l.options.platePadding.toFloat()
+                                sidePadding = l.options.plateSidePadding.toFloat()
                                 marginV = l.options.marginV.toFloat()
                                 lineGap = l.options.extraLineSpacing.toFloat()
+                                fontSize = l.options.fontSize.toFloat()
                                 loaded = l
                             }
                         }
@@ -390,8 +394,16 @@ private fun EditAssScreen(onBack: () -> Unit) {
             Slider(value = transparency, onValueChange = { transparency = it }, valueRange = 0f..100f)
             Text(stringResource(R.string.edit_transparency_hint), style = MaterialTheme.typography.bodySmall)
 
+            Text(stringResource(R.string.edit_fontsize, fontSize.toInt()), style = MaterialTheme.typography.bodyMedium)
+            Slider(value = fontSize, onValueChange = { fontSize = it }, valueRange = 12f..60f)
+            Text(stringResource(R.string.edit_fontsize_hint), style = MaterialTheme.typography.bodySmall)
+
             Text(stringResource(R.string.edit_padding, padding.toInt()), style = MaterialTheme.typography.bodyMedium)
-            Slider(value = padding, onValueChange = { padding = it }, valueRange = 0f..20f)
+            Slider(value = padding, onValueChange = { padding = it }, valueRange = 0f..30f)
+
+            Text(stringResource(R.string.edit_side_padding, sidePadding.toInt()), style = MaterialTheme.typography.bodyMedium)
+            Slider(value = sidePadding, onValueChange = { sidePadding = it }, valueRange = 0f..60f)
+            Text(stringResource(R.string.edit_side_padding_hint), style = MaterialTheme.typography.bodySmall)
 
             Text(stringResource(R.string.edit_margin, marginV.toInt()), style = MaterialTheme.typography.bodyMedium)
             Slider(value = marginV, onValueChange = { marginV = it }, valueRange = 0f..120f)
@@ -417,9 +429,10 @@ private fun EditAssScreen(onBack: () -> Unit) {
                             AssStyleOptions(
                                 bgTransparencyPercent = transparency.toInt(),
                                 platePadding = padding.toInt(),
+                                plateSidePadding = sidePadding.toInt(),
                                 marginV = marginV.toInt(),
                                 extraLineSpacing = lineGap.toInt(),
-                                fontSize = current.options.fontSize,
+                                fontSize = fontSize.toInt(),
                             ),
                         )
                         busy = false

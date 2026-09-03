@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HebSub 2.6 — כתוביות עברית</string>
+    <string name="app_name">HebSub 2.7 — כתוביות עברית</string>
 
     <string name="home_title">כתוביות עברית לסרטים</string>
 
@@ -15,7 +15,7 @@
     <string name="video_info_transparency_hint">‏0%% = רקע אטום (מסתיר כתוביות צרובות) · 100%% = ללא רקע כלל.</string>
     <string name="video_info_delete">מחיקת קבצי ביניים בסיום</string>
     <string name="video_info_delete_hint">להשאיר רק את קובץ ה‑MKV (עם מסלול העברית ונתוני הסרט) ואת קובץ ה‑PDF.</string>
-    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 2.6</string>
+    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 2.7</string>
     <string name="pick_file">בחירת קובץ וידאו מהמכשיר</string>
     <string name="paste_link">הוספת קישור להורדת וידאו</string>
     <string name="link_hint">הדביקו או הקלידו כתובת וידאו (https://…)</string>
@@ -35,7 +35,11 @@
     <string name="edit_from_srt">למסלול הנוכחי אין עיצוב (SRT) — הוא יומר לכתוביות מעוצבות עם רקע.</string>
     <string name="edit_transparency">שקיפות רקע הכתוביות: %1$d%%</string>
     <string name="edit_transparency_hint">‏0%% = רקע אטום (מסתיר כתוביות צרובות) · 100%% = ללא רקע כלל.</string>
-    <string name="edit_padding">רוחב הפלטה (ריפוד סביב הטקסט): %1$d</string>
+    <string name="edit_fontsize">גודל הפונט: %1$d</string>
+    <string name="edit_fontsize_hint">הערך יחסי לגובה הפריים (ברירת מחדל 26), כך שהגודל נראה זהה בכל רזולוציה.</string>
+    <string name="edit_padding">גובה הפלטה מעל ומתחת לטקסט: %1$d</string>
+    <string name="edit_side_padding">אורך הפלטה מימין ומשמאל לטקסט: %1$d</string>
+    <string name="edit_side_padding_hint">מרחיב את הפלטה לצדדים בלבד, בלי לשנות את גובהה.</string>
     <string name="edit_margin">גובה הכתוביות מתחתית הפריים: %1$d</string>
     <string name="edit_margin_hint">הערך יחסי לגובה הפריים (ברירת מחדל 20), כך שהמראה זהה בכל רזולוציה.</string>
     <string name="edit_linegap">מרווח נוסף בין שתי שורות: %1$d</string>
