@@ -82,6 +82,9 @@
     <string name="edit_margin_hint">הערך יחסי לגובה הפריים (ברירת מחדל 20), כך שהמראה זהה בכל רזולוציה.</string>
     <string name="edit_linegap">מרווח נוסף בין שתי שורות: %1$d</string>
     <string name="edit_linegap_hint">‏0 = המרווח הטבעי של הגופן. הערך מוסיף רווח בין השורות (אי אפשר לצמצם מתחת לטבעי).</string>
+    <string name="edit_preview">תצוגה מקדימה על פריים מהסרט</string>
+    <string name="edit_preview_working">מכין תצוגה מקדימה…</string>
+    <string name="edit_preview_unavailable">תצוגה מקדימה אינה זמינה בגרסת ה‑FFmpeg שבמכשיר. אפשר להחיל את ההגדרות ולבדוק בנגן.</string>
     <string name="edit_save_defaults">לסמן את כל הפרמטרים כברירת מחדל</string>
     <string name="edit_save_defaults_hint">כל קובץ ASS שייווצר מכאן ואילך יתחיל מההגדרות שכאן.</string>
     <string name="edit_defaults_saved">ההגדרות נשמרו כברירת מחדל.</string>

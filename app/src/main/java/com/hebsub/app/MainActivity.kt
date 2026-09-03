@@ -17,7 +17,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.hebsub.app.storage.HebSubStorage
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,7 +31,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -470,6 +475,9 @@ private fun EditAssScreen(onHome: () -> Unit) {
     // Editable settings, seeded from the track once it is loaded.
     var style by remember { mutableStateOf(settings.assStyleDefaults) }
     var saveDefaults by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf<java.io.File?>(null) }
+    var previewing by remember { mutableStateOf(false) }
+    var previewFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { targets = editor.findTargets() }
 
@@ -492,6 +500,7 @@ private fun EditAssScreen(onHome: () -> Unit) {
                             } else {
                                 style = l.options
                                 loaded = l
+                                preview = null; previewFailed = false
                             }
                         }
                     },
@@ -506,6 +515,32 @@ private fun EditAssScreen(onHome: () -> Unit) {
             }
 
             StyleSliders(style) { style = it }
+
+            // A frame of the actual film with these settings on it, so the choice is
+            // made against the picture rather than after a full rebuild.
+            Button(
+                onClick = {
+                    previewing = true; previewFailed = false
+                    scope.launch {
+                        val img = editor.preview(current, style)
+                        previewing = false
+                        if (img == null) { previewFailed = true; preview = null } else preview = img
+                    }
+                },
+                enabled = !busy && !previewing,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.edit_preview)) }
+
+            if (previewing) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.edit_preview_working), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            if (previewFailed) {
+                Text(stringResource(R.string.edit_preview_unavailable), style = MaterialTheme.typography.bodySmall)
+            }
+            preview?.let { PreviewFrame(it) }
 
             // §10 — one tick makes every parameter here the default for future ASS files.
             CheckRow(
@@ -541,7 +576,11 @@ private fun EditAssScreen(onHome: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.edit_apply)) }
 
-            OutlinedButton(onClick = { loaded = null; message = null }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { loaded = null; message = null; preview = null; previewFailed = false },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(stringResource(R.string.edit_pick_other))
             }
         }
@@ -1072,6 +1111,26 @@ private fun StyleSliders(options: AssStyleOptions, onChange: (AssStyleOptions) -
             valueRange = 0f..40f,
         )
         Text(stringResource(R.string.edit_linegap_hint), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/**
+ * Show a rendered preview frame. The bitmap is decoded off the file the editor
+ * just wrote; if decoding fails (an unreadable or truncated render) nothing is
+ * drawn rather than an empty box.
+ */
+@Composable
+private fun PreviewFrame(image: java.io.File) {
+    val bitmap = remember(image.absolutePath) {
+        runCatching { android.graphics.BitmapFactory.decodeFile(image.absolutePath) }.getOrNull()
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = stringResource(R.string.edit_preview),
+            contentScale = ContentScale.FitWidth,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+        )
     }
 }
 

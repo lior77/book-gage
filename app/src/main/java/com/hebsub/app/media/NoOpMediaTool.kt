@@ -53,4 +53,12 @@ class NoOpMediaTool : MediaTool {
         metadata: Map<String, String>,
         poster: File?,
     ): Boolean = false
+
+    override suspend fun renderStyledFrame(
+        video: File,
+        ass: File,
+        fontsDir: File?,
+        atMs: Long,
+        outImage: File,
+    ): Boolean = false
 }

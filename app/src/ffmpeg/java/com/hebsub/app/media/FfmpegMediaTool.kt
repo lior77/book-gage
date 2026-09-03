@@ -136,6 +136,38 @@ class FfmpegMediaTool : MediaTool {
         return ok
     }
 
+    override suspend fun renderStyledFrame(
+        video: File,
+        ass: File,
+        fontsDir: File?,
+        atMs: Long,
+        outImage: File,
+    ): Boolean {
+        // `-ss` before `-i` seeks by keyframe, which is near-instant even two hours
+        // in; a preview does not need frame accuracy. The frame is scaled down
+        // because it is going onto a phone screen, and `ass` scales its rendering
+        // with the frame, so the proportions the user sees are the real ones.
+        val seconds = (atMs.coerceAtLeast(0L) / 1000.0)
+        val filter = buildString {
+            append("ass=").append(escapeFilterArg(ass.absolutePath))
+            fontsDir?.let { append(":fontsdir=").append(escapeFilterArg(it.absolutePath)) }
+            append(",scale=960:-2")
+        }
+        val ok = run(
+            "-y", "-ss", "%.3f".format(seconds), "-i", video.absolutePath,
+            "-vf", filter, "-frames:v", "1", "-q:v", "3", outImage.absolutePath,
+        )
+        if (!ok) RunLog.log("preview: the ass filter is unavailable in this FFmpeg build (or the seek failed)")
+        return ok && outImage.exists() && outImage.length() > 0
+    }
+
+    /**
+     * Escape a path for use inside a filtergraph, where `:` separates options and
+     * `\` and `'` are the escape characters themselves.
+     */
+    private fun escapeFilterArg(path: String): String =
+        path.replace("""\""", """\\""").replace(":", """\:""").replace("'", """\'""")
+
     /** How many attachment streams [input] already has (0 when it cannot be probed). */
     private suspend fun attachmentCount(input: File): Int = withContext(Dispatchers.IO) {
         val info = runCatching { FFprobeKit.getMediaInformation(input.absolutePath).mediaInformation }.getOrNull()

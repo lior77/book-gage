@@ -5,6 +5,7 @@ import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaTool
 import com.hebsub.app.storage.HebSubStorage
+import com.hebsub.core.subtitle.AssParser
 import com.hebsub.core.subtitle.AssStyleOptions
 import com.hebsub.core.subtitle.AssStyler
 import com.hebsub.core.subtitle.AssWriter
@@ -148,6 +149,53 @@ class AssEditor(
 
         if (ok2) RunLog.log("edit: ${original.name} replaced (${original.length()} bytes)")
         ok2
+    }
+
+    /**
+     * Render one frame of the film with [options] applied, so the settings can be
+     * judged against the actual picture instead of after a full rebuild. Returns
+     * the image, or null when this FFmpeg build cannot burn subtitles in — the
+     * editor then simply carries on without a preview.
+     */
+    suspend fun preview(loaded: Loaded, options: AssStyleOptions): File? = withContext(Dispatchers.IO) {
+        val ass = if (loaded.ass != null) {
+            AssStyler.restyle(loaded.ass, options, fontName = AssStyler.fontOf(loaded.ass) ?: HEBREW_FONT_FAMILY)
+        } else {
+            val cues = SrtParser.parse(loaded.srt.orEmpty())
+            if (cues.isEmpty()) return@withContext null
+            AssWriter.write(cues, fontName = HEBREW_FONT_FAMILY, options = options)
+        }
+        val at = previewTimeMs(ass) ?: return@withContext null
+
+        val font = ensureHebrewFont()
+        val tmpAss = File(context.cacheDir, "preview.ass")
+        val out = File(context.cacheDir, "preview.jpg")
+        runCatching { tmpAss.writeText(ass, Charsets.UTF_8); out.delete() }
+
+        val ok = runCatching {
+            mediaTool.renderStyledFrame(loaded.target.mkv, tmpAss, font?.parentFile, at, out)
+        }.getOrElse { RunLog.error("preview failed", it); false }
+        if (!ok) return@withContext null
+        RunLog.log("preview: rendered at ${at}ms (${out.length()} bytes)")
+        // A fresh name each time, or Compose reuses the previous bitmap for the
+        // unchanged path and the preview appears not to update.
+        val stamped = File(context.cacheDir, "preview-${System.currentTimeMillis()}.jpg")
+        if (out.renameTo(stamped)) stamped else out
+    }
+
+    /**
+     * A timestamp worth previewing: a two-line cue if the film has one, since only
+     * then is the line spacing visible; otherwise the longest cue, which shows the
+     * plate at its widest. Both are taken from the middle of the film, where a
+     * frame is likely to be a real scene rather than a title card.
+     */
+    private fun previewTimeMs(ass: String): Long? {
+        val cues = AssParser.parse(ass).ifEmpty { return null }
+        val middle = cues.drop(cues.size / 4).take(cues.size / 2).ifEmpty { cues }
+        val cue = middle.firstOrNull { it.lines.size > 1 }
+            ?: middle.maxByOrNull { it.text.length }
+            ?: return null
+        return (cue.startMs + cue.endMs) / 2
     }
 
     /** Copy the bundled Hebrew TTF out of assets so FFmpeg can attach it. */

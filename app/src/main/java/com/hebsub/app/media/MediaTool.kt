@@ -103,4 +103,15 @@ interface MediaTool {
         metadata: Map<String, String>,
         poster: File?,
     ): Boolean
+
+    /**
+     * Render one frame of [video] at [atMs] with [ass] drawn onto it, so the user
+     * can see a style on the actual film instead of rebuilding a whole MKV to find
+     * out how it looks. [fontsDir] is where the bundled Hebrew font lives.
+     *
+     * Returns false when this FFmpeg build has no libass — burning subtitles in is
+     * a separate feature from muxing them, and not every build carries it — so a
+     * preview is always optional and never blocks the edit itself.
+     */
+    suspend fun renderStyledFrame(video: File, ass: File, fontsDir: File?, atMs: Long, outImage: File): Boolean
 }
