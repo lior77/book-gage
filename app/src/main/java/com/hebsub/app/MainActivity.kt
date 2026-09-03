@@ -444,13 +444,10 @@ private fun AddDataScreen(onHome: () -> Unit) {
         result?.let { r ->
             HorizontalDivider()
             Text(stringResource(R.string.data_done, r.folder.name), style = MaterialTheme.typography.titleSmall)
-            val made = buildList {
-                if (r.pdf != null) add(stringResource(R.string.data_out_pdf))
-                if (r.poster != null) add(stringResource(R.string.data_out_poster))
-                if (r.embedded) add(stringResource(R.string.data_out_embedded))
-                if (r.renamed) add(stringResource(R.string.data_out_renamed))
-            }
-            made.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+            if (r.pdf != null) Bullet(stringResource(R.string.data_out_pdf))
+            if (r.poster != null) Bullet(stringResource(R.string.data_out_poster))
+            if (r.embedded) Bullet(stringResource(R.string.data_out_embedded))
+            if (r.renamed) Bullet(stringResource(R.string.data_out_renamed))
         }
         message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
     }
@@ -567,8 +564,9 @@ private fun EditAssScreen(onHome: () -> Unit) {
                     scope.launch {
                         val ok = editor.apply(current, style)
                         busy = false
-                        message = context.getString(if (ok) R.string.edit_done else R.string.edit_failed) +
-                            if (saveDefaults) " " + context.getString(R.string.edit_defaults_saved) else ""
+                        val outcome = context.getString(if (ok) R.string.edit_done else R.string.edit_failed)
+                        val defaults = if (saveDefaults) " " + context.getString(R.string.edit_defaults_saved) else ""
+                        message = outcome + defaults
                         if (ok) targets = editor.findTargets()
                     }
                 },
@@ -1044,6 +1042,12 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
             }
         }
     }
+}
+
+/** One line of a short outcome list. */
+@Composable
+private fun Bullet(text: String) {
+    Text("• $text", style = MaterialTheme.typography.bodySmall)
 }
 
 /** One option of a radio group; the whole row is the target, not just the dot. */
