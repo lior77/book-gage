@@ -88,26 +88,39 @@ class FfmpegMediaTool : MediaTool {
         outMkv: File,
         title: String,
         font: File?,
+        poster: File?,
     ): Boolean {
-        val attachFont = font != null && font.exists()
+        // Mirror the creation mux exactly. Copying the source's attachments through
+        // with `-map 0:t?` is NOT reliable: the font can arrive without a usable
+        // mimetype, libass then has no Hebrew glyphs, every glyph collapses to zero
+        // width — and the text AND its plate render as nothing at all. So the font
+        // (and cover) are always re-attached explicitly, with their mimetypes.
+        val hasFont = font != null && font.exists()
+        val hasPoster = poster != null && poster.exists()
         val args = ArrayList<String>()
         args += listOf("-y", "-i", inputMkv.absolutePath, "-i", sub.absolutePath)
-        if (attachFont) args += listOf("-attach", font!!.absolutePath)
-        // Video + audio verbatim, the NEW subtitle, and the source's attachments
-        // (font/cover) unless we are attaching a font ourselves.
-        args += listOf("-map", "0:v", "-map", "0:a?")
-        if (!attachFont) args += listOf("-map", "0:t?")
-        args += listOf("-map", "1", "-c", "copy", "-c:s", "copy")
+        if (hasFont) args += listOf("-attach", font!!.absolutePath)
+        if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
+        // Only the real video stream (a cover stored as a video stream would
+        // otherwise be duplicated) plus the audio, then the NEW subtitle.
+        args += listOf("-map", "0:v:0", "-map", "0:a?", "-map", "1", "-c", "copy", "-c:s", "copy")
         args += listOf(
             "-metadata:s:s:0", "language=heb",
             "-metadata:s:s:0", "title=$title",
             "-disposition:s:0", "default",
         )
-        if (attachFont) {
+        var t = 0
+        if (hasFont) {
             args += listOf(
-                "-metadata:s:t:0", "mimetype=application/x-truetype-font",
-                "-metadata:s:t:0", "filename=${font!!.name}",
+                "-metadata:s:t:$t", "mimetype=application/x-truetype-font",
+                "-metadata:s:t:$t", "filename=${font!!.name}",
             )
+            t++
+        }
+        if (hasPoster) {
+            val mime = if (poster!!.extension.equals("png", true)) "image/png" else "image/jpeg"
+            val fname = if (mime == "image/png") "cover.png" else "cover.jpg"
+            args += listOf("-metadata:s:t:$t", "mimetype=$mime", "-metadata:s:t:$t", "filename=$fname")
         }
         args += outMkv.absolutePath
         val ok = run(*args.toTypedArray())
@@ -230,18 +243,34 @@ class FfmpegMediaTool : MediaTool {
             val info = FFprobeKit.getMediaInformation(outMkv.absolutePath).mediaInformation
             if (info == null) { RunLog.log("verify: ffprobe returned no media info for ${outMkv.name}"); return@withContext }
             val subs = ArrayList<String>()
+            val attachments = ArrayList<String>()
             for (stream in info.streams ?: emptyList()) {
-                if (stream.type != "subtitle") continue
                 val props = runCatching { stream.allProperties }.getOrNull()
                 val tags = props?.optJSONObject("tags")
-                val lang = tags?.optString("language").takeUnless { it.isNullOrBlank() } ?: "?"
-                val title = tags?.optString("title").takeUnless { it.isNullOrBlank() } ?: "?"
-                val codec = stream.codec ?: "?"
-                subs += "s:${stream.index}[$codec/$lang/\"$title\"]"
+                when (stream.type) {
+                    "subtitle" -> {
+                        val lang = tags?.optString("language").takeUnless { it.isNullOrBlank() } ?: "?"
+                        val title = tags?.optString("title").takeUnless { it.isNullOrBlank() } ?: "?"
+                        val codec = stream.codec ?: "?"
+                        subs += "s:${stream.index}[$codec/$lang/\"$title\"]"
+                    }
+                    // A styled ASS is only readable if its font really came along, so
+                    // log the attachments too — a missing font renders as nothing.
+                    "attachment" -> {
+                        val name = tags?.optString("filename").takeUnless { it.isNullOrBlank() } ?: "?"
+                        val mime = tags?.optString("mimetype").takeUnless { it.isNullOrBlank() } ?: "?"
+                        attachments += "$name($mime)"
+                    }
+                }
             }
             val heb = subs.count { it.contains("/heb/") || it.contains("/he/") }
             RunLog.log("verify: ${outMkv.name} subtitleStreams=${subs.size} hebrew=$heb ${subs.joinToString(" ")}")
+            RunLog.log("verify: attachments=${attachments.size} ${attachments.joinToString(" ")}")
             if (heb == 0) RunLog.error("verify: NO Hebrew subtitle track found in ${outMkv.name}")
+            val needsFont = subs.any { it.contains("ass") || it.contains("ssa") }
+            if (needsFont && attachments.none { it.contains("font", ignoreCase = true) || it.endsWith(".ttf)", ignoreCase = true) }) {
+                RunLog.error("verify: styled ASS track but NO font attachment — Hebrew will not render")
+            }
         } catch (t: Throwable) {
             RunLog.error("verify failed", t)
         }

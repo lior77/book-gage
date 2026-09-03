@@ -38,10 +38,10 @@ interface MediaTool {
 
     /**
      * Rebuild [inputMkv] with its subtitle track replaced by [sub], copying video
-     * and audio untouched. When [font] is given it is attached (and the source's
-     * own attachments are dropped, because there were none worth keeping); when it
-     * is null the source's attachments — the Hebrew font and the cover — are
-     * preserved as-is.
+     * and audio untouched. [font] and [poster] are re-attached explicitly (with
+     * their mimetypes) rather than copied through from the source, because an
+     * attachment that survives without a usable mimetype leaves libass with no
+     * Hebrew glyphs — and the subtitles then render as nothing at all.
      */
     suspend fun replaceSubtitleTrack(
         inputMkv: File,
@@ -49,6 +49,7 @@ interface MediaTool {
         outMkv: File,
         title: String,
         font: File?,
+        poster: File?,
     ): Boolean
 
     /** Extract mono 16 kHz PCM WAV for on-device ASR. */

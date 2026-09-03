@@ -25,6 +25,7 @@ class NoOpMediaTool : MediaTool {
         outMkv: File,
         title: String,
         font: File?,
+        poster: File?,
     ): Boolean = false
 
     override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean = false

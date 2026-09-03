@@ -106,11 +106,18 @@ class AssEditor(
         runCatching { assFile.writeText(ass, Charsets.UTF_8) }
             .onFailure { RunLog.error("edit: could not write ${assFile.name}", it); return@withContext false }
 
-        val font = if (convertingFromSrt) ensureHebrewFont() else null
+        // ALWAYS re-attach the font: an ASS whose font is missing renders as nothing
+        // at all (missing glyphs collapse the text and its plate to zero width).
+        val font = ensureHebrewFont()
+        if (font == null) RunLog.error("edit: the Hebrew font is unavailable — subtitles may not render")
+        // Re-attach the cover too, since we no longer copy the source's attachments.
+        val poster = target.dir.listFiles()
+            ?.firstOrNull { it.isFile && it.name.endsWith(".poster.jpg", ignoreCase = true) }
+
         val tmpOut = File(target.dir, "$base.he.restyled.mkv")
         runCatching { tmpOut.delete() }
 
-        RunLog.log("edit: rebuilding ${target.mkv.name} with $options (convertFromSrt=$convertingFromSrt)")
+        RunLog.log("edit: rebuilding ${target.mkv.name} with $options (convertFromSrt=$convertingFromSrt font=${font?.name ?: "-"} poster=${poster?.name ?: "-"})")
         val ok = runCatching {
             mediaTool.replaceSubtitleTrack(
                 inputMkv = target.mkv,
@@ -118,6 +125,7 @@ class AssEditor(
                 outMkv = tmpOut,
                 title = if (options.hasPlate) "עברית עם רקע" else "עברית",
                 font = font,
+                poster = poster,
             )
         }.getOrElse { RunLog.error("edit: remux failed", it); false }
 
