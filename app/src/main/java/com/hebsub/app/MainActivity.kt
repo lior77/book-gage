@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hebsub.app.data.SettingsRepository
 import com.hebsub.app.edit.AssEditor
+import com.hebsub.app.enrich.MovieDataTool
 import com.hebsub.app.media.MediaToolFactory
 import com.hebsub.core.subtitle.AssStyleOptions
 import com.hebsub.app.io.OutputWriter
@@ -47,6 +49,7 @@ import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.VideoInfo
 import com.hebsub.app.service.ProcessingService
+import com.hebsub.app.ui.HebSubTheme
 import com.hebsub.core.provider.claude.ClaudeApi
 import kotlinx.coroutines.launch
 
@@ -54,16 +57,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Draw behind the status bar and the gesture area; every screen keeps its
+        // content clear of them with safeDrawingPadding (spec §4).
+        enableEdgeToEdge()
         setContent {
             // Hebrew UI is right-to-left throughout.
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                MaterialTheme { AppRoot() }
+                HebSubTheme { AppRoot() }
             }
         }
     }
 }
 
-private enum class Screen { Onboarding, Mode, Home, Settings, EditAss }
+private enum class Screen { Onboarding, Mode, Home, Settings, EditAss, AddData }
 
 /** Fixed name of the keys-backup file inside the HebSub folder (§4.1). */
 private const val KEYS_FILE_NAME = "HebSub-keys.json"
@@ -89,7 +95,7 @@ private fun AppRoot() {
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (screen) {
             Screen.Onboarding -> OnboardingScreen {
                 settings.onboardingComplete = true
@@ -98,14 +104,16 @@ private fun AppRoot() {
             Screen.Mode -> ModeScreen(
                 onAddSubtitles = { screen = Screen.Home },
                 onEditAss = { screen = Screen.EditAss },
+                onAddData = { screen = Screen.AddData },
                 onOpenSettings = { screen = Screen.Settings },
             )
             Screen.Home -> HomeScreen(
                 onOpenSettings = { screen = Screen.Settings },
-                onBack = { screen = Screen.Mode },
+                onHome = { screen = Screen.Mode },
             )
             Screen.Settings -> SettingsScreen(settings) { screen = Screen.Mode }
-            Screen.EditAss -> EditAssScreen(onBack = { screen = Screen.Mode })
+            Screen.EditAss -> EditAssScreen(onHome = { screen = Screen.Mode })
+            Screen.AddData -> AddDataScreen(onHome = { screen = Screen.Mode })
         }
     }
 
@@ -168,11 +176,9 @@ private fun OnboardingScreen(onDone: () -> Unit) {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(stringResource(R.string.onboarding_title), style = MaterialTheme.typography.headlineMedium)
+    // No home to go back to until the permissions are granted, so the frame offers
+    // only the way out of the app (§5).
+    HebSubScreen(title = stringResource(R.string.onboarding_title), onHome = null) {
         Text(stringResource(R.string.onboarding_body), style = MaterialTheme.typography.bodyLarge)
 
         PermissionRow(
@@ -218,46 +224,97 @@ private fun PermissionRow(title: String, body: String, granted: Boolean, onGrant
     }
 }
 
-/** First screen after onboarding: pick what this run should do (§1). */
+/**
+ * The frame every screen sits in: a title bar (with the settings gear where it
+ * belongs) and, at the bottom, the two ways out that §5 asks for on every screen —
+ * back to the home screen, or close the app. [onHome] is null on the home screen
+ * itself, which only offers the close button.
+ */
+@Composable
+private fun HebSubScreen(
+    title: String,
+    onHome: (() -> Unit)?,
+    onOpenSettings: (() -> Unit)? = null,
+    exitEnabled: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val activity = LocalContext.current.findActivity()
+    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth()
+                .padding(horizontal = 20.dp).padding(top = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Title on the right (RTL start); weight(1f) reserves room so a long
+            // title can never push the gear off the opposite corner.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, modifier = Modifier.weight(1f))
+                if (onOpenSettings != null) {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
+                    }
+                }
+            }
+            content()
+            Spacer(Modifier.height(8.dp))
+        }
+        // The way out, pinned within thumb reach at the bottom of every screen.
+        HorizontalDivider()
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (onHome != null) {
+                OutlinedButton(onClick = onHome, enabled = exitEnabled, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.go_home))
+                }
+            }
+            OutlinedButton(
+                onClick = { activity?.finishAffinity() },
+                enabled = exitEnabled,
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.exit_app)) }
+        }
+    }
+}
+
+/** A big primary action with its explanation underneath — the home screen's unit. */
+@Composable
+private fun ModeCard(title: String, hint: String, primary: Boolean, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (primary) {
+            Button(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(title) }
+        } else {
+            OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(title) }
+        }
+        Text(hint, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** The home screen: the three things this app does (§3). */
 @Composable
 private fun ModeScreen(
     onAddSubtitles: () -> Unit,
     onEditAss: () -> Unit,
+    onAddData: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    HebSubScreen(
+        title = stringResource(R.string.home_title),
+        onHome = null,                       // this IS the home screen
+        onOpenSettings = onOpenSettings,
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.home_title),
-                style = MaterialTheme.typography.headlineSmall,
-                maxLines = 2,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
-            }
-        }
         Text(stringResource(R.string.mode_prompt), style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(8.dp))
-
-        Button(onClick = onAddSubtitles, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.mode_add_subs))
-        }
-        Text(stringResource(R.string.mode_add_subs_hint), style = MaterialTheme.typography.bodySmall)
-
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onEditAss, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.mode_edit_ass))
-        }
-        Text(stringResource(R.string.mode_edit_ass_hint), style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(4.dp))
+        ModeCard(stringResource(R.string.mode_add_subs), stringResource(R.string.mode_add_subs_hint), true, onAddSubtitles)
+        ModeCard(stringResource(R.string.mode_edit_ass), stringResource(R.string.mode_edit_ass_hint), false, onEditAss)
+        ModeCard(stringResource(R.string.mode_add_data), stringResource(R.string.mode_add_data_hint), false, onAddData)
     }
 }
 
 @Composable
-private fun HomeScreen(onOpenSettings: () -> Unit, onBack: () -> Unit = {}) {
+private fun HomeScreen(onOpenSettings: () -> Unit, onHome: () -> Unit) {
     val context = LocalContext.current
     var link by remember { mutableStateOf("") }
 
@@ -274,34 +331,20 @@ private fun HomeScreen(onOpenSettings: () -> Unit, onBack: () -> Unit = {}) {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    HebSubScreen(
+        title = stringResource(R.string.mode_add_subs),
+        onHome = onHome,
+        onOpenSettings = onOpenSettings,
     ) {
-        // Title on the right (RTL start); the settings gear sits in the top-left
-        // (RTL end) corner — a tap opens the key-entry screen.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            // weight(1f) reserves space for the gear so a long title can never push
-            // it off-screen; the gear stays pinned in the top-left (RTL end) corner.
-            Text(
-                stringResource(R.string.home_title),
-                style = MaterialTheme.typography.headlineSmall,
-                maxLines = 2,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings))
-            }
-        }
         Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.bodyMedium)
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Button(
             onClick = { filePicker.launch(arrayOf("video/*")) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
         ) { Text(stringResource(R.string.pick_file)) }
 
-        Divider()
+        HorizontalDivider()
 
         OutlinedTextField(
             value = link,
@@ -313,12 +356,98 @@ private fun HomeScreen(onOpenSettings: () -> Unit, onBack: () -> Unit = {}) {
         Button(
             onClick = { if (link.isNotBlank()) ProcessingService.startWithUrl(context, link.trim()) },
             enabled = link.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         ) { Text(stringResource(R.string.paste_link) + " — " + stringResource(R.string.start)) }
+    }
+}
 
-        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.back))
+/**
+ * §3.3 — pick a film already in HebSub, give its IMDb link, and get the PDF, the
+ * poster, canonical names and the data written into the container. The subtitle
+ * track is not touched, which the screen says out loud.
+ */
+@Composable
+private fun AddDataScreen(onHome: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val tool = remember { MovieDataTool(context, SettingsRepository(context), MediaToolFactory.create()) }
+
+    var targets by remember { mutableStateOf<List<MovieDataTool.Target>>(emptyList()) }
+    var chosen by remember { mutableStateOf<MovieDataTool.Target?>(null) }
+    var imdb by remember { mutableStateOf("") }
+    var stage by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<MovieDataTool.Result?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val busy = stage != null
+
+    LaunchedEffect(Unit) { targets = tool.findTargets() }
+
+    HebSubScreen(title = stringResource(R.string.data_title), onHome = onHome, exitEnabled = !busy) {
+        val current = chosen
+        if (current == null) {
+            Text(stringResource(R.string.data_pick_movie), style = MaterialTheme.typography.bodyMedium)
+            if (targets.isEmpty()) Text(stringResource(R.string.data_none), style = MaterialTheme.typography.bodySmall)
+            targets.forEach { t ->
+                OutlinedButton(
+                    onClick = { chosen = t; result = null; message = null },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) { Text(t.title) }
+            }
+        } else {
+            Text(current.title, style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = imdb, onValueChange = { imdb = it },
+                label = { Text(stringResource(R.string.data_imdb)) },
+                singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth(),
+            )
+            Text(stringResource(R.string.data_imdb_hint), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.data_note), style = MaterialTheme.typography.bodySmall)
+
+            if (busy) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text(stage.orEmpty(), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            Button(
+                onClick = {
+                    stage = ""; message = null; result = null
+                    scope.launch {
+                        when (val out = tool.apply(current, imdb.trim()) { s -> stage = s }) {
+                            is MovieDataTool.Outcome.Ok -> {
+                                result = out.result
+                                targets = tool.findTargets()
+                                chosen = null
+                            }
+                            is MovieDataTool.Outcome.Failed -> message = out.reason
+                        }
+                        stage = null
+                    }
+                },
+                enabled = !busy && imdb.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.data_apply)) }
+
+            OutlinedButton(
+                onClick = { chosen = null; message = null },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.data_pick_other)) }
         }
+
+        result?.let { r ->
+            HorizontalDivider()
+            Text(stringResource(R.string.data_done, r.folder.name), style = MaterialTheme.typography.titleSmall)
+            val made = buildList {
+                if (r.pdf != null) add(stringResource(R.string.data_out_pdf))
+                if (r.poster != null) add(stringResource(R.string.data_out_poster))
+                if (r.embedded) add(stringResource(R.string.data_out_embedded))
+                if (r.renamed) add(stringResource(R.string.data_out_renamed))
+            }
+            made.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+        message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
     }
 }
 
@@ -327,7 +456,7 @@ private fun HomeScreen(onOpenSettings: () -> Unit, onBack: () -> Unit = {}) {
  * movie, adjust the four display settings, and rebuild the MKV in place.
  */
 @Composable
-private fun EditAssScreen(onBack: () -> Unit) {
+private fun EditAssScreen(onHome: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val editor = remember { AssEditor(context, MediaToolFactory.create()) }
@@ -344,12 +473,7 @@ private fun EditAssScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) { targets = editor.findTargets() }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(stringResource(R.string.edit_title), style = MaterialTheme.typography.headlineSmall)
-
+    HebSubScreen(title = stringResource(R.string.edit_title), onHome = onHome, exitEnabled = !busy) {
         val current = loaded
         if (current == null) {
             Text(stringResource(R.string.edit_pick_movie), style = MaterialTheme.typography.bodyMedium)
@@ -423,10 +547,6 @@ private fun EditAssScreen(onBack: () -> Unit) {
         }
 
         message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-
-        OutlinedButton(onClick = onBack, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.back))
-        }
     }
 }
 
@@ -505,12 +625,7 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall)
-
+    HebSubScreen(title = stringResource(R.string.settings_title), onHome = { leave() }) {
         // Cloud translation model — picked before the Anthropic test so the test
         // validates the exact model that will be used.
         ExposedDropdownMenuBox(expanded = modelMenu, onExpandedChange = { modelMenu = it }) {
@@ -608,10 +723,6 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
         backupMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
         Text(stringResource(R.string.settings_privacy_note), style = MaterialTheme.typography.bodySmall)
-
-        Button(onClick = { leave() }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.back))
-        }
     }
 }
 

@@ -5,7 +5,6 @@ import com.arthenica.ffmpegkit.FFprobeKit
 import com.arthenica.ffmpegkit.ReturnCode
 import com.hebsub.app.log.RunLog
 import com.hebsub.core.lang.Language
-import com.hebsub.core.pipeline.EmbeddedSubtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -36,12 +35,9 @@ class FfmpegMediaTool : MediaTool {
             val props = runCatching { stream.allProperties }.getOrNull()
             val tags = props?.optJSONObject("tags")
             val lang = tags?.optString("language").takeUnless { it.isNullOrBlank() }
-            val title = tags?.optString("title").takeUnless { it.isNullOrBlank() }
-            val disposition = props?.optJSONObject("disposition")
-            val forced = disposition?.optInt("forced", 0) == 1
             val index = stream.index?.toInt() ?: continue
             when (type) {
-                "subtitle" -> subs.add(EmbeddedSubtitle(index, lang, title, forced))
+                "subtitle" -> subs.add(EmbeddedSubtitle(index, lang))
                 "audio" -> if (audioLang == null) audioLang = lang
             }
         }
@@ -104,6 +100,47 @@ class FfmpegMediaTool : MediaTool {
         val ok = run(*args.toTypedArray())
         if (ok) verifySubtitleTracks(outMkv)
         return ok
+    }
+
+    override suspend fun applyMovieData(
+        input: File,
+        outFile: File,
+        metadata: Map<String, String>,
+        poster: File?,
+    ): Boolean {
+        // §3.3 — add the film's data and cover, change nothing else. `-map 0`
+        // carries every stream over (subtitles included) and `-c copy` means not
+        // one of them is re-encoded, so the subtitle track comes out identical.
+        val args = ArrayList<String>()
+        args += listOf("-y", "-i", input.absolutePath)
+        val hasPoster = poster != null && poster.exists()
+        if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
+        // `-map 0` alone would drop nothing, but an explicit `-map 0:t?` keeps the
+        // existing attachments (the Hebrew font) even as a new one is added.
+        args += listOf("-map", "0", "-c", "copy")
+        if (hasPoster) {
+            val mime = if (poster!!.extension.equals("png", true)) "image/png" else "image/jpeg"
+            val fname = if (mime == "image/png") "cover.png" else "cover.jpg"
+            // The new attachment is appended after whatever the source already had.
+            val t = attachmentCount(input)
+            args += listOf("-metadata:s:t:$t", "mimetype=$mime", "-metadata:s:t:$t", "filename=$fname")
+        }
+        metadata.forEach { (k, v) ->
+            val clean = v.replace("\n", " ").replace("\"", "'").trim()
+            if (clean.isNotEmpty()) args += listOf("-metadata", "$k=$clean")
+        }
+        args += outFile.absolutePath
+        RunLog.log("data: writing ${metadata.size} tags + cover=${hasPoster} into ${outFile.name}")
+        val ok = run(*args.toTypedArray())
+        if (ok) verifySubtitleTracks(outFile)
+        return ok
+    }
+
+    /** How many attachment streams [input] already has (0 when it cannot be probed). */
+    private suspend fun attachmentCount(input: File): Int = withContext(Dispatchers.IO) {
+        val info = runCatching { FFprobeKit.getMediaInformation(input.absolutePath).mediaInformation }.getOrNull()
+            ?: return@withContext 0
+        (info.streams ?: emptyList()).count { it.type == "attachment" }
     }
 
     override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean =

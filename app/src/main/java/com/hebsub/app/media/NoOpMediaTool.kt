@@ -46,4 +46,11 @@ class NoOpMediaTool : MediaTool {
         poster: File?,
         font: File?,
     ): Boolean = false
+
+    override suspend fun applyMovieData(
+        input: File,
+        outFile: File,
+        metadata: Map<String, String>,
+        poster: File?,
+    ): Boolean = false
 }

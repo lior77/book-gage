@@ -115,7 +115,7 @@ class SubtitlePipeline(
             var poster: File? = null
             val metadata = LinkedHashMap<String, String>()
             var pdf: File? = null
-            if (imdbId != null) metadata["IMDB"] = "tt$imdbId"   // embed the id even without OMDb
+            if (imdbId != null) metadata["IMDB"] = imdbId        // embed the id even without OMDb
             if (movie != null) {
                 val hebrewPlot = if (settings.hasAnthropicKey)
                     ClaudeText.toHebrew(settings.anthropicApiKey, settings.claudeModel, movie.plot)

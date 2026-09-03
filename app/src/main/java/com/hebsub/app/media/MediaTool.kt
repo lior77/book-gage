@@ -1,7 +1,14 @@
 package com.hebsub.app.media
 
-import com.hebsub.core.pipeline.EmbeddedSubtitle
 import java.io.File
+
+/** A subtitle stream the container already carries. */
+data class EmbeddedSubtitle(
+    /** Stream index within the container, as ffmpeg's `-map 0:<index>` wants it. */
+    val index: Int,
+    /** The stream's declared language tag, or null when it has none. */
+    val language: String?,
+)
 
 /** What ffprobe told us about the container. */
 data class MediaProbe(
@@ -81,5 +88,19 @@ interface MediaTool {
         metadata: Map<String, String>,
         poster: File?,
         font: File?,
+    ): Boolean
+
+    /**
+     * Spec §3.3 — write [metadata] and the [poster] cover into a copy of [input]
+     * while leaving what it already contains completely alone: every stream,
+     * subtitles included, is mapped and copied verbatim. Existing attachments are
+     * carried over too, since this run adds data and must not cost the file its
+     * embedded font.
+     */
+    suspend fun applyMovieData(
+        input: File,
+        outFile: File,
+        metadata: Map<String, String>,
+        poster: File?,
     ): Boolean
 }

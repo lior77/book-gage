@@ -52,6 +52,20 @@
     <string name="exit_app">סגירת האפליקציה</string>
     <string name="go_home">מסך הבית</string>
 
+    <string name="data_title">הוספת נתוני סרט</string>
+    <string name="data_pick_movie">בחרו את הסרט:</string>
+    <string name="data_none">לא נמצאו סרטים בתיקיית HebSub.</string>
+    <string name="data_imdb">קישור ל‑IMDb</string>
+    <string name="data_imdb_hint">לדוגמה: https://www.imdb.com/title/tt0111161/ — מכאן נלקחים שם הסרט, השנה, התקציר והתמונה.</string>
+    <string name="data_note">מסלול הכתוביות שבקובץ לא ישתנה: כל הרצועות מועתקות כפי שהן, ורק שם הסרט, התקציר ותמונת השער נוספים.</string>
+    <string name="data_apply">יצירת הנתונים</string>
+    <string name="data_pick_other">בחירת סרט אחר</string>
+    <string name="data_done">הנתונים נוצרו: %1$s</string>
+    <string name="data_out_pdf">קובץ PDF</string>
+    <string name="data_out_poster">תמונת הסרט</string>
+    <string name="data_out_embedded">נתונים מוטמעים בקובץ הוידאו</string>
+    <string name="data_out_renamed">שמות הקבצים עודכנו</string>
+
     <string name="edit_title">עריכת עיצוב הכתוביות</string>
     <string name="edit_pick_movie">בחרו את הסרט לעריכה:</string>
     <string name="edit_none">לא נמצאו סרטים מעובדים בתיקיית HebSub. יש ליצור קודם קובץ MKV עם מסלול עברית.</string>

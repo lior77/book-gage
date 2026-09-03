@@ -118,7 +118,7 @@ class ProcessingService : Service() {
                 PipelineBus.update(PipelineState.Running("שליפת נתוני הסרט מ‑IMDb", null))
                 com.hebsub.app.provider.OmdbService(settings.omdbApiKey).fetch(imdbId)
             } else null
-            if (imdbId != null && movie == null && settings.hasOmdbKey) RunLog.log("OMDb: no data for tt$imdbId")
+            if (imdbId != null && movie == null && settings.hasOmdbKey) RunLog.log("OMDb: no data for $imdbId")
 
             val typedName = storage.sanitize(info.name.ifBlank { suggested })
             val typedYear = info.year?.filter { it.isDigit() }?.take(4)
