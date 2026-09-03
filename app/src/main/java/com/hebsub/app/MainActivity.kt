@@ -279,6 +279,45 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
     var omdbStatus by remember { mutableStateOf<TestStatus>(TestStatus.Idle) }
     // True once any test ran — controls whether a settings log is written on exit.
     var testsRan by remember { mutableStateOf(false) }
+    var backupMsg by remember { mutableStateOf<String?>(null) }
+
+    // Save the keys to a JSON file the user picks (survives reinstalls).
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ok = runCatching {
+            context.contentResolver.openOutputStream(uri)?.use {
+                it.write(settings.exportKeysJson().toByteArray(Charsets.UTF_8))
+            } != null
+        }.getOrDefault(false)
+        backupMsg = context.getString(if (ok) R.string.keys_export_ok else R.string.keys_backup_fail)
+        RunLog.log("settings: export keys ok=$ok")
+    }
+
+    // Load keys from a JSON file the user picks, then refresh the fields.
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val n = runCatching {
+            val text = context.contentResolver.openInputStream(uri)
+                ?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
+            settings.importKeysJson(text)
+        }.getOrDefault(-1)
+        if (n >= 0) {
+            osKey = settings.openSubtitlesApiKey
+            anthropicKey = settings.anthropicApiKey
+            deepgramKey = settings.deepgramApiKey
+            omdbKey = settings.omdbApiKey
+            model = settings.claudeModel
+            online = settings.onlineSearchEnabled
+            backupMsg = context.getString(R.string.keys_import_ok, n)
+        } else {
+            backupMsg = context.getString(R.string.keys_backup_fail)
+        }
+        RunLog.log("settings: import keys applied=$n")
+    }
 
     fun leave() {
         // Persist the settings log so every connection test is diagnosable
@@ -391,6 +430,25 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
                 }
             },
         )
+
+        HorizontalDivider()
+
+        // Backup / restore all keys to a file, so a reinstall doesn't require
+        // retyping them (encrypted storage is cleared on uninstall).
+        Text(stringResource(R.string.keys_backup_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.keys_backup_note), style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = { exportLauncher.launch("HebSub-keys.json") }, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.keys_export))
+            }
+            OutlinedButton(
+                onClick = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(stringResource(R.string.keys_import))
+            }
+        }
+        backupMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
         Text(stringResource(R.string.settings_privacy_note), style = MaterialTheme.typography.bodySmall)
 

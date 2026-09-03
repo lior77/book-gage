@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HebSub 1.9 — כתוביות עברית</string>
+    <string name="app_name">HebSub 2.0 — כתוביות עברית</string>
 
     <string name="home_title">כתוביות עברית לסרטים</string>
 
@@ -15,7 +15,7 @@
     <string name="video_info_transparency_hint">‏0%% = רקע אטום (מסתיר כתוביות צרובות) · 100%% = ללא רקע כלל.</string>
     <string name="video_info_delete">מחיקת קבצי ביניים בסיום</string>
     <string name="video_info_delete_hint">להשאיר רק את קובץ ה‑MKV (עם מסלול העברית ונתוני הסרט) ואת קובץ ה‑PDF.</string>
-    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 1.9</string>
+    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 2.0</string>
     <string name="pick_file">בחירת קובץ וידאו מהמכשיר</string>
     <string name="paste_link">הוספת קישור להורדת וידאו</string>
     <string name="link_hint">הדביקו או הקלידו כתובת וידאו (https://…)</string>
@@ -43,6 +43,14 @@
     <string name="save">שמירה ובדיקת חיבור</string>
     <string name="back">חזרה</string>
     <string name="conn_testing">בודק חיבור…</string>
+
+    <string name="keys_backup_title">גיבוי מפתחות לקובץ</string>
+    <string name="keys_backup_note">שמירת כל המפתחות לקובץ, וטעינתם בחזרה לאחר התקנה מחדש — כדי לא להקליד שוב. הקובץ מכיל את המפתחות כטקסט גלוי ואינו נשלח לרשת; שמרו אותו במקום פרטי.</string>
+    <string name="keys_export">שמירת מפתחות לקובץ</string>
+    <string name="keys_import">טעינת מפתחות מקובץ</string>
+    <string name="keys_export_ok">המפתחות נשמרו לקובץ.</string>
+    <string name="keys_import_ok">נטענו %1$d מפתחות מהקובץ.</string>
+    <string name="keys_backup_fail">הפעולה נכשלה. ודאו שנבחר קובץ תקין.</string>
 
     <string name="choose_translation">לא נמצאו כתוביות עברית מוכנות. כיצד לתרגם?</string>
     <string name="translate_local">תרגום מקומי (פרטי, ML Kit)</string>

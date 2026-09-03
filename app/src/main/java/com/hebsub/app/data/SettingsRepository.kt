@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.hebsub.core.provider.claude.ClaudeApi
+import org.json.JSONObject
 
 /**
  * All user configuration, including API keys. Keys are stored **encrypted at
@@ -60,6 +61,43 @@ class SettingsRepository(context: Context) {
     val hasDeepgramKey: Boolean get() = deepgramApiKey.isNotBlank()
     val hasOmdbKey: Boolean get() = omdbApiKey.isNotBlank()
 
+    /**
+     * Serialize the keys + model + online flag to a JSON backup the user can save
+     * to a file and re-import after a reinstall (encrypted storage is wiped when
+     * the app is uninstalled). The file holds the keys in plain text, so it must
+     * be kept private — it never leaves the device on its own.
+     */
+    fun exportKeysJson(): String = JSONObject().apply {
+        put(F_VERSION, 1)
+        put(F_OS, openSubtitlesApiKey)
+        put(F_ANTHROPIC, anthropicApiKey)
+        put(F_DEEPGRAM, deepgramApiKey)
+        put(F_OMDB, omdbApiKey)
+        put(F_MODEL, claudeModel)
+        put(F_ONLINE, onlineSearchEnabled)
+    }.toString(2)
+
+    /**
+     * Import keys from a JSON backup produced by [exportKeysJson]. Only non-blank
+     * values overwrite existing settings, so a partial file never clears a key
+     * that isn't in it. Returns how many API keys were applied.
+     */
+    fun importKeysJson(json: String): Int {
+        val o = JSONObject(json)
+        var applied = 0
+        fun apply(field: String, set: (String) -> Unit) {
+            val v = o.optString(field, "").trim()
+            if (v.isNotEmpty()) { set(v); applied++ }
+        }
+        apply(F_OS) { openSubtitlesApiKey = it }
+        apply(F_ANTHROPIC) { anthropicApiKey = it }
+        apply(F_DEEPGRAM) { deepgramApiKey = it }
+        apply(F_OMDB) { omdbApiKey = it }
+        o.optString(F_MODEL, "").trim().takeIf { it.isNotEmpty() }?.let { claudeModel = it }
+        if (o.has(F_ONLINE)) onlineSearchEnabled = o.optBoolean(F_ONLINE, onlineSearchEnabled)
+        return applied
+    }
+
     private companion object {
         const val KEY_ONBOARDED = "onboarded"
         const val KEY_ONLINE = "online_search"
@@ -68,5 +106,14 @@ class SettingsRepository(context: Context) {
         const val KEY_DEEPGRAM_KEY = "deepgram_key"
         const val KEY_OMDB_KEY = "omdb_key"
         const val KEY_MODEL = "claude_model"
+
+        // JSON field names for the keys backup file.
+        const val F_VERSION = "hebsub_keys_version"
+        const val F_OS = "opensubtitles"
+        const val F_ANTHROPIC = "anthropic"
+        const val F_DEEPGRAM = "deepgram"
+        const val F_OMDB = "omdb"
+        const val F_MODEL = "model"
+        const val F_ONLINE = "online_search"
     }
 }
