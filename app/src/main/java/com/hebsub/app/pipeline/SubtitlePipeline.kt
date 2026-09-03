@@ -15,6 +15,7 @@ import com.hebsub.app.translate.MlKitTranslator
 import com.hebsub.core.lang.Language
 import com.hebsub.core.provider.omdb.OmdbMovie
 import com.hebsub.core.provider.opensubtitles.OsCandidate
+import com.hebsub.core.subtitle.AssParser
 import com.hebsub.core.subtitle.AssWriter
 import com.hebsub.core.subtitle.SubtitleAligner
 import com.hebsub.core.subtitle.SubtitleMatch
@@ -153,20 +154,34 @@ class SubtitlePipeline(
     private suspend fun buildSubtitle(
         videoFile: File, base: String, probe: MediaProbe, subtitlePath: String?, bgTransparency: Int, imdbId: String?,
     ): File? {
-        // §4 — the user picked a subtitle: attach it as-is (parse to apply a plate if requested).
+        // §4 — the user supplied a subtitle file. It goes through exactly the same
+        // treatment as one we found ourselves: parse it, translate it to Hebrew
+        // unless it already IS Hebrew, then write it in the requested form (ASS
+        // with a plate when transparency < 100, otherwise plain SRT). Its timing is
+        // trusted, since the user chose this file for this video.
         if (subtitlePath != null) {
             val chosen = File(subtitlePath)
-            RunLog.log("using chosen subtitle: ${chosen.name}")
             val ext = chosen.extension.lowercase()
-            if (bgTransparency < 100 && (ext == "srt" || ext == "vtt")) {
-                val cues = runCatching { SrtParser.parse(chosen.readText(Charsets.UTF_8)) }.getOrDefault(emptyList())
-                if (cues.isNotEmpty()) return writeSubs(cues, base, bgTransparency)
+            RunLog.log("using chosen subtitle: ${chosen.name}")
+            val raw = runCatching { chosen.readText(Charsets.UTF_8) }.getOrNull()
+            if (raw.isNullOrBlank()) { RunLog.error("chosen subtitle is empty or unreadable"); return null }
+
+            // Keep the original alongside the outputs for reference.
+            runCatching { chosen.copyTo(File(outputDir, "chosen-$base.${ext.ifBlank { "srt" }}"), overwrite = true) }
+
+            val cues = if (ext == "ass" || ext == "ssa" || AssParser.looksLikeAss(raw)) {
+                AssParser.parse(raw)
+            } else {
+                SrtParser.parse(raw)
             }
-            // Copy verbatim into the folder and mux that.
-            val dest = File(outputDir, "chosen-$base.${ext.ifBlank { "srt" }}")
-            runCatching { chosen.copyTo(dest, overwrite = true) }
-            if (ext == "srt") runCatching { chosen.copyTo(File(outputDir, "he-$base.srt"), overwrite = true) }
-            return if (dest.exists()) dest else null
+            if (cues.isEmpty()) { RunLog.error("chosen subtitle produced no cues"); return null }
+
+            val lang = Language.detectScript(cues.joinToString("\n") { it.text })
+            val alreadyHebrew = Language.isHebrew(lang)
+            RunLog.log("chosen subtitle: cues=${cues.size} detectedLang=${lang ?: "?"} alreadyHebrew=$alreadyHebrew")
+            val hebrewCues = if (alreadyHebrew) cues else translate(Acq(cues, lang, false))
+            val finalCues = SubtitlePostProcessor.process(hebrewCues)
+            return writeSubs(finalCues, base, bgTransparency)
         }
 
         val acq = acquire(videoFile, base, probe, imdbId) ?: return null

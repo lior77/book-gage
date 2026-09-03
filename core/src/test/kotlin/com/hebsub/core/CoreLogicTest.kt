@@ -358,6 +358,50 @@ class SubtitleSourcePlannerTest {
         assertEquals(100, styler.read(plain)!!.bgTransparencyPercent)   // BorderStyle 1 → no plate
     }
 
+    @Test fun assParserRecoversCuesFromAStyledFile() {
+        val p = com.hebsub.core.subtitle.AssParser
+        // A file this app produced: per-axis override, a line-spacing spacer, \N break.
+        val ass = """
+            [Script Info]
+            ScriptType: v4.00+
+
+            [V4+ Styles]
+            Style: Default,Alef,26,&H00FFFFFF,&H000000FF,&H4C1A1A1A,&H4C1A1A1A,0,0,0,0,100,100,0,0,3,6,0,2,20,20,16,1
+
+            [Events]
+            Dialogue: 0,0:02:26.28,0:02:27.77,Default,,0,0,0,,{\xbord8\ybord4}Hello there.
+            Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,First line\NSecond line
+        """.trimIndent()
+        assertTrue(p.looksLikeAss(ass))
+        val cues = p.parse(ass)
+        assertEquals(2, cues.size)
+        // Sorted by time and re-indexed, overrides stripped.
+        assertEquals(1500L, cues[0].startMs)
+        assertEquals(3000L, cues[0].endMs)
+        assertEquals(listOf("First line", "Second line"), cues[0].lines)
+        assertEquals(1, cues[0].index)
+        assertEquals(146280L, cues[1].startMs)          // 2:26.28
+        assertEquals("Hello there.", cues[1].text)      // {\xbord…} gone
+    }
+
+    @Test fun assParserSurvivesOurOwnWriterOutput() {
+        // What the app writes must be readable back — this is the path an uploaded
+        // .ass takes when it has to be re-translated.
+        val original = listOf(
+            com.hebsub.core.subtitle.SubtitleCue(1, 2480, 3699, listOf("hello", "world")),
+        )
+        val written = com.hebsub.core.subtitle.AssWriter.write(
+            original, bgTransparencyPercent = 40, fontName = "Alef",
+            options = com.hebsub.core.subtitle.AssStyleOptions(
+                bgTransparencyPercent = 40, extraLineSpacing = 8, plateSidePadding = 12,
+            ),
+        )
+        val back = com.hebsub.core.subtitle.AssParser.parse(written)
+        assertEquals(1, back.size)
+        assertEquals(2480L, back[0].startMs)
+        assertEquals(listOf("hello", "world"), back[0].lines)  // spacer + override removed
+    }
+
     @Test fun offlineOnlyOmitsOnlineSteps() {
         val plan = SubtitleSourcePlanner.plan(
             embedded = emptyList(),
