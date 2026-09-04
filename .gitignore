@@ -21,3 +21,6 @@ release/
 *.keystore
 *.jks
 secrets.properties
+
+# The committed debug signing key — see app/build.gradle.kts. Not a secret; its job is to stay the same.
+!app/debug.keystore

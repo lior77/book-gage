@@ -13,11 +13,29 @@ android {
         applicationId = "com.hebsub.app"
         minSdk = 26          // SAF + MediaMuxer + scoped storage
         targetSdk = 35       // Android 15 (One UI 7 on the Galaxy A56)
-        versionCode = 31
-        versionName = "3.7"
+        versionCode = 32
+        versionName = "3.8"
         // The Galaxy A56 is arm64-v8a. The 16KB FFmpeg build ships arm64-v8a only,
         // so we target that single ABI (also keeps the APK smaller).
         ndk { abiFilters += "arm64-v8a" }
+    }
+
+    // One fixed debug key, committed with the project.
+    //
+    // Without it every CI run signed the APK with a debug key it had just
+    // generated, so no two builds shared a signature. Android will not install an
+    // update signed differently from what is installed, which forced an uninstall
+    // for every version — and an uninstall wipes the app's data, API keys
+    // included. That is how a run arrived with no keys and reported "no subtitles
+    // found". A debug key is not a secret in any meaningful sense (the stock one
+    // has a public password); its only job is to stay the same.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -28,6 +46,7 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

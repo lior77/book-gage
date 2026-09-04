@@ -113,7 +113,16 @@ class SubtitlePipeline(
             val built = buildSubtitle(videoFile, base, probe, options)
                 ?: run {
                     RunLog.error("no subtitle produced")
-                    PipelineBus.update(PipelineState.Failed("לא נמצאו כתוביות תואמות ולא ניתן היה ליצור אותן."))
+                    // Say WHY when the reason is a missing key — a run that could not
+                    // search online and could not transcribe was never going to find
+                    // anything, and "no subtitles found" hides that.
+                    val missing = buildList {
+                        if (!settings.hasOpenSubtitlesKey) add("OpenSubtitles")
+                        if (!settings.hasDeepgramKey) add("Deepgram")
+                    }
+                    val why = if (missing.isEmpty()) ""
+                    else "\n\nמפתחות API חסרים בהגדרות: ${missing.joinToString(", ")}. בלעדיהם אין חיפוש ברשת ואין תמלול מפס הקול."
+                    PipelineBus.update(PipelineState.Failed("לא נמצאו כתוביות תואמות ולא ניתן היה ליצור אותן.$why"))
                     return
                 }
 
