@@ -1,11 +1,19 @@
 package com.hebsub.core.text
 
 import com.hebsub.core.subtitle.SubtitleCue
+import com.hebsub.core.subtitle.SubtitleTiming
 
 /**
  * Final polish applied to the translated Hebrew cues before they are written to
- * the output track: normalise whitespace, re-wrap to at most two balanced
- * lines, enforce a minimum on-screen duration, and apply RTL marks.
+ * the output track, in this order:
+ *
+ *  1. **Split** anything longer than two lines into consecutive cues. This has to
+ *     come first: wrapping cannot fix a cue that holds four sentences, it can only
+ *     decide where to put the overflow, and every choice it has is wrong.
+ *  2. **Wrap** each cue into at most two balanced lines.
+ *  3. **Floor the duration** so a one-word reply is still readable — taken only
+ *     from the silence that follows, never by overlapping the next cue.
+ *  4. **Apply the RTL marks** that keep mixed Hebrew/Latin lines in the right order.
  *
  * Kept pure (no I/O) so it is fully unit-testable.
  */
@@ -19,20 +27,13 @@ object SubtitlePostProcessor {
         maxCharsPerLine: Int = LineWrapper.DEFAULT_MAX_CHARS,
         applyRtl: Boolean = true,
         minDurationMs: Long = MIN_DURATION_MS,
+        maxLines: Int = CueSplitter.DEFAULT_MAX_LINES,
     ): List<SubtitleCue> {
-        return cues
-            .asSequence()
-            .filter { it.lines.any { l -> l.isNotBlank() } }
-            .map { cue ->
-                val wrapped = LineWrapper.wrap(cue.text, maxCharsPerLine)
-                var out = cue.copy(lines = wrapped)
-                if (out.durationMs < minDurationMs) {
-                    out = out.copy(endMs = out.startMs + minDurationMs)
-                }
-                if (applyRtl) out = RtlFormatter.applyToCue(out) else out
-                out
-            }
-            .mapIndexed { i, cue -> cue.copy(index = i + 1) }
-            .toList()
+        val kept = cues.filter { cue -> cue.lines.any { it.isNotBlank() } }
+        val split = CueSplitter.split(kept, maxCharsPerLine, maxLines)
+        val wrapped = split.map { it.copy(lines = LineWrapper.wrap(it.text, maxCharsPerLine)) }
+        val timed = SubtitleTiming.ensureMinimumDuration(wrapped, minDurationMs)
+        val out = if (applyRtl) timed.map { RtlFormatter.applyToCue(it) } else timed
+        return out.mapIndexed { i, cue -> cue.copy(index = i + 1) }
     }
 }

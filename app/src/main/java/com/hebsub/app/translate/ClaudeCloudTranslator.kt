@@ -22,6 +22,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
  *  - Every batch is checked for completeness; ids the model skipped are
  *    re-requested (up to [MAX_ATTEMPTS]) instead of silently falling back to
  *    the source text (which previously left whole batches untranslated).
+ *  - A batch that still fails is then narrowed: the remaining ids are asked for
+ *    in small groups and finally one at a time. A batch rarely fails because all
+ *    forty lines are unanswerable — it is usually a few, and asking for them
+ *    together loses the rest with them.
+ *  - A reply that is cut off mid-JSON is salvaged for whatever it did contain
+ *    rather than discarded whole, and the API's own stop_reason is logged, so a
+ *    refusal, a truncation and a parse failure are told apart in the log.
  *  - Transient HTTP failures (429/5xx/529) are retried with backoff.
  *  - Before the batches, one small request pins the Hebrew spelling of the names
  *    that recur in this film, so batch 3 and batch 11 cannot spell the same
@@ -65,14 +72,9 @@ class ClaudeCloudTranslator(
                 attempt++
                 val onlyIds = if (attempt == 1) null else missing
                 val userContent = ClaudeTranslator.buildUserContent(batch, precedingHebrew, onlyIds)
-                val text = runCatching { post(system, userContent, i, attempt) }
-                    .getOrElse { e ->
-                        // A request that never came back at all is itself a finding.
-                        RunLog.error("Claude batch $i attempt $attempt: request failed — ${e.message.orEmpty().take(200)}")
-                        ""
-                    }
+                val reply = request(system, userContent, i, "attempt $attempt")
                 // Keep only ids of this batch — never let a stray id pollute another batch.
-                val parsed = ClaudeTranslator.parseTranslations(text).filterKeys { it in missing }
+                val parsed = ClaudeTranslator.parseTranslations(reply.text).filterKeys { it in missing }
                 translations.putAll(parsed)
                 missing = ClaudeTranslator.missingIds(batch, translations)
                 RunLog.log("Claude batch $i attempt $attempt: +${parsed.size} missing=${missing.size}")
@@ -83,13 +85,28 @@ class ClaudeCloudTranslator(
                 if (parsed.isEmpty()) {
                     RunLog.error(
                         "Claude batch $i attempt $attempt: no usable translations. " +
-                            "reply=${text.length} chars: ${sample(text)}"
+                            "stop=${reply.stopReason ?: "-"} reply=${reply.text.length} chars: ${sample(reply.text)}"
                     )
                 }
             }
+
+            // Narrowing. A batch that keeps coming back empty is not usually 40 bad
+            // lines — it is a handful the model will not write, taking the other 30-odd
+            // down with them. Asking for small groups, and then for single lines,
+            // isolates the ones that actually fail and rescues the rest.
+            if (missing.isNotEmpty()) {
+                for (chunk in NARROW_CHUNKS) {
+                    if (missing.isEmpty()) break
+                    if (chunk == 1 && missing.size > MAX_SINGLE_RETRIES) break
+                    val before = missing.size
+                    missing = narrow(system, batch, precedingHebrew, missing, translations, i, chunk)
+                    RunLog.log("Claude batch $i narrowing(size=$chunk): recovered=${before - missing.size} still=${missing.size}")
+                }
+            }
+
             if (missing.isNotEmpty()) {
                 untranslated += missing.size
-                RunLog.error("Claude batch $i: ${missing.size} lines still untranslated after $MAX_ATTEMPTS attempts (ids ${missing.take(10)})")
+                RunLog.error("Claude batch $i: ${missing.size} lines still untranslated after every retry (ids ${missing.take(10)})")
                 // The source text of the first few, so the log shows WHAT failed and not
                 // only that something did — a refusal usually has a visible cause.
                 batch.cues.filter { it.index in missing }.take(3).forEach {
@@ -107,6 +124,42 @@ class ClaudeCloudTranslator(
         ClaudeTranslator.applyTranslations(cues, translations)
     }
 
+    /**
+     * Re-ask for [missing] in groups of [chunk] ids and return what is still
+     * missing afterwards. Each group is one request, so a group the model will not
+     * answer costs only its own ids.
+     */
+    private fun narrow(
+        system: String,
+        batch: ClaudeTranslator.Batch,
+        precedingHebrew: List<String>,
+        missing: Set<Int>,
+        translations: MutableMap<Int, String>,
+        batchIdx: Int,
+        chunk: Int,
+    ): Set<Int> {
+        for (group in missing.chunked(chunk)) {
+            val ids = group.toSet()
+            val content = ClaudeTranslator.buildUserContent(batch, precedingHebrew, ids)
+            val reply = request(system, content, batchIdx, "narrow ${ids.size}")
+            val parsed = ClaudeTranslator.parseTranslations(reply.text).filterKeys { it in ids }
+            translations.putAll(parsed)
+        }
+        return ClaudeTranslator.missingIds(batch, translations)
+    }
+
+    /** One request, with the failure turned into an empty reply rather than an exception. */
+    private fun request(system: String, userContent: String, batchIdx: Int, what: String): Reply =
+        runCatching { post(system, userContent, batchIdx, what) }
+            .getOrElse { e ->
+                // A request that never came back at all is itself a finding.
+                RunLog.error("Claude batch $batchIdx $what: request failed — ${e.message.orEmpty().take(200)}")
+                Reply("", null)
+            }
+
+    /** The model's text plus the API's own reason for stopping. */
+    private data class Reply(val text: String, val stopReason: String?)
+
     /** A single-line, length-capped excerpt of a model reply, safe to put in a log. */
     private fun sample(text: String): String =
         if (text.isBlank()) "<empty>"
@@ -121,19 +174,19 @@ class ClaudeCloudTranslator(
         val terms = Glossary.extractTerms(cues)
         if (terms.isEmpty()) { RunLog.log("glossary: no recurring names found"); return "" }
         val pinned = runCatching {
-            val text = post(
+            val reply = post(
                 ClaudeTranslator.glossarySystemPrompt(sourceName),
                 ClaudeTranslator.buildGlossaryContent(terms),
-                batchIdx = -1, attempt = 1,
+                batchIdx = -1, attempt = "attempt 1",
             )
-            ClaudeTranslator.parseGlossary(text)
+            ClaudeTranslator.parseGlossary(reply.text)
         }.getOrElse { RunLog.error("glossary failed — continuing without it", it); emptyMap() }
         RunLog.log("glossary: terms=${terms.size} pinned=${pinned.size} ${terms.take(8)}")
         return Glossary.render(pinned)
     }
 
     /** POST one request and return the model text; retries transient HTTP failures with backoff. */
-    private fun post(system: String, userContent: String, batchIdx: Int, attempt: Int): String {
+    private fun post(system: String, userContent: String, batchIdx: Int, attempt: String): Reply {
         val body = ClaudeTranslator.buildRequestBody(model, system, userContent)
         val what = if (batchIdx < 0) "glossary" else "batch $batchIdx"
         var lastErr = ""
@@ -146,10 +199,12 @@ class ClaudeCloudTranslator(
                 .build()
             PrivacyHttp.client.newCall(request).execute().use { resp ->
                 val respBody = resp.body?.string().orEmpty()
-                if (resp.isSuccessful) return ClaudeTranslator.extractText(respBody)
+                if (resp.isSuccessful) {
+                    return Reply(ClaudeTranslator.extractText(respBody), ClaudeTranslator.stopReason(respBody))
+                }
                 lastErr = "HTTP ${resp.code}: ${respBody.take(200)}"
                 val transient = resp.code == 429 || resp.code == 529 || resp.code >= 500
-                RunLog.error("Claude $what (attempt $attempt, try $tryNo) $lastErr")
+                RunLog.error("Claude $what ($attempt, try $tryNo) $lastErr")
                 if (!transient) throw RuntimeException("Claude API error ${resp.code}: ${respBody.take(300)}")
             }
             Thread.sleep(1500L * tryNo)
@@ -158,6 +213,12 @@ class ClaudeCloudTranslator(
     }
 
     private companion object {
-        const val MAX_ATTEMPTS = 3
+        const val MAX_ATTEMPTS = 2
+
+        /** Group sizes for the narrowing pass, from coarse to one line at a time. */
+        val NARROW_CHUNKS = listOf(8, 1)
+
+        /** Never fire more than this many single-line requests for one batch. */
+        const val MAX_SINGLE_RETRIES = 16
     }
 }

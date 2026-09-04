@@ -71,13 +71,9 @@ class DeepgramAsrEngine(private val apiKey: String) : AsrEngine {
         val utterances = results.optJSONArray("utterances")
         if (utterances != null && utterances.length() > 0) {
             for (i in 0 until utterances.length()) {
-                val u = utterances.getJSONObject(i)
-                val text = u.optString("transcript").trim()
-                if (text.isEmpty()) continue
-                val start = u.optDouble("start", 0.0)
-                val end = u.optDouble("end", start + 1.0)
-                cues.add(SubtitleCue(cues.size + 1, (start * 1000).toLong(), (end * 1000).toLong(), listOf(text)))
+                segmentUtterance(utterances.getJSONObject(i), cues)
             }
+            RunLog.log("Deepgram: ${utterances.length()} utterances → ${cues.size} cues")
         } else {
             // Fallback: group words into short cues.
             val words = channel0?.optJSONArray("alternatives")?.optJSONObject(0)?.optJSONArray("words")
@@ -103,5 +99,86 @@ class DeepgramAsrEngine(private val apiKey: String) : AsrEngine {
             }
         }
         return SubtitleTrack(cues, language)
+    }
+
+    /**
+     * Turn one Deepgram utterance into subtitle-sized cues.
+     *
+     * An utterance is everything said between two pauses, which in a conversation
+     * can be twenty seconds and several hundred characters — a paragraph, not a
+     * subtitle. Used whole it becomes a wall of text over the picture, and it makes
+     * the translation coarse as well, because the model is handed a paragraph and
+     * asked for one line back.
+     *
+     * The response already carries a timing for every word, so the utterance is cut
+     * at the places a reader would cut it: the end of a sentence, a pause in the
+     * speech, or the two-line budget — whichever comes first. Every cue then starts
+     * and ends on a real word boundary, with times measured rather than estimated.
+     */
+    private fun segmentUtterance(u: JSONObject, out: MutableList<SubtitleCue>) {
+        val transcript = u.optString("transcript").trim()
+        val uStart = u.optDouble("start", 0.0)
+        val uEnd = u.optDouble("end", uStart + 1.0)
+        val words = u.optJSONArray("words")
+
+        // Short enough already, or no word timings to cut it with.
+        if (words == null || words.length() == 0 || transcript.length <= MAX_CHARS) {
+            if (transcript.isNotEmpty()) out.add(cue(out.size + 1, uStart, uEnd, transcript))
+            return
+        }
+
+        val text = StringBuilder()
+        var segStart = 0.0
+        var segEnd = 0.0
+        var prevEnd = -1.0
+
+        fun flush() {
+            if (text.isEmpty()) return
+            out.add(cue(out.size + 1, segStart, segEnd, text.toString()))
+            text.setLength(0)
+        }
+
+        for (i in 0 until words.length()) {
+            val w = words.getJSONObject(i)
+            val token = w.optString("punctuated_word").ifBlank { w.optString("word") }.trim()
+            if (token.isEmpty()) continue
+            val wStart = w.optDouble("start", if (prevEnd < 0) uStart else prevEnd)
+            val wEnd = w.optDouble("end", wStart)
+
+            if (text.isNotEmpty()) {
+                val tooWide = text.length + 1 + token.length > MAX_CHARS
+                val pause = prevEnd >= 0 && wStart - prevEnd >= PAUSE_S
+                val tooLong = wEnd - segStart > MAX_SPAN_S
+                if (tooWide || pause || tooLong) flush()
+            }
+            if (text.isEmpty()) segStart = wStart else text.append(' ')
+            text.append(token)
+            segEnd = wEnd
+            prevEnd = wEnd
+
+            // A finished sentence is the best place to end a subtitle — but only once
+            // there is enough on screen to be worth its own cue.
+            if (text.length >= MIN_CHARS && token.last() in SENTENCE_END) flush()
+        }
+        flush()
+    }
+
+    private fun cue(index: Int, startSec: Double, endSec: Double, text: String): SubtitleCue =
+        SubtitleCue(index, (startSec * 1000).toLong(), (endSec * 1000).toLong(), listOf(text))
+
+    private companion object {
+        /** Two subtitle lines' worth of text — the point at which a cue must be cut. */
+        const val MAX_CHARS = 84
+
+        /** Below this a cue is too short to stand alone, so a full stop is ignored. */
+        const val MIN_CHARS = 24
+
+        /** A silence this long between two words is a natural subtitle boundary. */
+        const val PAUSE_S = 0.6
+
+        /** No cue stays on screen longer than this without a break. */
+        const val MAX_SPAN_S = 7.0
+
+        val SENTENCE_END = charArrayOf('.', '!', '?', '…')
     }
 }

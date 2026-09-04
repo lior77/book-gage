@@ -23,6 +23,8 @@ import com.hebsub.core.subtitle.SubtitleTrack
 import com.hebsub.core.subtitle.SrtParser
 import com.hebsub.core.subtitle.SrtWriter
 import com.hebsub.core.subtitle.SubtitleCue
+import com.hebsub.core.text.CueSplitter
+import com.hebsub.core.text.LineWrapper
 import com.hebsub.core.text.SubtitlePostProcessor
 import java.io.File
 
@@ -183,6 +185,10 @@ class SubtitlePipeline(
 
         val hebrewCues = if (acq.readyHebrew) acq.cues else translate(acq)
         val processed = SubtitlePostProcessor.process(hebrewCues)
+        val oversized = CueSplitter.countOversized(
+            hebrewCues, LineWrapper.DEFAULT_MAX_CHARS, CueSplitter.DEFAULT_MAX_LINES,
+        )
+        RunLog.log("layout: ${hebrewCues.size} cues → ${processed.size} (split $oversized over the two-line budget)")
 
         // §8 — a floor on how long each line stays up, taken only from the silence
         // that follows it. §7 says the source timing must survive, so prove it did.
@@ -421,8 +427,8 @@ class SubtitlePipeline(
         return asrTrack
     }
 
-    private suspend fun translate(acq: Acq): List<SubtitleCue> =
-        if (settings.hasAnthropicKey) {
+    private suspend fun translate(acq: Acq): List<SubtitleCue> {
+        val translated = if (settings.hasAnthropicKey) {
             RunLog.log("translating with Claude (${settings.claudeModel}) from ${acq.language}")
             PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", 0f))
             ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel)
@@ -432,6 +438,50 @@ class SubtitlePipeline(
             PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", 0f))
             MlKitTranslator().translate(acq.cues, acq.language) { d, t -> PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", d.toFloat() / t)) }
         }
+        return fillUntranslated(translated, acq.language)
+    }
+
+    /**
+     * Second pass over the lines that came back still in the source language.
+     *
+     * The cloud translator does not always answer. When it does not, the cue used
+     * to keep its source text and go straight to the screen — so a film could play
+     * with a run of Spanish subtitles in the middle of the Hebrew, which is worse
+     * than either language on its own. The on-device translator is a weaker
+     * translator but an unconditional one, so it fills the gaps: an imperfect
+     * Hebrew line is still a Hebrew line.
+     */
+    private suspend fun fillUntranslated(cues: List<SubtitleCue>, sourceLang: String?): List<SubtitleCue> {
+        val stuck = cues.filter { stillForeign(it.text) }
+        if (stuck.isEmpty()) return cues
+        RunLog.error("fallback: ${stuck.size} of ${cues.size} lines are still not in Hebrew — trying the on-device translator")
+        PipelineBus.update(PipelineState.Running("השלמת שורות שלא תורגמו (מקומי)", 0f))
+        val fixed: List<SubtitleCue>? = runCatching {
+            MlKitTranslator().translate(stuck, sourceLang) { d, t ->
+                PipelineBus.update(PipelineState.Running("השלמת שורות שלא תורגמו (מקומי)", d.toFloat() / t))
+            }
+        }.getOrElse { RunLog.error("fallback translation failed — those lines stay in the source language", it); null }
+        if (fixed == null) return cues
+
+        val byIndex = fixed.filterNot { stillForeign(it.text) }.associateBy { it.index }
+        val out = cues.map { byIndex[it.index] ?: it }
+        RunLog.log("fallback: recovered ${byIndex.size} of ${stuck.size} lines with the on-device translator")
+        if (byIndex.size < stuck.size) {
+            RunLog.error("fallback: ${stuck.size - byIndex.size} lines remain in the source language")
+        }
+        return out
+    }
+
+    /**
+     * True when a finished cue is still written in Latin script. `detectScript`
+     * calls a line Hebrew as soon as a fifth of its letters are Hebrew, so a Hebrew
+     * subtitle quoting a brand or a name does not trip this; the letter floor keeps
+     * out short fragments where the script says nothing either way.
+     */
+    private fun stillForeign(text: String): Boolean {
+        if (Language.isHebrew(Language.detectScript(text))) return false
+        return text.count { it in 'a'..'z' || it in 'A'..'Z' } >= 8
+    }
 
     private suspend fun parseEmbedded(videoFile: File, streamIndex: Int, base: String, lang: String): List<SubtitleCue>? {
         val out = File(outputDir, "$lang-$base.srt")

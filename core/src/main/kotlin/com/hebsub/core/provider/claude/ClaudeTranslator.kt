@@ -192,6 +192,17 @@ object ClaudeTranslator {
         return json.encodeToString(JsonObject.serializer(), body)
     }
 
+    /**
+     * The API's own account of why generation stopped ("end_turn", "max_tokens",
+     * "refusal", …). Worth logging on a failed batch: an empty reply, a reply cut
+     * off mid-sentence and a reply the model declined to write are indistinguishable
+     * from the text alone, and they call for different responses.
+     */
+    fun stopReason(responseBody: String): String? =
+        runCatching {
+            json.parseToJsonElement(responseBody).jsonObject["stop_reason"]?.jsonPrimitive?.contentOrNull
+        }.getOrNull()
+
     /** Concatenate the text blocks from a Messages API response. */
     fun extractText(responseBody: String): String {
         val root = json.parseToJsonElement(responseBody).jsonObject
@@ -239,7 +250,49 @@ object ClaudeTranslator {
                 if (result.isNotEmpty()) return result
             }
         }
-        return emptyMap()
+        // 3) Salvage. Both parsers above need the document to be well-formed, so a
+        //    reply that stops in the middle — hitting the token ceiling, or being
+        //    cut short — yields nothing at all, and the lines that DID come back are
+        //    thrown away with the ones that did not. Scan for the pairs directly and
+        //    keep whatever is complete.
+        return salvagePairs(cleaned)
+    }
+
+    /** Recover `"id":"text"` pairs from a reply that is not valid JSON as a whole. */
+    private fun salvagePairs(text: String): Map<Int, String> {
+        val result = LinkedHashMap<Int, String>()
+        for (m in PAIR.findAll(text)) {
+            val id = m.groupValues[1].toIntOrNull() ?: continue
+            val value = unescapeJsonString(m.groupValues[2]).trim()
+            if (value.isNotEmpty()) result[id] = value
+        }
+        return result
+    }
+
+    private val PAIR = Regex("""["'](\d{1,6})["']\s*:\s*"((?:[^"\\]|\\.)*)"""")
+
+    private fun unescapeJsonString(s: String): String {
+        if ('\\' !in s) return s
+        val sb = StringBuilder(s.length)
+        var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            if (c != '\\' || i == s.length - 1) { sb.append(c); i++; continue }
+            when (val e = s[i + 1]) {
+                'n' -> { sb.append('\n'); i += 2 }
+                'r' -> { sb.append('\r'); i += 2 }
+                't' -> { sb.append('\t'); i += 2 }
+                'b' -> { sb.append('\b'); i += 2 }
+                'f' -> { sb.append('\u000C'); i += 2 }
+                'u' -> {
+                    val hex = s.substring(i + 2, minOf(i + 6, s.length))
+                    val code = hex.takeIf { it.length == 4 }?.toIntOrNull(16)
+                    if (code != null) { sb.append(code.toChar()); i += 6 } else { sb.append(e); i += 2 }
+                }
+                else -> { sb.append(e); i += 2 }   // \" \\ \/ and anything unexpected
+            }
+        }
+        return sb.toString()
     }
 
     /** Apply id→translation onto cues, keeping timing. Untranslated cues are kept as-is. */

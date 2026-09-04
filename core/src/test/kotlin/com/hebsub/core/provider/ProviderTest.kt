@@ -86,6 +86,30 @@ class ClaudeTranslatorTest {
         assertEquals("עולם", map[2])
     }
 
+    @Test fun salvagesTranslationsFromATruncatedReply() {
+        // Exactly the shape seen in the Horseplay run: valid JSON that stops in the
+        // middle of a value. Everything complete before the cut must survive.
+        val text = """{"201":"יותר חכם","202":"מהשמן הגמגם.","203":"כדי לזיין אותה.","204":"ואתה חושב שהבחור"""
+        val map = ClaudeTranslator.parseTranslations(text)
+        assertEquals("יותר חכם", map[201])
+        assertEquals("מהשמן הגמגם.", map[202])
+        assertEquals("כדי לזיין אותה.", map[203])
+        assertEquals(3, map.size, "the value cut in half must not be kept")
+    }
+
+    @Test fun salvageUnescapesAndKeepsQuotes() {
+        val text = """{"7":"הוא אמר \"די\"\nוהלך""" + "\"" + ", \"8\":\"בסדר\""
+        val map = ClaudeTranslator.parseTranslations(text)
+        assertEquals("הוא אמר \"די\"\nוהלך", map[7])
+        assertEquals("בסדר", map[8])
+    }
+
+    @Test fun readsTheStopReason() {
+        val resp = """{"content":[{"type":"text","text":""}],"stop_reason":"refusal"}"""
+        assertEquals("refusal", ClaudeTranslator.stopReason(resp))
+        assertEquals(null, ClaudeTranslator.stopReason("not json at all"))
+    }
+
     @Test fun glossaryPinsSpellingsInTheSystemPrompt() {
         val prompt = ClaudeTranslator.systemPrompt("en", "Martin = מרטין\nQuinn = קווין")
         assertTrue(prompt.contains("Martin = מרטין"))

@@ -19,22 +19,24 @@ object LineWrapper {
         if (collapsed.length <= maxChars) return listOf(collapsed)
 
         val words = collapsed.split(' ')
-        // Find the break point closest to the middle that keeps line 1 <= maxChars,
-        // producing visually balanced lines.
+        // Find the break that keeps line 1 within the budget, preferring one that
+        // leaves line 2 inside it too and only then the most balanced pair. Without
+        // the overflow term the break nearest the middle wins even when it strands
+        // everything else on line 2 — which is how a long cue used to arrive at the
+        // renderer as one enormous line and come out as a block of text.
         val target = collapsed.length / 2
         var best = -1
-        var bestDistance = Int.MAX_VALUE
+        var bestScore = Long.MAX_VALUE
         var runningLen = 0
         for (w in words.indices.take(words.size - 1)) {
             runningLen += words[w].length + if (w > 0) 1 else 0
-            if (runningLen <= maxChars) {
-                val distance = kotlin.math.abs(runningLen - target)
-                if (distance <= bestDistance) {
-                    bestDistance = distance
-                    best = w
-                }
-            } else {
-                break
+            if (runningLen > maxChars) break
+            val rest = collapsed.length - runningLen - 1
+            val overflow = (rest - maxChars).coerceAtLeast(0).toLong()
+            val score = overflow * 1000L + kotlin.math.abs(runningLen - target)
+            if (score <= bestScore) {
+                bestScore = score
+                best = w
             }
         }
 
