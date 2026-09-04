@@ -64,17 +64,22 @@ class FfmpegMediaTool : MediaTool {
         font: File?,
         poster: File?,
     ): Boolean {
-        // Mirror the creation mux exactly. Copying the source's attachments through
-        // with `-map 0:t?` is NOT reliable: the font can arrive without a usable
-        // mimetype, libass then has no Hebrew glyphs, every glyph collapses to zero
-        // width — and the text AND its plate render as nothing at all. So the font
-        // (and cover) are always re-attached explicitly, with their mimetypes.
+        // Copying the source's attachments through with `-map 0:t?` is NOT reliable:
+        // the font can arrive without a usable mimetype, libass then has no Hebrew
+        // glyphs, every glyph collapses to zero width — and the text AND its plate
+        // render as nothing at all. So the font is always re-attached explicitly.
+        //
+        // The cover image is deliberately NOT attached here. The one produced file
+        // that renders correctly was built without it, the one that renders nothing
+        // was built with it, and its own -attach did not even land (the container
+        // came back with one attachment after two were asked for). A cover is
+        // decoration; the subtitles are the point, so the suspect is kept out of
+        // this path. The poster still sits in the movie's folder as a file, and
+        // "add data" still embeds it when that is what the user asked for.
         val hasFont = font != null && font.exists()
-        val hasPoster = poster != null && poster.exists()
         val args = ArrayList<String>()
         args += listOf("-y", "-i", inputMkv.absolutePath, "-i", sub.absolutePath)
         if (hasFont) args += listOf("-attach", font!!.absolutePath)
-        if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
         // Only the real video stream (a cover stored as a video stream would
         // otherwise be duplicated) plus the audio, then the NEW subtitle.
         args += listOf("-map", "0:v:0", "-map", "0:a?", "-map", "1", "-c", "copy", "-c:s", "copy")
@@ -91,14 +96,9 @@ class FfmpegMediaTool : MediaTool {
             )
             t++
         }
-        if (hasPoster) {
-            val mime = if (poster!!.extension.equals("png", true)) "image/png" else "image/jpeg"
-            val fname = if (mime == "image/png") "cover.png" else "cover.jpg"
-            args += listOf("-metadata:s:t:$t", "mimetype=$mime", "-metadata:s:t:$t", "filename=$fname")
-        }
         args += outMkv.absolutePath
         val ok = run(*args.toTypedArray())
-        if (ok) verifySubtitleTracks(outMkv)
+        if (ok) verifySubtitleTracks(outMkv, expectedAttachments = t)
         return ok
     }
 
@@ -224,8 +224,6 @@ class FfmpegMediaTool : MediaTool {
         // Attachments (font first, then poster) become attachment streams t:0,t:1…
         // in the order the -attach options appear here.
         if (hasFont) args += listOf("-attach", font!!.absolutePath)
-        val hasPoster = poster != null && poster.exists()
-        if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
         args += listOf("-map", "0", "-map", "1")
         args += listOf("-c", "copy", "-c:s", "copy")
 
@@ -247,12 +245,6 @@ class FfmpegMediaTool : MediaTool {
             )
             t++
         }
-        if (hasPoster) {
-            val mime = if (poster!!.extension.equals("png", true)) "image/png" else "image/jpeg"
-            val fname = if (mime == "image/png") "cover.png" else "cover.jpg"
-            args += listOf("-metadata:s:t:$t", "mimetype=$mime", "-metadata:s:t:$t", "filename=$fname")
-            t++
-        }
         metadata.forEach { (k, v) ->
             val clean = v.replace("\n", " ").replace("\"", "'").trim()
             if (clean.isNotEmpty()) args += listOf("-metadata", "$k=$clean")
@@ -260,7 +252,7 @@ class FfmpegMediaTool : MediaTool {
         args += outMkv.absolutePath
         val ok = run(*args.toTypedArray())
         // Upgrade (b): read the file back and prove the Hebrew tracks are there.
-        if (ok) verifySubtitleTracks(outMkv)
+        if (ok) verifySubtitleTracks(outMkv, expectedAttachments = t)
         return ok
     }
 
@@ -269,7 +261,7 @@ class FfmpegMediaTool : MediaTool {
      * it actually contains (codec, language, title), turning "wrote media file"
      * into a verified fact. Purely diagnostic — never fails the run.
      */
-    private suspend fun verifySubtitleTracks(outMkv: File) = withContext(Dispatchers.IO) {
+    private suspend fun verifySubtitleTracks(outMkv: File, expectedAttachments: Int = 0) = withContext(Dispatchers.IO) {
         try {
             val info = FFprobeKit.getMediaInformation(outMkv.absolutePath).mediaInformation
             if (info == null) { RunLog.log("verify: ffprobe returned no media info for ${outMkv.name}"); return@withContext }
@@ -297,6 +289,12 @@ class FfmpegMediaTool : MediaTool {
             val heb = subs.count { it.contains("/heb/") || it.contains("/he/") }
             RunLog.log("verify: ${outMkv.name} subtitleStreams=${subs.size} hebrew=$heb ${subs.joinToString(" ")}")
             RunLog.log("verify: attachments=${attachments.size} ${attachments.joinToString(" ")}")
+            if (expectedAttachments > 0 && attachments.size != expectedAttachments) {
+                // Asking ffmpeg to attach two files and getting one back means an
+                // -attach was silently dropped, and the -metadata:s:t:N that went
+                // with it addressed a stream that does not exist.
+                RunLog.error("verify: attached $expectedAttachments file(s) but the container has ${attachments.size}")
+            }
             if (heb == 0) RunLog.error("verify: NO Hebrew subtitle track found in ${outMkv.name}")
             val needsFont = subs.any { it.contains("ass") || it.contains("ssa") }
             if (needsFont && attachments.none { it.contains("font", ignoreCase = true) || it.endsWith(".ttf)", ignoreCase = true) }) {

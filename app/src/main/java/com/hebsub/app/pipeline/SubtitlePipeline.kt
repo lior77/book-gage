@@ -147,9 +147,14 @@ class SubtitlePipeline(
                 if (muxed && outMkv.exists()) {
                     mediaName = outMkv.name
                     RunLog.log("wrote media file: ${outMkv.absolutePath} (${outMkv.length()} bytes)")
-                    // Keep the MKV, the PDF and the poster (+ the run log, written later).
+                    // Keep the MKV, the PDF, the poster and the SRT sidecar (+ the
+                    // run log, written later). The sidecar survives the cleanup on
+                    // purpose: it is the one file a player will let you load by hand.
                     if (options.deleteData) {
-                        cleanIntermediates(keep = setOfNotNull(outMkv.name, pdf?.name, poster?.name), video = videoFile)
+                        cleanIntermediates(
+                            keep = setOfNotNull(outMkv.name, pdf?.name, poster?.name, "$base.he.srt"),
+                            video = videoFile,
+                        )
                     }
                 } else {
                     RunLog.log("media file not created (muxed=$muxed exists=${outMkv.exists()})")
@@ -200,20 +205,24 @@ class SubtitlePipeline(
      * alongside an ASS just gave players a second, unstyled Hebrew track to pick.
      */
     private fun writeSubs(cues: List<SubtitleCue>, base: String, options: RunOptions): File {
-        return if (options.styled) {
-            File(outputDir, "$base.he.ass").apply {
-                // Name the embedded Hebrew font in the style so libass uses it.
-                writeText(
-                    AssWriter.write(cues, fontName = HEBREW_FONT_FAMILY, options = options.style),
-                    Charsets.UTF_8,
-                )
-                RunLog.log("wrote ASS (${options.style.serialize()}, font=$HEBREW_FONT_FAMILY)")
-            }
-        } else {
-            File(outputDir, "he-$base.srt").apply {
-                writeText(SrtWriter.write(cues), Charsets.UTF_8)
-                RunLog.log("wrote SRT (${cues.size} cues)")
-            }
+        // A plain SRT is always written to the folder, whichever kind is muxed.
+        // It costs nothing, and it is the only form a player will accept when you
+        // ask it to load a subtitle file by hand — VLC's picker lists .srt and not
+        // .ass — so there is always something to fall back to and something to
+        // compare the muxed track against.
+        val srt = File(outputDir, "$base.he.srt").apply {
+            writeText(SrtWriter.write(cues), Charsets.UTF_8)
+            RunLog.log("wrote SRT sidecar: $name (${cues.size} cues)")
+        }
+        if (!options.styled) return srt
+
+        return File(outputDir, "$base.he.ass").apply {
+            // Name the embedded Hebrew font in the style so libass uses it.
+            writeText(
+                AssWriter.write(cues, fontName = HEBREW_FONT_FAMILY, options = options.style),
+                Charsets.UTF_8,
+            )
+            RunLog.log("wrote ASS (${options.style.serialize()}, font=$HEBREW_FONT_FAMILY)")
         }
     }
 
