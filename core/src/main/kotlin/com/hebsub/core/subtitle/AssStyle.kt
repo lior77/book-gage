@@ -149,7 +149,10 @@ object AssStyler {
     // height is its font size. This is that blank line, kept recognisable so a later
     // edit can strip it and re-apply a different amount.
     private const val ZWSP = "\u200B"
-    private val SPACER = Regex("""\\N\{\\fs(\d+)\}$ZWSP\\N""")
+    // The optional trailing size is the restore that follows the spacer. It is
+    // optional so that a track written before the restore existed still matches,
+    // and can therefore be stripped and rebuilt correctly by the editor.
+    private val SPACER = Regex("""\\N\{\\fs(\d+)\}$ZWSP(?:\{\\fs\d+\})?\\N""")
 
     /** The spacing currently baked into the dialogue lines (0 when none). */
     fun spacingOf(ass: String): Int =
@@ -158,11 +161,18 @@ object AssStyler {
     /** Remove any previously inserted spacer, returning the plain `\N` form. */
     fun normalizeText(text: String): String = SPACER.replace(text, """\\N""")
 
-    /** Apply [extra] units of additional gap between the lines of one cue. */
-    fun applySpacing(text: String, extra: Int): String {
+    /**
+     * Apply [extra] units of additional gap between the lines of one cue.
+     *
+     * [restoreSize] must be the style's own font size. An ASS override runs to the
+     * END of the event, so `{\fs4}` for the spacer would otherwise shrink every
+     * line AFTER it to 4 units — which is how the second line of every two-line
+     * subtitle became invisible. The size is restored immediately after the spacer.
+     */
+    fun applySpacing(text: String, extra: Int, restoreSize: Int): String {
         val plain = normalizeText(text)
         if (extra <= 0) return plain
-        return plain.replace("""\N""", """\N{\fs$extra}$ZWSP\N""")
+        return plain.replace("""\N""", """\N{\fs$extra}$ZWSP{\fs$restoreSize}\N""")
     }
 
     // A style line carries one padding value for all four sides, so the separate
@@ -181,7 +191,7 @@ object AssStyler {
      * editing repeatedly never stacks overrides or spacers.
      */
     fun applyText(text: String, o: AssStyleOptions): String {
-        val spaced = applySpacing(stripOverride(text), o.extraLineSpacing)
+        val spaced = applySpacing(stripOverride(text), o.extraLineSpacing, o.fontSize)
         if (!o.hasPlate) return spaced
         val x = o.plateSidePadding.coerceIn(0, 100)
         val y = o.platePadding.coerceIn(0, 100)

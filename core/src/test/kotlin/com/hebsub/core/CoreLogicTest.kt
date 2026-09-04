@@ -270,6 +270,33 @@ class SubtitleCoreTest {
         assertTrue(out[1].endMs < out[2].startMs)
     }
 
+    @Test fun lineGapSpacerRestoresTheFontSizeAfterItself() {
+        // An ASS override runs to the END of the event, so the spacer's {\fs4} used
+        // to shrink the SECOND line of every two-line subtitle to 4 units — visible
+        // in a produced file as text that is there but far too small to read.
+        val styler = com.hebsub.core.subtitle.AssStyler
+        val o = com.hebsub.core.subtitle.AssStyleOptions(
+            bgTransparencyPercent = 10, extraLineSpacing = 4, fontSize = 28,
+        )
+        val out = styler.applyText("""שורה ראשונה\Nשורה שנייה""", o)
+        assertTrue(out.contains("""{\fs4}"""), "the gap itself is still inserted")
+        assertTrue(out.contains("""{\fs28}"""), "and the style's size is restored right after it")
+        // The restore must come BEFORE the second line, not after it.
+        assertTrue(out.indexOf("""{\fs28}""") < out.indexOf("שורה שנייה"))
+    }
+
+    @Test fun lineGapSpacerIsStrippedFromBothOldAndNewForms() {
+        val styler = com.hebsub.core.subtitle.AssStyler
+        val old = """שורה\N{\fs4}""" + "​" + """\Nשנייה"""      // written before the fix
+        val new = """שורה\N{\fs4}""" + "​" + """{\fs28}\Nשנייה"""
+        // Re-editing a track produced by either version must give back plain text,
+        // or the editor would stack a second spacer on top of the first.
+        assertEquals("""שורה\Nשנייה""", styler.normalizeText(old))
+        assertEquals("""שורה\Nשנייה""", styler.normalizeText(new))
+        assertEquals(4, styler.spacingOf(old))
+        assertEquals(4, styler.spacingOf(new))
+    }
+
     @Test fun shiftMovesEveryCueAndKeepsDurations() {
         val timing = com.hebsub.core.subtitle.SubtitleTiming
         val cues = listOf(
