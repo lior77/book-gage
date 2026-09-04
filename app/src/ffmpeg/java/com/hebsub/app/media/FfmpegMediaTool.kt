@@ -302,9 +302,40 @@ class FfmpegMediaTool : MediaTool {
             if (needsFont && attachments.none { it.contains("font", ignoreCase = true) || it.endsWith(".ttf)", ignoreCase = true) }) {
                 RunLog.error("verify: styled ASS track but NO font attachment — Hebrew will not render")
             }
+            if (needsFont) readBackSubtitle(outMkv)
         } catch (t: Throwable) {
             RunLog.error("verify failed", t)
         }
+    }
+
+    /**
+     * Pull the subtitle track back OUT of the finished container and log what it
+     * actually contains.
+     *
+     * ffprobe listing a stream only proves the stream exists — it says nothing
+     * about whether the ASS header survived the mux. An MKV stores that header
+     * separately from the events (as CodecPrivate), and a track whose header lost
+     * its `[V4+ Styles]` section has no style to render with, which looks exactly
+     * like "the track is there and nothing appears". This makes the difference
+     * visible in the log instead of leaving it to be guessed at.
+     */
+    private suspend fun readBackSubtitle(outMkv: File) = withContext(Dispatchers.IO) {
+        val tmp = File(outMkv.parentFile, "verify-readback.ass")
+        runCatching { tmp.delete() }
+        if (!run("-y", "-i", outMkv.absolutePath, "-map", "0:s:0", "-c:s", "copy", tmp.absolutePath)) {
+            RunLog.error("verify: could not read the subtitle track back out of ${outMkv.name}")
+            return@withContext
+        }
+        val text = runCatching { tmp.readText(Charsets.UTF_8) }.getOrNull().orEmpty()
+        val dialogue = text.lineSequence().count { it.startsWith("Dialogue:") }
+        val style = text.lineSequence().firstOrNull { it.startsWith("Style:") }
+        RunLog.log("verify: track read back — ${text.length} chars, $dialogue dialogue lines")
+        RunLog.log("verify: style in the muxed track: ${style ?: "*** NONE — nothing can render ***"}")
+        text.lineSequence().firstOrNull { it.startsWith("Dialogue:") }
+            ?.let { RunLog.log("verify: first event: ${it.take(160)}") }
+        if (dialogue == 0) RunLog.error("verify: the muxed subtitle track has NO events")
+        if (style == null) RunLog.error("verify: the muxed subtitle track has NO style line")
+        runCatching { tmp.delete() }
     }
 
     private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
