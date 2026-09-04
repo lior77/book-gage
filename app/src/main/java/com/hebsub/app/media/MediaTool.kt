@@ -19,6 +19,13 @@ data class MediaProbe(
     val subtitleCount: Int get() = embeddedSubtitles.size
 }
 
+/** The first audio stream's shape, as far as the recogniser cares. */
+data class AudioLayout(
+    val channels: Int,
+    /** ffprobe's layout name — "stereo", "5.1", "5.1(side)", "mono" — or null. */
+    val layout: String?,
+)
+
 /**
  * Container operations needed by the pipeline. Backed by FFmpeg so we can remux
  * a selectable Hebrew subtitle track into a new MKV **without re-encoding**
@@ -56,8 +63,34 @@ interface MediaTool {
         poster: File?,
     ): Boolean
 
-    /** Extract mono 16 kHz PCM WAV for on-device ASR. */
+    /** Extract compact mono 16 kHz AAC for ASR — the plain path, kept as the fallback. */
     suspend fun extractAudioForAsr(input: File, outWav: File): Boolean
+
+    /** Channel count and layout of the first audio stream, or null when unknown. */
+    suspend fun probeAudio(input: File): AudioLayout?
+
+    /**
+     * Extract the DIALOGUE of [input] as lossless mono 16 kHz FLAC, prepared for a
+     * speech recogniser: the centre channel of a surround mix, or an enhanced
+     * centre extracted from a stereo one, with quiet speech brought up to level.
+     * Returns a short description of the chain that succeeded, or null when none
+     * did (the caller then falls back to [extractAudioForAsr]).
+     */
+    suspend fun extractDialogueForAsr(input: File, out: File, layout: AudioLayout?): String?
+
+    /**
+     * Cut [fromMs, toMs) of an audio file into [out] (same sample format). With
+     * [boost], a stronger enhancement is applied — noise reduction and a harder
+     * speech expansion — for a second attempt on a stretch the first pass heard
+     * nothing in.
+     */
+    suspend fun cutAudio(input: File, fromMs: Long, toMs: Long, out: File, boost: Boolean): Boolean
+
+    /**
+     * Fraction (0..1) of [fromMs, toMs) that is NOT silence, or null when it could
+     * not be measured. Tells a gap with speech in it from a gap that is simply quiet.
+     */
+    suspend fun nonSilentFraction(input: File, fromMs: Long, toMs: Long): Double?
 
     /**
      * Copy [input] to [outMkv] adding the Hebrew [srt] as a selectable track,

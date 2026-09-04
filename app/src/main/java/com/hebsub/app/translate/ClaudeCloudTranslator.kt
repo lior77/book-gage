@@ -50,12 +50,14 @@ class ClaudeCloudTranslator(
     override suspend fun translate(
         cues: List<SubtitleCue>,
         sourceLang: String?,
+        machineTranscript: Boolean,
         onProgress: (Int, Int) -> Unit,
     ): List<SubtitleCue> = withContext(Dispatchers.IO) {
         require(apiKey.isNotBlank()) { "Missing Anthropic API key" }
         val sourceName = Language.canonical(sourceLang)
         val glossary = buildGlossary(cues, sourceName)
-        val system = ClaudeTranslator.systemPrompt(sourceName, glossary)
+        val system = ClaudeTranslator.systemPrompt(sourceName, glossary, machineTranscript)
+        if (machineTranscript) RunLog.log("Claude: source is a machine transcript — translating for the scene, not the letter")
         val batches = ClaudeTranslator.buildBatches(cues)
         RunLog.log("Claude: model=$model batches=${batches.size} cues=${cues.size} glossary=${glossary.isNotBlank()}")
 

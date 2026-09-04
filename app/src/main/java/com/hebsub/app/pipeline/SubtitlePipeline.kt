@@ -75,6 +75,8 @@ class SubtitlePipeline(
         val language: String?,
         val readyHebrew: Boolean,
         val source: String,
+        /** True when the cues are a speech recogniser's output, not a written subtitle. */
+        val machine: Boolean = false,
     )
 
     /** Cached transcript: at most one Deepgram call per run (see [speechTrack]). */
@@ -154,7 +156,7 @@ class SubtitlePipeline(
                     // purpose: it is the one file a player will let you load by hand.
                     if (options.deleteData) {
                         cleanIntermediates(
-                            keep = setOfNotNull(outMkv.name, pdf?.name, poster?.name, "$base.he.srt"),
+                            keep = setOfNotNull(outMkv.name, pdf?.name, poster?.name, "$base.he.srt", "$base.deepgram.jsonl"),
                             video = videoFile,
                         )
                     }
@@ -287,7 +289,7 @@ class SubtitlePipeline(
             ?.let { return it }
 
         // 1.6 — the audio itself. Derived from this very file, so already in step.
-        return transcriptionStep(videoFile, base)
+        return transcriptionStep(videoFile, base, probe)
     }
 
     /**
@@ -388,9 +390,9 @@ class SubtitlePipeline(
     }
 
     /** 1.6 — transcribe the soundtrack. The last resort, and derived from this file. */
-    private suspend fun transcriptionStep(videoFile: File, base: String): Acq? {
+    private suspend fun transcriptionStep(videoFile: File, base: String, probe: MediaProbe): Acq? {
         PipelineBus.step(SourceStep.Transcription, StepStatus.Running)
-        val track = speechTrack(videoFile, base)
+        val track = speechTrack(videoFile, base, probe)
         if (track == null) {
             RunLog.log("transcription unavailable (no Deepgram key or it failed)")
             PipelineBus.step(SourceStep.Transcription, StepStatus.Skipped, "אין מפתח Deepgram או שהתמלול נכשל")
@@ -405,6 +407,7 @@ class SubtitlePipeline(
         return Acq(
             track.cues, Language.canonical(track.language),
             readyHebrew = Language.isHebrew(track.language), source = "audio transcription",
+            machine = true,
         )
     }
 
@@ -413,18 +416,14 @@ class SubtitlePipeline(
      * second Deepgram call. Reached only when every other source has fallen through.
      * Returns null when transcription is unavailable or failed.
      */
-    private suspend fun speechTrack(videoFile: File, base: String): SubtitleTrack? {
+    private suspend fun speechTrack(videoFile: File, base: String, probe: MediaProbe): SubtitleTrack? {
         if (asrAttempted) return asrTrack
         asrAttempted = true
         if (!asrEngine.available) { RunLog.log("speech: unavailable (no Deepgram key)"); return null }
-        PipelineBus.update(PipelineState.Running("חילוץ פס הקול מהקובץ", null))
-        val audio = File(outputDir, "$base.audio.m4a")
-        if (!audio.exists() && !mediaTool.extractAudioForAsr(videoFile, audio)) {
-            RunLog.error("speech: audio extraction failed"); return null
-        }
-        PipelineBus.update(PipelineState.Running("תמלול פס הקול", 0f))
         asrTrack = runCatching {
-            asrEngine.transcribe(audio) { p -> PipelineBus.update(PipelineState.Running("תמלול פס הקול", p)) }
+            SpeechTranscriber(mediaTool, asrEngine, outputDir).transcribe(videoFile, base, probe) { what, p ->
+                PipelineBus.update(PipelineState.Running(what, p))
+            }
         }.getOrElse { RunLog.error("speech: transcription failed", it); null }
         RunLog.log("speech: segments=${asrTrack?.cues?.size ?: 0} language=${asrTrack?.language ?: "-"}")
         return asrTrack
@@ -435,7 +434,7 @@ class SubtitlePipeline(
             RunLog.log("translating with Claude (${settings.claudeModel}) from ${acq.language}")
             PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", 0f))
             ClaudeCloudTranslator(settings.anthropicApiKey, settings.claudeModel)
-                .translate(acq.cues, acq.language) { d, t -> PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", d.toFloat() / t)) }
+                .translate(acq.cues, acq.language, machineTranscript = acq.machine) { d, t -> PipelineBus.update(PipelineState.Running("תרגום חכם לעברית (ענן)", d.toFloat() / t)) }
         } else {
             RunLog.log("translating with ML Kit (on-device) from ${acq.language}")
             PipelineBus.update(PipelineState.Running("תרגום לעברית (מקומי)", 0f))

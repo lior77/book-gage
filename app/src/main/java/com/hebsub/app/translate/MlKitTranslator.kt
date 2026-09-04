@@ -26,6 +26,7 @@ class MlKitTranslator : TranslationEngine {
     override suspend fun translate(
         cues: List<SubtitleCue>,
         sourceLang: String?,
+        machineTranscript: Boolean,
         onProgress: (Int, Int) -> Unit,
     ): List<SubtitleCue> {
         val source = mlKitLanguage(sourceLang) ?: TranslateLanguage.ENGLISH

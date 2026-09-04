@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.util.Locale
 
 /**
  * FFmpeg-backed [MediaTool].
@@ -150,14 +151,13 @@ class FfmpegMediaTool : MediaTool {
         // in; a preview does not need frame accuracy. The frame is scaled down
         // because it is going onto a phone screen, and `ass` scales its rendering
         // with the frame, so the proportions the user sees are the real ones.
-        val seconds = (atMs.coerceAtLeast(0L) / 1000.0)
         val filter = buildString {
             append("ass=").append(escapeFilterArg(ass.absolutePath))
             fontsDir?.let { append(":fontsdir=").append(escapeFilterArg(it.absolutePath)) }
             append(",scale=960:-2")
         }
         val ok = run(
-            "-y", "-ss", "%.3f".format(seconds), "-i", video.absolutePath,
+            "-y", "-ss", sec(atMs.coerceAtLeast(0L)), "-i", video.absolutePath,
             "-vf", filter, "-frames:v", "1", "-q:v", "3", outImage.absolutePath,
         )
         if (!ok) RunLog.log("preview: the ass filter is unavailable in this FFmpeg build (or the seek failed)")
@@ -186,6 +186,103 @@ class FfmpegMediaTool : MediaTool {
             "-y", "-i", input.absolutePath,
             "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "48k", outWav.absolutePath,
         )
+
+    override suspend fun probeAudio(input: File): AudioLayout? = withContext(Dispatchers.IO) {
+        val info = runCatching { FFprobeKit.getMediaInformation(input.absolutePath).mediaInformation }.getOrNull()
+            ?: return@withContext null
+        val audio = info.streams?.firstOrNull { it.type == "audio" } ?: return@withContext null
+        val props = runCatching { audio.allProperties }.getOrNull()
+        val channels = props?.optInt("channels", 0) ?: 0
+        val layout = props?.optString("channel_layout")?.takeUnless { it.isNullOrBlank() }
+        if (channels <= 0) null else AudioLayout(channels, layout)
+    }
+
+    /**
+     * Dialogue extraction for the recogniser.
+     *
+     * Film sound is not a microphone in front of a speaker: the dialogue is mixed
+     * under music and effects, and the quiet lines are the ones that go missing.
+     * Two things about the mix work in our favour. In a surround mix the dialogue
+     * lives on its own channel, the front centre, so taking just that channel
+     * drops most of the score. In a stereo mix the dialogue is panned to the
+     * middle while music and ambience are spread wide, and FFmpeg's dialoguenhance
+     * filter extracts that centre as a third channel. `speechnorm` then brings
+     * quiet speech up to level — it expands each half-cycle towards a target
+     * peak, which is the right tool for a whispered line under a loud score.
+     *
+     * Lossless FLAC, because the recogniser's own forum records missed words on
+     * compressed audio and the previous path sent 48 kbps AAC.
+     *
+     * Each chain is tried in turn; a build missing a filter fails fast with
+     * "No such filter", and the next chain is tried. The caller gets the name of
+     * the one that worked, for the log.
+     */
+    override suspend fun extractDialogueForAsr(input: File, out: File, layout: AudioLayout?): String? {
+        val channels = layout?.channels ?: 0
+        val speech = "speechnorm=e=4:r=0.0001:l=1"
+        val chains = ArrayList<Pair<String, String>>()
+        when {
+            channels >= 6 -> chains += "surround centre channel" to "pan=mono|c0=FC,$speech"
+            channels == 2 -> chains += "stereo dialogue enhance" to "dialoguenhance,pan=mono|c0=FC,$speech"
+        }
+        chains += "speech normalisation" to "$speech"
+        chains += "plain mono" to "aresample=16000"
+        for ((name, chain) in chains) {
+            runCatching { out.delete() }
+            val ok = run(
+                "-y", "-i", input.absolutePath, "-vn",
+                "-af", chain, "-ac", "1", "-ar", "16000", "-c:a", "flac", out.absolutePath,
+            )
+            if (ok && out.exists() && out.length() > 0) return name
+            RunLog.log("dialogue extraction: '$name' failed — trying the next chain")
+        }
+        return null
+    }
+
+    override suspend fun cutAudio(input: File, fromMs: Long, toMs: Long, out: File, boost: Boolean): Boolean {
+        val args = ArrayList<String>()
+        args += listOf(
+            "-y", "-ss", sec(fromMs), "-t", sec(toMs - fromMs),
+            "-i", input.absolutePath,
+        )
+        if (boost) {
+            // A gap the first pass heard nothing in: denoise, then expand harder. Both
+            // cost fidelity, which is why they are not on the main path.
+            args += listOf("-af", "afftdn=nf=-45:nr=20,speechnorm=e=12:r=0.0005:l=1")
+        }
+        args += listOf("-ac", "1", "-ar", "16000", "-c:a", "flac", out.absolutePath)
+        return run(*args.toTypedArray())
+    }
+
+    override suspend fun nonSilentFraction(input: File, fromMs: Long, toMs: Long): Double? {
+        val lenSec = (toMs - fromMs) / 1000.0
+        if (lenSec <= 0) return null
+        val (ok, output) = runCapture(
+            "-ss", sec(fromMs), "-t", sec(toMs - fromMs),
+            "-i", input.absolutePath, "-af", "silencedetect=n=-40dB:d=0.5", "-f", "null", "-",
+        )
+        if (!ok) return null
+        // silencedetect logs "silence_duration: 1.234" for each silent stretch.
+        var silent = 0.0
+        for (m in SILENCE_DURATION.findAll(output)) silent += m.groupValues[1].toDoubleOrNull() ?: 0.0
+        // A silence still open at the end of the range is reported as a start with no end.
+        val starts = SILENCE_START.findAll(output).count()
+        val ends = SILENCE_END.findAll(output).count()
+        if (starts > ends) {
+            val lastStart = SILENCE_START.findAll(output).last().groupValues[1].toDoubleOrNull()
+            if (lastStart != null) silent += (lenSec - lastStart).coerceAtLeast(0.0)
+        }
+        return (1.0 - silent / lenSec).coerceIn(0.0, 1.0)
+    }
+
+    /** Seconds with a dot decimal point regardless of the device locale — FFmpeg reads no other. */
+    private fun sec(ms: Long): String = String.format(Locale.US, "%.3f", ms / 1000.0)
+
+    private companion object {
+        val SILENCE_DURATION = Regex("""silence_duration:\s*([0-9.]+)""")
+        val SILENCE_START = Regex("""silence_start:\s*([0-9.]+)""")
+        val SILENCE_END = Regex("""silence_end:\s*([0-9.]+)""")
+    }
 
     override suspend fun remuxWithHebrew(
         input: File,
@@ -358,18 +455,22 @@ class FfmpegMediaTool : MediaTool {
      * A failure now says so, with the tail of FFmpeg's own output, rather than
      * returning a bare false and leaving the log to be read as success.
      */
-    private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun run(vararg args: String): Boolean = runCapture(*args).first
+
+    /** Like [run], but also hands back FFmpeg's own output for callers that parse it. */
+    private suspend fun runCapture(vararg args: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
         try {
             val session = FFmpegKit.executeWithArguments(args)
             val ok = ReturnCode.isSuccess(session.returnCode)
+            val output = session.output.orEmpty()
             if (!ok) {
                 RunLog.error("ffmpeg failed rc=${session.returnCode} (${args.size} args)")
-                RunLog.error("ffmpeg output: ${session.output?.takeLast(600).orEmpty()}")
+                RunLog.error("ffmpeg output: ${output.takeLast(600)}")
             }
-            ok
+            ok to output
         } catch (t: Throwable) {
             RunLog.error("ffmpeg threw", t)
-            false
+            false to ""
         }
     }
 }

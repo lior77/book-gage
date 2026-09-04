@@ -77,11 +77,25 @@ object ClaudeTranslator {
      *   database: a cast list names the ACTORS, not the characters, so feeding it
      *   in misleads the model instead of helping it.
      */
-    fun systemPrompt(sourceLanguageName: String?, glossary: String? = null): String {
+    fun systemPrompt(
+        sourceLanguageName: String?,
+        glossary: String? = null,
+        machineTranscript: Boolean = false,
+    ): String {
         val src = sourceLanguageName?.takeIf { it.isNotBlank() } ?: "the source language"
         val film = glossary?.takeIf { it.isNotBlank() }?.let {
             "\n\nUse EXACTLY these Hebrew spellings every time these names appear:\n$it"
         } ?: ""
+        // A recogniser's transcript is not a script. Told this, the model reads a
+        // line that makes no sense as a mishearing and renders what the scene means,
+        // instead of faithfully translating a word nobody said.
+        val transcript = if (machineTranscript) {
+            "\n\nThe source lines are an AUTOMATIC SPEECH TRANSCRIPT of the soundtrack, not a written subtitle: " +
+                "a word may be misheard for a similar-sounding one, punctuation is partial, and one line may " +
+                "contain more than one speaker. Translate what was most plausibly SAID in the scene. When a " +
+                "word makes no sense in context, prefer the reading a native listener would have understood " +
+                "over a literal rendering of the transcript. Keep colloquial register; do not sanitise or soften."
+        } else ""
         return """
             You are a professional film subtitle translator. Translate film/TV subtitles from $src into natural, fluent Modern Hebrew that reads like a real Israeli cinema/TV subtitle.
 
@@ -95,7 +109,7 @@ object ClaudeTranslator {
             - The preceding-context lines (and their Hebrew, when given) are for continuity only; do not translate them again.
             - Output Hebrew text only — no transliteration, no notes, no romanization.
 
-            Return ONLY a single JSON object mapping each input id (as a string) to its Hebrew translation, e.g. {"12":"…","13":"…"}. Escape newlines inside a translation as \n. No markdown, no code fences, no extra text.$film
+            Return ONLY a single JSON object mapping each input id (as a string) to its Hebrew translation, e.g. {"12":"…","13":"…"}. Escape newlines inside a translation as \n. No markdown, no code fences, no extra text.$film$transcript
         """.trimIndent()
     }
 

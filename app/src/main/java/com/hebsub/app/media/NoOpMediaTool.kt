@@ -30,6 +30,14 @@ class NoOpMediaTool : MediaTool {
 
     override suspend fun extractAudioForAsr(input: File, outWav: File): Boolean = false
 
+    override suspend fun probeAudio(input: File): AudioLayout? = null
+
+    override suspend fun extractDialogueForAsr(input: File, out: File, layout: AudioLayout?): String? = null
+
+    override suspend fun cutAudio(input: File, fromMs: Long, toMs: Long, out: File, boost: Boolean): Boolean = false
+
+    override suspend fun nonSilentFraction(input: File, fromMs: Long, toMs: Long): Double? = null
+
     override suspend fun remuxWithHebrew(
         input: File,
         srt: File,
