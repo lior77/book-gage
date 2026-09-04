@@ -13,13 +13,19 @@ import java.util.Locale
 /**
  * Collects a detailed, timestamped diagnostic log for one processing run.
  *
- * Two outputs:
- *  - [tail] — the last few lines, surfaced live in the UI ("behind the scenes").
- *  - [dump] — the full text, written to Download/HebSub at the end of the run.
+ * Three outputs:
+ *  - [tail] — the last few lines, surfaced live on the progress overlay.
+ *  - [dump] — the full text, written by `ProcessingService` (always, in its
+ *    `finally`) to `<movie folder>/<folder name>.txt`.
+ *  - [issues] — the short Hebrew list shown on the success dialog.
  *
- * Privacy (spec §12): the log stays entirely on the device — it is written to
- * the user's own Downloads folder and never sent anywhere. Device/build details
- * are recorded only to make local debugging possible.
+ * A process-wide singleton because one run happens at a time and every layer
+ * (FFmpeg wrapper, HTTP clients, pipeline, UI) needs to write to it without
+ * being handed a logger. [start] clears it at the beginning of each run.
+ *
+ * Privacy (spec §12): the log stays entirely on the device and is never sent
+ * anywhere. Device/build details are recorded only to make local debugging
+ * possible; API keys are never logged.
  */
 object RunLog {
 

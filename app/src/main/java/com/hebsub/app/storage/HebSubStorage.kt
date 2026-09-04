@@ -6,15 +6,23 @@ import android.os.Environment
 import java.io.File
 
 /**
- * Owns the on-device folder layout introduced in the updated spec (§ב.1, §ב.2):
+ * Owns the on-device folder layout (spec §ב.1, §ב.2):
  *
  *   <primary shared storage>/HebSub/            ← created once, reused every run
- *       <video base name>/                       ← one folder per processed video
- *           <video file>                         ← the moved/downloaded video
- *           <video base>.<lang>.srt              ← extracted / downloaded source subs
- *           <video base>.he.srt                  ← the finished Hebrew subtitles
- *           <video base>.audio.m4a               ← extracted audio (ASR fallback)
- *           HebSub-log-*.txt                     ← the detailed run log (§ב.6)
+ *       HebSub-keys.json                         ← keys backup (Settings → save)
+ *       crash-<timestamp>.txt                    ← only if the app crashed
+ *       <name>-<year>/                           ← one folder per processed video
+ *           <name>-<year>.he.mkv                 ← the video with the Hebrew track
+ *           <name>-<year>.he.srt                 ← the Hebrew track as SRT (always)
+ *           <name>-<year>.he.ass                 ← the styled track (when ASS chosen)
+ *           <name>-<year>.deepgram.jsonl         ← raw recogniser replies (source 1.6)
+ *           <name>-<year>.pdf / .poster.jpg      ← with an IMDb link only
+ *           <name>-<year>.txt                    ← the detailed run log (§ב.6)
+ *
+ * While a run is in progress the folder also holds the original video, the
+ * extracted/downloaded source subtitles (`<lang>-<name>.srt`), the dialogue audio
+ * (`.dialogue.flac`) and its pieces; `SubtitlePipeline.cleanIntermediates` removes
+ * them at the end unless the user unticked "delete intermediate files".
  *
  * The folder lives at the root ("home directory") of primary shared storage so
  * the user can browse it in any file manager, and — crucially — it survives an

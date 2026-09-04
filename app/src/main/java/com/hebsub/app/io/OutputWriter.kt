@@ -10,10 +10,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Publishes the finished files to shared storage **without any storage
- * permission**: MediaStore on Android 10+ (the Galaxy A56 is Android 15). The
- * new MKV goes to Movies/HebSub and the sidecar .srt to Download/HebSub so the
- * user can load it in any player if their default player lacks MKV sub support.
+ * Publishes files to shared storage through MediaStore, which needs **no storage
+ * permission** on Android 10+.
+ *
+ * History note: this was how the finished MKV and SRT reached the user before
+ * the spec moved every output into the `HebSub/<film>/` folder that
+ * [HebSubStorage][com.hebsub.app.storage.HebSubStorage] owns (which needs
+ * All-files access, granted at onboarding). Today the only caller is the
+ * Settings screen, which drops its connection-test log into Download/HebSub via
+ * [publishLog]; [publishVideo] and [publishSrt] are kept as the permission-free
+ * fallback path should All-files access ever be withdrawn.
  */
 class OutputWriter(private val context: Context) {
 

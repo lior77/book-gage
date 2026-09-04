@@ -33,9 +33,28 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Runs the conversion in the foreground so it survives the app being backgrounded.
- * The heavy work is driven by [SubtitlePipeline]; this service only prepares the
- * input file (SAF copy or URL download) and posts progress notifications.
+ * Runs one conversion as a foreground service, so a run of forty minutes
+ * survives the screen turning off and the app being backgrounded. The heavy work
+ * is [SubtitlePipeline]; this service does everything *around* it, in order:
+ *
+ *  1. Get the video into the app's cache — a copy of the SAF document the user
+ *     picked, or a download of the link they pasted ([VideoDownloader]).
+ *  2. Ask the user to confirm the run — name, year, IMDb link, a subtitle file,
+ *     SRT or ASS, the style, the display floor — by suspending on
+ *     [PipelineBus.awaitVideoInfo] until the overlay in `MainActivity` answers.
+ *  3. If an IMDb link and an OMDb key are present, fetch the record *first*, so
+ *     the folder and the files can carry the canonical `<title>-<year>` name.
+ *  4. Move the video into `HebSub/<name>-<year>/` ([HebSubStorage.placeVideo]).
+ *  5. Build the pipeline with the tools this device has — the FFmpeg-backed
+ *     [MediaToolFactory] tool or its no-op stand-in, Deepgram or the unavailable
+ *     engine — and run it.
+ *  6. In `finally`, always: write the run log into the movie's folder (or the
+ *     work dir if the folder was never created), delete the cache, stop.
+ *
+ * Cancellation (§5) arrives as an intent with [ACTION_CANCEL] and cancels the
+ * coroutine scope; partial files stay in the folder on purpose. Every failure
+ * path ends in a [PipelineState.Failed] with a Hebrew sentence the overlay can
+ * show as-is.
  */
 class ProcessingService : Service() {
 

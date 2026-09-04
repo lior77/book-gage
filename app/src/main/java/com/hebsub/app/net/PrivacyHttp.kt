@@ -10,11 +10,14 @@ import java.util.concurrent.TimeUnit
  *  - A generic, version-less User-Agent — no device model, OS build, or app id.
  *  - No cookie jar (default) — nothing is persisted or sent back.
  *  - Strips any header that could carry identifying data.
- *  - Long timeouts for large video downloads.
+ *  - Long timeouts for large video downloads and slow model replies.
  *
- * The only data that ever leaves the device via this client is: the video bytes
- * the user asked to download, the movie hash/title for a subtitle lookup, and
- * (if the user opts in) the subtitle text for cloud translation.
+ * Every HTTP request in the app goes through this one client — downloads,
+ * OpenSubtitles, OMDb, Deepgram, Claude, the connection tests — so the privacy
+ * rules are enforced in one place. The only data that ever leaves the device is:
+ * the URL the user asked to download, the file hash for a subtitle lookup (never
+ * a title), the audio for transcription, the subtitle text for translation, and
+ * the API key of the provider being called, in that provider's own header.
  */
 object PrivacyHttp {
 

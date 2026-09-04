@@ -5,8 +5,10 @@ import com.hebsub.core.subtitle.AssStyleOptions
 /**
  * The six places Hebrew subtitles can come from, in the order they are tried.
  * The app walks this list top to bottom and stops at the first one that yields
- * cues; [number] is what the progress screen shows so the user can see exactly
- * where in the search the run currently is.
+ * cues. Enum order IS the search order: `PipelineBus.stepUsed` marks everything
+ * after the chosen step as skipped by ordinal. [number] is the spec's numbering
+ * (§1), kept for the log and the documentation; the progress screen shows only
+ * [label] since 3.7.
  */
 enum class SourceStep(val number: String, val label: String) {
     EmbeddedHebrew("1.1", "רצועה עברית מוטמעת"),

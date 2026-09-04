@@ -60,6 +60,45 @@ import com.hebsub.app.ui.HebSubTheme
 import com.hebsub.core.provider.claude.ClaudeApi
 import kotlinx.coroutines.launch
 
+/**
+ * The whole user interface, in one file, in Jetpack Compose.
+ *
+ * **Navigation** is a single `Screen` value held in [AppRoot]; there is no
+ * navigation library because there are six screens and no deep links. Every
+ * screen is wrapped in [HebSubScreen], which supplies the title, the optional
+ * settings gear, and the two exit buttons the spec requires on every screen
+ * (§5: home, and close the app).
+ *
+ * **Screens**, in the order a first-time user meets them:
+ *  - [OnboardingScreen] — the two permissions the app cannot work without
+ *    (All-files access for the HebSub folder; notifications for the foreground
+ *    service). Shown once; `SettingsRepository.onboardingComplete` remembers it.
+ *  - [ModeScreen] — the home screen: the three things the app does (§3).
+ *  - [HomeScreen] — "add Hebrew subtitles": pick a video or paste a link. Both
+ *    hand off to [ProcessingService]; nothing heavy runs in the Activity.
+ *  - [EditAssScreen] — restyle and/or shift an existing Hebrew track ([AssEditor]),
+ *    with a preview frame rendered on the real film.
+ *  - [AddDataScreen] — IMDb link → PDF, poster, names, metadata ([MovieDataTool]).
+ *  - [SettingsScreen] — the four API keys with a live connection test each, the
+ *    Claude model, and backup/restore of the keys to `HebSub/HebSub-keys.json`.
+ *
+ * **The run itself is not a screen.** [PipelineOverlay] is a modal drawn on top
+ * of whatever screen is showing, driven by `PipelineBus.state`:
+ *  - `Running` — stage label, progress bar, the six-source list ([StepRow]) and
+ *    the live log tail, plus a cancel button;
+ *  - `NeedVideoInfo` — the pre-run form (name, year, IMDb, subtitle file, SRT/ASS,
+ *    style, display floor, delete intermediates); its confirm button completes
+ *    the `CompletableDeferred` the service is suspended on;
+ *  - `Success` — where the files are, the issues list, and the three next steps;
+ *  - `Failed` — the message and where the log is.
+ * Because the state lives in the bus and not in the Activity, rotating the phone
+ * or leaving and returning shows the same overlay at the same point.
+ *
+ * Layout is right-to-left throughout (Hebrew UI); the few places that show
+ * file names or log lines switch back to LTR locally so paths read correctly.
+ * Strings live in `res/values/strings.xml`; the handful of literals in this file
+ * are the newest messages and should move there when next touched.
+ */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,11 +115,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** The screens, as a plain enum: the current one is a single `remember`ed value in [AppRoot]. */
 private enum class Screen { Onboarding, Mode, Home, Settings, EditAss, AddData }
 
 /** Fixed name of the keys-backup file inside the HebSub folder (§4.1). */
 private const val KEYS_FILE_NAME = "HebSub-keys.json"
 
+/**
+ * Root of the composition: owns the current [Screen], observes the pipeline
+ * state, and draws [PipelineOverlay] above every screen. Also owns the picker
+ * used by "process another video" on the success dialog, so a new run can start
+ * from the overlay itself without going back through [HomeScreen].
+ */
 @Composable
 private fun AppRoot() {
     val context = LocalContext.current
@@ -131,6 +177,13 @@ private fun AppRoot() {
     )
 }
 
+/**
+ * First launch: the permissions without which nothing works. All-files access
+ * (MANAGE_EXTERNAL_STORAGE) is what lets the app create `HebSub/` at the root of
+ * shared storage and move the user's video into it; notifications are required
+ * for the foreground service on Android 13+. Both are granted in system Settings
+ * screens, so the state is re-read on every resume.
+ */
 @Composable
 private fun OnboardingScreen(onDone: () -> Unit) {
     val context = LocalContext.current
@@ -237,6 +290,13 @@ private fun PermissionRow(title: String, body: String, granted: Boolean, onGrant
  * back to the home screen, or close the app. [onHome] is null on the home screen
  * itself, which only offers the close button.
  */
+/**
+ * The frame every screen sits in: title row (with the settings gear when
+ * [onOpenSettings] is given), scrollable content, and the exit bar pinned to the
+ * bottom — "home" (absent on the home screen itself) and "close the app". §5 of
+ * the spec: there is a way out of every screen, within thumb reach.
+ * [exitEnabled] is false while a screen is busy rewriting a file.
+ */
 @Composable
 private fun HebSubScreen(
     title: String,
@@ -320,6 +380,12 @@ private fun ModeScreen(
     }
 }
 
+/**
+ * "Add Hebrew subtitles": a video from the device (SAF picker) or a download
+ * link. Either way the Activity only starts [ProcessingService] and gets out of
+ * the way; everything after that is reported through `PipelineBus` and shown by
+ * [PipelineOverlay].
+ */
 @Composable
 private fun HomeScreen(onOpenSettings: () -> Unit, onHome: () -> Unit) {
     val context = LocalContext.current
@@ -458,6 +524,13 @@ private fun AddDataScreen(onHome: () -> Unit) {
 /**
  * §1.2 — restyle the Hebrew track of a movie HebSub already produced: pick the
  * movie, adjust the four display settings, and rebuild the MKV in place.
+ */
+/**
+ * "Edit the subtitle look": pick a film HebSub already produced, change the
+ * plate/font/margins ([StyleSliders]) and the manual sync offset
+ * ([OffsetControls]), preview one frame, then rebuild the MKV with the track
+ * restyled and nothing re-translated. The work is done by [AssEditor]; this
+ * screen holds the editable state and disables its exits while a rebuild runs.
  */
 @Composable
 private fun EditAssScreen(onHome: () -> Unit) {
@@ -613,6 +686,14 @@ private sealed interface TestStatus {
     data class Failure(val message: String) : TestStatus
 }
 
+/**
+ * The four API keys, each with its own Save that runs a real request through
+ * [ConnectionTester] and shows the verdict inline ([KeyField]); the Claude model
+ * picker; and backup/restore of the keys to a fixed JSON file in the HebSub
+ * folder — the way to survive an uninstall, since the encrypted preferences die
+ * with the app's data. Keys are held only in [SettingsRepository] (encrypted at
+ * rest, §12) and never leave the device except as the provider's own auth header.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
@@ -825,10 +906,21 @@ private fun KeyField(
     }
 }
 
+/**
+ * The modal that follows a run from start to finish, drawn above whichever
+ * screen is showing. One branch per [PipelineState]; see the file header for
+ * what each shows. The `Running` and `NeedVideoInfo` dialogs cannot be dismissed
+ * by tapping outside, only by their own buttons — a stray tap must not cancel a
+ * forty-minute run or leave the service suspended waiting for an answer that
+ * will never come.
+ */
 @Composable
 private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
     when (state) {
         is PipelineState.Idle -> Unit
+
+        // A run in progress: what stage, how far, which of the six sources has
+        // been tried, and the last few log lines so a stall is visible.
 
         is PipelineState.Running -> Dialog(dismissable = false) {
             val tail by RunLog.tail.collectAsStateWithLifecycle()
@@ -881,6 +973,9 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
             }
         }
 
+        // The pre-run form. The service is suspended in PipelineBus.awaitVideoInfo()
+        // until the confirm button submits a VideoInfo, or cancel completes it with
+        // null. Every field is keyed on suggestedName so a new run starts clean.
         is PipelineState.NeedVideoInfo -> Dialog(dismissable = false) {
             val ctx = LocalContext.current
             val settings = remember { SettingsRepository(ctx) }

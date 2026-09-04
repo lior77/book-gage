@@ -12,12 +12,30 @@ import java.io.File
 import java.util.Locale
 
 /**
- * FFmpeg-backed [MediaTool].
+ * FFmpeg-backed [MediaTool] — every ffmpeg/ffprobe command line in the app lives
+ * in this file, so a change to how audio is prepared or a container is rebuilt
+ * is made here and nowhere else.
  *
- * Requires a 16 KB-page-size-compatible FFmpegKit build on the classpath (see
- * README → "Native dependencies"). The official `ffmpeg-kit` was retired in
- * Jan 2025 and its binaries removed from Maven, so a community 16KB fork (or a
- * locally built AAR) must be added for the app to compile and run on Android 15.
+ * Compiled only with `-PwithFfmpeg` (this source set is added by
+ * `app/build.gradle.kts`) and instantiated by reflection from
+ * [MediaToolFactory], so the default build has no dependency on the native
+ * library. It requires a 16 KB-page-size-compatible FFmpegKit build: the official
+ * `ffmpeg-kit` was retired in Jan 2025 and its binaries removed from Maven, so
+ * the community fork `com.moizhassan.ffmpeg:ffmpeg-kit-16kb` is used (same
+ * `com.arthenica.ffmpegkit` package). See README part ב, §4.12.
+ *
+ * Rules that hold throughout:
+ *  - Video and audio are always `-c copy`. Nothing is ever re-encoded; a remux
+ *    of a two-hour film takes seconds and loses nothing.
+ *  - After every container write, [verifySubtitleTracks] reads the result back
+ *    with ffprobe and confirms the Hebrew track (and the font attachment, for a
+ *    styled track) is really there. A silent failure here is what "subtitles
+ *    show as nothing" looked like from the outside.
+ *  - Every filter chain has a plainer fallback, because not every FFmpeg build
+ *    carries every filter (`dialoguenhance`, `speechnorm`, `afftdn`, libass); the
+ *    chain that worked is logged so the run log says what the audio went through.
+ *  - Numbers are formatted with [Locale.US] ([sec]): a Hebrew-locale device would
+ *    otherwise hand ffmpeg a decimal comma.
  */
 class FfmpegMediaTool : MediaTool {
 

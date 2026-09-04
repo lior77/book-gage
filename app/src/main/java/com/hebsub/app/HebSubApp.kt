@@ -11,6 +11,20 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Process-wide setup, done once. Two things only:
+ *
+ *  1. The notification channel [ProcessingService][com.hebsub.app.service.ProcessingService]
+ *     posts on while a run is in progress — Android will not let a foreground
+ *     service start without one.
+ *  2. A last-resort crash handler that writes `HebSub/crash-<timestamp>.txt` so an
+ *     uncaught exception on the phone can be read the next day without a PC.
+ *
+ * There is deliberately no dependency injection framework, no analytics SDK and
+ * no crash-reporting service (§12: nothing about the device leaves it). Objects
+ * are constructed where they are used; the shared singletons are `PipelineBus`
+ * (pipeline ↔ UI state) and `RunLog` (the run's diagnostic log).
+ */
 class HebSubApp : Application() {
 
     override fun onCreate() {
