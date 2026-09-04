@@ -135,3 +135,23 @@ class ClaudeTranslatorTest {
         assertEquals("line 2", out[1].text)          // untranslated kept as-is
     }
 }
+
+class ClaudeRequestBudgetTest {
+    @Test fun sendsEffortAndARealCeilingToModelsThatUnderstandIt() {
+        val body = ClaudeTranslator.buildRequestBody("claude-sonnet-5", "sys", """{"lines":[]}""")
+        assertTrue(body.contains("\"output_config\":{\"effort\":\"medium\"}"), body)
+        assertTrue(body.contains("\"max_tokens\":16000"), body)
+    }
+
+    @Test fun omitsEffortForHaikuWhichRejectsIt() {
+        val body = ClaudeTranslator.buildRequestBody("claude-haiku-4-5", "sys", """{"lines":[]}""")
+        assertTrue(!body.contains("output_config"), "haiku 4.5 returns 400 for output_config.effort")
+        assertTrue(body.contains("\"max_tokens\":8192"), body)
+    }
+
+    @Test fun readsUsageForTheLog() {
+        val resp = """{"content":[],"stop_reason":"max_tokens","usage":{"input_tokens":1200,"output_tokens":8192}}"""
+        assertEquals("in=1200 out=8192", ClaudeTranslator.usageSummary(resp))
+        assertEquals("-", ClaudeTranslator.usageSummary("nonsense"))
+    }
+}

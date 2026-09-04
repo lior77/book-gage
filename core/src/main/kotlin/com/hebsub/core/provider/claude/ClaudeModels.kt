@@ -20,4 +20,21 @@ object ClaudeApi {
         "claude-sonnet-5",
         "claude-haiku-4-5",
     )
+
+    /**
+     * Whether this model accepts `output_config.effort`.
+     *
+     * It is how much thinking the model does before it answers, and it matters
+     * here because thinking tokens come out of the SAME `max_tokens` budget as the
+     * answer. Left unset, Opus 5 and Sonnet 5 both think adaptively at effort
+     * `high` — which is right for a hard problem and wrong for translating forty
+     * subtitle lines, where the thinking can eat the budget the Hebrew needed.
+     *
+     * Haiku 4.5 predates the parameter and rejects it with a 400, so it is only
+     * sent to models that understand it.
+     */
+    fun supportsEffort(model: String): Boolean = !model.startsWith("claude-haiku-4-5")
+
+    /** Largest output budget worth asking of [model], thinking included. */
+    fun maxOutputTokens(model: String): Int = if (supportsEffort(model)) 16_000 else 8_192
 }

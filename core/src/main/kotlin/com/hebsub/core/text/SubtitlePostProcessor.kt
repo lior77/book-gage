@@ -11,8 +11,9 @@ import com.hebsub.core.subtitle.SubtitleTiming
  *     come first: wrapping cannot fix a cue that holds four sentences, it can only
  *     decide where to put the overflow, and every choice it has is wrong.
  *  2. **Wrap** each cue into at most two balanced lines.
- *  3. **Floor the duration** so a one-word reply is still readable — taken only
- *     from the silence that follows, never by overlapping the next cue.
+ *  3. **Give each cue time to be read** — [SubtitleTiming.MAX_CPS] characters per
+ *     second, plus a floor for very short replies, taken only from the silence
+ *     that follows and never by overlapping the next cue.
  *  4. **Apply the RTL marks** that keep mixed Hebrew/Latin lines in the right order.
  *
  * Kept pure (no I/O) so it is fully unit-testable.
@@ -20,7 +21,7 @@ import com.hebsub.core.subtitle.SubtitleTiming
 object SubtitlePostProcessor {
 
     /** Minimum time a cue should stay on screen so short replies remain readable. */
-    const val MIN_DURATION_MS = 800L
+    const val MIN_DURATION_MS = SubtitleTiming.MIN_EVENT_MS
 
     fun process(
         cues: List<SubtitleCue>,
@@ -32,7 +33,8 @@ object SubtitlePostProcessor {
         val kept = cues.filter { cue -> cue.lines.any { it.isNotBlank() } }
         val split = CueSplitter.split(kept, maxCharsPerLine, maxLines)
         val wrapped = split.map { it.copy(lines = LineWrapper.wrap(it.text, maxCharsPerLine)) }
-        val timed = SubtitleTiming.ensureMinimumDuration(wrapped, minDurationMs)
+        val readable = SubtitleTiming.ensureReadingSpeed(wrapped)
+        val timed = SubtitleTiming.ensureMinimumDuration(readable, minDurationMs)
         val out = if (applyRtl) timed.map { RtlFormatter.applyToCue(it) } else timed
         return out.mapIndexed { i, cue -> cue.copy(index = i + 1) }
     }

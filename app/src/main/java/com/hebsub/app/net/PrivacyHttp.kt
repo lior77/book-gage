@@ -32,7 +32,9 @@ object PrivacyHttp {
         OkHttpClient.Builder()
             .addInterceptor(stripIdentifiers)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
+            // A translation batch on a thinking model regularly ran to 110 seconds
+            // against a 120-second ceiling. That is not a margin, it is a coin toss.
+            .readTimeout(300, TimeUnit.SECONDS)
             .writeTimeout(120, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .followRedirects(true)

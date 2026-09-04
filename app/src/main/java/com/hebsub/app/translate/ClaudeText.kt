@@ -3,6 +3,7 @@ package com.hebsub.app.translate
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.PrivacyHttp
 import com.hebsub.core.provider.claude.ClaudeApi
+import com.hebsub.core.provider.claude.ClaudeTranslator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -22,10 +23,19 @@ object ClaudeText {
         if (apiKey.isBlank() || text.isBlank()) return@withContext null
         val system = "You are a professional translator. Translate the user's movie synopsis into natural, fluent Hebrew. " +
             "Reflect meaning and tone, not a literal word-for-word rendering. Output ONLY the Hebrew translation, no preamble."
+        // max_tokens covers thinking as well as the answer, and the current models
+        // think by default — 1024 was enough for the Hebrew alone and not enough for
+        // both, which returns a truncated paragraph or an empty one. Low effort and a
+        // real ceiling: a synopsis needs no deliberation, only a good translation.
         val payload = JSONObject()
             .put("model", model)
-            .put("max_tokens", 1024)
+            .put("max_tokens", 4096)
             .put("system", system)
+            .apply {
+                if (ClaudeApi.supportsEffort(model)) {
+                    put("output_config", JSONObject().put("effort", ClaudeTranslator.GLOSSARY_EFFORT))
+                }
+            }
             .put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", text)))
             .toString()
         val req = Request.Builder()

@@ -107,3 +107,32 @@ class SrtParserTest {
         assertTrue(out.contains("\n2\n"))
     }
 }
+
+class ReadingSpeedTest {
+    private fun cue(i: Int, start: Long, end: Long, text: String) =
+        SubtitleCue(i, start, end, listOf(text))
+
+    @Test fun extendsALineIntoTheSilenceThatFollowsIt() {
+        // 32 non-space characters at 17 cps needs ~1880 ms; the cue has 900 and the
+        // next line is far away, so it may have the time.
+        val text = "אבגדהוזחטיכלמנסעפצקרשתאבגדהוזחטי"
+        val out = SubtitleTiming.ensureReadingSpeed(
+            listOf(cue(1, 0, 900, text), cue(2, 60_000, 61_000, "ב")),
+        )
+        assertTrue(out[0].durationMs >= 1800, "got ${out[0].durationMs}ms for ${text.length} chars")
+        assertEquals(0L, out[0].startMs, "a start time is never moved")
+    }
+
+    @Test fun neverEncroachesOnTheNextCue() {
+        val out = SubtitleTiming.ensureReadingSpeed(
+            listOf(cue(1, 0, 900, "א".repeat(80)), cue(2, 1_500, 3_000, "ב")),
+        )
+        assertTrue(out[0].endMs <= 1_500 - SubtitleTiming.GUARD_MS, "ends at ${out[0].endMs}")
+    }
+
+    @Test fun countsTheCuesTheDialogueLeavesNoRoomFor() {
+        val cues = listOf(cue(1, 0, 900, "א".repeat(80)), cue(2, 1_500, 3_000, "ב"))
+        val out = SubtitleTiming.ensureReadingSpeed(cues)
+        assertEquals(1, SubtitleTiming.tooFast(out))
+    }
+}

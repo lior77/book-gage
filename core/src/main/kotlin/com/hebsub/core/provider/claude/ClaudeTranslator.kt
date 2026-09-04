@@ -32,7 +32,12 @@ object ClaudeTranslator {
 
     const val DEFAULT_BATCH_SIZE = 40
     const val DEFAULT_CONTEXT_SIZE = 6
-    const val DEFAULT_MAX_TOKENS = 8192
+
+    /** Thinking depth for a translation batch — see [buildRequestBody]. */
+    const val DEFAULT_EFFORT = "medium"
+
+    /** Thinking depth for the glossary pass: a list of names needs none. */
+    const val GLOSSARY_EFFORT = "low"
 
     // Lenient: the model occasionally emits relaxed JSON; we still want the map.
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -171,17 +176,31 @@ object ClaudeTranslator {
     fun missingIds(batch: Batch, translations: Map<Int, String>): Set<Int> =
         batch.cues.map { it.index }.filter { it !in translations || translations[it].isNullOrBlank() }.toSet()
 
-    /** Build the full Messages API request body as a JSON string. */
+    /**
+     * Build the full Messages API request body as a JSON string.
+     *
+     * [effort] decides how much the model thinks before answering. It is not a
+     * quality dial to be left at maximum: thinking tokens are drawn from the same
+     * [maxTokens] budget as the answer, so on a batch the model finds hard, the
+     * reasoning can consume the budget and leave the JSON cut off — or absent. That
+     * is what happened to this app on Sonnet 5, which thinks adaptively at effort
+     * `high` unless told otherwise. Translating subtitles is bounded work, not a
+     * puzzle, so it asks for a moderate amount and keeps the room for the Hebrew.
+     */
     fun buildRequestBody(
         model: String,
         system: String,
         userContent: String,
-        maxTokens: Int = DEFAULT_MAX_TOKENS,
+        maxTokens: Int = ClaudeApi.maxOutputTokens(model),
+        effort: String? = DEFAULT_EFFORT,
     ): String {
         val body = buildJsonObject {
             put("model", model)
             put("max_tokens", maxTokens)
             put("system", system)
+            if (effort != null && ClaudeApi.supportsEffort(model)) {
+                put("output_config", buildJsonObject { put("effort", effort) })
+            }
             put("messages", buildJsonArray {
                 add(buildJsonObject {
                     put("role", "user")
@@ -191,6 +210,15 @@ object ClaudeTranslator {
         }
         return json.encodeToString(JsonObject.serializer(), body)
     }
+
+    /** `in=… out=…` from a response's usage block, for the log. */
+    fun usageSummary(responseBody: String): String =
+        runCatching {
+            val u = json.parseToJsonElement(responseBody).jsonObject["usage"]?.jsonObject ?: return "-"
+            val inTok = u["input_tokens"]?.jsonPrimitive?.contentOrNull ?: "?"
+            val outTok = u["output_tokens"]?.jsonPrimitive?.contentOrNull ?: "?"
+            "in=$inTok out=$outTok"
+        }.getOrDefault("-")
 
     /**
      * The API's own account of why generation stopped ("end_turn", "max_tokens",

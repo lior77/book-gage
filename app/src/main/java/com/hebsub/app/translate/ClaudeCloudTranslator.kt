@@ -77,7 +77,15 @@ class ClaudeCloudTranslator(
                 val parsed = ClaudeTranslator.parseTranslations(reply.text).filterKeys { it in missing }
                 translations.putAll(parsed)
                 missing = ClaudeTranslator.missingIds(batch, translations)
-                RunLog.log("Claude batch $i attempt $attempt: +${parsed.size} missing=${missing.size}")
+                RunLog.log(
+                    "Claude batch $i attempt $attempt: +${parsed.size} missing=${missing.size} " +
+                        "stop=${reply.stopReason ?: "-"} ${reply.usage}"
+                )
+                // The budget is shared between thinking and the answer, so a batch that
+                // stops on max_tokens is the request's fault, not the model's.
+                if (reply.stopReason == "max_tokens") {
+                    RunLog.error("Claude batch $i attempt $attempt: hit the output ceiling (${reply.usage}) — reply truncated")
+                }
 
                 // §3 — when an attempt yields nothing, record what actually came back.
                 // Without this a repeated "+0" is undiagnosable after the fact: an empty
@@ -85,7 +93,8 @@ class ClaudeCloudTranslator(
                 if (parsed.isEmpty()) {
                     RunLog.error(
                         "Claude batch $i attempt $attempt: no usable translations. " +
-                            "stop=${reply.stopReason ?: "-"} reply=${reply.text.length} chars: ${sample(reply.text)}"
+                            "stop=${reply.stopReason ?: "-"} ${reply.usage} " +
+                            "reply=${reply.text.length} chars: ${sample(reply.text)}"
                     )
                 }
             }
@@ -157,8 +166,8 @@ class ClaudeCloudTranslator(
                 Reply("", null)
             }
 
-    /** The model's text plus the API's own reason for stopping. */
-    private data class Reply(val text: String, val stopReason: String?)
+    /** The model's text plus the API's own reason for stopping and what it spent. */
+    private data class Reply(val text: String, val stopReason: String?, val usage: String = "-")
 
     /** A single-line, length-capped excerpt of a model reply, safe to put in a log. */
     private fun sample(text: String): String =
@@ -187,7 +196,8 @@ class ClaudeCloudTranslator(
 
     /** POST one request and return the model text; retries transient HTTP failures with backoff. */
     private fun post(system: String, userContent: String, batchIdx: Int, attempt: String): Reply {
-        val body = ClaudeTranslator.buildRequestBody(model, system, userContent)
+        val effort = if (batchIdx < 0) ClaudeTranslator.GLOSSARY_EFFORT else ClaudeTranslator.DEFAULT_EFFORT
+        val body = ClaudeTranslator.buildRequestBody(model, system, userContent, effort = effort)
         val what = if (batchIdx < 0) "glossary" else "batch $batchIdx"
         var lastErr = ""
         for (tryNo in 1..3) {
@@ -200,7 +210,11 @@ class ClaudeCloudTranslator(
             PrivacyHttp.client.newCall(request).execute().use { resp ->
                 val respBody = resp.body?.string().orEmpty()
                 if (resp.isSuccessful) {
-                    return Reply(ClaudeTranslator.extractText(respBody), ClaudeTranslator.stopReason(respBody))
+                    return Reply(
+                        text = ClaudeTranslator.extractText(respBody),
+                        stopReason = ClaudeTranslator.stopReason(respBody),
+                        usage = ClaudeTranslator.usageSummary(respBody),
+                    )
                 }
                 lastErr = "HTTP ${resp.code}: ${respBody.take(200)}"
                 val transient = resp.code == 429 || resp.code == 529 || resp.code >= 500

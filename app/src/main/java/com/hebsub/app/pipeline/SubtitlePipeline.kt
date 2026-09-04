@@ -188,7 +188,10 @@ class SubtitlePipeline(
         val oversized = CueSplitter.countOversized(
             hebrewCues, LineWrapper.DEFAULT_MAX_CHARS, CueSplitter.DEFAULT_MAX_LINES,
         )
-        RunLog.log("layout: ${hebrewCues.size} cues → ${processed.size} (split $oversized over the two-line budget)")
+        RunLog.log(
+            "layout: ${hebrewCues.size} cues → ${processed.size} (split $oversized over the two-line budget); " +
+                "reading speed >${SubtitleTiming.MAX_CPS.toInt()} cps on ${SubtitleTiming.tooFast(processed)} cues"
+        )
 
         // §8 — a floor on how long each line stays up, taken only from the silence
         // that follows it. §7 says the source timing must survive, so prove it did.
