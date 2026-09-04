@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HebSub 3.2.2 — כתוביות עברית</string>
+    <string name="app_name">HebSub 3.3 — כתוביות עברית</string>
 
     <string name="home_title">כתוביות עברית לסרטים</string>
 
@@ -33,7 +33,7 @@
     <string name="video_info_save_defaults">לשמור את ההגדרות האלה כברירת מחדל</string>
     <string name="video_info_save_defaults_hint">העיצוב וזמן ההצגה ישמשו כברירת מחדל לסרטים הבאים.</string>
 
-    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 3.2.2</string>
+    <string name="home_subtitle">הוספת מסלול כתוביות בעברית לסרט קיים · גרסה 3.3</string>
     <string name="pick_file">בחירת קובץ וידאו מהמכשיר</string>
     <string name="paste_link">הוספת קישור להורדת וידאו</string>
     <string name="link_hint">הדביקו או הקלידו כתובת וידאו (https://…)</string>

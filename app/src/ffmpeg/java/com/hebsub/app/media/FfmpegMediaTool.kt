@@ -126,7 +126,10 @@ class FfmpegMediaTool : MediaTool {
             args += listOf("-metadata:s:t:$t", "mimetype=$mime", "-metadata:s:t:$t", "filename=$fname")
         }
         metadata.forEach { (k, v) ->
-            val clean = v.replace("\n", " ").replace("\"", "'").trim()
+            // Newlines are flattened because an MKV tag is a single line. Quotes are
+            // left alone: replacing them was only ever protecting the old string-based
+            // command builder, and it silently altered the film's own description.
+            val clean = v.replace("\n", " ").replace("\r", " ").trim()
             if (clean.isNotEmpty()) args += listOf("-metadata", "$k=$clean")
         }
         args += outFile.absolutePath
@@ -246,7 +249,10 @@ class FfmpegMediaTool : MediaTool {
             t++
         }
         metadata.forEach { (k, v) ->
-            val clean = v.replace("\n", " ").replace("\"", "'").trim()
+            // Newlines are flattened because an MKV tag is a single line. Quotes are
+            // left alone: replacing them was only ever protecting the old string-based
+            // command builder, and it silently altered the film's own description.
+            val clean = v.replace("\n", " ").replace("\r", " ").trim()
             if (clean.isNotEmpty()) args += listOf("-metadata", "$k=$clean")
         }
         args += outMkv.absolutePath
@@ -336,15 +342,34 @@ class FfmpegMediaTool : MediaTool {
         runCatching { tmp.delete() }
     }
 
+    /**
+     * Run FFmpeg with these arguments, each passed as its own argv entry.
+     *
+     * This used to join the arguments into one string and let FFmpegKit tokenise it
+     * back apart, wrapping anything containing whitespace in double quotes. That
+     * holds up until an argument contains a quote character of its own — and the
+     * film metadata is free-form prose from OMDb and from the translator, so
+     * apostrophes and quotation marks are a matter of course, not an edge case. One
+     * of them flips the tokeniser's quote state and every argument after it is
+     * re-split at the wrong boundaries: a silent, data-dependent corruption of the
+     * rest of the command. `executeWithArguments` parses nothing, so the array built
+     * here is exactly the array FFmpeg receives.
+     *
+     * A failure now says so, with the tail of FFmpeg's own output, rather than
+     * returning a bare false and leaving the log to be read as success.
+     */
     private suspend fun run(vararg args: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val session = FFmpegKit.execute(args.joinToString(" ") { quoteIfNeeded(it) })
-            ReturnCode.isSuccess(session.returnCode)
-        } catch (_: Throwable) {
+            val session = FFmpegKit.executeWithArguments(args)
+            val ok = ReturnCode.isSuccess(session.returnCode)
+            if (!ok) {
+                RunLog.error("ffmpeg failed rc=${session.returnCode} (${args.size} args)")
+                RunLog.error("ffmpeg output: ${session.output?.takeLast(600).orEmpty()}")
+            }
+            ok
+        } catch (t: Throwable) {
+            RunLog.error("ffmpeg threw", t)
             false
         }
     }
-
-    private fun quoteIfNeeded(arg: String): String =
-        if (arg.any { it.isWhitespace() }) "\"$arg\"" else arg
 }
