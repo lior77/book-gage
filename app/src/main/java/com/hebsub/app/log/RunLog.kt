@@ -29,12 +29,30 @@ object RunLog {
     private val _tail = MutableStateFlow<List<String>>(emptyList())
     val tail = _tail.asStateFlow()
 
+    /**
+     * Problems worth telling the user about at the end of the run, in Hebrew.
+     * The log records everything; this is the short list of what went wrong with
+     * the finished file — untranslated lines, a track the container lost, a
+     * fallback that lowered quality — so the user knows WHEN the log is worth
+     * reading rather than having to read it every time.
+     */
+    private val issues = Collections.synchronizedList(ArrayList<String>())
+
     private val clock = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
     fun start() {
         synchronized(lines) { lines.clear() }
+        synchronized(issues) { issues.clear() }
         _tail.value = emptyList()
     }
+
+    /** Record a user-facing problem (also logged). Duplicates are kept once. */
+    fun issue(message: String) {
+        synchronized(issues) { if (message !in issues) issues.add(message) }
+        log("ISSUE: $message")
+    }
+
+    fun issues(): List<String> = synchronized(issues) { issues.toList() }
 
     fun log(message: String) {
         val line = "${clock.format(Date())}  $message"

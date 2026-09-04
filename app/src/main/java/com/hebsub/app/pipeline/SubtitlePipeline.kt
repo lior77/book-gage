@@ -162,10 +162,11 @@ class SubtitlePipeline(
                     }
                 } else {
                     RunLog.log("media file not created (muxed=$muxed exists=${outMkv.exists()})")
+                    RunLog.issue("קובץ המדיה (MKV) לא נוצר — נשמר רק קובץ הכתוביות")
                 }
             }
 
-            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, built.name, mediaName))
+            PipelineBus.update(PipelineState.Success(outputDir.absolutePath, built.name, mediaName, RunLog.issues()))
             RunLog.log("run finished OK")
         } catch (t: Throwable) {
             RunLog.error("run failed", t)
@@ -190,10 +191,16 @@ class SubtitlePipeline(
         val oversized = CueSplitter.countOversized(
             hebrewCues, LineWrapper.DEFAULT_MAX_CHARS, CueSplitter.DEFAULT_MAX_LINES,
         )
+        val tooFast = SubtitleTiming.tooFast(processed)
         RunLog.log(
             "layout: ${hebrewCues.size} cues → ${processed.size} (split $oversized over the two-line budget); " +
-                "reading speed >${SubtitleTiming.MAX_CPS.toInt()} cps on ${SubtitleTiming.tooFast(processed)} cues"
+                "reading speed >${SubtitleTiming.MAX_CPS.toInt()} cps on $tooFast cues"
         )
+        // A tenth of the film too fast to read is a note for the user; a line or
+        // two is the dialogue being quick, and not worth an alarm.
+        if (tooFast > processed.size / 10) {
+            RunLog.issue("$tooFast כתוביות מהירות מדי לקריאה (מעל ${SubtitleTiming.MAX_CPS.toInt()} תווים לשנייה)")
+        }
 
         // §8 — a floor on how long each line stays up, taken only from the silence
         // that follows it. §7 says the source timing must survive, so prove it did.
@@ -310,7 +317,7 @@ class SubtitlePipeline(
             return null
         }
         PipelineBus.step(step, StepStatus.Running)
-        PipelineBus.update(PipelineState.Running("${step.number} ${step.label}", null))
+        PipelineBus.update(PipelineState.Running(step.label, null))
         for (t in tracks) {
             val lang = if (hebrewSource) "he" else (Language.canonical(t.language) ?: "src")
             val cues = parseEmbedded(videoFile, t.index, base, lang) ?: continue
@@ -335,7 +342,7 @@ class SubtitlePipeline(
             return null
         }
         PipelineBus.step(step, StepStatus.Running)
-        PipelineBus.update(PipelineState.Running("${step.number} ${step.label}", null))
+        PipelineBus.update(PipelineState.Running(step.label, null))
         val found = fetchHashMatch(os, hash, listOf(lang), base)
         if (found == null) {
             PipelineBus.step(step, StepStatus.NotFound, "אין התאמה לקובץ הזה")
@@ -357,7 +364,7 @@ class SubtitlePipeline(
             return null
         }
         PipelineBus.step(SourceStep.ChosenFile, StepStatus.Running)
-        PipelineBus.update(PipelineState.Running("${SourceStep.ChosenFile.number} ${SourceStep.ChosenFile.label}", null))
+        PipelineBus.update(PipelineState.Running(SourceStep.ChosenFile.label, null))
 
         val chosen = File(path)
         val ext = chosen.extension.lowercase()
@@ -463,13 +470,15 @@ class SubtitlePipeline(
                 PipelineBus.update(PipelineState.Running("השלמת שורות שלא תורגמו (מקומי)", d.toFloat() / t))
             }
         }.getOrElse { RunLog.error("fallback translation failed — those lines stay in the source language", it); null }
-        if (fixed == null) return cues
+        if (fixed == null) { RunLog.issue("${stuck.size} שורות נשארו בשפת המקור"); return cues }
 
         val byIndex = fixed.filterNot { stillForeign(it.text) }.associateBy { it.index }
         val out = cues.map { byIndex[it.index] ?: it }
         RunLog.log("fallback: recovered ${byIndex.size} of ${stuck.size} lines with the on-device translator")
+        if (byIndex.isNotEmpty()) RunLog.issue("${byIndex.size} שורות תורגמו במתרגם המקומי (איכות נמוכה יותר)")
         if (byIndex.size < stuck.size) {
             RunLog.error("fallback: ${stuck.size - byIndex.size} lines remain in the source language")
+            RunLog.issue("${stuck.size - byIndex.size} שורות נשארו בשפת המקור")
         }
         return out
     }

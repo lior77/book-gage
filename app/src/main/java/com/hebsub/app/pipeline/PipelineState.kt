@@ -80,7 +80,13 @@ sealed interface PipelineState {
 
     /** Hebrew subtitles written. [folder] is the video's HebSub folder, [srtName] the Hebrew .srt,
      *  [mediaName] the new MKV with the embedded Hebrew track (null if not created). */
-    data class Success(val folder: String, val srtName: String, val mediaName: String? = null) : PipelineState
+    data class Success(
+        val folder: String,
+        val srtName: String,
+        val mediaName: String? = null,
+        /** Problems found with the finished file — empty when there were none. */
+        val issues: List<String> = emptyList(),
+    ) : PipelineState
 
     data class Failed(val message: String) : PipelineState
 }

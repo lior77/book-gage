@@ -53,6 +53,7 @@ class SpeechTranscriber(
             RunLog.log("speech: dialogue audio via '$chain' — ${audio.length() / 1024} KB")
         } else {
             RunLog.error("speech: dialogue extraction failed on every chain — falling back to plain AAC")
+            RunLog.issue("חילוץ הדיאלוג נכשל — התמלול נעשה על האודיו הרגיל")
             audio = File(outputDir, "$base.audio.m4a")
             if (!audio.exists() && !mediaTool.extractAudioForAsr(videoFile, audio)) {
                 RunLog.error("speech: audio extraction failed"); return null
@@ -79,7 +80,10 @@ class SpeechTranscriber(
             val result = runCatching { asr.transcribe(piece, language, model) }
                 .getOrElse { RunLog.error("speech: piece ${chunk.index} failed", it); null }
             runCatching { piece.delete() }
-            if (result == null) continue
+            if (result == null) {
+                RunLog.issue("קטע תמלול ${chunk.index + 1}/${chunks.size} (${fmt(chunk.fromMs)}–${fmt(chunk.toMs)}) נכשל — אין כתוביות לקטע הזה")
+                continue
+            }
             appendRaw(raw, chunk.index, chunk.fromMs, result.rawJson)
             model = result.model
             if (language == null && result.detectedLanguage != null) {
@@ -138,6 +142,10 @@ class SpeechTranscriber(
                 "gaps left: ${remaining.size} (${remaining.sumOf { it.last + 1 - it.first } / 60000} min); model=$model language=${language ?: "?"}"
         )
         RunLog.log("speech: raw replies kept in ${raw.name}")
+        if (model != PREFERRED_MODEL) RunLog.issue("התמלול נעשה במודל $model במקום $PREFERRED_MODEL")
+        if (remaining.isNotEmpty()) {
+            RunLog.issue("${remaining.size} קטעים ללא דיבור מזוהה (${remaining.sumOf { it.last + 1 - it.first } / 60000} דק') — ייתכן דיאלוג שלא תומלל")
+        }
         return SubtitleTrack(cues, language)
     }
 

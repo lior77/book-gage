@@ -87,6 +87,7 @@ class ClaudeCloudTranslator(
                 // stops on max_tokens is the request's fault, not the model's.
                 if (reply.stopReason == "max_tokens") {
                     RunLog.error("Claude batch $i attempt $attempt: hit the output ceiling (${reply.usage}) — reply truncated")
+                    RunLog.issue("תקרת הפלט של המתרגם הושגה (אצווה $i) — תשובה נקטעה")
                 }
 
                 // §3 — when an attempt yields nothing, record what actually came back.
@@ -129,6 +130,7 @@ class ClaudeCloudTranslator(
         }
         if (untranslated > 0) {
             RunLog.error("TRANSLATION INCOMPLETE: $untranslated of ${cues.size} lines stayed in the source language")
+            RunLog.issue("$untranslated מתוך ${cues.size} שורות לא תורגמו על ידי Claude")
         } else {
             RunLog.log("translation complete: ${cues.size}/${cues.size} lines")
         }

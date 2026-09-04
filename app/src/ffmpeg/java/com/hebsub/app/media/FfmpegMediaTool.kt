@@ -68,19 +68,19 @@ class FfmpegMediaTool : MediaTool {
         // Copying the source's attachments through with `-map 0:t?` is NOT reliable:
         // the font can arrive without a usable mimetype, libass then has no Hebrew
         // glyphs, every glyph collapses to zero width — and the text AND its plate
-        // render as nothing at all. So the font is always re-attached explicitly.
+        // render as nothing at all. So the font is always re-attached explicitly,
+        // and the cover with it.
         //
-        // The cover image is deliberately NOT attached here. The one produced file
-        // that renders correctly was built without it, the one that renders nothing
-        // was built with it, and its own -attach did not even land (the container
-        // came back with one attachment after two were asked for). A cover is
-        // decoration; the subtitles are the point, so the suspect is kept out of
-        // this path. The poster still sits in the movie's folder as a file, and
-        // "add data" still embeds it when that is what the user asked for.
+        // The cover was suspected for a while of breaking the subtitles (3.2.2) and
+        // taken out. It was innocent — the fault was the command-line tokeniser,
+        // fixed in 3.3 — so it is back: a film file with its poster is what players
+        // and library apps show as the thumbnail.
         val hasFont = font != null && font.exists()
+        val hasPoster = poster != null && poster.exists()
         val args = ArrayList<String>()
         args += listOf("-y", "-i", inputMkv.absolutePath, "-i", sub.absolutePath)
         if (hasFont) args += listOf("-attach", font!!.absolutePath)
+        if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
         // Only the real video stream (a cover stored as a video stream would
         // otherwise be duplicated) plus the audio, then the NEW subtitle.
         args += listOf("-map", "0:v:0", "-map", "0:a?", "-map", "1", "-c", "copy", "-c:s", "copy")
@@ -97,10 +97,20 @@ class FfmpegMediaTool : MediaTool {
             )
             t++
         }
+        if (hasPoster) { args += coverMetadata(poster!!, t); t++ }
         args += outMkv.absolutePath
         val ok = run(*args.toTypedArray())
         if (ok) verifySubtitleTracks(outMkv, expectedAttachments = t)
         return ok
+    }
+
+    /** MKV cover-art tags for attachment stream [t]: mimetype and the conventional name. */
+    private fun coverMetadata(poster: File, t: Int): List<String> {
+        val png = poster.extension.equals("png", ignoreCase = true)
+        return listOf(
+            "-metadata:s:t:$t", "mimetype=${if (png) "image/png" else "image/jpeg"}",
+            "-metadata:s:t:$t", "filename=${if (png) "cover.png" else "cover.jpg"}",
+        )
     }
 
     override suspend fun applyMovieData(
@@ -319,11 +329,13 @@ class FfmpegMediaTool : MediaTool {
         // A Hebrew font is embedded only for the styled ASS track, so libass has
         // real Hebrew glyphs instead of substituting a box-only font.
         val hasFont = isAss && font != null && font.exists()
+        val hasPoster = poster != null && poster.exists()
         val args = ArrayList<String>()
         args += listOf("-y", "-i", input.absolutePath, "-i", sub.absolutePath)
         // Attachments (font first, then poster) become attachment streams t:0,t:1…
         // in the order the -attach options appear here.
         if (hasFont) args += listOf("-attach", font!!.absolutePath)
+        if (hasPoster) args += listOf("-attach", poster!!.absolutePath)
         args += listOf("-map", "0", "-map", "1")
         args += listOf("-c", "copy", "-c:s", "copy")
 
@@ -345,6 +357,7 @@ class FfmpegMediaTool : MediaTool {
             )
             t++
         }
+        if (hasPoster) { args += coverMetadata(poster!!, t); t++ }
         metadata.forEach { (k, v) ->
             // Newlines are flattened because an MKV tag is a single line. Quotes are
             // left alone: replacing them was only ever protecting the old string-based
@@ -397,11 +410,16 @@ class FfmpegMediaTool : MediaTool {
                 // -attach was silently dropped, and the -metadata:s:t:N that went
                 // with it addressed a stream that does not exist.
                 RunLog.error("verify: attached $expectedAttachments file(s) but the container has ${attachments.size}")
+                RunLog.issue("צורפו $expectedAttachments קבצים (גופן/פוסטר) אך המכל מכיל ${attachments.size}")
             }
-            if (heb == 0) RunLog.error("verify: NO Hebrew subtitle track found in ${outMkv.name}")
+            if (heb == 0) {
+                RunLog.error("verify: NO Hebrew subtitle track found in ${outMkv.name}")
+                RunLog.issue("לא נמצאה רצועת כתוביות בעברית בקובץ המדיה")
+            }
             val needsFont = subs.any { it.contains("ass") || it.contains("ssa") }
             if (needsFont && attachments.none { it.contains("font", ignoreCase = true) || it.endsWith(".ttf)", ignoreCase = true) }) {
                 RunLog.error("verify: styled ASS track but NO font attachment — Hebrew will not render")
+                RunLog.issue("רצועת ASS ללא גופן מצורף — העברית לא תוצג")
             }
             if (needsFont) readBackSubtitle(outMkv)
         } catch (t: Throwable) {
@@ -425,6 +443,7 @@ class FfmpegMediaTool : MediaTool {
         runCatching { tmp.delete() }
         if (!run("-y", "-i", outMkv.absolutePath, "-map", "0:s:0", "-c:s", "copy", tmp.absolutePath)) {
             RunLog.error("verify: could not read the subtitle track back out of ${outMkv.name}")
+            RunLog.issue("לא ניתן לקרוא חזרה את רצועת הכתוביות מהקובץ")
             return@withContext
         }
         val text = runCatching { tmp.readText(Charsets.UTF_8) }.getOrNull().orEmpty()
@@ -434,8 +453,14 @@ class FfmpegMediaTool : MediaTool {
         RunLog.log("verify: style in the muxed track: ${style ?: "*** NONE — nothing can render ***"}")
         text.lineSequence().firstOrNull { it.startsWith("Dialogue:") }
             ?.let { RunLog.log("verify: first event: ${it.take(160)}") }
-        if (dialogue == 0) RunLog.error("verify: the muxed subtitle track has NO events")
-        if (style == null) RunLog.error("verify: the muxed subtitle track has NO style line")
+        if (dialogue == 0) {
+            RunLog.error("verify: the muxed subtitle track has NO events")
+            RunLog.issue("רצועת הכתוביות בקובץ ריקה — אין שורות")
+        }
+        if (style == null) {
+            RunLog.error("verify: the muxed subtitle track has NO style line")
+            RunLog.issue("רצועת הכתוביות בקובץ ללא הגדרת סגנון — לא תוצג")
+        }
         runCatching { tmp.delete() }
     }
 

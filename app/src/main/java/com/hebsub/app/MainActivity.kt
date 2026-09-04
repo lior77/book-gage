@@ -1040,6 +1040,19 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
                     Spacer(Modifier.height(4.dp))
                     Text("פתחו את קובץ ה־MKV בנגן ובחרו את מסלול העברית.", style = MaterialTheme.typography.bodySmall)
                 }
+                Spacer(Modifier.height(10.dp))
+                // What went wrong with the finished file, if anything — so the user
+                // knows when the log is worth reading and when it is not.
+                if (state.issues.isEmpty()) {
+                    Text("✓ לא זוהו בעיות בקובץ הסופי.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text(
+                        "⚠ ${state.issues.size} בעיות זוהו — מומלץ לעיין ביומן:",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    state.issues.forEach { Bullet(it) }
+                }
                 Spacer(Modifier.height(16.dp))
                 // §2 — three next-step choices at the end of a run.
                 Button(onClick = { onNewVideo() }, modifier = Modifier.fillMaxWidth()) {
@@ -1121,11 +1134,13 @@ private fun OffsetControls(offsetMs: Long, enabled: Boolean, onChange: (Long) ->
 private fun StepRow(state: SourceStepState) {
     val done = MaterialTheme.colorScheme.primary
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // One mark for "this source was not the one": a step that did not apply and a
+    // step that was tried and came back empty both read the same to the user. The
+    // cross is kept for an actual error, in the error colour.
     val (mark, tint) = when (state.status) {
         StepStatus.Pending -> "○" to muted
         StepStatus.Running -> "▶" to done
-        StepStatus.Skipped -> "–" to muted
-        StepStatus.NotFound -> "✕" to muted
+        StepStatus.Skipped, StepStatus.NotFound -> "–" to muted
         StepStatus.Failed -> "✕" to MaterialTheme.colorScheme.error
         StepStatus.Used -> "✓" to done
     }
@@ -1140,7 +1155,7 @@ private fun StepRow(state: SourceStepState) {
         Text(mark, color = tint, style = MaterialTheme.typography.labelLarge)
         Column(Modifier.weight(1f)) {
             Text(
-                "${state.step.number}  ${state.step.label}",
+                state.step.label,
                 color = emphasis,
                 style = MaterialTheme.typography.bodySmall,
             )
