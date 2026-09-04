@@ -206,3 +206,22 @@ class SpeechChunksTest {
         assertEquals(listOf(0L until 60_000L, 61_000L until 200_000L, 201_000L until 300_000L), gaps)
     }
 }
+
+class OverlapTest {
+    @Test fun pullsAnEndBackBeforeTheNextStart() {
+        // Cue 89 in the Plan B run ended 240 ms after cue 90 had begun.
+        val cues = listOf(
+            SubtitleCue(1, 815_665, 821_430, listOf("א")),
+            SubtitleCue(2, 821_190, 823_989, listOf("ב")),
+        )
+        val out = SubtitleTiming.removeOverlaps(cues)
+        assertEquals(821_190L - SubtitleTiming.GUARD_MS, out[0].endMs)
+        assertEquals(815_665L, out[0].startMs, "starts are never moved")
+        assertEquals(cues[1], out[1])
+    }
+
+    @Test fun leavesSeparatedCuesAlone() {
+        val cues = listOf(SubtitleCue(1, 0, 1000, listOf("א")), SubtitleCue(2, 2000, 3000, listOf("ב")))
+        assertEquals(cues, SubtitleTiming.removeOverlaps(cues))
+    }
+}

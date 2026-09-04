@@ -94,13 +94,18 @@ class SpeechTranscriber(
         if (words.isEmpty()) { RunLog.error("speech: no words at all"); return null }
 
         // 3. Long stretches with no words: silent, or missed?
-        val gaps = SpeechChunks.gaps(words, durationMs, GAP_MS)
+        // Longest first: a five-minute hole is more likely to hide a scene than a
+        // fifty-second one, and the ceilings below may stop the loop early.
+        val gaps = SpeechChunks.gaps(words, durationMs, GAP_MS).sortedByDescending { it.last - it.first }
         var silentGaps = 0; var rePassed = 0; var recovered = 0; var rePassMs = 0L
         val extra = ArrayList<List<SpeechWord>>()
         for ((n, gap) in gaps.withIndex()) {
             if (rePassed >= MAX_REPASS || rePassMs >= MAX_REPASS_MS) break
             val from = gap.first; val to = gap.last + 1
-            val live = mediaTool.nonSilentFraction(audio, from, to)
+            // Measured on the SOURCE, not the prepared audio: speech normalisation
+            // raises everything towards the peak, so on the enhanced file every gap
+            // read as 100% non-silent and the measure said nothing.
+            val live = mediaTool.nonSilentFraction(videoFile, from, to)
             if (live == null || live < LIVE_FRACTION) {
                 silentGaps++
                 RunLog.log("speech: gap ${fmt(from)}–${fmt(to)} non-silent=${pct(live)} — quiet, left alone")
@@ -159,7 +164,7 @@ class SpeechTranscriber(
         const val LIVE_FRACTION = 0.25
 
         /** Ceilings on the second pass, so a film of pure music cannot double its bill. */
-        const val MAX_REPASS = 30
-        const val MAX_REPASS_MS = 40 * 60_000L
+        const val MAX_REPASS = 12
+        const val MAX_REPASS_MS = 25 * 60_000L
     }
 }

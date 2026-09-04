@@ -55,6 +55,24 @@ object SubtitleTiming {
         }
     }
 
+    /**
+     * Make sure no cue is still on screen when the next one starts. Only ends
+     * are pulled back — a start is never moved — and only to [guardMs] before the
+     * following start. Two cues that overlap in an ASS track are drawn stacked,
+     * one above the other, which is how a two-line subtitle turns into four; in
+     * SRT most players show the same stack. Overlapping timings arrive from
+     * recognisers (two people talking at once) and from hand-made files alike.
+     */
+    fun removeOverlaps(cues: List<SubtitleCue>, guardMs: Long = GUARD_MS): List<SubtitleCue> {
+        if (cues.size < 2) return cues
+        val nextStart = nextStarts(cues)
+        return cues.map { cue ->
+            val ceiling = nextStart[cue.startMs]?.minus(guardMs) ?: return@map cue
+            if (cue.endMs <= ceiling) cue
+            else cue.copy(endMs = maxOf(ceiling, cue.startMs + 1))
+        }
+    }
+
     /** How many cues are still shown faster than [cps] can be read. */
     fun tooFast(cues: List<SubtitleCue>, cps: Double = MAX_CPS): Int =
         cues.count { it.durationMs < neededMs(it, cps) }

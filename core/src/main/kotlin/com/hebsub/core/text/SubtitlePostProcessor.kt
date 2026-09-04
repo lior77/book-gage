@@ -35,7 +35,10 @@ object SubtitlePostProcessor {
         val wrapped = split.map { it.copy(lines = LineWrapper.wrap(it.text, maxCharsPerLine)) }
         val readable = SubtitleTiming.ensureReadingSpeed(wrapped)
         val timed = SubtitleTiming.ensureMinimumDuration(readable, minDurationMs)
-        val out = if (applyRtl) timed.map { RtlFormatter.applyToCue(it) } else timed
+        // Last, so nothing above can reintroduce one: a cue must be gone before the
+        // next appears, or the renderer stacks them.
+        val separated = SubtitleTiming.removeOverlaps(timed)
+        val out = if (applyRtl) separated.map { RtlFormatter.applyToCue(it) } else separated
         return out.mapIndexed { i, cue -> cue.copy(index = i + 1) }
     }
 }
