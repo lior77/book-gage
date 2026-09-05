@@ -1,0 +1,687 @@
+{
+ "meta": {
+  "source": "OpenStreetMap via Overpass",
+  "licence": "ODbL — © OpenStreetMap contributors",
+  "retrieved": "2026-09-05",
+  "note_he": "מתחת לפרגזיה אין בפורטוגל שכבה מנהלית רשמית. השמות אינם רשמיים ואין להם גבולות — הנקודות מסמנות איפה השכונה נמצאת, לא את מרכזה המדויק ולא את שטחה."
+ },
+ "items": [
+  {
+   "quarter": 1,
+   "he": "סדופייטה",
+   "en": "Cedofeita",
+   "ll": [
+    41.156076,
+    -8.622714
+   ],
+   "matched": "Cedofeita",
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "סנטו אילדפונסו",
+   "en": "Santo Ildefonso",
+   "ll": [
+    41.14598,
+    -8.606807
+   ],
+   "matched": "Santo Ildefonso",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "קורדוארייה וקרלוש אלברטו",
+   "en": "Cordoaria / Carlos Alberto",
+   "ll": [
+    41.145983,
+    -8.615886
+   ],
+   "matched": "Cordoaria",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "אליאדוש ובאישה",
+   "en": "Aliados / Baixa",
+   "ll": [
+    41.148592,
+    -8.610975
+   ],
+   "matched": "Aliados",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Aliados״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 1,
+   "he": "סֶה",
+   "en": "Sé",
+   "ll": [
+    41.142308,
+    -8.611563
+   ],
+   "matched": "Sé",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "מירגאיה",
+   "en": "Miragaia",
+   "ll": [
+    41.14344,
+    -8.62153
+   ],
+   "matched": "Miragaia",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "ויטוריה",
+   "en": "Vitória",
+   "ll": [
+    41.143284,
+    -8.616847
+   ],
+   "matched": "Vitória",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "סאו ניקולאו",
+   "en": "São Nicolau",
+   "ll": [
+    41.140439,
+    -8.616344
+   ],
+   "matched": "São Nicolau",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 1,
+   "he": "ריביירה",
+   "en": "Ribeira",
+   "ll": [
+    41.140966,
+    -8.609506
+   ],
+   "matched": "Ribeira",
+   "kind": "railway=halt",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Ribeira״ (railway=halt) ששמו זהה."
+  },
+  {
+   "quarter": 2,
+   "he": "פרנאו דה מגליאיש",
+   "en": "Fernão de Magalhães",
+   "ll": [
+    41.15395,
+    -8.598502
+   ],
+   "matched": "Escola Básica do 1º Ciclo Fernão de Magalhães",
+   "kind": "amenity=school",
+   "confidence": "approx",
+   "note": "מיקום מקורב: לא נמצא אובייקט בשם הזה, והנקודה נלקחה מ״Escola Básica do 1º Ciclo Fernão de Magalhães״ (amenity=school) ששמו מכיל את שם השכונה."
+  },
+  {
+   "quarter": 2,
+   "he": "אירואיזמו",
+   "en": "Heroísmo",
+   "ll": [
+    41.14652,
+    -8.593045
+   ],
+   "matched": "Heroísmo",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Heroísmo״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 2,
+   "he": "קמפו 24 דה אגושטו",
+   "en": "Campo 24 de Agosto",
+   "ll": [
+    41.148749,
+    -8.598693
+   ],
+   "matched": "Campo 24 de Agosto",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Campo 24 de Agosto״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 2,
+   "he": "בונפים (סביב הכנסייה)",
+   "en": "Bonfim",
+   "ll": [
+    41.152711,
+    -8.597613
+   ],
+   "matched": "Bonfim",
+   "kind": "boundary=administrative",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Bonfim״ (boundary=administrative) ששמו זהה."
+  },
+  {
+   "quarter": 2,
+   "he": "פונטאיניאש",
+   "en": "Fontainhas",
+   "ll": [
+    41.142916,
+    -8.601628
+   ],
+   "matched": "Fontaínhas",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 2,
+   "he": "סאו רוקה",
+   "en": "São Roque",
+   "ll": [
+    41.161499,
+    -8.577
+   ],
+   "matched": "São Roque",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 3,
+   "he": "קונטומיל",
+   "en": "Contumil",
+   "ll": [
+    41.165693,
+    -8.578676
+   ],
+   "matched": "Contumil",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Contumil״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 3,
+   "he": "נואדה ואזוודו",
+   "en": "Noeda / Azevedo",
+   "ll": [
+    41.146954,
+    -8.583074
+   ],
+   "matched": "Noeda",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 3,
+   "he": "אנטאש ואצטדיון דו דראגאו",
+   "en": "Antas / Estádio do Dragão",
+   "ll": [
+    41.16068,
+    -8.59239
+   ],
+   "matched": "Antas",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 3,
+   "he": "קורוז'יירה וסאו רוקה דה למיירה",
+   "en": "Corujeira / S. Roque da Lameira",
+   "ll": [
+    41.158913,
+    -8.579707
+   ],
+   "matched": "Corujeira",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 3,
+   "he": "תחנת קמפניה",
+   "en": "Estação de Campanhã",
+   "ll": [
+    41.150734,
+    -8.585639
+   ],
+   "matched": "Campanhã",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: לא נמצא אובייקט בשם הזה, והנקודה נלקחה מ״Campanhã״ (railway=station) ששמו מכיל את שם השכונה."
+  },
+  {
+   "quarter": 3,
+   "he": "סרקו, לגרטיירו ופלקאו",
+   "en": "Cerco / Lagarteiro / Falcão",
+   "ll": [
+    41.153811,
+    -8.566744
+   ],
+   "matched": "Lagarteiro",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 3,
+   "he": "בונז'ויה",
+   "en": "Bonjóia",
+   "ll": [
+    41.153026,
+    -8.579429
+   ],
+   "matched": "Bonjóia",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 3,
+   "he": "פריישו",
+   "en": "Freixo",
+   "ll": [
+    41.146054,
+    -8.579652
+   ],
+   "matched": "Freixo",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 4,
+   "he": "אספרלה והקמפוס האוניברסיטאי",
+   "en": "Asprela / Polo Universitário",
+   "ll": [
+    41.185652,
+    -8.604012
+   ],
+   "matched": "Asprela",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 4,
+   "he": "קושטה קברל",
+   "en": "Costa Cabral",
+   "ll": [
+    41.169031,
+    -8.59043
+   ],
+   "matched": "Rua de Costa Cabral",
+   "kind": "highway=secondary",
+   "confidence": "approx",
+   "note": "מיקום מקורב: לא נמצא אובייקט בשם הזה, והנקודה נלקחה מ״Rua de Costa Cabral״ (highway=secondary) ששמו מכיל את שם השכונה."
+  },
+  {
+   "quarter": 4,
+   "he": "אמיאל",
+   "en": "Amial",
+   "ll": [
+    41.180799,
+    -8.61521
+   ],
+   "matched": "Amial",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 4,
+   "he": "אראוזה",
+   "en": "Areosa",
+   "ll": [
+    41.179696,
+    -8.584623
+   ],
+   "matched": "Areosa",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 4,
+   "he": "רגאדו",
+   "en": "Regado",
+   "ll": [
+    41.171827,
+    -8.618843
+   ],
+   "matched": "Regado",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 4,
+   "he": "מרכז פרניוש",
+   "en": "Paranhos (centro)",
+   "ll": [
+    41.173513,
+    -8.605898
+   ],
+   "matched": "Paranhos",
+   "kind": "boundary=administrative",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Paranhos״ (boundary=administrative) ששמו זהה."
+  },
+  {
+   "quarter": 4,
+   "he": "סלגיירוש",
+   "en": "Salgueiros",
+   "ll": [
+    41.169297,
+    -8.598662
+   ],
+   "matched": "Salgueiros",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Salgueiros״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 5,
+   "he": "ויזו",
+   "en": "Viso",
+   "ll": [
+    41.177236,
+    -8.646534
+   ],
+   "matched": "Viso",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Viso״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 5,
+   "he": "קרבלידו",
+   "en": "Carvalhido",
+   "ll": [
+    41.166573,
+    -8.626593
+   ],
+   "matched": "Carvalhido",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 5,
+   "he": "רמאלדה דו מייו",
+   "en": "Ramalde do Meio",
+   "ll": [
+    41.167193,
+    -8.641965
+   ],
+   "matched": "Ramalde do Meio",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 5,
+   "he": "פרלאדה",
+   "en": "Prelada",
+   "ll": [
+    41.172427,
+    -8.63201
+   ],
+   "matched": "Prelada",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 5,
+   "he": "פרנקוש",
+   "en": "Francos",
+   "ll": [
+    41.165486,
+    -8.636351
+   ],
+   "matched": "Francos",
+   "kind": "railway=station",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Francos״ (railway=station) ששמו זהה."
+  },
+  {
+   "quarter": 5,
+   "he": "בסה",
+   "en": "Bessa",
+   "ll": [
+    41.164574,
+    -8.642584
+   ],
+   "matched": "Bessa",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 5,
+   "he": "פינייירו מנסו",
+   "en": "Pinheiro Manso",
+   "ll": [
+    41.164805,
+    -8.651211
+   ],
+   "matched": "Pinheiro Manso",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 5,
+   "he": "בואוישטה (קצה מזרחי)",
+   "en": "Boavista",
+   "ll": [
+    41.157648,
+    -8.637497
+   ],
+   "matched": "Boavista",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 6,
+   "he": "קשטלו דו קייז'ו",
+   "en": "Castelo do Queijo",
+   "ll": [
+    41.168033,
+    -8.688858
+   ],
+   "matched": "Castelo do Queijo",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 6,
+   "he": "אלדואר",
+   "en": "Aldoar",
+   "ll": [
+    41.170743,
+    -8.670853
+   ],
+   "matched": "Aldoar",
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 6,
+   "he": "פארק העיר",
+   "en": "Parque da Cidade",
+   "ll": [
+    41.16938,
+    -8.679758
+   ],
+   "matched": "Parque da Cidade",
+   "kind": "leisure=park",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Parque da Cidade״ (leisure=park) ששמו זהה."
+  },
+  {
+   "quarter": 6,
+   "he": "נבוז'ילדה",
+   "en": "Nevogilde",
+   "ll": [
+    41.16408,
+    -8.676819
+   ],
+   "matched": "Nevogilde",
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 6,
+   "he": "פראיה דו מוליה ואוריגו",
+   "en": "Praia do Molhe / Ourigo",
+   "ll": [
+    41.157711,
+    -8.683337
+   ],
+   "matched": "Praia do Molhe",
+   "kind": "natural=beach",
+   "confidence": "approx",
+   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Praia do Molhe״ (natural=beach) ששמו זהה."
+  },
+  {
+   "quarter": 6,
+   "he": "פוז נובה ופאסאיו אלגרה",
+   "en": "Foz Nova / Passeio Alegre",
+   "ll": [
+    41.149213,
+    -8.672034
+   ],
+   "matched": "Passeio Alegre",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 6,
+   "he": "פוז ולייה",
+   "en": "Foz Velha",
+   "ll": [
+    41.149665,
+    -8.670955
+   ],
+   "matched": "Conjunto da Foz Velha",
+   "kind": "historic",
+   "confidence": "approx",
+   "note": "מיקום מקורב: לא נמצא אובייקט בשם הזה, והנקודה נלקחה מ״Conjunto da Foz Velha״ (historic) ששמו מכיל את שם השכונה."
+  },
+  {
+   "quarter": 7,
+   "he": "פסטלירה",
+   "en": "Pasteleira",
+   "ll": [
+    41.152318,
+    -8.658147
+   ],
+   "matched": "Pasteleira",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 7,
+   "he": "בום סוסֶסו",
+   "en": "Bom Sucesso",
+   "ll": [
+    41.155817,
+    -8.629054
+   ],
+   "matched": "Mercado do Bom Sucesso",
+   "kind": "amenity=marketplace",
+   "confidence": "approx",
+   "note": "מיקום מקורב: לא נמצא אובייקט בשם הזה, והנקודה נלקחה מ״Mercado do Bom Sucesso״ (amenity=marketplace) ששמו מכיל את שם השכונה."
+  },
+  {
+   "quarter": 7,
+   "he": "סראלבש",
+   "en": "Serralves",
+   "ll": [
+    41.15853,
+    -8.660357
+   ],
+   "matched": "Serralves",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 7,
+   "he": "קמפו אלגרה",
+   "en": "Campo Alegre",
+   "ll": [
+    41.153147,
+    -8.636734
+   ],
+   "matched": "Campo Alegre",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 7,
+   "he": "לורדלו דו אורו",
+   "en": "Lordelo do Ouro",
+   "ll": [
+    41.154044,
+    -8.651083
+   ],
+   "matched": "Lordelo do Ouro",
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 7,
+   "he": "מסארלוש",
+   "en": "Massarelos",
+   "ll": [
+    41.146484,
+    -8.631674
+   ],
+   "matched": "Massarelos",
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  },
+  {
+   "quarter": 7,
+   "he": "ארבידה",
+   "en": "Arrábida",
+   "ll": [
+    41.1498,
+    -8.644756
+   ],
+   "matched": "Arrábida",
+   "kind": "place=neighbourhood",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
+  }
+ ],
+ "generated": "2026-09-05"
+}

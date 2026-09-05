@@ -15,6 +15,14 @@ Inputs (all under data/raw/):
 
 Outputs (data/processed/ and data/sources.json).  Nothing is invented: a field
 that has no verified value is simply absent, and the UI renders "אין נתון".
+
+Confidence
+----------
+Every value belongs to one of three levels, defined in scripts/ingest_overpass.py:
+"verified" (cross-checked against a second source), "reported" (one source says
+so) and "approx" (derived or proxied, never a measurement).  Anything below
+"verified" carries a note saying what is uncertain, and the line that produces
+it carries a comment saying the same.  Search this file for CONFIDENCE.
 """
 import json
 import math
@@ -172,7 +180,14 @@ def main():
     osm = json.load(open(os.path.join(RAW, "osm", "porto_freguesias.geojson")))
     osm_mun = json.load(open(os.path.join(RAW, "osm", "porto_municipios.geojson")))
 
-    # municipality population, Censos 2021, carried on the OSM boundary relations
+    # Municipality population, Censos 2021, read off the population tag on the
+    # OSM boundary relations.
+    # CONFIDENCE: "reported", not "verified" — this is a single source. The tag
+    # says Censos 2021 and the values are consistent with it, but nothing here
+    # cross-checks them against INE directly; scripts/fetch_ine.py does that on
+    # a machine with open network access. The parish sums land 0.00-0.12% below
+    # these numbers, which is the gap between INE's publication rounds rather
+    # than an error in either. See data/sources.json → municipio.pop2021.
     osm_pop = {}
     osm_ine = {}
     for ft in osm_mun["features"]:
@@ -230,6 +245,10 @@ def main():
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
             if "he" not in rec and caop_name in extra_he:
+                # CONFIDENCE: not verified. These 103 Hebrew names were written
+                # for the app from the pronunciation rules the source document
+                # set out; nobody has reviewed them. he_origin marks them so the
+                # UI can say so and so they stay editable in one raw file.
                 rec["he"] = extra_he[caop_name]
                 rec["he_origin"] = "app"
             if "pop2021" in rec and rec["area_km2"] > 0:

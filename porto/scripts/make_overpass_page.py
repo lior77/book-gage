@@ -21,38 +21,64 @@ QDIR = os.path.join(HERE, "overpass")
 
 QUERIES = [
     {
+        "file": "02c_matadouro.overpassql",
+        "n": "2ג",
+        "title": "מטדורו — האחרון שחסר",
+        "save_as": "porto_matadouro.geojson",
+        "colour": "#B3261E",
+        "status": "todo",
+        "why": "מתוך 13 השמות שחיפשנו, 12 כבר נמצאו בקובץ הנ״צ שהרצת. נשאר רק "
+               "מטדורו, האטליז התעשייתי הישן בקמפניה. אחריו כל 53 השכונות יהיו על המפה.",
+        "note": "קלה מאוד. ה‑regex מוגבל לתיבה קטנה במזרח פורטו במקום לכל העירייה — "
+                "זו בדיוק הסיבה שהשאילתה המקורית נפלה.",
+    },
+    {
+        "file": "02a_porto_places.overpassql",
+        "n": "2א",
+        "title": "שכונות וייעודי קרקע",
+        "save_as": "porto_places.geojson",
+        "colour": "#2E7D32",
+        "status": "optional",
+        "why": "רשות. סורקת את כל אובייקטי place ו‑landuse בעירייה — משפרת את הדיוק "
+               "של מיקומי השכונות שכרגע מקורבים.",
+        "note": "קלה: שני הסינונים על מפתח מאונדקס, כך שאין סריקה מלאה.",
+    },
+    {
+        "file": "02b_porto_named_streets.overpassql",
+        "n": "2ב",
+        "title": "רחובות בשם של שכונה",
+        "save_as": "porto_streets.geojson",
+        "colour": "#6A1B9A",
+        "status": "optional",
+        "why": "רשות. חלק מהשכונות קיימות ב‑OSM רק כשם של רחוב, כמו קושטה קברל.",
+        "note": "קלה: הסינון על highway מאונדקס, וה‑regex רץ רק על מה שנשאר.",
+    },
+    {
         "file": "01_porto_pois.overpassql",
         "n": "1",
         "title": "נ״צ בעיריית פורטו",
         "save_as": "porto_pois.geojson",
         "colour": "#1B4F8C",
-        "why": "מטרו, רכבת, בתי חולים, אוניברסיטה, מוזיאונים, תיאטראות, אתרי מורשת, "
-               "פארקים, כיכרות וגשרים. זה מה שהספרות הרומיות במפת הרובע צריכות.",
-        "note": "מהירה. מוגבלת ליחס OSM של עיריית פורטו, אז היא לא סורקת שטח מיותר.",
-    },
-    {
-        "file": "02_porto_missing_bairros.overpassql",
-        "n": "2",
-        "title": "שמונה השכונות החסרות",
-        "save_as": "porto_bairros_extra.geojson",
-        "colour": "#2E7D32",
-        "why": "השכונות שאין להן נקודה בייצוא הקיים. הן קיימות ב‑OSM, רק לא כשכונה: "
-               "קמפו 24 דה אגושטו היא תחנת מטרו וכיכר, פארק העיר הוא פארק, "
-               "פראיה דו מוליה הוא חוף.",
-        "note": "איטית — היא סורקת כל אובייקט בעל שם בעירייה. אם היא נופלת ב‑timeout, "
-                "חצה את רשימת השמות שבשורת ה‑regex לשתי הרצות נפרדות.",
+        "status": "done",
+        "why": "מטרו, רכבת, בתי חולים, אוניברסיטה, מוזיאונים, אתרי מורשת, פארקים, "
+               "כיכרות וגשרים.",
+        "note": "התקבל: 1,787 נקודות, 1,652 אחרי ניקוי כפילויות. 26 מתוך 30 האתרים "
+                "שהמסמך מזכיר נמצאו בו.",
     },
     {
         "file": "03_district_peaks.overpassql",
         "n": "3",
         "title": "פסגות מתויגות במחוז",
         "save_as": "porto_peaks.geojson",
-        "colour": "#6A1B9A",
-        "why": "אופציונלי. מחזיר את הפסגות שמישהו תייג ב‑OSM עם גובה.",
-        "note": "זו לא הנקודה הגבוהה בעירייה — רק מה שתויג, והכיסוי דליל. "
-                "לגובה אמיתי צריך מודל גבהים (DEM).",
+        "colour": "#8a5000",
+        "status": "done",
+        "why": "הגובה הגבוה ביותר שמתויג ב‑OSM בכל עירייה.",
+        "note": "התקבל: 414 נקודות, 408 עם תג גובה. 57 נפסלו כי הגובה הוא של מבנה "
+                "ולא של הקרקע (גג מלון, טורבינת רוח). זה חסם תחתון, לא הנקודה הגבוהה.",
     },
 ]
+
+STATUS_HE = {"done": "התקבל ✓", "todo": "צריך להריץ", "optional": "רשות"}
 
 
 def compact(q):
@@ -68,11 +94,11 @@ def build():
         url = ("https://overpass-turbo.eu/?Q="
                + urllib.parse.quote(compact(raw), safe="") + "&R")
         cards.append(f"""
-    <article class="card" style="--accent:{spec['colour']}">
+    <article class="card {'is-done' if spec['status'] == 'done' else ''}" style="--accent:{spec['colour']}">
       <header class="card-h">
         <span class="badge">{spec['n']}</span>
         <div>
-          <h2>{html.escape(spec['title'])}</h2>
+          <h2>{html.escape(spec['title'])} <span class="pill pill-{spec['status']}">{STATUS_HE[spec['status']]}</span></h2>
           <p class="why">{spec['why']}</p>
         </div>
       </header>
@@ -145,7 +171,11 @@ code{font-size:.86em;background:var(--code-bg);border:1px solid var(--line);
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
   padding:16px;margin-block-end:16px;box-shadow:var(--shadow);
   border-top:3px solid var(--accent)}
+.card.is-done{opacity:.62}
 .card-h{display:flex;gap:12px;align-items:flex-start;margin-block-end:12px}
+.pill{display:inline-block;vertical-align:middle;font-size:.66rem;font-weight:500;
+  padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.pill-done{color:var(--ok)} .pill-todo{color:#b3261e} .pill-optional{color:var(--ink-2)}
 .badge{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--accent);
   color:#fff;font-weight:700;display:grid;place-items:center;font-size:1rem}
 .why{color:var(--ink-2);font-size:.93rem;margin:0}
@@ -186,8 +216,8 @@ a{color:var(--accent)}
 
 <div class="wrap">
   <h1>שאילתות Overpass למחוז פורטו</h1>
-  <p class="lede">שלוש שאילתות להרצה ידנית. כל אחת מחזירה קובץ GeoJSON אחד
-    שנכנס לאפליקציה.</p>
+  <p class="lede">שתיים כבר הרצת והקבצים נבדקו ונקלטו. נשארה אחת קטנה
+    שחייבים, ושתיים שהן רשות.</p>
 
   <ol class="steps">
     <li><b>פתיחה ב‑Overpass Turbo והרצה</b> — הכפתור הכחול פותח את האתר עם
