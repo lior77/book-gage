@@ -10,12 +10,19 @@
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
 }
+/* Dark palette, defined once and applied twice: by the device setting, and by
+   an explicit data-theme when a host stamps one on the root element. */
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --bg:#0f172a; --card:#182136; --ink:#e8ecf3; --ink-2:#9aa6ba; --line:#28324a;
     --accent:#6fa8dc; --accent-ink:#0f172a; --warn:#ffd28a; --warn-bg:#3a2c12;
     --miss:#7d879b; --shadow:0 2px 12px rgba(0,0,0,.4);
   }
+}
+:root[data-theme="dark"]{
+  --bg:#0f172a; --card:#182136; --ink:#e8ecf3; --ink-2:#9aa6ba; --line:#28324a;
+  --accent:#6fa8dc; --accent-ink:#0f172a; --warn:#ffd28a; --warn-bg:#3a2c12;
+  --miss:#7d879b; --shadow:0 2px 12px rgba(0,0,0,.4);
 }
 
 *{box-sizing:border-box}
@@ -96,6 +103,12 @@ main{position:absolute; inset-block-start:var(--top-h);
 .attrib{position:absolute; inset-block-end:2px; inset-inline-start:6px; margin:0;
         font-size:9.5px; color:var(--ink-2); background:color-mix(in srgb,var(--card) 78%,transparent);
         padding:1px 5px; border-radius:5px; pointer-events:none; z-index:400}
+/* inline-end clears Leaflet's zoom control, which sits on the left in RTL */
+.tile-note{position:absolute; inset-block-start:8px; inset-inline-start:8px;
+           inset-inline-end:56px; z-index:420; margin:0;
+           padding:7px 10px; border-radius:10px; background:var(--card); color:var(--ink-2);
+           border:1px solid var(--line); box-shadow:var(--shadow); font-size:.78rem;
+           text-align:center}
 .legend{position:absolute; inset-block-end:26px; inset-inline-end:8px; z-index:410;
         max-width:min(58vw,260px); padding:8px 10px; background:var(--card);
         border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow);

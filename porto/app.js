@@ -34,8 +34,25 @@ function fmtVal(v, ind) {
 const html = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// Same rule the stylesheet uses: an explicit data-theme wins, otherwise the device.
+function isDark() {
+  const t = document.documentElement.dataset.theme;
+  if (t === 'dark') return true;
+  if (t === 'light') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 /* ------------------------------------------------------------- load data --- */
+// scripts/bundle_standalone.py inlines every data file into window.PORTO_DATA,
+// so the same code runs from a server, from a single file on file://, and from
+// a published page that is not allowed to fetch anything.
+const STANDALONE = typeof window.PORTO_DATA === 'object' && window.PORTO_DATA !== null;
+
 async function j(path) {
+  if (STANDALONE) {
+    if (!(path in window.PORTO_DATA)) throw new Error('missing inlined ' + path);
+    return window.PORTO_DATA[path];
+  }
   const r = await fetch(path, { cache: 'no-cache' });
   if (!r.ok) throw new Error(path + ' → ' + r.status);
   return r.json();
@@ -119,6 +136,19 @@ function initMap() {
     maxZoom: 17, crossOrigin: true,
     attribution: '© OpenStreetMap contributors',
   });
+  // No connection, or a host that will not load third-party images: drop the
+  // background rather than leaving the user staring at empty grey squares.
+  let tileErrors = 0;
+  tileLayer.on('tileerror', () => {
+    if (++tileErrors < 6 || !map.hasLayer(tileLayer)) return;
+    map.removeLayer(tileLayer);
+    S.tiles = false;
+    $('#tilesBtn').setAttribute('aria-pressed', 'false');
+    const note = $('#tileNote');
+    note.hidden = false;
+    note.textContent = 'רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים זמינים.';
+    setTimeout(() => { note.hidden = true; }, 6000);
+  });
   if (S.tiles) tileLayer.addTo(map);
 
   const stroke = getComputedStyle(document.body).getPropertyValue('--card').trim() || '#fff';
@@ -191,8 +221,7 @@ function drawLevel(fit) {
   const q = quantiles(vals, PALETTE.length);
   // a neutral translucent stroke reads against every fill in the ramp, and also
   // against bare background when the tile layer is off or offline
-  const stroke = window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'rgba(232,236,243,.45)' : 'rgba(20,25,34,.35)';
+  const stroke = isDark() ? 'rgba(232,236,243,.45)' : 'rgba(20,25,34,.35)';
 
   layer.eachLayer(l => {
     const p = l.feature.properties;
@@ -232,7 +261,7 @@ function layerOf(level) {
 function highlight() {
   const layer = layerOf(S.level);
   if (!layer) return;
-  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = isDark();
   layer.eachLayer(l => {
     const p = l.feature.properties;
     let on = false;
@@ -704,7 +733,11 @@ function renderInfo() {
       <li>שטח וצפיפות לכל 18 העיריות ו-243 הפרגזיות</li>
       <li>נבנה: <span class="lat">${html(D.generated)}</span></li>
     </ul>
-    <p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">פתיחת המסמך המקורי (PDF, 19 עמודים)</a></p>
+    ${STANDALONE
+      ? `<p class="note">זהו קובץ בודד ועצמאי — כל הנתונים נמצאים בתוכו והוא עובד
+         בלי רשת ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-
+         <span class="lat">porto/data/raw/</span>.</p>`
+      : `<p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">פתיחת המסמך המקורי (PDF, 19 עמודים)</a></p>`}
 
     <h2>מה עוד חסר</h2>
     <p>${html(s.missing.note_he)}</p>
@@ -929,7 +962,8 @@ function alertSource(key) {
   runSearch('');
   $('#boot').remove();
 
-  if ('serviceWorker' in navigator) {
+  // The standalone build has nothing to precache: it is already one file.
+  if (!STANDALONE && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode unavailable */ });
   }
 })();
