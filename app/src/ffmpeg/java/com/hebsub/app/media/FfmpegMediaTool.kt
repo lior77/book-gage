@@ -404,6 +404,11 @@ class FfmpegMediaTool : MediaTool {
             for (stream in info.streams ?: emptyList()) {
                 val props = runCatching { stream.allProperties }.getOrNull()
                 val tags = props?.optJSONObject("tags")
+                fun describe(): String {
+                    val name = tags?.optString("filename").takeUnless { it.isNullOrBlank() } ?: "?"
+                    val mime = tags?.optString("mimetype").takeUnless { it.isNullOrBlank() } ?: "?"
+                    return "$name($mime)"
+                }
                 when (stream.type) {
                     "subtitle" -> {
                         val lang = tags?.optString("language").takeUnless { it.isNullOrBlank() } ?: "?"
@@ -413,10 +418,17 @@ class FfmpegMediaTool : MediaTool {
                     }
                     // A styled ASS is only readable if its font really came along, so
                     // log the attachments too — a missing font renders as nothing.
-                    "attachment" -> {
-                        val name = tags?.optString("filename").takeUnless { it.isNullOrBlank() } ?: "?"
-                        val mime = tags?.optString("mimetype").takeUnless { it.isNullOrBlank() } ?: "?"
-                        attachments += "$name($mime)"
+                    "attachment" -> attachments += describe()
+                    // The cover is attached with -attach like the font, but a picture
+                    // does not come back as an attachment stream: ffprobe reports MKV
+                    // cover art as a VIDEO stream carrying the attached_pic
+                    // disposition. Counting only "attachment" streams therefore made
+                    // every run with a poster end on "attached 2 files but the
+                    // container has 1" — an alarm about a file that was there all
+                    // along. Verified against ffmpeg directly before changing this.
+                    "video" -> {
+                        val attachedPic = props?.optJSONObject("disposition")?.optInt("attached_pic", 0) == 1
+                        if (attachedPic) attachments += describe()
                     }
                 }
             }

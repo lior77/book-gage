@@ -1,5 +1,6 @@
 package com.hebsub.app.pipeline
 
+import com.hebsub.core.report.RunHistory
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,11 +59,21 @@ object PipelineBus {
         _state.value = PipelineState.Idle
     }
 
-    /** Null when the user backed out instead of confirming (§5 — every screen has a way out). */
-    suspend fun awaitVideoInfo(suggestedName: String): VideoInfo? {
+    /**
+     * Show the pre-run screen and suspend until the user answers. [previous] is
+     * the history entry for this same file, when there is one, so the screen can
+     * warn before two hours of work are repeated.
+     *
+     * Null when the user backed out instead of confirming (§5 — every screen has
+     * a way out).
+     */
+    suspend fun awaitVideoInfo(
+        suggestedName: String,
+        previous: RunHistory.Entry? = null,
+    ): VideoInfo? {
         val deferred = CompletableDeferred<VideoInfo?>()
         videoInfoDecision = deferred
-        _state.value = PipelineState.NeedVideoInfo(suggestedName)
+        _state.value = PipelineState.NeedVideoInfo(suggestedName, previous)
         return deferred.await()
     }
 

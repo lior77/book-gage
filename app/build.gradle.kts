@@ -13,8 +13,15 @@ android {
         applicationId = "com.hebsub.app"
         minSdk = 26          // SAF + MediaMuxer + scoped storage
         targetSdk = 35       // Android 15 (One UI 7 on the Galaxy A56)
-        versionCode = 32
-        versionName = "3.8"
+        versionCode = 33
+        versionName = "3.9"
+
+        // The version belongs in the name the user sees and in the file they
+        // install, so "which version is on the phone?" never needs a screen.
+        // Generated from versionName so it cannot go stale — the hand-written
+        // one in strings.xml still said 3.3 while the app was 3.8.
+        resValue("string", "app_name", "HebSub $versionName — כתוביות עברית")
+        resValue("string", "home_subtitle", "הוספת מסלול כתוביות בעברית לסרט קיים · גרסה $versionName")
         // The Galaxy A56 is arm64-v8a. The 16KB FFmpeg build ships arm64-v8a only,
         // so we target that single ABI (also keeps the APK smaller).
         ndk { abiFilters += "arm64-v8a" }

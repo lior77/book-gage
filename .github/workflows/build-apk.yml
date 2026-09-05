@@ -40,16 +40,26 @@ jobs:
       - name: Build debug APK (full — with FFmpeg)
         run: ./gradlew :app:assembleDebug -PwithFfmpeg --no-daemon --stacktrace
 
-      - name: Rename APK
+      - name: Name the APK after its version
+        id: apk
         run: |
           mkdir -p dist
+          # The version comes from the one place that defines it, so the file name
+          # can never disagree with the app.
+          VER=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
+          [ -n "$VER" ] || { echo "could not read versionName"; exit 1; }
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/HebSub-$VER-debug.apk"
+          # An un-versioned copy as well: the README's download link is a fixed URL
+          # people have bookmarked, and it must keep working.
           cp app/build/outputs/apk/debug/app-debug.apk dist/HebSub-debug.apk
+          ls -l dist
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HebSub-debug-apk
-          path: dist/HebSub-debug.apk
+          name: HebSub-${{ steps.apk.outputs.version }}-debug-apk
+          path: dist/HebSub-${{ steps.apk.outputs.version }}-debug.apk
           if-no-files-found: error
 
       - name: Publish downloadable release
@@ -58,7 +68,8 @@ jobs:
         run: |
           set -e
           TAG="hebsub-latest"
-          NOTES="Debug-signed, installable APK built from ${{ github.sha }} with FFmpeg (probe, embedded-subtitle extraction, and new-media-file creation). arm64-v8a (Galaxy A56). Enable 'install from unknown sources', install HebSub-debug.apk, then enter your OpenSubtitles and Anthropic API keys in Settings on first run."
+          VER="${{ steps.apk.outputs.version }}"
+          NOTES="HebSub $VER — debug-signed, installable APK built from ${{ github.sha }} with FFmpeg (probe, embedded-subtitle extraction, and new-media-file creation). arm64-v8a (Galaxy A56). Two identical files: HebSub-$VER-debug.apk (named after the version) and HebSub-debug.apk (the fixed download link). Enable 'install from unknown sources', install it, then enter your API keys in Settings on first run."
           # Remove any previous release (published OR a leftover untagged draft) and
           # its tag, then wait for the tag-ref deletion to propagate. Deleting and
           # immediately recreating races GitHub's ref cache and can otherwise leave
@@ -73,9 +84,9 @@ jobs:
           # Create a fresh, PUBLISHED release; retry to ride out propagation races.
           ok=""
           for i in 1 2 3 4; do
-            if gh release create "$TAG" dist/HebSub-debug.apk \
+            if gh release create "$TAG" dist/*.apk \
                 --target "${{ github.sha }}" \
-                --title "HebSub — installable APK (full)" \
+                --title "HebSub $VER — installable APK (full)" \
                 --notes "$NOTES"; then
               ok=1; break
             fi

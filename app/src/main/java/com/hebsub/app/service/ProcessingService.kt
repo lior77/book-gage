@@ -15,13 +15,17 @@ import com.hebsub.app.R
 import com.hebsub.app.asr.DeepgramAsrEngine
 import com.hebsub.app.asr.UnavailableAsrEngine
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.history.RunFacts
+import com.hebsub.app.history.RunHistoryStore
 import com.hebsub.app.io.VideoDownloader
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.MediaToolFactory
 import com.hebsub.app.pipeline.PipelineBus
 import com.hebsub.app.pipeline.PipelineState
 import com.hebsub.app.pipeline.SubtitlePipeline
+import com.hebsub.app.provider.OpenSubtitlesService
 import com.hebsub.app.storage.HebSubStorage
+import com.hebsub.core.report.RunHistory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -31,6 +35,9 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Runs one conversion as a foreground service, so a run of forty minutes
@@ -82,9 +89,15 @@ class ProcessingService : Service() {
             val storage = HebSubStorage(applicationContext)
             var logDir: File = workDir   // where the run log is finally written (§ב.6)
             RunLog.start()
+            RunFacts.start()
             PipelineBus.resetSteps()
             RunLog.header(applicationContext)
             RunLog.log("input=${if (url != null) "URL" else "file"}")
+
+            // Everything the history sheet needs, filled in as the run learns it,
+            // and read back in `finally` whichever way the run ends.
+            var history = RunHistory.Entry(date = "", title = "")
+            var confirmed = false
             try {
             // §א.2/§ב.1 — we need All-files access to build the HebSub folder tree.
             if (!storage.hasAllFilesAccess()) {
@@ -136,16 +149,31 @@ class ProcessingService : Service() {
                 }
             }
 
+            // Identify the film by its own bytes before anything else happens, and
+            // look it up in the history. Two hours of work deserve the warning that
+            // this exact file has been through the app before — and the hash means
+            // a renamed or moved copy is still recognised.
+            history = history.copy(
+                fileName = name,
+                sizeMb = (videoFile.length() / 1_000_000).toString(),
+                hash = runCatching { OpenSubtitlesService.computeMovieHash(videoFile) }.getOrNull().orEmpty(),
+            )
+            val previous = RunHistoryStore(applicationContext).find(history.key)
+            if (previous != null) {
+                RunLog.log("history: this file ran before on ${previous.date} — ${previous.status.label} ('${previous.title}')")
+            }
+
             // §2 — before creating the folder, let the user confirm/edit the name
             // and optionally enter the year.
             val suggested = name.substringBeforeLast('.').ifBlank { name }
-            val info = PipelineBus.awaitVideoInfo(suggested) ?: run {
+            val info = PipelineBus.awaitVideoInfo(suggested, previous) ?: run {
                 // §5 — the user backed out of the pre-run screen. Nothing was written
                 // to HebSub yet, so there is nothing to undo; just stand down.
                 RunLog.log("cancelled before the run started")
                 PipelineBus.update(PipelineState.Idle)
                 return@launch
             }
+            confirmed = true
             val ext = name.substringAfterLast('.', "mp4").ifBlank { "mp4" }
 
             // §2.2 — if an IMDb link + OMDb key are present, fetch the record BEFORE
@@ -164,6 +192,7 @@ class ProcessingService : Service() {
             val yr = movie?.year?.filter { it.isDigit() }?.take(4)?.ifBlank { null } ?: typedYear
             val folderName = if (!yr.isNullOrBlank()) "$cleanName-$yr" else cleanName
             RunLog.log("naming: name='$cleanName' year='${yr ?: "-"}' folder='$folderName' fromOmdb=${movie != null}")
+            history = history.copy(title = cleanName, year = yr.orEmpty(), imdb = imdbId.orEmpty())
 
             // §2.1/§2.3 — folder + video share the confirmed name.
             PipelineBus.update(PipelineState.Running("הכנת תיקיית הוידאו", null))
@@ -204,11 +233,23 @@ class ProcessingService : Service() {
                 val detail = "${t::class.java.simpleName}: ${t.message.orEmpty()}".trim().take(300)
                 PipelineBus.update(PipelineState.Failed("שגיאה — $detail"))
             } finally {
-                // §2.3/§ב.6 — log file shares the folder name, written into the folder.
-                runCatching {
-                    withContext(NonCancellable) {
-                        File(logDir, "${logDir.name}.txt").writeText(RunLog.dump(), Charsets.UTF_8)
+                withContext(NonCancellable) {
+                    // §2.3/§ב.6 — the log shares the folder name and is written into the
+                    // film's folder. A run that failed BEFORE that folder existed used to
+                    // write its log into the cache directory that the next line deletes,
+                    // so precisely the failures worth diagnosing left no trace at all.
+                    // Those go to the HebSub root instead, stamped with the time.
+                    runCatching {
+                        val target =
+                            if (logDir == workDir) File(storage.ensureRoot(), "HebSub-run-${stamp()}.txt")
+                            else File(logDir, "${logDir.name}.txt")
+                        target.writeText(RunLog.dump(), Charsets.UTF_8)
                     }
+                    // Only once the user actually confirmed the run: a file they
+                    // backed out of was never processed and does not belong in the
+                    // history. Best-effort, like the log — a spreadsheet must not be
+                    // able to fail a run that already finished.
+                    if (confirmed) runCatching { recordHistory(history) }
                 }
                 workDir.deleteRecursively()
                 stopSelfCleanly()
@@ -216,6 +257,46 @@ class ProcessingService : Service() {
         }
         return START_NOT_STICKY
     }
+
+    /**
+     * Write this run into `HebSub/HebSub-history.xlsx`, whichever way it ended.
+     * The outcome is read from the state the run left behind — the same value the
+     * screen is showing — so success, failure and cancellation are recorded
+     * without the pipeline having to report anything twice.
+     */
+    private fun recordHistory(base: RunHistory.Entry) {
+        val state = PipelineBus.state.value
+        val issues = (state as? PipelineState.Success)?.issues.orEmpty()
+        val status = when (state) {
+            is PipelineState.Success -> RunHistory.Status.SUCCESS
+            is PipelineState.Failed -> RunHistory.Status.FAILED
+            else -> RunHistory.Status.CANCELLED
+        }
+        val note = when {
+            state is PipelineState.Failed -> state.message.replace('\n', ' ').trim().take(300)
+            issues.isNotEmpty() -> issues.joinToString(" · ").take(300)
+            else -> ""
+        }
+        val version = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull().orEmpty()
+        RunHistoryStore(applicationContext).record(
+            base.copy(
+                date = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date()),
+                title = base.title.ifBlank { base.fileName },
+                durationMin = if (RunFacts.durationMs > 0) (RunFacts.durationMs / 60_000).toString() else "",
+                source = RunFacts.source,
+                cues = if (RunFacts.cues > 0) RunFacts.cues.toString() else "",
+                track = RunFacts.track,
+                status = status,
+                issues = if (status == RunHistory.Status.SUCCESS) issues.size.toString() else "",
+                note = note,
+                appVersion = version,
+            )
+        )
+    }
+
+    private fun stamp(): String = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
 
     private fun stopSelfCleanly() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(STOP_FOREGROUND_REMOVE)

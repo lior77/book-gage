@@ -6,19 +6,23 @@ import android.app.NotificationManager
 import android.os.Build
 import android.os.Environment
 import android.util.Log
+import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.log.InstallLog
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * Process-wide setup, done once. Two things only:
+ * Process-wide setup, done once. Three things only:
  *
  *  1. The notification channel [ProcessingService][com.hebsub.app.service.ProcessingService]
  *     posts on while a run is in progress — Android will not let a foreground
  *     service start without one.
  *  2. A last-resort crash handler that writes `HebSub/crash-<timestamp>.txt` so an
  *     uncaught exception on the phone can be read the next day without a PC.
+ *  3. [InstallLog], which records an install or an update into the HebSub folder
+ *     the first time a new version runs.
  *
  * There is deliberately no dependency injection framework, no analytics SDK and
  * no crash-reporting service (§12: nothing about the device leaves it). Objects
@@ -38,6 +42,12 @@ class HebSubApp : Application() {
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+        // On a background thread: opening the encrypted settings and writing a file
+        // are both too slow to put in front of the first frame, and nothing on
+        // screen depends on the result.
+        Thread {
+            runCatching { InstallLog.recordIfNewVersion(this, SettingsRepository(this)) }
+        }.start()
     }
 
     /**

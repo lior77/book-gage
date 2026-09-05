@@ -46,7 +46,6 @@ import com.hebsub.app.edit.AssEditor
 import com.hebsub.app.enrich.MovieDataTool
 import com.hebsub.app.media.MediaToolFactory
 import com.hebsub.core.subtitle.AssStyleOptions
-import com.hebsub.app.io.OutputWriter
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.net.ConnectionTester
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,6 +57,7 @@ import com.hebsub.app.pipeline.VideoInfo
 import com.hebsub.app.service.ProcessingService
 import com.hebsub.app.ui.HebSubTheme
 import com.hebsub.core.provider.claude.ClaudeApi
+import com.hebsub.core.report.RunHistory
 import kotlinx.coroutines.launch
 
 /**
@@ -746,13 +746,18 @@ private fun SettingsScreen(settings: SettingsRepository, onBack: () -> Unit) {
 
     fun leave() {
         // Persist the settings log so every connection test is diagnosable
-        // offline. onBack() runs only after the write, so navigating away doesn't
+        // offline. It goes to the HebSub folder, beside the run logs, the install
+        // logs and the crash reports — one place to look for everything the app
+        // records. onBack() runs only after the write, so navigating away doesn't
         // dispose this composition (and cancel the write) mid-flight.
         if (testsRan) {
             val dump = RunLog.dump()
             scope.launch {
                 runCatching {
-                    OutputWriter(context).publishLog(dump, "HebSub-settings-log-${System.currentTimeMillis()}.txt")
+                    val root = HebSubStorage(context).ensureRoot()
+                    val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US)
+                        .format(java.util.Date())
+                    java.io.File(root, "HebSub-settings-$stamp.txt").writeText(dump, Charsets.UTF_8)
                 }
                 onBack()
             }
@@ -1005,6 +1010,12 @@ private fun PipelineOverlay(state: PipelineState, onNewVideo: () -> Unit = {}) {
             Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.video_info_title), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
+                // This exact file has been through the app before — say so, and say
+                // how it went, before two hours of transcription and translation are
+                // spent again. The choice stays the user's: a second run is
+                // sometimes just what is wanted (a subtitle file this time, or an
+                // API key that is configured now).
+                state.previous?.let { PreviousRunWarning(it) }
                 Text(stringResource(R.string.video_info_body), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
@@ -1257,6 +1268,44 @@ private fun StepRow(state: SourceStepState) {
             state.detail?.let { Text(it, color = muted, style = MaterialTheme.typography.labelSmall) }
         }
     }
+}
+
+/**
+ * The warning on the pre-run screen when the file about to be processed is one
+ * the app has already done. Matched on the file's own content hash, so a copy
+ * that was renamed or moved is still recognised. It reports rather than blocks —
+ * the confirm and cancel buttons below it are the decision.
+ */
+@Composable
+private fun PreviousRunWarning(previous: RunHistory.Entry) {
+    val succeeded = previous.status == RunHistory.Status.SUCCESS
+    Surface(
+        color = if (succeeded) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                if (succeeded) "⚠ הקובץ הזה כבר עובד בהצלחה" else "⚠ הקובץ הזה כבר נוסה בעבר ונכשל",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            val name = previous.title + if (previous.year.isNotBlank()) " (${previous.year})" else ""
+            Text("${previous.date} · $name", style = MaterialTheme.typography.bodySmall)
+            if (previous.source.isNotBlank()) {
+                val lines = if (previous.cues.isNotBlank()) " · ${previous.cues} שורות" else ""
+                Text("מקור: ${previous.source}$lines", style = MaterialTheme.typography.labelSmall)
+            }
+            if (previous.note.isNotBlank()) {
+                Text(previous.note, style = MaterialTheme.typography.labelSmall)
+            }
+            Text(
+                "אפשר להמשיך בכל זאת, או לבטל בכפתור שבתחתית המסך.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+    Spacer(Modifier.height(12.dp))
 }
 
 /** One line of a short outcome list. */

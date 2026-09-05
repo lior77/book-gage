@@ -3,6 +3,7 @@ package com.hebsub.app.pipeline
 import android.content.Context
 import com.hebsub.app.asr.AsrEngine
 import com.hebsub.app.data.SettingsRepository
+import com.hebsub.app.history.RunFacts
 import com.hebsub.app.io.MoviePdf
 import com.hebsub.app.log.RunLog
 import com.hebsub.app.media.EmbeddedSubtitle
@@ -74,7 +75,10 @@ class SubtitlePipeline(
         val cues: List<SubtitleCue>,
         val language: String?,
         val readyHebrew: Boolean,
+        /** Free text for the log — which track, which file, which stream. */
         val source: String,
+        /** Which of the six steps this was, for the history sheet's Hebrew label. */
+        val step: SourceStep,
         /** True when the cues are a speech recogniser's output, not a written subtitle. */
         val machine: Boolean = false,
     )
@@ -103,6 +107,7 @@ class SubtitlePipeline(
             val probe = runCatching { mediaTool.probe(videoFile) }
                 .getOrElse { RunLog.error("probe failed", it); MediaProbe(emptyList(), null, 0) }
             RunLog.log("probe: subs=${probe.subtitleCount} audioLang=${probe.audioLanguage} durationMs=${probe.durationMs} embedded=${probe.embeddedSubtitles.map { it.index to it.language }}")
+            RunFacts.durationMs = probe.durationMs
             RunLog.log(
                 "options: imdbId=${imdbId ?: "-"} omdb=${movie != null} chosenSub=${options.subtitlePath ?: "-"} " +
                     "styled=${options.styled} " +
@@ -194,6 +199,7 @@ class SubtitlePipeline(
     ): File? {
         val acq = acquire(videoFile, base, probe, options) ?: return null
         RunLog.log("source: ${acq.source} — cues=${acq.cues.size} lang=${acq.language ?: "?"} readyHebrew=${acq.readyHebrew}")
+        RunFacts.source = acq.step.label
 
         val hebrewCues = if (acq.readyHebrew) acq.cues else translate(acq)
         val processed = SubtitlePostProcessor.process(hebrewCues)
@@ -232,6 +238,8 @@ class SubtitlePipeline(
      * alongside an ASS just gave players a second, unstyled Hebrew track to pick.
      */
     private fun writeSubs(cues: List<SubtitleCue>, base: String, options: RunOptions): File {
+        RunFacts.cues = cues.size
+        RunFacts.track = if (options.styled) "ASS" else "SRT"
         // A plain SRT is always written to the folder, whichever kind is muxed.
         // It costs nothing, and it is the only form a player will accept when you
         // ask it to load a subtitle file by hand — VLC's picker lists .srt and not
@@ -291,10 +299,13 @@ class SubtitlePipeline(
         // match is an identity check, not a search: the timing is right by
         // construction, so both are used untouched.
         hashStep(os, hash, "he", base, SourceStep.HashHebrew)?.let { (cues, lang) ->
-            return Acq(cues, lang, readyHebrew = true, source = "OpenSubtitles hash match (he)")
+            return Acq(cues, lang, readyHebrew = true, source = "OpenSubtitles hash match (he)", step = SourceStep.HashHebrew)
         }
         hashStep(os, hash, "en", base, SourceStep.HashEnglish)?.let { (cues, lang) ->
-            return Acq(cues, lang, readyHebrew = Language.isHebrew(lang), source = "OpenSubtitles hash match ($lang)")
+            return Acq(
+                cues, lang, readyHebrew = Language.isHebrew(lang),
+                source = "OpenSubtitles hash match ($lang)", step = SourceStep.HashEnglish,
+            )
         }
 
         // 1.4 — the file the user chose for this video.
@@ -336,6 +347,7 @@ class SubtitlePipeline(
                 if (hebrewSource) "he" else Language.canonical(t.language),
                 readyHebrew = hebrewSource,
                 source = "embedded $lang (stream ${t.index})",
+                step = step,
             )
         }
         PipelineBus.step(step, StepStatus.Failed, "החילוץ נכשל")
@@ -396,12 +408,32 @@ class SubtitlePipeline(
             return null
         }
 
-        val lang = Language.detectScript(parsed.joinToString("\n") { it.text })
+        // The language: the FILE NAME first, the text only if the name says nothing.
+        //
+        // Every other source hands over a real language tag — the container's
+        // stream tag, OpenSubtitles' own field, the recogniser's detection. An
+        // uploaded file has one too, in its name: subtitle sites and subtitle
+        // managers all write it before the extension ("…Saraiva.pt-PT.srt"), and
+        // it survives the copy into the cache. Reading the text can only tell
+        // Hebrew from Latin — `detectScript` answers "en" for anything Latin —
+        // which is how a Portuguese subtitle was once handed to the translator as
+        // English.
+        val tagged = Language.fromFileName(chosen.name)
+        val script = Language.detectScript(parsed.joinToString("\n") { it.text })
+        val lang = tagged ?: script
+        RunLog.log("  chosen subtitle language: name tag=${tagged ?: "-"} script=${script ?: "-"} → ${lang ?: "unknown"}")
+        // The tag decides, but say so when the text disagrees: a file named
+        // ".he.srt" that holds Latin letters would otherwise be passed through
+        // untranslated without a word.
+        if (tagged != null && script != null && Language.isHebrew(tagged) != Language.isHebrew(script)) {
+            RunLog.issue("שם קובץ הכתוביות מצהיר על שפה ($tagged) שאינה תואמת את הכתב שבתוכו — פעלנו לפי שם הקובץ")
+        }
         PipelineBus.stepUsed(SourceStep.ChosenFile, "${parsed.size} שורות · ${chosen.name.take(30)}")
         return Acq(
             parsed, lang,
             readyHebrew = Language.isHebrew(lang),
             source = "chosen file ${chosen.name}",
+            step = SourceStep.ChosenFile,
         )
     }
 
@@ -423,7 +455,7 @@ class SubtitlePipeline(
         return Acq(
             track.cues, Language.canonical(track.language),
             readyHebrew = Language.isHebrew(track.language), source = "audio transcription",
-            machine = true,
+            step = SourceStep.Transcription, machine = true,
         )
     }
 

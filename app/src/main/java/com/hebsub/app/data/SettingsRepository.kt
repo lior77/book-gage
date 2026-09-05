@@ -76,6 +76,15 @@ class SettingsRepository(context: Context) {
         get() = prefs.getLong(KEY_MIN_DISPLAY, 0L)
         set(v) = prefs.edit().putLong(KEY_MIN_DISPLAY, v.coerceIn(0L, MAX_MIN_DISPLAY_MS)).apply()
 
+    /**
+     * The app version that ran last on this device, or "" on a first launch.
+     * Only used to notice an install or an update and write the install log —
+     * see [InstallLog][com.hebsub.app.log.InstallLog].
+     */
+    var lastSeenVersion: String
+        get() = prefs.getString(KEY_LAST_VERSION, "").orEmpty()
+        set(v) = prefs.edit().putString(KEY_LAST_VERSION, v).apply()
+
     val hasAnthropicKey: Boolean get() = anthropicApiKey.isNotBlank()
     val hasOpenSubtitlesKey: Boolean get() = openSubtitlesApiKey.isNotBlank()
     val hasDeepgramKey: Boolean get() = deepgramApiKey.isNotBlank()
@@ -132,6 +141,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_MODEL = "claude_model"
         private const val KEY_ASS_DEFAULTS = "ass_defaults"
         private const val KEY_MIN_DISPLAY = "min_display_ms"
+        private const val KEY_LAST_VERSION = "last_seen_version"
 
         // JSON field names for the keys backup file.
         private const val F_VERSION = "hebsub_keys_version"

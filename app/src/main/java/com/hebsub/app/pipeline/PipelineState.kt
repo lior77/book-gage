@@ -1,5 +1,6 @@
 package com.hebsub.app.pipeline
 
+import com.hebsub.core.report.RunHistory
 import com.hebsub.core.subtitle.AssStyleOptions
 
 /**
@@ -78,7 +79,17 @@ sealed interface PipelineState {
     data class Running(val stageLabel: String, val progress: Float?) : PipelineState
 
     /** Before creating the folder: confirm/edit the name and the run's options. */
-    data class NeedVideoInfo(val suggestedName: String) : PipelineState
+    data class NeedVideoInfo(
+        val suggestedName: String,
+        /**
+         * What happened the last time this exact file was processed, when it was
+         * — matched on the file's own content hash, so a rename does not hide it.
+         * The screen shows it as a warning; the choice to go ahead stays the
+         * user's, because a second run is sometimes exactly what is wanted (a
+         * different subtitle source, a key that is configured now).
+         */
+        val previous: RunHistory.Entry? = null,
+    ) : PipelineState
 
     /** Hebrew subtitles written. [folder] is the video's HebSub folder, [srtName] the Hebrew .srt,
      *  [mediaName] the new MKV with the embedded Hebrew track (null if not created). */

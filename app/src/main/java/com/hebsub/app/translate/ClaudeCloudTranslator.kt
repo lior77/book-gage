@@ -54,7 +54,11 @@ class ClaudeCloudTranslator(
         onProgress: (Int, Int) -> Unit,
     ): List<SubtitleCue> = withContext(Dispatchers.IO) {
         require(apiKey.isNotBlank()) { "Missing Anthropic API key" }
-        val sourceName = Language.canonical(sourceLang)
+        // The language by name ("Portuguese"), not by code ("pt"), and nothing at
+        // all when it is unknown — the prompt then says "the source language" and
+        // the model reads it off the text, which it does well. Naming the WRONG
+        // language is the one thing worse than naming none.
+        val sourceName = Language.displayName(sourceLang)
         val glossary = buildGlossary(cues, sourceName)
         val system = ClaudeTranslator.systemPrompt(sourceName, glossary, machineTranscript)
         if (machineTranscript) RunLog.log("Claude: source is a machine transcript — translating for the scene, not the letter")
