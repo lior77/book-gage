@@ -1,0 +1,119 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
+}
+
+android {
+    namespace = "com.hebsub.app"
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = "com.hebsub.app"
+        minSdk = 26          // SAF + MediaMuxer + scoped storage
+        targetSdk = 35       // Android 15 (One UI 7 on the Galaxy A56)
+        versionCode = 33
+        versionName = "3.9"
+
+        // The version belongs in the name the user sees and in the file they
+        // install, so "which version is on the phone?" never needs a screen.
+        // Generated from versionName so it cannot go stale — the hand-written
+        // one in strings.xml still said 3.3 while the app was 3.8.
+        resValue("string", "app_name", "HebSub $versionName — כתוביות עברית")
+        resValue("string", "home_subtitle", "הוספת מסלול כתוביות בעברית לסרט קיים · גרסה $versionName")
+        // The Galaxy A56 is arm64-v8a. The 16KB FFmpeg build ships arm64-v8a only,
+        // so we target that single ABI (also keeps the APK smaller).
+        ndk { abiFilters += "arm64-v8a" }
+    }
+
+    // One fixed debug key, committed with the project.
+    //
+    // Without it every CI run signed the APK with a debug key it had just
+    // generated, so no two builds shared a signature. Android will not install an
+    // update signed differently from what is installed, which forced an uninstall
+    // for every version — and an uninstall wipes the app's data, API keys
+    // included. That is how a run arrived with no keys and reported "no subtitles
+    // found". A debug key is not a secret in any meaningful sense (the stock one
+    // has a public password); its only job is to stay the same.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        debug {
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = "17" }
+
+    buildFeatures { compose = true }
+
+    // The FFmpeg integration is an opt-in source set + dependency. The default
+    // build (no `-PwithFfmpeg`) compiles with Maven-only dependencies and uses
+    // NoOpMediaTool, so a working APK builds anywhere. Pass -PwithFfmpeg and drop
+    // a 16KB-compatible FFmpegKit AAR into app/libs/ to enable probing + MKV mux.
+    if (project.hasProperty("withFfmpeg")) {
+        sourceSets["main"].java.srcDir("src/ffmpeg/java")
+    }
+
+    // Android 15 requires 16 KB page-size alignment. useLegacyPackaging=false keeps
+    // the .so files page-aligned in the APK; the native AARs must also be 16KB-built.
+    packaging {
+        jniLibs { useLegacyPackaging = false }
+        resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    }
+}
+
+dependencies {
+    // Pure-Kotlin subtitle/translation logic (substituted from includeBuild("core")).
+    implementation("com.hebsub:core")
+
+    // Compose UI
+    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    implementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.core:core-ktx:1.15.0")
+
+    // Encrypted local storage for the user's API keys (never leaves the device).
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Privacy-hardened HTTP for downloads, OpenSubtitles, and Claude.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // On-device translation (offline, private). Hebrew supported.
+    implementation("com.google.mlkit:translate:17.0.3")
+
+    // --- Optional native media (FFmpeg) --------------------------------------
+    // Enabled with -PwithFfmpeg. Uses a Maven Central 16KB-page-size-compatible
+    // community fork of FFmpegKit (the official one was retired Jan 2025). The
+    // package stays com.arthenica.ffmpegkit, so FfmpegMediaTool is drop-in.
+    if (project.hasProperty("withFfmpeg")) {
+        implementation("com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1")
+    }
+
+    testImplementation("junit:junit:4.13.2")
+}
