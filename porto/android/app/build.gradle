@@ -1,0 +1,46 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'app.porto.atlas'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "app.porto.atlas"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    // the web app is the app: index.html and everything it loads is copied in
+    // as assets, and served to the WebView from a virtual https origin
+    sourceSets {
+        main {
+            assets.srcDirs += "$buildDir/web"
+        }
+    }
+}
+
+// One copy task rather than a second copy of the web app checked into the
+// repository: the app that ships is byte for byte the one in porto/.
+tasks.register('copyWebApp', Copy) {
+    from(rootProject.file('../')) {
+        include 'index.html', 'app.css', 'app.js', 'manifest.webmanifest'
+        include 'vendor/**', 'icons/**', 'data/processed/**', 'data/sources.json'
+    }
+    into "$buildDir/web/site"
+}
+tasks.configureEach { t ->
+    if (t.name.startsWith('generate') && t.name.endsWith('Assets')) t.dependsOn('copyWebApp')
+    if (t.name.startsWith('merge') && t.name.endsWith('Assets')) t.dependsOn('copyWebApp')
+    if (t.name.startsWith('package')) t.dependsOn('copyWebApp')
+}

@@ -2486,6 +2486,14 @@ function wire() {
 
   $('#boot').remove();
 
+  // The Android wrapper asks this before it lets the system back button close
+  // the app, so back climbs the app's own levels first.
+  window.__portoBack = function () {
+    if (S.level === 'district') return false;
+    goUp();
+    return true;
+  };
+
   // The standalone build has nothing to precache: it is already one file.
   if (!STANDALONE && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline unavailable */ });

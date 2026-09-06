@@ -1,0 +1,59 @@
+# Builds the Porto atlas as an Android APK.
+#
+# It runs here rather than on a developer's machine because the Android build
+# tools — aapt2 and d8 — are published only from dl.google.com, and the
+# environment the app is developed in cannot reach it.  GitHub's runners carry
+# the SDK already, so the build happens where the tools are.
+#
+# The result is a debug-signed APK: installable by sideloading, no secrets and
+# no signing key needed.  Download it from the run's Artifacts section.
+name: Porto atlas — Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/mobile-app-pdf-knowledge-aoomsp]
+    paths:
+      - 'porto/android/**'
+      - 'porto/index.html'
+      - 'porto/app.js'
+      - 'porto/app.css'
+      - 'porto/data/processed/**'
+      - '.github/workflows/porto-android-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+
+      - name: Build the APK
+        working-directory: porto/android
+        run: gradle --no-daemon assembleDebug
+
+      - name: What came out
+        working-directory: porto/android
+        run: |
+          find . -name '*.apk' -printf '%p  %sB\n'
+          echo "--- assets that went in:"
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -c 'assets/site/' || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: porto-atlas-apk
+          path: porto/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
