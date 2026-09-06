@@ -12,6 +12,22 @@ android {
         versionName "1.0"
     }
 
+    // A stable signing key, when one is provided.  Without it Gradle invents a
+    // fresh debug key on every build, and Android refuses to install a new
+    // version over an old one whose key does not match — which forces an
+    // uninstall, and an uninstall takes the user's saved points with it.
+    signingConfigs {
+        debug {
+            def ks = System.getenv('PORTO_KEYSTORE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('PORTO_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('PORTO_KEY_ALIAS')
+                keyPassword System.getenv('PORTO_KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

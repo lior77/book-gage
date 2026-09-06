@@ -1058,6 +1058,16 @@ body.is-dragging #map{pointer-events:none}
   </div>
 </div>
 
+<div class="modal" id="impModal" hidden role="dialog" aria-modal="true" aria-labelledby="impTitle">
+  <div class="modal-in">
+    <h2 id="impTitle">ייבוא נקודות</h2>
+    <p class="note" id="impNote"></p>
+    <textarea id="impText" rows="7" dir="ltr" spellcheck="false"></textarea>
+    <button class="cta" id="impSave">ייבוא</button>
+    <button class="cta cta-2" id="impCancel">סגירה</button>
+  </div>
+</div>
+
 <div class="modal" id="srcModal" hidden role="dialog" aria-modal="true" aria-labelledby="srcTitle">
   <div class="modal-in">
     <h2 id="srcTitle"></h2>
@@ -1443,6 +1453,7 @@ function drawDistrict() {
     onEachFeature: (ft, l) => {
       const m = D.munByNum.get(ft.properties.num);
       l.on('click', () => {
+        if (S.adding) return;
         if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
         goMun(ft.properties.num);
       });
@@ -1462,6 +1473,7 @@ function drawDistrict() {
     const mk = L.marker(latlng(m.center), { icon: numIcon(m.num), keyboard: false,
       title: m.num + '. ' + m.he, riseOnHover: true });
     mk.on('click', () => {
+      if (S.adding) return;
       if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
       goMun(m.num);
     });
@@ -1631,6 +1643,10 @@ function renderMun(num) {
     <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הפרגזיות'} — לפי המספור במפה</div>
     ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
     <div class="rows">${list}</div>
+    ${mineList(p => {
+      const at = freguesiaAt(p.ll[0], p.ll[1]);
+      return at && at.mun_num === num;
+    })}
     ${isPorto ? '' : `<p class="note" style="margin-block-start:10px">המספור של הפרגזיות הוא מספור של האפליקציה
       ולא מספור רשמי; הוא נועד לקשור בין המפה לרשימה. סדר הפרגזיות נלקח מהמסמך
       המקורי היכן שהוא מפרט אותן, ובשש העיריות שהוא לא מפרט — לפי גודל אוכלוסייה.</p>`}`;
@@ -1666,6 +1682,7 @@ function drawMine() {
     mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : ''),
       { direction: 'top', className: 'tt' });
     mk.on('click', () => {
+      if (S.adding) return;
       if (isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
       openMine(p.id);
     });
@@ -1701,6 +1718,67 @@ function commitMine() {
 function deleteMine() {
   D.mine = D.mine.filter(x => x.id !== mineEditing.id);
   saveMine(); closeMine(); drawMine(); redrawText();
+}
+
+/* The points are the one thing here the user made, and the only thing an
+   uninstall would take with it.  Both directions are plain text, so they
+   survive a new phone, a reinstall, and a message to yourself. */
+function exportMine() {
+  if (!D.mine.length) { mapNote('אין עדיין נקודות לייצוא.'); return; }
+  const text = JSON.stringify(D.mine, null, 1);
+  const done = () => mapNote(nf(D.mine.length) + ' נקודות הועתקו. אפשר להדביק אותן ' +
+    'בהודעה לעצמך, ולייבא בחזרה בכל מכשיר.');
+  try {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } catch (e) { fallbackCopy(text, done); }
+}
+function fallbackCopy(text, done) {
+  // clipboard access needs a secure context and a permission; a hidden
+  // textarea and execCommand still work where it is refused
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(ta);
+  if (ok) done();
+  else openImport(text);          // could not copy: show it to be selected by hand
+}
+
+function openImport(prefill) {
+  $('#impText').value = prefill || '';
+  $('#impNote').textContent = prefill
+    ? 'לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.'
+    : 'הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.';
+  $('#impModal').hidden = false;
+}
+function commitImport() {
+  let rows;
+  try { rows = JSON.parse($('#impText').value); }
+  catch (e) { $('#impNote').textContent = 'זה לא טקסט תקין של נקודות.'; return; }
+  if (!Array.isArray(rows)) { $('#impNote').textContent = 'ציפיתי לרשימה של נקודות.'; return; }
+  const have = new Set(D.mine.map(p => p.id));
+  let added = 0, skipped = 0;
+  rows.forEach(r => {
+    const ok = r && typeof r.name === 'string' && Array.isArray(r.ll)
+      && r.ll.length === 2 && r.ll.every(n => typeof n === 'number' && isFinite(n));
+    if (!ok) { skipped++; return; }
+    const id = typeof r.id === 'string' && r.id ? r.id : 'p' + Math.random().toString(36).slice(2);
+    if (have.has(id)) { skipped++; return; }
+    have.add(id);
+    D.mine.push({ id: id, name: r.name, desc: typeof r.desc === 'string' ? r.desc : '',
+                  ll: [r.ll[0], r.ll[1]], at: typeof r.at === 'string' ? r.at : '' });
+    added++;
+  });
+  saveMine();
+  $('#impModal').hidden = true;
+  drawMine(); redrawText();
+  mapNote(added ? ('נוספו ' + nf(added) + ' נקודות' + (skipped ? ', ' + nf(skipped) + ' דולגו' : '') + '.')
+                : 'לא נוספה אף נקודה חדשה.', !added);
 }
 
 function toggleAdd() {
@@ -1859,11 +1937,16 @@ function renderZone(key) {
    district level, the ones inside this parish at level 3. */
 function mineList(within) {
   const rows = D.mine.filter(p => !within || within(p));
-  if (!rows.length) return '';
+  // at district level the card shows even when empty, so points exported from
+  // another phone have somewhere to be pasted in
+  if (!rows.length && within) return '';
   return `<div class="card">
       <h2>הנקודות שלי <span class="note num">${rows.length}</span></h2>
-      <p class="sub">נשמרות בדפדפן הזה בלבד. לא נשלחות לשום מקום ולא מגובות —
-        ניקוי נתוני הדפדפן ימחק אותן.</p>
+      <p class="sub">נשמרות במכשיר הזה בלבד. לא נשלחות לשום מקום ולא מגובות.</p>
+      <div class="chips">
+        <button class="chip" data-mine-act="export">העתקת הנקודות</button>
+        <button class="chip" data-mine-act="import">ייבוא נקודות</button>
+      </div>
     </div>
     <div class="rows">${rows.map(p => `<button class="row" data-mine="${html(p.id)}">
         <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
@@ -1985,6 +2068,7 @@ function openInGoogle(ll, name) {
 // One record is "picked" at a time, and both halves show it: the row gets a
 // frame and scrolls into view, the shape or dot on the map gets a heavy ring.
 function pick(hi, from) {
+  if (S.adding) return;               // the tap is placing a point, not choosing one
   if (isSecondTap(hi.kind + ':' + hi.id)) {
     const z = zoneOf(S.zone);
     const it = hi.kind === 'bairro'
@@ -1999,6 +2083,7 @@ function pick(hi, from) {
 // Every parish has a level of its own now, so a tap on one opens it.  The
 // second argument is kept because the map and the list both call this.
 function pickFre(f) {
+  if (S.adding) return;
   if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), f.he || f.pt); return; }
   goZone(D.freKey(f));
 }
@@ -2340,6 +2425,11 @@ function wire() {
   $('#mineSave').addEventListener('click', commitMine);
   $('#mineCancel').addEventListener('click', closeMine);
   $('#mineDelete').addEventListener('click', deleteMine);
+  $('#impSave').addEventListener('click', commitImport);
+  $('#impCancel').addEventListener('click', () => { $('#impModal').hidden = true; });
+  $('#impModal').addEventListener('click', e => {
+    if (e.target.id === 'impModal') $('#impModal').hidden = true;
+  });
   $('#mineGoogle').addEventListener('click', () => {
     if (mineEditing) openInGoogle(mineEditing.ll, mineEditing.name);
   });
@@ -2390,6 +2480,11 @@ function wire() {
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
       if (!S.cats.size) S.cats.add(c);              // never leave the map blank
       drawZone(S.zone); renderZone(S.zone); applyHi();
+      return;
+    }
+    const act = e.target.closest('[data-mine-act]');
+    if (act) {
+      if (act.dataset.mineAct === 'export') exportMine(); else openImport('');
       return;
     }
     const mine = e.target.closest('[data-mine]');

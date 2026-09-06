@@ -43,6 +43,30 @@ jobs:
         with:
           gradle-version: '8.10'
 
+      # Optional, and the build says plainly which way it went.  With the
+      # secret the app updates in place and keeps the points the user saved;
+      # without it every build carries a different key and an update can only
+      # be installed by uninstalling first.
+      - name: Signing key
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/porto.jks"
+            {
+              echo "PORTO_KEYSTORE=$RUNNER_TEMP/porto.jks"
+              echo "PORTO_KEYSTORE_PASSWORD=$KS_PASS"
+              echo "PORTO_KEY_ALIAS=${KS_ALIAS:-porto}"
+              echo "PORTO_KEY_PASSWORD=${KEY_PASS:-$KS_PASS}"
+            } >> "$GITHUB_ENV"
+            echo "signing with the stored key: updates will install over an existing copy"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_B64 secret. Signing with a throwaway debug key, so this build cannot be installed over an earlier one without uninstalling first — which deletes the points saved in the app. See porto/android/SIGNING.md."
+          fi
+
       - name: Build the APK
         working-directory: porto/android
         run: gradle --no-daemon assembleDebug
