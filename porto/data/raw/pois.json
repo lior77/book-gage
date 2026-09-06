@@ -230,7 +230,7 @@
   },
   {
    "name": "Câmara Municipal do Porto",
-   "cat": "landmark",
+   "cat": "civic",
    "ll": [
     41.150063,
     -8.610705
@@ -776,7 +776,7 @@
   },
   {
    "name": "Junta de Freguesia do Bonfim",
-   "cat": "landmark",
+   "cat": "civic",
    "ll": [
     41.147963,
     -8.59832
@@ -1569,7 +1569,7 @@
   },
   {
    "name": "Junta de Freguesia de Lordelo do Ouro e Massarelos - Polo de Massarelos",
-   "cat": "landmark",
+   "cat": "civic",
    "ll": [
     41.152847,
     -8.630862
@@ -2907,6 +2907,19 @@
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },
   {
+   "name": "União de Freguesias de Aldoar, Foz do Douro e Nevogilde",
+   "cat": "civic",
+   "ll": [
+    41.171,
+    -8.67116
+   ],
+   "osm": "way/446887305",
+   "notable": false,
+   "quarter": 6,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
    "name": "\"Palacios\" de Dom Miguel da Silva",
    "cat": "landmark",
    "ll": [
@@ -3371,6 +3384,19 @@
    "osm": "way/391839915",
    "notable": true,
    "quarter": 2,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "Junta de Freguesia de Lordelo do Ouro e Massarelos",
+   "cat": "civic",
+   "ll": [
+    41.154417,
+    -8.648399
+   ],
+   "osm": "way/462819033",
+   "notable": false,
+   "quarter": 7,
    "confidence": "reported",
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },
@@ -8146,6 +8172,19 @@
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },
   {
+   "name": "Junta de Freguesia de São Nicolau",
+   "cat": "civic",
+   "ll": [
+    41.141106,
+    -8.617366
+   ],
+   "osm": "way/211284633",
+   "notable": false,
+   "quarter": 1,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
    "name": "Conjunto de Três Edifícios de Comércio e Escritórios",
    "cat": "landmark",
    "ll": [
@@ -8363,6 +8402,19 @@
    "osm": "way/408920357",
    "notable": true,
    "quarter": 7,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "União das Freguesias de Cedofeita, Santo Ildefonso, Sé, Miragaia, São Nicolau e Vitória - Polo da Sé",
+   "cat": "civic",
+   "ll": [
+    41.144417,
+    -8.606857
+   ],
+   "osm": "way/467562736",
+   "notable": true,
+   "quarter": 1,
    "confidence": "reported",
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },
@@ -9687,6 +9739,19 @@
     -8.590697
    ],
    "osm": "way/482565592",
+   "notable": false,
+   "quarter": 3,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "Junta de Freguesia de Campanhã",
+   "cat": "civic",
+   "ll": [
+    41.157424,
+    -8.578371
+   ],
+   "osm": "way/530327993",
    "notable": false,
    "quarter": 3,
    "confidence": "reported",
@@ -12904,6 +12969,19 @@
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },
   {
+   "name": "Junta de Freguesia de Ramalde",
+   "cat": "civic",
+   "ll": [
+    41.168403,
+    -8.647614
+   ],
+   "osm": "node/8364536695",
+   "notable": false,
+   "quarter": 5,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
    "name": "Dom António Augusto de Castro Meireles",
    "cat": "landmark",
    "ll": [
@@ -13446,6 +13524,19 @@
    "osm": "way/426318919",
    "notable": false,
    "quarter": 6,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "Junta de Freguesia de Paranhos",
+   "cat": "civic",
+   "ll": [
+    41.170716,
+    -8.60429
+   ],
+   "osm": "way/450403974",
+   "notable": false,
+   "quarter": 4,
    "confidence": "reported",
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },
@@ -14315,6 +14406,19 @@
     -8.615103
    ],
    "osm": "way/215298424",
+   "notable": false,
+   "quarter": 1,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "Junta de Freguesia de Miragaia",
+   "cat": "civic",
+   "ll": [
+    41.145997,
+    -8.617932
+   ],
+   "osm": "way/215333076",
    "notable": false,
    "quarter": 1,
    "confidence": "reported",
@@ -15473,6 +15577,19 @@
    ],
    "osm": "way/223622276",
    "notable": true,
+   "quarter": 1,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "Junta de Freguesia da Vitória",
+   "cat": "civic",
+   "ll": [
+    41.149032,
+    -8.616126
+   ],
+   "osm": "way/229316615",
+   "notable": false,
    "quarter": 1,
    "confidence": "reported",
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
@@ -18152,6 +18269,19 @@
    "osm": "way/462823041",
    "notable": false,
    "quarter": 7,
+   "confidence": "reported",
+   "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
+  },
+  {
+   "name": "Junta de Freguesia da Foz do Douro",
+   "cat": "civic",
+   "ll": [
+    41.154276,
+    -8.674808
+   ],
+   "osm": "way/462842613",
+   "notable": false,
+   "quarter": 6,
    "confidence": "reported",
    "note": "מיקום מ-OpenStreetMap, מקור יחיד ולא מאומת מול מקור שני."
   },

@@ -31,6 +31,7 @@ const ASSETS = [
   './data/processed/municipios.json',
   './data/processed/freguesias.json',
   './data/processed/porto_city.json',
+  './data/processed/zones.json',
   './data/processed/boundaries_municipios.geojson',
   './data/processed/boundaries_belts.geojson',
   './data/processed/boundaries_freguesias.geojson',

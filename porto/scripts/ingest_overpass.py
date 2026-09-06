@@ -71,6 +71,7 @@ CATEGORIES = [
     ("museum",   lambda p: p.get("tourism") in ("museum", "gallery")),
     ("culture",  lambda p: p.get("amenity") in ("theatre", "arts_centre", "library")),
     ("market",   lambda p: p.get("amenity") == "marketplace"),
+    ("civic",    lambda p: p.get("amenity") == "townhall"),
     ("landmark", lambda p: p.get("tourism") in ("attraction", "viewpoint")
                  or p.get("historic") or p.get("heritage")
                  or p.get("man_made") == "bridge" or p.get("bridge") == "yes"
@@ -80,7 +81,7 @@ CATEGORIES = [
 CATEGORY_HE = {
     "station": "תחנה", "hospital": "בית חולים", "university": "השכלה",
     "museum": "מוזיאון", "culture": "תרבות", "market": "שוק",
-    "landmark": "אתר", "green": "שטח פתוח",
+    "landmark": "אתר", "green": "שטח פתוח", "civic": "מוסד ציבורי",
 }
 
 _STOP = {"de", "do", "da", "dos", "das", "e", "of", "the"}
@@ -321,6 +322,147 @@ def ingest_bairros(pois_feats, quarters):
     }
 
 
+# ------------------------------------------------------------- the district ---
+# Queries 4, 5 and 6 cover all 18 municipalities.  They are bbox queries, not
+# area queries: a boundary relation id can change and then the query returns
+# silence instead of an error.  The bbox takes in slices of Braga, Aveiro and
+# Vila Real as well, and everything outside the district is dropped here,
+# against the CAOP parish polygons the app already draws.
+PLACE_RANK = ["city", "town", "village", "suburb", "quarter", "neighbourhood", "hamlet"]
+PLACE_HE = {"city": "עיר", "town": "עיירה", "village": "כפר", "hamlet": "כפר קטן",
+            "suburb": "פרבר", "quarter": "רובע", "neighbourhood": "שכונה"}
+
+
+def parish_index(fre_fc):
+    """(bbox, polygon, key) for each of the 243 parishes.
+
+    A bbox test first: 6,000 points against 243 polygons is 1.5 m cheap
+    comparisons and a few thousand expensive ones, instead of 1.5 m expensive.
+    """
+    idx = []
+    for ft in fre_fc["features"]:
+        poly = shape(ft["geometry"]).buffer(0)
+        key = "%d|%s" % (ft["properties"]["mun_num"], ft["properties"]["name"])
+        idx.append((poly.bounds, poly, key))
+    return idx
+
+
+def parish_of(idx, lon, lat):
+    pt = Point(lon, lat)
+    for (x0, y0, x1, y1), poly, key in idx:
+        if x0 <= lon <= x1 and y0 <= lat <= y1 and poly.contains(pt):
+            return key
+    return None
+
+
+def points_of(feats):
+    """Named point features, as (props, lon, lat)."""
+    for ft in feats:
+        p = ft["properties"]
+        if p.get("name") and ft["geometry"]["type"] == "Point":
+            lon, lat = ft["geometry"]["coordinates"]
+            yield p, lon, lat
+
+
+def dedupe(rows, key_of, limit_m=250):
+    """OSM often holds the same thing twice, as a node and as a way."""
+    rows.sort(key=lambda r: -r.pop("_tags", 0))
+    out, seen = [], {}
+    for r in rows:
+        k = key_of(r)
+        twin = seen.get(k)
+        if twin and metres([twin["ll"][1], twin["ll"][0]], [r["ll"][1], r["ll"][0]]) < limit_m:
+            continue
+        seen[k] = r
+        out.append(r)
+    return out
+
+
+def ingest_district(fre_fc):
+    places_ft = load("district_places.geojson")
+    serv_ft = load("district_services.geojson")
+    land_ft = load("district_landmarks.geojson")
+    if not places_ft and not serv_ft and not land_ft:
+        print("  district exports missing — skipping")
+        return None
+
+    idx = parish_index(fre_fc)
+
+    # ---- localities: the letters on a parish map ---------------------------
+    places = []
+    for p, lon, lat in points_of(places_ft):
+        kind = p.get("place")
+        if kind not in PLACE_RANK:
+            continue
+        pop = p.get("population")
+        places.append({
+            "name": p["name"], "kind": kind, "ll": [round(lat, 6), round(lon, 6)],
+            "osm": p.get("@id", ""),
+            "pop": int(pop) if (pop or "").strip().isdigit() else None,
+            "_tags": len(p),
+        })
+    places = dedupe(places, lambda r: (norm(r["name"]), r["kind"]), 400)
+    out_places, off_p = [], 0
+    for r in places:
+        key = parish_of(idx, r["ll"][1], r["ll"][0])
+        if key is None:
+            off_p += 1
+            continue
+        r["freg"] = key
+        out_places.append(r)
+
+    # ---- landmarks and services: the black dots ---------------------------
+    pois = []
+    for feats in (serv_ft, land_ft):
+        for p, lon, lat in points_of(feats):
+            cat = categorise(p)
+            if not cat:
+                continue
+            pois.append({
+                "name": p["name"], "cat": cat, "ll": [round(lat, 6), round(lon, 6)],
+                "osm": p.get("@id", ""),
+                # the one notability signal the data itself carries
+                "notable": bool(p.get("wikidata") or p.get("wikipedia")),
+                "_tags": len(p),
+            })
+    pois = dedupe(pois, lambda r: (norm(r["name"]), r["cat"]))
+    out_pois, off_q = [], 0
+    for r in pois:
+        key = parish_of(idx, r["ll"][1], r["ll"][0])
+        if key is None:
+            off_q += 1
+            continue
+        r["freg"] = key
+        out_pois.append(r)
+
+    by_kind, by_cat = {}, {}
+    for r in out_places:
+        by_kind[r["kind"]] = by_kind.get(r["kind"], 0) + 1
+    for r in out_pois:
+        by_cat[r["cat"]] = by_cat.get(r["cat"], 0) + 1
+    touched = len({r["freg"] for r in out_places} | {r["freg"] for r in out_pois})
+    print("  district: %d places → %d inside the district (%d outside the 18 municipalities)"
+          % (len(places), len(out_places), off_p))
+    print("            %d points → %d inside (%d outside)" % (len(pois), len(out_pois), off_q))
+    print("            " + "  ".join("%s=%d" % (PLACE_HE[k], v) for k, v in
+                                     sorted(by_kind.items(), key=lambda kv: PLACE_RANK.index(kv[0]))))
+    print("            " + "  ".join("%s=%d" % (CATEGORY_HE[k], v) for k, v in sorted(by_cat.items())))
+    print("            %d of 243 parishes have something to show" % touched)
+    return {
+        "meta": {
+            "source": "OpenStreetMap via Overpass (scripts/overpass/04, 05, 06)",
+            "licence": "ODbL — © OpenStreetMap contributors",
+            "retrieved": date.today().isoformat(),
+            "confidence": REPORTED,
+            "note_he": "כל הנקודות מ-OSM: מקור יחיד, לא מאומת מול מקור שני. "
+                       "המיפוי התנדבותי ולא אחיד — הרשימה אינה ממצה, והיעדר "
+                       "נקודה אינו ראיה שאין שם דבר.",
+        },
+        "places": out_places,
+        "pois": out_pois,
+    }
+
+
 # -------------------------------------------------------------- elevation ---
 def ingest_elevation(municipalities):
     feats = load("osm_district_ele.geojson")
@@ -403,9 +545,13 @@ def main():
     municipalities = {ft["properties"]["num"]: (ft["properties"]["name"], shape(ft["geometry"]))
                       for ft in mun_fc["features"]}
 
+    fre_fc = json.load(open(os.path.join(ROOT, "data", "processed",
+                                         "boundaries_freguesias.geojson"), encoding="utf-8"))
+
     print("ingesting Overpass exports")
     outputs = {
         "pois.json": ingest_pois(quarters),
+        "district_points.json": ingest_district(fre_fc),
         "bairro_points.json": ingest_bairros(None, quarters),
         "elevation_osm.json": ingest_elevation(municipalities),
     }

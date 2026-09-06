@@ -251,10 +251,12 @@ def belt_outlines(belts, mun_geom, name_of):
 
 # The categories always shown; everything else needs a notability signal.
 POI_CORE = {"station", "hospital", "university", "museum", "culture", "market"}
+POI_CORE = POI_CORE | {"civic"}
 POI_LABEL = {"station": "תחנות מטרו ורכבת", "hospital": "בתי חולים",
              "university": "אוניברסיטה והשכלה", "museum": "מוזיאונים וגלריות",
              "culture": "תיאטרון, ספריות ותרבות", "market": "שווקים",
-             "landmark": "אתרים ומונומנטים", "green": "פארקים, גנים וחופים"}
+             "landmark": "אתרים ומונומנטים", "green": "פארקים, גנים וחופים",
+             "civic": "מוסדות ציבור"}
 
 
 def city_extras(city):
@@ -281,9 +283,7 @@ def city_extras(city):
 
     for q in city:
         for i, b in enumerate(q["bairros"]):
-            # A, B, C ... AA, AB for a quarter with more than 26
-            b["letter"] = (chr(65 + i) if i < 26
-                           else "A" + chr(65 + i - 26))
+            b["letter"] = letter_at(i)
             hit = by_key.get((q["num"], b["en"]))
             if hit:
                 b["ll"] = hit["ll"]
@@ -306,6 +306,102 @@ def city_extras(city):
                       "osm": r.get("osm", "")} for r in mine]
         stats["pois"] += len(mine)
     return stats
+
+
+PLACE_HE = {"city": "עיר", "town": "עיירה", "village": "כפר", "hamlet": "כפר קטן",
+            "suburb": "פרבר", "quarter": "רובע", "neighbourhood": "שכונה"}
+PLACE_RANK = ["city", "town", "village", "suburb", "quarter", "neighbourhood", "hamlet"]
+
+
+def letter_at(i):
+    """A, B, C … Z, AA, AB … AZ, BA … — the label a locality carries on the map.
+
+    Spreadsheet-column order, because one parish (Gondomar São Cosme, Valbom e
+    Jovim) holds more than 52 localities and a two-letter scheme that wrapped
+    would hand two of them the same label.
+    """
+    out = ""
+    i += 1
+    while i:
+        i, r = divmod(i - 1, 26)
+        out = chr(65 + r) + out
+    return out
+
+
+def build_zones(freguesias, city):
+    """Level 3, for all 243 parishes rather than only Porto's seven.
+
+    Porto keeps the curated material: 53 named neighbourhoods with a Hebrew
+    name and a description, from the source document.  Nothing equivalent is
+    published for the other 236 parishes and none was invented — what they get
+    instead is what OpenStreetMap actually holds: the localities inside the
+    parish (a village, a hamlet, a suburb) and the landmarks and services in
+    it.  A locality carries no Hebrew name and no description here, because
+    nobody wrote one; it carries its Portuguese name and what OSM calls it.
+    """
+    zones = {}
+    stats = {"porto": 0, "osm": 0, "letters": 0, "pois": 0, "empty": 0}
+
+    # Porto: reuse the quarters exactly as they are already built.
+    # CAOP prints "União das freguesias de X" where the document prints "X";
+    # norm() drops that prefix, so match on it rather than on the raw name.
+    q_by_en = {norm(q["en"]): q for q in city}
+    for f in freguesias:
+        if f["mun_num"] != 1:
+            continue
+        q = q_by_en.get(norm(f["pt"]))
+        if not q:
+            continue
+        zones["%d|%s" % (f["mun_num"], f["pt"])] = {
+            "origin": "pdf", "desc": q.get("desc"),
+            "bairros": q["bairros"], "pois": q["pois"],
+        }
+        stats["porto"] += 1
+        stats["letters"] += sum(1 for b in q["bairros"] if b.get("ll"))
+        stats["pois"] += len(q["pois"])
+
+    district = load_raw("district_points.json")
+    if district:
+        places, pois = {}, {}
+        for r in district["places"]:
+            places.setdefault(r["freg"], []).append(r)
+        for r in district["pois"]:
+            if r["cat"] in POI_CORE or r.get("notable") or r["cat"] == "landmark":
+                pois.setdefault(r["freg"], []).append(r)
+
+        for f in freguesias:
+            key = "%d|%s" % (f["mun_num"], f["pt"])
+            if key in zones:                       # Porto, already done
+                continue
+            rows = places.get(key, [])
+            # biggest first: a village of 900 belongs above a hamlet of 40, and
+            # a place with no population tag sorts under one that has it
+            rows.sort(key=lambda r: (PLACE_RANK.index(r["kind"]), -(r["pop"] or 0), r["name"]))
+            bairros = []
+            for i, r in enumerate(rows):
+                bairros.append({
+                    "letter": letter_at(i), "en": r["name"], "ll": r["ll"],
+                    "kind": r["kind"], "kind_he": PLACE_HE[r["kind"]],
+                    "pop": r.get("pop"), "osm": r.get("osm", ""),
+                    # CONFIDENCE: "reported". One OSM contributor placed this
+                    # point; nothing here cross-checks it.
+                    "confidence": "reported",
+                    "note_src": "נקודת היישוב מ-OpenStreetMap, מקור יחיד.",
+                })
+            mine = pois.get(key, [])
+            mine.sort(key=lambda r: (list(POI_LABEL).index(r["cat"]), r["name"]))
+            zones[key] = {
+                "origin": "osm", "desc": None,
+                "bairros": bairros,
+                "pois": [{"name": r["name"], "cat": r["cat"], "ll": r["ll"],
+                          "osm": r.get("osm", "")} for r in mine],
+            }
+            stats["osm"] += 1
+            stats["letters"] += len(bairros)
+            stats["pois"] += len(mine)
+            if not bairros and not mine:
+                stats["empty"] += 1
+    return zones, stats
 
 
 # ------------------------------------------------------------------- build ---
@@ -539,6 +635,7 @@ def main():
                         % (spec["key"], n_m, n_f))
 
     city_stats = city_extras(city)
+    zones, zone_stats = build_zones(freguesias, city)
     belt_fc = belt_outlines(belts, mun_geom, {NUM[m]: m for m in MUNICIPALITIES})
 
     os.makedirs(OUT, exist_ok=True)
@@ -558,6 +655,7 @@ def main():
                              "items": freguesias})
     dump("porto_city.json", {"generated": date.today().isoformat(),
                              "quarters": city, "places": places})
+    dump("zones.json", {"generated": date.today().isoformat(), "zones": zones})
     dump("boundaries_municipios.geojson", mun_fc)
     dump("boundaries_belts.geojson", belt_fc)
     dump("boundaries_freguesias.geojson", fre_fc)
@@ -576,6 +674,9 @@ def main():
              len(belt_fc["features"])))
     n_pop = sum(1 for f in freguesias if "pop2021" in f)
     n_he = sum(1 for f in freguesias if "he" in f)
+    print("level 3: %d parishes from the document, %d from OSM, %d with nothing to show"
+          % (zone_stats["porto"], zone_stats["osm"], zone_stats["empty"]))
+    print("         %d letters, %d dots" % (zone_stats["letters"], zone_stats["pois"]))
     n_note = sum(1 for f in freguesias if "note" in f)
     n_app = sum(1 for f in freguesias if f.get("note_origin") == "app")
     print("freguesias with population 2021: %d/%d   with Hebrew name: %d/%d"

@@ -11,7 +11,8 @@ Rules enforced (from BRIEF.md):
      because INE published the two at different moments)
   5. density == population / area
   6. every geometry is valid and lies inside the district bounding box
-  7. what the app draws matches what it lists: the parish numbers run 1..N with
+  7. level 3 covers all 243 parishes, and what the app draws matches what it
+     lists: the parish numbers run 1..N with
      no gaps and no repeats, every parish has a description whose origin is
      recorded, every bairro has a letter, and every belt outline names the
      municipalities it encloses
@@ -192,6 +193,29 @@ def main():
     if origins.get("app") and "freguesia.note" not in sources["fields"]:
         fail("descriptions written for the app are not documented in sources.json")
 
+    # ---- level 3 covers every parish, not only Porto's seven ---------------
+    zones = load("zones.json")["zones"]
+    missing_z = [f["pt"] for f in fre if "%d|%s" % (f["mun_num"], f["pt"]) not in zones]
+    if missing_z:
+        fail("%d parishes have no level-3 record, e.g. %s" % (len(missing_z), missing_z[:3]))
+    labelled = {"station", "hospital", "university", "museum", "culture",
+                "market", "landmark", "green", "civic"}
+    for key, z in zones.items():
+        seen = [b["letter"] for b in z["bairros"]]
+        if len(set(seen)) != len(seen):
+            fail("%s repeats a locality letter" % key)
+        for b in z["bairros"]:
+            if b.get("ll") and not b.get("confidence"):
+                fail("%s: locality %s has a point but no confidence" % (key, b.get("en")))
+        for r in z["pois"]:
+            if r["cat"] not in labelled:
+                fail("%s: point %r has category %r, which the app cannot label"
+                     % (key, r["name"], r["cat"]))
+            if not r.get("ll"):
+                fail("%s: point %r has no coordinate" % (key, r["name"]))
+    if zones and "freguesia.locality" not in sources["fields"]:
+        fail("the level-3 localities are not documented in sources.json")
+
     letters = [b for q in city["quarters"] for b in q["bairros"] if not b.get("letter")]
     if letters:
         fail("%d bairros have no letter" % len(letters))
@@ -218,6 +242,9 @@ def main():
     # ---- report -----------------------------------------------------------
     print("municipalities %d   freguesias %d   city quarters %d   bairros %d"
           % (len(mun), len(fre), len(city["quarters"]), n_bairros))
+    print("level 3: %d parishes, %d localities, %d points"
+          % (len(zones), sum(len(z["bairros"]) for z in zones.values()),
+             sum(len(z["pois"]) for z in zones.values())))
     print("freguesias with a description %d/%d (%d of them written for the app)"
           % (sum(1 for f in fre if f.get("note")), len(fre), origins.get("app", 0)))
     print("freguesias with population %d/%d, with Hebrew name %d/%d, with area %d/%d"

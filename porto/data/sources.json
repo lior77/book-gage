@@ -107,6 +107,26 @@
       "coverage": "243/243",
       "caveat_he": "אינו מספור רשמי ואין לו קיום מחוץ לאפליקציה. תפקידו היחיד הוא לקשור בין המפה לרשימה. פורטו היא היוצאת מן הכלל: שבע הפרגזיות שלה הן שבעת רבעי העיר, והאפליקציה מדפיסה להן את מספר הרובע כדי שרמה 2 ורמה 3 יסכימו ביניהן."
     },
+    "freguesia.locality": {
+      "label_he": "יישובים ושכונות בתוך הפרגזיה (האותיות במפה)",
+      "value_type": "point",
+      "reference_year": 2026,
+      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/04_district_places.overpassql. האות (A, B, C…) היא של האפליקציה; הסדר לפי סוג היישוב ואז לפי אוכלוסייה",
+      "url": "https://www.openstreetmap.org/",
+      "retrieved": "2026-09-06",
+      "coverage": "1,773 יישובים ב-243 פרגזיות",
+      "caveat_he": "מתחת לפרגזיה אין בפורטוגל שכבה מנהלית רשמית: ליישובים האלה אין גבול, ויש להם נקודה אחת בלבד, במרכז בקירוב. שבע הפרגזיות של פורטו הן היוצאות מן הכלל — שם 53 השכונות מגיעות מהמסמך המקורי ויש להן שם עברי ותיאור. ל-1,720 היישובים האחרים אין שם עברי ואין תיאור, כי לא נכתב כזה לאף אחד מהם ולא הומצא. המיפוי ב-OSM התנדבותי ואינו אחיד — היעדר יישוב אינו ראיה שאין שם דבר."
+    },
+    "freguesia.poi": {
+      "label_he": "נקודות במפת הפרגזיה (תחנות, בתי חולים, מוסדות, אתרים)",
+      "value_type": "point",
+      "reference_year": 2026,
+      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/05_district_services.overpassql ו-06_district_landmarks.overpassql",
+      "url": "https://www.openstreetmap.org/",
+      "retrieved": "2026-09-06",
+      "coverage": "1,530 נקודות ב-243 פרגזיות",
+      "caveat_he": "שאילתת המורשת דורשת מכל אובייקט גם name וגם wikidata או heritage. בלי התנאי הזה יש במחוז אלפי רשומות historic שרובן פרט אדריכלי בודד, ומפה שמסמנת את כולן אינה אומרת דבר. אף נקודה לא נבחרה ידנית. המיפוי התנדבותי ואינו אחיד."
+    },
     "porto_city.quarter": {
       "label_he": "שבעת רבעי עיריית פורטו",
       "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",

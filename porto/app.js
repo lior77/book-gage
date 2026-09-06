@@ -7,7 +7,7 @@
    Three levels, one screen split in two:
      district   18 numbered municipalities + the three belt outlines
      mun        that municipality's numbered parishes
-     quarter    a Porto quarter: lettered neighbourhoods + black landmark dots
+     zone       inside one parish: lettered localities + black landmark dots
 */
 'use strict';
 
@@ -17,9 +17,9 @@ const MISSING = 'אין נתון';
 const KEY = 'porto-split-v1';
 
 const S = {
-  level: 'district',   // district | mun | quarter
+  level: 'district',   // district | mun | zone
   mun: null,           // municipality number, 1..18
-  quarter: null,       // Porto quarter number, 1..7
+  zone: null,          // level 3: the parish key, "mun_num|name"
   tiles: true,
   fPort: 52,           // the map's share of the split, per orientation
   fLand: 46,
@@ -74,11 +74,12 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, sources, bM, bB, bF, bC] = await Promise.all([
+  const [ind, mun, fre, city, zones, sources, bM, bB, bF, bC] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
     j('data/processed/porto_city.json'),
+    j('data/processed/zones.json'),
     j('data/sources.json'),
     j('data/processed/boundaries_municipios.geojson'),
     j('data/processed/boundaries_belts.geojson'),
@@ -89,6 +90,7 @@ async function load() {
   D.mun = mun.items;
   D.fre = fre.items;
   D.city = city.quarters;
+  D.zones = zones.zones;
   D.sources = sources;
   D.generated = mun.generated;
   D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC;
@@ -490,21 +492,30 @@ function renderMun(num) {
   $('#paneText').scrollTop = 0;
 }
 
-/* -------------------------------------------------- level 3: רובע פורטו --- */
-function drawQuarter(qn) {
+/* ------------------------------------------------- level 3: תוך הפרגזיה --- */
+/* Every parish has this level, not only Porto's seven.  What fills it differs,
+   and the app says which is which: Porto's quarters carry the 53 neighbourhoods
+   the source document names, with a Hebrew name and a description each; the
+   other 236 parishes carry what OpenStreetMap actually holds — the localities
+   inside them and the landmarks and services in those. */
+const zoneOf = key => D.zones[key] || { origin: 'osm', bairros: [], pois: [] };
+
+function drawZone(key) {
   clearMap();
-  const q = D.quarterByNum.get(qn);
+  const f = D.freByKey.get(key);
+  const z = zoneOf(key);
 
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
-      features: D.bC.features.filter(ft => ft.properties.num === qn) },
+      features: D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === key) },
     { interactive: false,
-      style: { color: stroke(), weight: 2, opacity: .9, fillColor: q.colour, fillOpacity: .35 } }).addTo(map);
+      style: { color: stroke(), weight: 2, opacity: .9,
+               fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
 
-  // Neighbourhood letters — A, B, C… at the point OSM gives for the bairro.
-  LG.letters = L.layerGroup(q.bairros.filter(b => b.ll).map(b => {
+  // Locality letters — A, B, C… at the point OSM gives for the place.
+  LG.letters = L.layerGroup(z.bairros.filter(b => b.ll).map(b => {
     const mk = L.marker(b.ll, { icon: numIcon(b.letter, 'lbl-ltr'), keyboard: false,
       // the historic centre carries 341 dots; the letters have to stay on top
-      zIndexOffset: 1000, title: b.letter + ' · ' + b.he, riseOnHover: true });
+      zIndexOffset: 1000, title: b.letter + ' · ' + (b.he || b.en), riseOnHover: true });
     mk.__hi = { kind: 'bairro', id: b.letter };
     mk.on('click', () => pick({ kind: 'bairro', id: b.letter }, 'map'));
     return mk;
@@ -512,7 +523,7 @@ function drawQuarter(qn) {
 
   // Landmarks: black dots, nothing written on the map itself.  Tapping a dot
   // highlights its record in the list, and tapping the record highlights the dot.
-  LG.pois = L.layerGroup(q.pois.map((p, i) => {
+  LG.pois = L.layerGroup(z.pois.map((p, i) => {
     if (!S.cats.has(p.cat)) return null;
     const mk = L.circleMarker(p.ll, poiStyle(false));
     mk.__hi = { kind: 'poi', id: i };
@@ -529,20 +540,23 @@ const poiStyle = on => on
   ? { radius: 9, weight: 3, color: '#b7791f', fillColor: '#101010', fillOpacity: 1, opacity: 1 }
   : { radius: 4.5, weight: 1.4, color: '#ffffff', fillColor: '#101010', fillOpacity: 1, opacity: 1 };
 
-function renderQuarter(qn) {
-  const q = D.quarterByNum.get(qn);
-  const f = D.fre.find(x => x.mun_num === 1 && bare(x.pt) === q.en);
+function renderZone(key) {
+  const f = D.freByKey.get(key);
+  const z = zoneOf(key);
+  const m = D.munByNum.get(f.mun_num);
+  const curated = z.origin === 'pdf';
 
-  const bairros = q.bairros.map(b => `<button class="row row-full" data-hi="bairro:${html(b.letter)}">
+  const bairros = z.bairros.map(b => `<button class="row row-full" data-hi="bairro:${html(b.letter)}">
       <span class="pin pin-sq" style="--c:#cfe0f2">${html(b.letter)}</span>
       <span class="row-body">
-        <span class="row-t">${html(b.he)} <span class="lat">(${html(b.en)})</span>
+        <span class="row-t">${b.he ? html(b.he) + ' ' : ''}<span class="lat">${b.he ? '(' : ''}${html(b.en)}${b.he ? ')' : ''}</span>
           ${b.ll ? '' : '<span class="flag">אין נקודה במפה</span>'}</span>
-        <span class="row-d">${html(b.desc || '')}</span>
-        ${b.note_src ? `<span class="row-m">${html(b.note_src)}</span>` : ''}
+        ${b.desc ? `<span class="row-d">${html(b.desc)}</span>` : ''}
+        <span class="row-m">${html(b.kind_he || '')}${b.pop ? ' · ' + nf(b.pop) + ' תושבים' : ''}${
+          b.kind_he && b.note_src ? ' · ' : ''}${html(b.note_src || '')}</span>
       </span></button>`).join('');
 
-  const shown = q.pois.map((p, i) => ({ p, i })).filter(x => S.cats.has(x.p.cat));
+  const shown = z.pois.map((p, i) => ({ p, i })).filter(x => S.cats.has(x.p.cat));
   const byCat = new Map();
   shown.forEach(x => {
     if (!byCat.has(x.p.cat)) byCat.set(x.p.cat, []);
@@ -557,38 +571,51 @@ function renderQuarter(qn) {
             <span class="lat">${html(x.p.osm)}</span></span></span>
       </button>`).join('')}</div>`).join('');
 
-  const chips = D.poiOrder.filter(c => q.pois.some(p => p.cat === c)).map(c =>
+  const chips = D.poiOrder.filter(c => z.pois.some(p => p.cat === c)).map(c =>
     `<button class="chip${S.cats.has(c) ? ' is-on' : ''}" data-cat="${html(c)}">${html(D.poiLabel[c] || c)}
-      <span class="num">${q.pois.filter(p => p.cat === c).length}</span></button>`).join('');
+      <span class="num">${z.pois.filter(p => p.cat === c).length}</span></button>`).join('');
 
   $('#doc').innerHTML = `
     <div class="card">
       <div class="hdr">
-        <span class="pin" style="--c:${html(q.colour)}">${q.num}</span>
-        <div><h1>${html(q.he)}</h1>
-          <p class="sub lat">${html(q.en)}</p></div>
+        <span class="pin" style="--c:${html(f.colour || '#ddd')}">${freNum(f)}</span>
+        <div><h1>${html(f.he || f.pt)}</h1>
+          <p class="sub lat">${html(f.en || f.pt)}</p></div>
       </div>
+      <p class="sub">${html(m.he)} · ${html(m.belt)}</p>
       <div class="stats">
-        ${stat('תושבים', q.pop2021, '', 0, 'freguesia.pop2021')}
-        ${f ? stat('שטח', f.area_km2, 'קמ״ר', 2, 'freguesia.area_km2') : ''}
-        ${f ? stat('צפיפות', f.density, 'לקמ״ר', 0, 'freguesia.density') : ''}
+        ${stat('תושבים', f.pop2021, '', 0, 'freguesia.pop2021')}
+        ${stat('שטח', f.area_km2, 'קמ״ר', 2, 'freguesia.area_km2')}
+        ${stat('צפיפות', f.density, 'לקמ״ר', 0, 'freguesia.density')}
       </div>
-      <p class="lead">${html(q.desc)}</p>
+      ${z.desc ? `<p class="lead">${html(z.desc)}</p>` : ''}
+      ${f.note ? `<p class="${z.desc ? 'sub' : 'lead'}">${html(f.note)}</p>` : ''}
+      ${f.note_origin === 'app'
+        ? '<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>' : ''}
     </div>
 
-    <div class="grp">${q.bairros.length} שכונות — האותיות במפה</div>
-    <div class="rows">${bairros}</div>
-    <p class="note" style="margin-block:8px 12px">לשכונות אין גבול רשמי. האות במפה
-      מסומנת על נקודת השכונה כפי שהיא ב-OpenStreetMap, במרכזה בקירוב.</p>
+    ${z.bairros.length ? `
+      <div class="grp">${z.bairros.length} ${curated ? 'שכונות' : 'יישובים ושכונות'} — האותיות במפה</div>
+      <div class="rows">${bairros}</div>
+      <p class="note" style="margin-block:8px 12px">${curated
+        ? `לשכונות אין גבול רשמי. האות במפה מסומנת על נקודת השכונה כפי שהיא
+           ב-OpenStreetMap, במרכזה בקירוב.`
+        : `היישובים האלה אינם יחידה מנהלית ואין להם גבול. הם מגיעים מ-OpenStreetMap
+           כנקודה אחת לכל יישוב, ולכן אין להם שם עברי ואין להם תיאור — לא נכתב
+           כזה לאף אחד מהם.`}</p>`
+      : '<p class="note">אין ביישוב הזה נקודות place ב-OpenStreetMap.</p>'}
 
-    <div class="card">
-      <h2>נקודות במפה</h2>
-      <p class="sub">כל נקודה שחורה במפה היא אתר או מוסד. לחיצה על נקודה מבליטה את
-        הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.</p>
-      <div class="chips">${chips}</div>
-      <p class="note">מקור: OpenStreetMap contributors, ODbL.</p>
-    </div>
-    ${shown.length ? pois : '<p class="note">לא נבחרה שום קטגוריה.</p>'}`;
+    ${z.pois.length ? `
+      <div class="card">
+        <h2>נקודות במפה</h2>
+        <p class="sub">כל נקודה שחורה במפה היא אתר או מוסד. לחיצה על נקודה מבליטה את
+          הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.</p>
+        <div class="chips">${chips}</div>
+        <p class="note">מקור: OpenStreetMap contributors, ODbL. המיפוי התנדבותי
+          ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.</p>
+      </div>
+      ${shown.length ? pois : '<p class="note">לא נבחרה שום קטגוריה.</p>'}`
+      : '<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>'}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -600,12 +627,9 @@ function pick(hi, from) {
   S.hi = same ? null : hi;
   applyHi(from);
 }
-function pickFre(f, from) {
-  // A Porto quarter has a level of its own, so it opens; every other parish
-  // has nothing below it, so it just lights up on both halves.
-  if (f.mun_num === 1 && f.q) { goQuarter(f.q); return; }
-  pick({ kind: 'fre', id: D.freKey(f) }, from);
-}
+// Every parish has a level of its own now, so a tap on one opens it.  The
+// second argument is kept because the map and the list both call this.
+function pickFre(f) { goZone(D.freKey(f)); }
 
 function applyHi(from) {
   const hi = S.hi;
@@ -647,10 +671,10 @@ function applyHi(from) {
       const f = D.freByKey.get(hi.id);
       if (f) ll = latlng(f.center);
     } else if (hi.kind === 'bairro') {
-      const b = D.quarterByNum.get(S.quarter).bairros.find(x => x.letter === hi.id);
+      const b = zoneOf(S.zone).bairros.find(x => x.letter === hi.id);
       if (b && b.ll) ll = b.ll;
     } else if (hi.kind === 'poi') {
-      const p = D.quarterByNum.get(S.quarter).pois[Number(hi.id)];
+      const p = zoneOf(S.zone).pois[Number(hi.id)];
       if (p) ll = p.ll;
     }
     if (ll && !map.getBounds().pad(-0.12).contains(ll)) map.panTo(ll, { animate: true });
@@ -659,20 +683,22 @@ function applyHi(from) {
 
 /* ------------------------------------------------------------ navigation --- */
 function goDistrict() {
-  S.level = 'district'; S.mun = null; S.quarter = null; S.hi = null;
+  S.level = 'district'; S.mun = null; S.zone = null; S.hi = null;
   drawDistrict(); renderDistrict(); afterNav();
 }
 function goMun(num) {
-  S.level = 'mun'; S.mun = num; S.quarter = null; S.hi = null;
+  S.level = 'mun'; S.mun = num; S.zone = null; S.hi = null;
   drawMun(num); renderMun(num); afterNav();
 }
-function goQuarter(qn) {
-  S.level = 'quarter'; S.mun = 1; S.quarter = qn; S.hi = null;
+function goZone(key) {
+  const f = D.freByKey.get(key);
+  if (!f) return;
+  S.level = 'zone'; S.mun = f.mun_num; S.zone = key; S.hi = null;
   S.cats = new Set(D.poiOrder);
-  drawQuarter(qn); renderQuarter(qn); afterNav();
+  drawZone(key); renderZone(key); afterNav();
 }
 function goUp() {
-  if (S.level === 'quarter') goMun(1);
+  if (S.level === 'zone') goMun(S.mun);
   else if (S.level === 'mun') goDistrict();
 }
 
@@ -685,8 +711,8 @@ function afterNav() {
     if (S.level === 'mun') c.push('<span class="sep">›</span><span class="now">' + html(m.he) + '</span>');
     else {
       c.push('<span class="sep">›</span><button data-go="mun">' + html(m.he) + '</button>');
-      const q = D.quarterByNum.get(S.quarter);
-      c.push('<span class="sep">›</span><span class="now">' + html(q.bairros_title_he || q.he) + '</span>');
+      const f = D.freByKey.get(S.zone);
+      c.push('<span class="sep">›</span><span class="now">' + html(f.he || f.pt) + '</span>');
     }
   }
   $('#crumb').innerHTML = c.join('');
@@ -753,7 +779,7 @@ function wireDivider() {
 function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
-      level: S.level, mun: S.mun, quarter: S.quarter,
+      level: S.level, mun: S.mun, zone: S.zone,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
   } catch (e) { /* private mode */ }
@@ -764,7 +790,11 @@ function restore() {
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
     if (typeof o.fLand === 'number') S.fLand = o.fLand;
-    if (o.level) { S.level = o.level; S.mun = o.mun; S.quarter = o.quarter; }
+    // an older build stored a Porto quarter number under `quarter`; it has no
+    // meaning here, and dropping it just opens the district
+    if (o.level === 'district' || o.level === 'mun' || o.level === 'zone') {
+      S.level = o.level; S.mun = o.mun; S.zone = o.zone || null;
+    }
   } catch (e) { /* nothing stored */ }
 }
 
@@ -785,20 +815,28 @@ function runSearch(term) {
     if (hit(f.he) || hit(f.pt)) out.push({
       t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he,
       k: f.mun_num === 1 ? 'רובע בפורטו' : 'פרגזיה',
-      go: f.mun_num === 1 && f.q ? `data-jump="quarter:${f.q}"` : `data-jump="fre:${html(D.freKey(f))}"` });
+      go: `data-jump="zone:${html(D.freKey(f))}"` });
   });
-  D.city.forEach(q => {
-    q.bairros.forEach(b => {
+  // 1,773 localities and 1,530 dots across the district; stop once the list is
+  // long enough rather than walk all of them for every keystroke
+  const CAP = 60;
+  for (const key of Object.keys(D.zones)) {
+    if (out.length > CAP) break;
+    const f = D.freByKey.get(key);
+    if (!f) continue;
+    const where = (f.he || f.pt) + ' · ' + f.mun_he;
+    const z = D.zones[key];
+    z.bairros.forEach(b => {
       if (hit(b.he) || hit(b.en)) out.push({
-        t: b.letter + ' · ' + b.he, s: b.en + ' · ' + (q.bairros_title_he || q.he),
-        k: 'שכונה', go: `data-jump="bairro:${q.num}:${html(b.letter)}"` });
+        t: b.letter + ' · ' + (b.he || b.en), s: b.en + ' · ' + where,
+        k: b.kind_he || 'שכונה', go: `data-jump="bairro:${html(key)}:${html(b.letter)}"` });
     });
-    q.pois.forEach((p, i) => {
+    z.pois.forEach((p, i) => {
       if (hit(p.name)) out.push({
-        t: p.name, s: (D.poiLabel[p.cat] || p.cat) + ' · ' + (q.bairros_title_he || q.he),
-        k: 'נקודה', go: `data-jump="poi:${q.num}:${i}"` });
+        t: p.name, s: (D.poiLabel[p.cat] || p.cat) + ' · ' + where,
+        k: 'נקודה', go: `data-jump="poi:${html(key)}:${i}"` });
     });
-  });
+  }
 
   $('#qres').innerHTML = out.length
     ? '<div class="rows">' + out.slice(0, 60).map(r => `<button class="row" ${r.go}>
@@ -813,20 +851,19 @@ function jump(spec) {
   const i = spec.indexOf(':');
   const kind = spec.slice(0, i), rest = spec.slice(i + 1);
   if (kind === 'mun') goMun(Number(rest));
-  else if (kind === 'quarter') goQuarter(Number(rest));
+  else if (kind === 'zone') goZone(rest);
   else if (kind === 'fre') {
     const f = D.freByKey.get(rest);
     if (!f) return;
     goMun(f.mun_num);
     S.hi = { kind: 'fre', id: rest }; applyHi('list');
-  } else if (kind === 'bairro') {
-    const [qn, letter] = rest.split(':');
-    goQuarter(Number(qn));
-    S.hi = { kind: 'bairro', id: letter }; applyHi('list');
-  } else if (kind === 'poi') {
-    const [qn, ix] = rest.split(':');
-    goQuarter(Number(qn));
-    S.hi = { kind: 'poi', id: Number(ix) }; applyHi('list');
+  } else if (kind === 'bairro' || kind === 'poi') {
+    // "bairro:<mun_num>|<parish>:<letter>" — the parish key itself holds a
+    // colon-free "|", so split from the right
+    const cut = rest.lastIndexOf(':');
+    goZone(rest.slice(0, cut));
+    const id = rest.slice(cut + 1);
+    S.hi = { kind, id: kind === 'poi' ? Number(id) : id }; applyHi('list');
   }
   $('#findDrawer').hidden = true;
 }
@@ -934,7 +971,7 @@ function wire() {
       const c = cat.dataset.cat;
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
       if (!S.cats.size) S.cats.add(c);              // never leave the map blank
-      drawQuarter(S.quarter); renderQuarter(S.quarter); applyHi();
+      drawZone(S.zone); renderZone(S.zone); applyHi();
       return;
     }
     const mun = e.target.closest('[data-mun]');
@@ -976,7 +1013,7 @@ function wire() {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (S.level === 'district') drawDistrict();
     else if (S.level === 'mun') drawMun(S.mun);
-    else drawQuarter(S.quarter);
+    else drawZone(S.zone);
     applyHi();
   });
 }
@@ -1009,7 +1046,7 @@ function wire() {
   wireDivider();
   $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));
 
-  if (S.level === 'quarter' && D.quarterByNum.has(S.quarter)) goQuarter(S.quarter);
+  if (S.level === 'zone' && D.freByKey.has(S.zone)) goZone(S.zone);
   else if (S.level === 'mun' && D.munByNum.has(S.mun)) goMun(S.mun);
   else goDistrict();
 
