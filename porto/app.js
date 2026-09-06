@@ -26,9 +26,10 @@ const S = {
   cats: null,          // level 3: which landmark categories are shown
   hi: null,            // { kind, id } — the record highlighted on both halves
   view: 'split',       // split | map | text — which half fills the screen
+  viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: true,         // rivers and lakes
-  green: true,         // parks, gardens and beaches
+  muncol: true,        // the 18 municipality colours (the outlines stay either way)
   mine: true,          // draw the points the user added
   adding: false,       // waiting for a tap on the map to place a new point
 };
@@ -95,14 +96,13 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, zones, bW, bG, sources, bM, bB, bF, bC] = await Promise.all([
+  const [ind, mun, fre, city, zones, bW, sources, bM, bB, bF, bC] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
     j('data/processed/porto_city.json'),
     j('data/processed/zones.json'),
     j('data/processed/boundaries_water.geojson'),
-    j('data/processed/boundaries_green.geojson'),
     j('data/sources.json'),
     j('data/processed/boundaries_municipios.geojson'),
     j('data/processed/boundaries_belts.geojson'),
@@ -117,9 +117,9 @@ async function load() {
   D.sources = sources;
   D.generated = mun.generated;
   D.version = ind.app_version || '';
-  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW; D.bG = bG;
+  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW;
   // an undefined layer renders as nothing at all, in silence; say so instead
-  for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW, bG })) {
+  for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW })) {
     if (!v || !Array.isArray(v.features)) throw new Error('layer ' + k + ' did not load');
   }
 
@@ -209,14 +209,10 @@ function initNature() {
       ? { color: '#2f7fc1', weight: 1.8, opacity: .85, fill: false }
       : { color: '#2f7fc1', weight: .8, opacity: .8, fillColor: '#4a9ad4', fillOpacity: .55 },
   });
-  NAT.green = L.geoJSON(D.bG, {
-    pane: 'nature', interactive: false,
-    style: { color: '#3f8a45', weight: .8, opacity: .75, fillColor: '#5aa860', fillOpacity: .45 },
-  });
   applyNature();
 }
 function applyNature() {
-  [['water', S.water], ['green', S.green]].forEach(([k, on]) => {
+  [['water', S.water]].forEach(([k, on]) => {
     if (!NAT[k]) return;
     if (on && !map.hasLayer(NAT[k])) NAT[k].addTo(map);
     if (!on && map.hasLayer(NAT[k])) map.removeLayer(NAT[k]);
@@ -230,7 +226,7 @@ function clearMap() {
 function numIcon(text, cls) {
   return L.divIcon({
     className: 'lbl' + (cls ? ' ' + cls : ''), html: html(text),
-    iconSize: [24, 24], iconAnchor: [12, 12],
+    iconSize: [20, 20], iconAnchor: [10, 10],
   });
 }
 
@@ -374,7 +370,9 @@ function drawDistrict() {
   LG.mun = L.geoJSON(D.bM, {
     style: ft => ({
       color: stroke(), weight: 1, opacity: .9,
-      fillColor: (D.munByNum.get(ft.properties.num) || {}).fill || '#ddd', fillOpacity: .8,
+      fillColor: (D.munByNum.get(ft.properties.num) || {}).fill || '#ddd',
+      // solid, and a switch that empties the fill without losing the outline
+      fillOpacity: S.muncol ? 1 : 0,
     }),
     onEachFeature: (ft, l) => {
       const m = D.munByNum.get(ft.properties.num);
@@ -493,7 +491,7 @@ function drawMun(num) {
   LG.fre = L.geoJSON(freFeatures(num), {
     style: ft => {
       const f = freOfFeature(num, ft.properties);
-      return { color: stroke(), weight: 1, opacity: .9,
+      return { color: edge(), weight: 1.6, opacity: .95,
         fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd', fillOpacity: .78 };
     },
     onEachFeature: (ft, l) => {
@@ -505,11 +503,6 @@ function drawMun(num) {
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
-
-  // the outer border of the municipality, over the parish fills
-  LG.munEdge = L.geoJSON({ type: 'FeatureCollection',
-      features: D.bM.features.filter(ft => ft.properties.num === num) },
-    { interactive: false, style: { color: edge(), weight: 3, opacity: .95, fill: false } }).addTo(map);
 
   LG.labels = L.layerGroup(rows.map(f => {
     const mk = L.marker(latlng(f.center), { icon: numIcon(freNum(f)), keyboard: false,
@@ -640,6 +633,14 @@ function openMine(id, ll) {
 }
 function closeMine() { closePanel(); mineEditing = null; }
 
+/* After a point is dealt with the screen goes back to halves — the map to see
+   where it landed, the text to read it. */
+function backToHalves() {
+  if (S.view === 'split') return;
+  S.view = 'split'; S.fPort = 50; S.fLand = 50;
+  applySplit(); applyView(); save();
+}
+
 function panelPointClick(e) {
   const b = e.target.closest('[data-pt]');
   if (!b || !mineEditing) return;
@@ -656,10 +657,12 @@ function commitMine() {
   const i = D.mine.findIndex(x => x.id === rec.id);
   if (i < 0) D.mine.push(rec); else D.mine[i] = rec;
   saveMine(); closeMine(); drawMine(); redrawText();
+  backToHalves();
 }
 function deleteMine() {
   D.mine = D.mine.filter(x => x.id !== mineEditing.id);
   saveMine(); closeMine(); drawMine(); redrawText();
+  backToHalves();
 }
 
 /* The points are the one thing here the user made, and the only thing an
@@ -724,13 +727,55 @@ function commitImport() {
                 : 'לא נוספה אף נקודה חדשה.', !added);
 }
 
+let ghost = null;              // the crosshair being positioned
+
 function toggleAdd() {
   S.adding = !S.adding;
   $('#addBtn').setAttribute('aria-pressed', String(S.adding));
-  $('#map').style.cursor = S.adding ? 'crosshair' : '';
-  if (S.adding) mapNote('לחץ על המפה במקום שבו תרצה לסמן נקודה. ' +
-    '<button type="button" data-add="off">ביטול</button>');
-  else hideNote();
+  if (S.adding) startPlacing(); else stopPlacing();
+}
+
+function startPlacing() {
+  // the map gets the whole screen while a point is being placed
+  S.viewBefore = S.view;
+  S.view = 'map'; applyView();
+  const mk = L.marker(map.getCenter(), {
+    icon: L.divIcon({ className: 'ghost', iconSize: [46, 46], iconAnchor: [23, 23],
+      html: '<span class="ghost-ring"></span><span class="ghost-dot"></span>' }),
+    draggable: true, autoPan: true, zIndexOffset: 2000,
+  }).addTo(map);
+  mk.on('dblclick', fixPlacing);
+  // a double tap on a touch screen does not always reach the marker as
+  // dblclick, so the same 450 ms rule the rest of the app uses stands in
+  mk.on('click', () => { if (isSecondTap('ghost')) fixPlacing(); });
+  ghost = mk;
+  mapNote('גררו את הסימון למקום המבוקש, ואז לחיצה כפולה עליו כדי לקבוע אותו. ' +
+    '<button type="button" data-add="off">ביטול</button>', false, true);
+  // the note opened the text half; placing wants the whole map
+  S.view = 'map'; applyView();
+}
+
+function stopPlacing() {
+  if (ghost) { map.removeLayer(ghost); ghost = null; }
+  S.adding = false;
+  $('#addBtn').setAttribute('aria-pressed', 'false');
+  $('#map').style.cursor = '';
+  hideNote();
+  if (S.viewBefore) { S.view = S.viewBefore; S.viewBefore = null; applyView(); save(); }
+}
+
+function fixPlacing() {
+  if (!ghost) return;
+  const ll = ghost.getLatLng();
+  map.removeLayer(ghost);
+  ghost = null;
+  S.adding = false;
+  S.viewBefore = null;
+  $('#addBtn').setAttribute('aria-pressed', 'false');
+  hideNote();
+  // the form gets the whole screen to be filled in
+  S.view = 'text'; applyView();
+  openMine(null, [ll.lat, ll.lng]);
 }
 
 /* ------------------------------------------------- level 3: תוך הרובע --- */
@@ -749,14 +794,8 @@ function drawZone(key) {
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
       features: D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === key) },
     { interactive: false,
-      style: { color: stroke(), weight: 2, opacity: .9,
+      style: { color: edge(), weight: 2.4, opacity: .95,
                fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
-
-  // The municipality this parish sits in, so level 3 still says where you are.
-  LG.munEdge = L.geoJSON({ type: 'FeatureCollection',
-      features: D.bM.features.filter(ft => ft.properties.num === f.mun_num) },
-    { interactive: false,
-      style: { color: edge(), weight: 2, opacity: .55, fill: false, dashArray: '6,4' } }).addTo(map);
 
   // Locality letters — A, B, C… at the point OSM gives for the place.
   LG.letters = L.layerGroup(!S.letters ? [] : z.bairros.filter(b => b.ll).map(b => {
@@ -920,6 +959,9 @@ function cycleView() {
   // announcement undid the very thing it was announcing. The screen changing
   // is the feedback.
   S.view = VIEW_NEXT[S.view] || 'split';
+  // "half" means half: the button is a reset, not a return to whatever the
+  // divider happened to be left at.
+  if (S.view === 'split') { S.fPort = 50; S.fLand = 50; applySplit(); }
   applyView(); save();
 }
 
@@ -964,8 +1006,8 @@ function renderLayers() {
 
   let h = '<h3>שכבות</h3>' +
     row(S.tiles, 'tiles', 'רקע המפה (רחובות)', 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
+    row(S.muncol, 'muncol', 'צבעי 18 העיריות', 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
     row(S.water, 'water', 'נהרות ומים', '#4a9ad4', true) +
-    row(S.green, 'green', 'שטחים ירוקים וחופים', '#5aa860', true) +
     row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true, D.mine.length);
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
@@ -1020,15 +1062,18 @@ function isSecondTap(key) {
   return again;
 }
 
-function openInGoogle(ll, name) {
-  const url = gmapsUrl(ll);
-  let w = null;
-  try { w = window.open(url, '_blank', 'noopener'); } catch (e) { w = null; }
-  if (!w) {
-    // a sandboxed frame can refuse to open a window, and refuses in silence
-    mapNote(`הדפדפן חסם את פתיחת החלון. אפשר לפתוח ידנית:
-      <a href="${html(url)}" target="_blank" rel="noopener">${html(name || 'מפות גוגל')}</a>`, true);
-  }
+function openInGoogle(ll) {
+  // A real link click, not window.open. In the Android wrapper the WebView
+  // hands the URL to the browser and returns null from window.open, which read
+  // as "blocked" while Google Maps was opening in front of the user.
+  const a = document.createElement('a');
+  a.href = gmapsUrl(ll);
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /* --------------------------------------------------------- highlighting --- */
@@ -1072,7 +1117,7 @@ function applyHi(from) {
   // the map half
   if (LG.fre) LG.fre.eachLayer(l => {
     const on = hi && hi.kind === 'fre' && l.feature.__key === hi.id;
-    l.setStyle({ weight: on ? 3.5 : 1, color: on ? '#b7791f' : stroke(), fillOpacity: on ? .92 : .78 });
+    l.setStyle({ weight: on ? 3.5 : 1.6, color: on ? '#b7791f' : edge(), fillOpacity: on ? .92 : .78 });
     if (on) l.bringToFront();
   });
   if (LG.labels) LG.labels.eachLayer(l => {
@@ -1134,11 +1179,11 @@ function afterNav() {
   else {
     c.push('<button data-go="district">מחוז פורטו</button>');
     const m = D.munByNum.get(S.mun);
-    if (S.level === 'mun') c.push('<span class="sep">‹</span><span class="now">' + html(m.he) + '</span>');
+    if (S.level === 'mun') c.push('<span class="sep" dir="ltr">‹</span><span class="now">' + html(m.he) + '</span>');
     else {
-      c.push('<span class="sep">‹</span><button data-go="mun">' + html(m.he) + '</button>');
+      c.push('<span class="sep" dir="ltr">‹</span><button data-go="mun">' + html(m.he) + '</button>');
       const f = D.freByKey.get(S.zone);
-      c.push('<span class="sep">‹</span><span class="now">' + html(f.he || f.pt) + '</span>');
+      c.push('<span class="sep" dir="ltr">‹</span><span class="now">' + html(f.he || f.pt) + '</span>');
     }
   }
   $('#crumb').innerHTML = c.join('');
@@ -1205,7 +1250,7 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view,
-      letters: S.letters, mine: S.mine, water: S.water, green: S.green,
+      letters: S.letters, mine: S.mine, water: S.water, muncol: S.muncol,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
   } catch (e) { /* private mode */ }
@@ -1217,7 +1262,7 @@ function restore() {
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
     if (typeof o.water === 'boolean') S.water = o.water;
-    if (typeof o.green === 'boolean') S.green = o.green;
+    if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
     if (typeof o.fLand === 'number') S.fLand = o.fLand;
@@ -1395,12 +1440,11 @@ function wire() {
   $('#viewBtn').addEventListener('click', cycleView);
   $('#layersBtn').addEventListener('click', () => toggleLayers());
   $('#addBtn').addEventListener('click', toggleAdd);
-  map.on('click', e => {
-    if (!S.adding) return;
-    toggleAdd();
-    openMine(null, [e.latlng.lat, e.latlng.lng]);
+  $('#panelClose').addEventListener('click', () => {
+    const wasPoint = panelIs('point');
+    closePanel();
+    if (wasPoint) { mineEditing = null; backToHalves(); }
   });
-  $('#panelClose').addEventListener('click', closePanel);
   $('#panelBody').addEventListener('click', e => {
     if (panelIs('search')) { panelSearchClick(e); return; }
     if (panelIs('point')) { panelPointClick(e); return; }
@@ -1413,7 +1457,7 @@ function wire() {
     }
     else if (k === 'letters') { S.letters = !S.letters; }
     else if (k === 'water') { S.water = !S.water; applyNature(); }
-    else if (k === 'green') { S.green = !S.green; applyNature(); }
+    else if (k === 'muncol') { S.muncol = !S.muncol; if (S.level === 'district') drawDistrict(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
     else if (k.startsWith('cat:')) {
       const c = k.slice(4);
@@ -1430,7 +1474,7 @@ function wire() {
   $('#msgs').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.dataset.add === 'off') { toggleAdd(); return; }
+    if (b.dataset.add === 'off') { stopPlacing(); return; }
     if (b.dataset.close || b.dataset.loc === 'back') { hideNote(); }
     if (b.dataset.loc === 'back') refit();
     if (b.dataset.jump) { jump(b.dataset.jump); hideNote(); }

@@ -98,9 +98,11 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 .crumb{flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px;
        overflow-x:auto; scrollbar-width:none; white-space:nowrap}
 .crumb::-webkit-scrollbar{display:none}
-.crumb button,.crumb span{font-size:.9rem; font-weight:600; padding:var(--s1) 2px}
-.crumb button{color:var(--accent); text-decoration:underline}
-.crumb .sep{color:var(--miss); font-weight:400}
+.crumb button,.crumb span{font-size:.8rem; font-weight:400; color:var(--ink-2);
+    padding:var(--s1) 2px}
+.crumb button{text-decoration:underline; text-underline-offset:3px}
+.crumb button:active{color:var(--ink)}
+.crumb .sep{color:var(--miss); unicode-bidi:isolate; padding-inline:2px}
 .crumb .now{color:var(--ink)}
 
 /* ---------- the split ---------- */
@@ -172,6 +174,16 @@ body[data-view="text"] .map-only{display:none}
 .msg-x:active{background:var(--bg)}
 /* the "you are here" dot: a device position, never a data point, so it is the
    one mark on the map that is neither numbered nor black */
+/* The crosshair a new point is dragged to. Big enough to grab with a thumb,
+   open in the middle so the map underneath stays readable while aiming. */
+.ghost{cursor:grab}
+.ghost:active{cursor:grabbing}
+.ghost-ring{position:absolute; inset:6px; border-radius:50%;
+    border:2.5px solid var(--accent); background:rgba(21,86,143,.12);
+    box-shadow:0 0 0 2px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.35)}
+.ghost-dot{position:absolute; inset-block-start:21px; inset-inline-start:21px;
+    width:4px; height:4px; border-radius:50%; background:var(--accent)}
+
 .me{width:16px; height:16px; border-radius:50%; background:#1a73e8;
     border:3px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.4)}
 .panel{margin:var(--s4) var(--s4) 0; padding:var(--s4);
@@ -215,8 +227,8 @@ body[data-view="text"] .map-only{display:none}
 .tt::before{border-top-color:var(--line)!important}
 
 /* number badge on the map, and its twin in the list */
-.lbl{display:grid; place-items:center; width:25px; height:25px;
-     border-radius:var(--r-pill); font:700 12px/1 system-ui,sans-serif;
+.lbl{display:grid; place-items:center; width:20px; height:20px;
+     border-radius:var(--r-pill); font:700 10px/1 system-ui,sans-serif;
      color:#101010; background:#fff; border:2px solid #101010;
      box-shadow:0 1px 4px rgba(0,0,0,.35); direction:ltr; cursor:pointer}
 .lbl.is-hi{background:var(--hi-line); color:#fff}

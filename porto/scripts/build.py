@@ -417,8 +417,6 @@ def build_zones(freguesias, city):
 LAYER_SPECS = [
     ("district_water.geojson", "boundaries_water.geojson", 0.0002, 3000,
      ("waterway", "natural", "water", "landuse")),
-    ("district_green.geojson", "boundaries_green.geojson", 0.00012, 2000,
-     ("leisure", "natural", "landuse")),
 ]
 
 
