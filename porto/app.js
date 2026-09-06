@@ -68,11 +68,12 @@ function isDark() {
 function stat(label, val, unit, dec, srcKey) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
-  // The unit rides on the label line, not beside the number: on a narrow tile it
-  // wrapped under the figure and broke the baseline across the row.
+  // One figure per line: label, value, year. Four tiles side by side made the
+  // numbers compete with each other and wrapped their units onto a second line.
   return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}">
-    <span class="stat-l">${html(label)}${unit ? ' · ' + html(unit) : ''}</span>
-    <span class="stat-v ${has ? 'num' : ''}">${has ? nf(val, dec) : MISSING}</span>
+    <span class="stat-l">${html(label)}</span>
+    <span class="stat-v ${has ? 'num' : ''}">${has ? nf(val, dec) : MISSING}${
+      has && unit ? ' <span class="stat-u">' + html(unit) + '</span>' : ''}</span>
     <span class="stat-y">${f.reference_year ? html(f.reference_year) : 'מקור'}</span>
   </button>`;
 }
@@ -181,7 +182,8 @@ function initMap() {
     if (++errs < 6 || !map.hasLayer(tileLayer)) return;
     map.removeLayer(tileLayer);
     S.tiles = false;
-    mapNote('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.');
+    mapNote('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.',
+            false, true);
   });
   if (S.tiles) tileLayer.addTo(map);
 
@@ -278,12 +280,17 @@ function freguesiaAt(lat, lon) {
 /* Every message the app has to give lands in the same place: the top of the
    text half.  Over the map they covered the thing being talked about, and on a
    phone in map-only view there was nowhere for them to go. */
-function mapNote(inner, bad) {
+/* Almost every message here answers something the user just pressed, so it
+   opens the text half to be read.  A message that arrives on its own — a tile
+   that would not load — passes `quiet`, because taking the screen back from a
+   layout the user had just chosen is worse than the notice is useful. */
+function mapNote(inner, bad, quiet) {
   const n = $('#msgs');
   n.innerHTML = `<div class="msg${bad ? ' bad' : ''}">
       <div class="msg-body">${inner}</div>
       <button class="msg-x" type="button" data-close="1" aria-label="סגירת ההודעה">✕</button>
     </div>`;
+  if (quiet) return;
   if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
   $('#paneText').scrollTop = 0;
 }
@@ -311,7 +318,7 @@ function showMe(pos) {
     map.setView(ll, Math.max(map.getZoom(), 14));
     mapNote(`אתה ב<b>${html(f.he || f.pt)}</b>, ${html(m.he)} ·
       דיוק ${nf(Math.round(acc))} מ׳
-      <button type="button" data-jump="fre:${html(D.freKey(f))}">פתיחת הפרגזיה</button>`);
+      <button type="button" data-jump="fre:${html(D.freKey(f))}">פתיחת הרובע</button>`);
   } else {
     // Anywhere else on earth: say so, and say how far, instead of dropping the
     // map on an empty spot in the ocean.
@@ -420,7 +427,7 @@ function renderDistrict() {
         <span class="row-d">${html(chr)}</span>
         <span class="row-m">${html(m.belt)} · <span class="num">${nf(m.pop2021)}</span> תושבים ·
           <span class="num">${nf(m.area_km2, 1)}</span> קמ״ר ·
-          <span class="num">${nf(m.n_freguesias)}</span> פרגזיות</span>
+          <span class="num">${nf(m.n_freguesias)}</span> רובעים</span>
       </span>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
     </button>`;
@@ -429,7 +436,7 @@ function renderDistrict() {
   $('#doc').innerHTML = `
     <div class="card">
       <h1>מחוז פורטו <span class="en lat">(Distrito do Porto)</span></h1>
-      <p class="lead">18 עיריות ו-243 פרגזיות בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי
+      <p class="lead">18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי
         במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה: כאן חיים
         <span class="num">${nf(D.totPop)}</span> תושבים על
         <span class="num">${nf(D.totArea, 1)}</span> קמ״ר.</p>
@@ -533,7 +540,7 @@ function renderMun(num) {
       <span class="pin" style="--c:${html(f.colour)}">${n}</span>
       <span class="row-body">
         <span class="row-t">${html(f.he || f.pt)} <span class="lat">(${html(bare(f.pt))})</span>${flag}</span>
-        <span class="row-d">${desc ? html(desc) : '<span class="muted">' + MISSING + ' — אין תיאור לפרגזיה הזו</span>'}</span>
+        <span class="row-d">${desc ? html(desc) : '<span class="muted">' + MISSING + ' — אין תיאור לרובע הזו</span>'}</span>
         <span class="row-m"><span class="num">${nf(f.pop2021)}</span> תושבים (2021) ·
           <span class="num">${nf(f.area_km2, 2)}</span> קמ״ר ·
           <span class="num">${nf(f.density)}</span> לקמ״ר${q ? ' · <span class="num">' + q.bairros.length + '</span> שכונות' : ''}</span>
@@ -547,7 +554,7 @@ function renderMun(num) {
       <div class="hdr">
         <span class="pin" style="--c:${html(m.fill)}">${m.num}</span>
         <div><h1>${html(m.he)} <span class="en lat">(${html(m.en)})</span></h1>
-          <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> פרגזיות</p></div>
+          <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> רובעים</p></div>
       </div>
       <div class="stats">
         ${stat('תושבים', m.pop2021, '', 0, 'municipio.pop2021')}
@@ -559,15 +566,15 @@ function renderMun(num) {
         <div><dt>תחבורה</dt><dd>${html(m.transport)}</dd></div></dl>
     </div>
 
-    <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הפרגזיות'} — לפי המספור במפה</div>
+    <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הרובעים'} — לפי המספור במפה</div>
     ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
     <div class="rows">${list}</div>
     ${mineList(p => {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && at.mun_num === num;
     })}
-    ${isPorto ? '' : `<p class="note" style="margin-block-start:10px">המספור של הפרגזיות הוא מספור של האפליקציה
-      ולא מספור רשמי; הוא נועד לקשור בין המפה לרשימה. סדר הפרגזיות נלקח מהמסמך
+    ${isPorto ? '' : `<p class="note" style="margin-block-start:10px">המספור של הרובעים הוא מספור של האפליקציה
+      ולא מספור רשמי; הוא נועד לקשור בין המפה לרשימה. סדר הרובעים נלקח מהמסמך
       המקורי היכן שהוא מפרט אותן, ובשש העיריות שהוא לא מפרט — לפי גודל אוכלוסייה.</p>`}`;
   $('#paneText').scrollTop = 0;
 }
@@ -614,16 +621,32 @@ function openMine(id, ll) {
   const p = id ? D.mine.find(x => x.id === id) : null;
   mineEditing = p ? { ...p } : { id: 'p' + Date.now().toString(36), ll, name: '', desc: '' };
   const at = freguesiaAt(mineEditing.ll[0], mineEditing.ll[1]);
-  $('#mineWhere').textContent = at
-    ? (at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he
-    : 'מחוץ למחוז פורטו';
-  $('#mineName').value = mineEditing.name || '';
-  $('#mineDesc').value = mineEditing.desc || '';
-  $('#mineDelete').hidden = !p;
-  $('#mineModal').hidden = false;
-  $('#mineName').focus();
+  openPanel('point', p ? 'עריכת נקודה' : 'נקודה חדשה', `
+    <p class="note">${at ? html((at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he)
+                        : 'מחוץ למחוז פורטו'} ·
+      <span class="num">${mineEditing.ll[0].toFixed(5)}, ${mineEditing.ll[1].toFixed(5)}</span></p>
+    <label class="fld-l" for="mineName">שם</label>
+    <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
+           value="${html(mineEditing.name || '')}">
+    <label class="fld-l" for="mineDesc">תיאור</label>
+    <textarea id="mineDesc" rows="4" placeholder="מה שחשוב לזכור על המקום הזה">${html(mineEditing.desc || '')}</textarea>
+    <div class="btns">
+      <button class="cta" data-pt="save">שמירה</button>
+      <button class="cta cta-2" data-pt="google">פתיחה במפות גוגל</button>
+      ${p ? '<button class="cta cta-danger" data-pt="delete">מחיקת הנקודה</button>' : ''}
+    </div>`);
+  const el = $('#mineName');
+  if (el) el.focus();
 }
-function closeMine() { $('#mineModal').hidden = true; mineEditing = null; }
+function closeMine() { closePanel(); mineEditing = null; }
+
+function panelPointClick(e) {
+  const b = e.target.closest('[data-pt]');
+  if (!b || !mineEditing) return;
+  if (b.dataset.pt === 'google') { openInGoogle(mineEditing.ll, mineEditing.name); return; }
+  if (b.dataset.pt === 'delete') { deleteMine(); return; }
+  commitMine();
+}
 
 function commitMine() {
   const name = $('#mineName').value.trim();
@@ -669,11 +692,12 @@ function fallbackCopy(text, done) {
 }
 
 function openImport(prefill) {
-  $('#impText').value = prefill || '';
-  $('#impNote').textContent = prefill
-    ? 'לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.'
-    : 'הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.';
-  $('#impModal').hidden = false;
+  openPanel('import', prefill ? 'העתקה ידנית' : 'ייבוא נקודות', `
+    <p class="note" id="impNote">${prefill
+      ? 'לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.'
+      : 'הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.'}</p>
+    <textarea id="impText" rows="7" dir="ltr" spellcheck="false">${html(prefill || '')}</textarea>
+    <div class="btns"><button class="cta" id="impSave">ייבוא</button></div>`);
 }
 function commitImport() {
   let rows;
@@ -694,7 +718,7 @@ function commitImport() {
     added++;
   });
   saveMine();
-  $('#impModal').hidden = true;
+  closePanel();
   drawMine(); redrawText();
   mapNote(added ? ('נוספו ' + nf(added) + ' נקודות' + (skipped ? ', ' + nf(skipped) + ' דולגו' : '') + '.')
                 : 'לא נוספה אף נקודה חדשה.', !added);
@@ -709,7 +733,7 @@ function toggleAdd() {
   else hideNote();
 }
 
-/* ------------------------------------------------- level 3: תוך הפרגזיה --- */
+/* ------------------------------------------------- level 3: תוך הרובע --- */
 /* Every parish has this level, not only Porto's seven.  What fills it differs,
    and the app says which is which: Porto's quarters carry the 53 neighbourhoods
    the source document names, with a Hebrew name and a description each; the
@@ -892,12 +916,37 @@ function applyView() {
   if (map) requestAnimationFrame(() => map.invalidateSize({ animate: false }));
 }
 function cycleView() {
+  // No toast confirming it: a message forces the split view back open, so the
+  // announcement undid the very thing it was announcing. The screen changing
+  // is the feedback.
   S.view = VIEW_NEXT[S.view] || 'split';
   applyView(); save();
-  mapNote(VIEW_HE[S.view]);
-  clearTimeout(cycleView._t);
-  cycleView._t = setTimeout(hideNote, 1600);
 }
+
+/* -------------------------------------------------------------- panel --- */
+/* Everything that used to be its own kind of window — the layers menu, the
+   form for a new point, an import, a source record, the search — is the same
+   thing: a titled box in the text half with a close button.  One pattern, one
+   place, one way out of it. */
+let panelKind = null;
+
+function openPanel(kind, title, body) {
+  panelKind = kind;
+  $('#panelTitle').textContent = title;
+  $('#panelBody').innerHTML = body;
+  $('#panel').hidden = false;
+  $('#layersBtn').setAttribute('aria-expanded', String(kind === 'layers'));
+  // the panel lives in the text half, so that half has to be on screen
+  if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
+  $('#paneText').scrollTop = 0;
+}
+function closePanel() {
+  panelKind = null;
+  $('#panel').hidden = true;
+  $('#panelBody').innerHTML = '';
+  $('#layersBtn').setAttribute('aria-expanded', 'false');
+}
+const panelIs = k => panelKind === k;
 
 /* ------------------------------------------------------------- layers --- */
 function renderLayers() {
@@ -931,24 +980,15 @@ function renderLayers() {
       .map(c => row(S.cats.has(c), 'cat:' + c, D.poiLabel[c] || c, CAT_COLOUR[c], false, counts[c]))
       .join('');
   } else {
-    h += '<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הפרגזיה.</p>';
+    h += '<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הרובע.</p>';
   }
-  $('#layerPanel').innerHTML = `<div class="panel-h">
-      <h2>שכבות המפה</h2>
-      <button class="msg-x" type="button" id="layClose" aria-label="סגירת התפריט">✕</button>
-    </div>` + h;
+  if (panelIs('layers')) $('#panelBody').innerHTML = h;
+  return h;
 }
 function toggleLayers(force) {
-  const p = $('#layerPanel');
-  const show = force === undefined ? p.hidden : force;
-  if (show) {
-    renderLayers();
-    // the menu is in the text half, so it has to be on screen to be used
-    if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
-    $('#paneText').scrollTop = 0;
-  }
-  p.hidden = !show;
-  $('#layersBtn').setAttribute('aria-expanded', String(show));
+  const show = force === undefined ? !panelIs('layers') : force;
+  if (show) openPanel('layers', 'שכבות המפה', renderLayers());
+  else closePanel();
 }
 
 // after a change that alters what the text half should say
@@ -1088,21 +1128,20 @@ function goUp() {
 
 function afterNav() {
   drawMine();
-  if (!$('#layerPanel').hidden) renderLayers();
+  if (panelIs('layers')) renderLayers();
   const c = [];
   if (S.level === 'district') c.push('<span class="now">מחוז פורטו</span>');
   else {
     c.push('<button data-go="district">מחוז פורטו</button>');
     const m = D.munByNum.get(S.mun);
-    if (S.level === 'mun') c.push('<span class="sep">›</span><span class="now">' + html(m.he) + '</span>');
+    if (S.level === 'mun') c.push('<span class="sep">‹</span><span class="now">' + html(m.he) + '</span>');
     else {
-      c.push('<span class="sep">›</span><button data-go="mun">' + html(m.he) + '</button>');
+      c.push('<span class="sep">‹</span><button data-go="mun">' + html(m.he) + '</button>');
       const f = D.freByKey.get(S.zone);
-      c.push('<span class="sep">›</span><span class="now">' + html(f.he || f.pt) + '</span>');
+      c.push('<span class="sep">‹</span><span class="now">' + html(f.he || f.pt) + '</span>');
     }
   }
   $('#crumb').innerHTML = c.join('');
-  $('#upBtn').hidden = S.level === 'district';
   save();
 }
 
@@ -1191,6 +1230,19 @@ function restore() {
 }
 
 /* ---------------------------------------------------------------- search --- */
+function openSearch() {
+  openPanel('search', 'חיפוש', `
+    <input id="q" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
+           placeholder="עירייה, רובע, יישוב או אתר" aria-label="חיפוש">
+    <div id="qres"></div>`);
+  const el = $('#q');
+  if (el) { el.focus(); runSearch(''); }
+}
+function panelSearchClick(e) {
+  const b = e.target.closest('[data-jump]');
+  if (b) jump(b.dataset.jump);
+}
+
 function runSearch(term) {
   const t = term.trim().toLowerCase();
   if (t.length < 2) {
@@ -1206,7 +1258,7 @@ function runSearch(term) {
   D.fre.forEach(f => {
     if (hit(f.he) || hit(f.pt)) out.push({
       t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he,
-      k: f.mun_num === 1 ? 'רובע בפורטו' : 'פרגזיה',
+      k: f.mun_num === 1 ? 'רובע בפורטו' : 'רובע',
       go: `data-jump="zone:${html(D.freKey(f))}"` });
   });
   // 1,773 localities and 1,530 dots across the district; stop once the list is
@@ -1230,7 +1282,9 @@ function runSearch(term) {
     });
   }
 
-  $('#qres').innerHTML = out.length
+  const box = $('#qres');
+  if (!box) return;
+  box.innerHTML = out.length
     ? '<div class="rows">' + out.slice(0, 60).map(r => `<button class="row" ${r.go}>
         <span class="row-body"><span class="row-t">${html(r.t)}</span>
           <span class="row-m"><span class="lat">${html(r.s)}</span></span></span>
@@ -1257,23 +1311,20 @@ function jump(spec) {
     const id = rest.slice(cut + 1);
     S.hi = { kind, id: kind === 'poi' ? Number(id) : id }; applyHi('list');
   }
-  $('#findDrawer').hidden = true;
 }
 
 /* ------------------------------------------------------ sources and info --- */
 function showSource(key) {
   const f = D.sources.fields[key];
   if (!f) return;
-  $('#srcTitle').textContent = f.label_he || key;
-  $('#srcBody').innerHTML = `
+  openPanel('source', f.label_he || key, `
     <p class="note"><code>${html(key)}</code></p>
     ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
     <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
     ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
     ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
     ${f.caveat_he ? `<div class="warn">${html(f.caveat_he)}</div>` : ''}
-    ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`;
-  $('#srcModal').hidden = false;
+    ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`);
 }
 
 function renderInfo() {
@@ -1304,12 +1355,12 @@ function renderInfo() {
     <p>המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני.
       הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.</p>
     <ul>
-      <li>18 עיריות · 243 פרגזיות · 7 רבעי פורטו · 53 שכונות ·
+      <li>18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·
         <span class="num">${D.totPoi}</span> נקודות במפה</li>
-      <li>אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הפרגזיות</li>
+      <li>אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים</li>
       <li>נבנה: <span class="lat">${html(D.generated)}</span></li>
     </ul>
-    <p class="note">מספרי העיריות הם המספרים מהמסמך המקורי. מספרי הפרגזיות
+    <p class="note">מספרי העיריות הם המספרים מהמסמך המקורי. מספרי הרובעים
       והאותיות של השכונות הם של האפליקציה, נועדו לקשור בין המפה לרשימה, ואינם
       מספור רשמי.</p>
     ${STANDALONE
@@ -1339,7 +1390,6 @@ function renderInfo() {
 
 /* ------------------------------------------------------------------ wire --- */
 function wire() {
-  $('#upBtn').addEventListener('click', goUp);
   $('#fitBtn').addEventListener('click', refit);
   $('#locBtn').addEventListener('click', toggleLocate);
   $('#viewBtn').addEventListener('click', cycleView);
@@ -1350,20 +1400,10 @@ function wire() {
     toggleAdd();
     openMine(null, [e.latlng.lat, e.latlng.lng]);
   });
-  $('#mineSave').addEventListener('click', commitMine);
-  $('#mineCancel').addEventListener('click', closeMine);
-  $('#mineDelete').addEventListener('click', deleteMine);
-  $('#impSave').addEventListener('click', commitImport);
-  $('#impCancel').addEventListener('click', () => { $('#impModal').hidden = true; });
-  $('#impModal').addEventListener('click', e => {
-    if (e.target.id === 'impModal') $('#impModal').hidden = true;
-  });
-  $('#mineGoogle').addEventListener('click', () => {
-    if (mineEditing) openInGoogle(mineEditing.ll, mineEditing.name);
-  });
-  $('#mineModal').addEventListener('click', e => { if (e.target.id === 'mineModal') closeMine(); });
-  $('#layerPanel').addEventListener('click', e => {
-    if (e.target.closest('#layClose')) { toggleLayers(false); return; }
+  $('#panelClose').addEventListener('click', closePanel);
+  $('#panelBody').addEventListener('click', e => {
+    if (panelIs('search')) { panelSearchClick(e); return; }
+    if (panelIs('point')) { panelPointClick(e); return; }
     const b = e.target.closest('[data-lay]');
     if (!b) return;
     const k = b.dataset.lay;
@@ -1383,6 +1423,9 @@ function wire() {
     save();
     if (S.level === 'zone') { drawZone(S.zone); renderZone(S.zone); }
     drawMine(); renderLayers(); applyHi();
+  });
+  $('#panelBody').addEventListener('input', e => {
+    if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
   $('#msgs').addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -1438,27 +1481,14 @@ function wire() {
     }
   });
 
-  $('#findBtn').addEventListener('click', () => {
-    $('#findDrawer').hidden = false;
-    runSearch($('#q').value);
-    $('#q').focus();
-  });
-  $('#findClose').addEventListener('click', () => { $('#findDrawer').hidden = true; });
-  $('#q').addEventListener('input', e => runSearch(e.target.value));
-  $('#qres').addEventListener('click', e => {
-    const b = e.target.closest('[data-jump]');
-    if (b) jump(b.dataset.jump);
-  });
+  $('#findBtn').addEventListener('click', openSearch);
 
   $('#infoBtn').addEventListener('click', () => { renderInfo(); $('#infoDrawer').hidden = false; });
   $('#infoClose').addEventListener('click', () => { $('#infoDrawer').hidden = true; });
-  $('#srcClose').addEventListener('click', () => { $('#srcModal').hidden = true; });
-  $('#srcModal').addEventListener('click', e => { if (e.target.id === 'srcModal') $('#srcModal').hidden = true; });
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (!$('#srcModal').hidden) $('#srcModal').hidden = true;
-    else if (!$('#findDrawer').hidden) $('#findDrawer').hidden = true;
+    if (!$('#panel').hidden) closePanel();
     else if (!$('#infoDrawer').hidden) $('#infoDrawer').hidden = true;
     else goUp();
   });

@@ -104,7 +104,8 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 .crumb .now{color:var(--ink)}
 
 /* ---------- the split ---------- */
-.split{flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
+.split{flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+       position:relative}
 @media (orientation:landscape){
   /* row-reverse in an RTL document puts the first child — the map — on the left */
   .split{flex-direction:row-reverse}
@@ -142,8 +143,11 @@ body.is-dragging{cursor:inherit}
 body.is-dragging #map{pointer-events:none}
 
 /* ---------- map furniture ---------- */
-.map-tools{position:absolute; z-index:500; inset-block-start:var(--s3);
-           inset-inline-end:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
+.tools{position:absolute; z-index:600; inset-block-start:var(--s3);
+       inset-inline-end:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
+/* fit, locate and add act on the map; with the map hidden they have nothing
+   to act on, so they go rather than sit there dead */
+body[data-view="text"] .map-only{display:none}
 .mt{display:grid; place-items:center; width:38px; height:38px;
     border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
     border:1px solid var(--line); box-shadow:var(--shadow)}
@@ -172,10 +176,17 @@ body.is-dragging #map{pointer-events:none}
     border:3px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.4)}
 .panel{margin:var(--s4) var(--s4) 0; padding:var(--s4);
        border-radius:var(--r-card); background:var(--card);
-       border:1px solid var(--line); font-size:.86rem}
-.panel-h{display:flex; align-items:center; gap:var(--s3);
-         margin-block-end:var(--s3)}
+       border:1px solid var(--line); border-block-start:3px solid var(--accent);
+       font-size:.88rem; display:flex; flex-direction:column; gap:var(--s3)}
+.panel-h{display:flex; align-items:center; gap:var(--s3)}
 .panel-h h2{flex:1 1 auto}
+.panel input[type=search],.panel input[type=text],.panel textarea{
+       width:100%; padding:var(--s3) var(--s4); border-radius:var(--r-ctl);
+       border:1px solid var(--line); background:var(--bg); color:var(--ink);
+       font:inherit; resize:vertical}
+.panel .rows{margin-block-start:var(--s2)}
+.btns{display:flex; flex-direction:column; gap:var(--s2); margin-block-start:var(--s2)}
+.btns .cta{margin:0}
 .panel h3{font-size:.74rem; font-weight:700; color:var(--ink-2);
           letter-spacing:.04em; margin:var(--s4) 0 var(--s1)}
 .lay{display:flex; align-items:center; gap:var(--s3); width:100%;
@@ -195,11 +206,8 @@ body.is-dragging #map{pointer-events:none}
 
 .fld-l{display:block; font-size:.8rem; font-weight:700; color:var(--ink-2);
        margin-block:8px 3px}
-.modal-in input[type=text],.modal-in textarea{width:100%; padding:9px 11px;
-       border-radius:10px; border:1px solid var(--line); background:var(--bg);
-       color:var(--ink); font:inherit; resize:vertical}
 .cta-2{background:var(--bg); color:var(--ink); border:1px solid var(--line)}
-.cta-2#mineDelete{color:#b3261e; border-color:#b3261e}
+.cta-danger{background:var(--bg); color:var(--bad); border:1px solid var(--bad)}
 
 .leaflet-container{font:inherit; background:var(--bg)}
 .tt{background:var(--card); color:var(--ink); border:1px solid var(--line);
@@ -257,16 +265,16 @@ body.is-dragging #map{pointer-events:none}
 .belt-sw{flex:0 0 auto; width:16px; height:16px; border-radius:4px; margin-block-start:4px;
          background:var(--c); box-shadow:0 0 0 1px rgba(0,0,0,.2)}
 
-.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
-       gap:var(--s2)}
-.stat{display:flex; flex-direction:column; gap:1px; padding:var(--s3) var(--s4);
-      border-radius:var(--r-ctl); background:var(--bg); border:1px solid var(--line);
-      text-align:start}
-.stat-l{font-size:.68rem; font-weight:600; letter-spacing:.03em; color:var(--ink-2);
-        white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.stat-v{font-weight:700; font-size:1.12rem; line-height:1.2}
-.stat-y{font-size:.66rem; color:var(--miss)}
-.stat.no .stat-v{color:var(--miss); font-size:.92rem; font-weight:600}
+.stats{display:flex; flex-direction:column;
+       border-block-start:1px solid var(--line)}
+.stat{display:flex; align-items:baseline; gap:var(--s3); width:100%;
+      padding:var(--s3) 0; border-block-end:1px solid var(--line); text-align:start}
+.stat:active{background:var(--bg)}
+.stat-l{flex:1 1 auto; font-size:.85rem; color:var(--ink-2)}
+.stat-v{flex:0 0 auto; font-weight:700; font-size:1.02rem}
+.stat-u{font-weight:400; font-size:.8rem; color:var(--ink-2)}
+.stat-y{flex:0 0 auto; width:3.2em; text-align:end; font-size:.7rem; color:var(--miss)}
+.stat.no .stat-v{color:var(--miss); font-size:.9rem; font-weight:600}
 
 .kv{margin:0; font-size:.9rem}
 .kv div{display:flex; gap:var(--s3); padding:var(--s2) 0; border-block-end:1px solid var(--line)}
@@ -296,7 +304,10 @@ body.is-dragging #map{pointer-events:none}
          padding:8px; overflow-x:auto; font-size:.78rem; direction:ltr; text-align:start}
 .doc code{font-size:.8rem; direction:ltr; unicode-bidi:isolate}
 
-/* ---------- drawers and the source modal ---------- */
+/* ---------- the sources drawer ---------- */
+/* The one window that is still full screen: it is a reference document, read
+   rather than operated, and the panel in the text half is the wrong shape for
+   twenty source records. */
 .drawer{position:fixed; inset:0; z-index:70; display:flex; flex-direction:column;
         background:var(--bg)}
 .drawer-in{display:flex; flex-direction:column; min-height:0; height:100%}
@@ -311,13 +322,6 @@ body.is-dragging #map{pointer-events:none}
              padding:var(--s4) var(--s4) calc(var(--safe-b) + 28px);
              display:flex; flex-direction:column; gap:var(--s4);
              max-width:72ch; margin-inline:auto; width:100%}
-.modal{position:fixed; inset:0; z-index:80; display:grid; place-items:end center;
-       background:rgba(8,12,20,.5); padding:0}
-.modal-in{width:100%; max-width:560px; max-height:82dvh; overflow-y:auto;
-          background:var(--card);
-          border-start-start-radius:18px; border-start-end-radius:18px;
-          padding:var(--s5) var(--s5) calc(var(--safe-b) + var(--s5));
-          box-shadow:var(--shadow)}
 .cta{display:block; width:100%; margin-block-start:var(--s4); padding:var(--s4);
      border-radius:var(--r-ctl); background:var(--accent); color:var(--accent-ink);
      font-weight:700; text-align:center}

@@ -21,13 +21,7 @@
 <div id="boot" class="boot"><div class="boot-in"><div class="spin"></div><p>טוען את נתוני המחוז…</p></div></div>
 
 <header class="top">
-  <button class="ico" id="upBtn" aria-label="חזרה לרמה שמעל" hidden>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-  </button>
   <nav class="crumb" id="crumb" aria-label="מסלול ניווט"></nav>
-  <button class="ico" id="findBtn" aria-label="חיפוש">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
-  </button>
   <button class="ico" id="infoBtn" aria-label="מקורות ומידע חסר">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
   </button>
@@ -39,46 +33,45 @@
 <main class="split" id="split" style="--f:52%">
   <section class="pane pane-map" id="paneMap" aria-label="מפה">
     <div id="map" role="application" aria-label="מפת מחוז פורטו"></div>
-    <div class="map-tools">
-      <button class="mt" id="viewBtn" aria-label="פריסת המסך">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
-      </button>
-      <button class="mt" id="fitBtn" aria-label="התאמת המפה למסך">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-      </button>
-      <button class="mt" id="locBtn" aria-label="הצגת המיקום שלי" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-      </button>
-      <button class="mt" id="layersBtn" aria-label="שכבות המפה" aria-expanded="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
-      </button>
-      <button class="mt" id="addBtn" aria-label="הוספת נקודה משלי" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-    </div>
   </section>
 
   <div class="divider" id="divider" role="separator" tabindex="0"
        aria-orientation="horizontal" aria-label="הזזת הקו משנה את גודל המפה"
        aria-valuemin="15" aria-valuemax="85" aria-valuenow="52"><span class="grip"></span></div>
 
+  <div class="tools">
+    <button class="mt" id="viewBtn" aria-label="פריסת המסך">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
+    </button>
+    <button class="mt" id="findBtn" aria-label="חיפוש">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+    </button>
+    <button class="mt map-only" id="fitBtn" aria-label="התאמת המפה למסך">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button class="mt map-only" id="locBtn" aria-label="הצגת המיקום שלי" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    </button>
+    <button class="mt" id="layersBtn" aria-label="שכבות המפה" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
+    </button>
+    <button class="mt map-only" id="addBtn" aria-label="הוספת נקודה משלי" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+
   <section class="pane pane-text" id="paneText" aria-label="נתונים">
     <div class="msgs" id="msgs" role="status" aria-live="polite"></div>
-    <div class="panel" id="layerPanel" hidden role="group" aria-label="שכבות המפה"></div>
+    <div class="panel" id="panel" hidden role="region" aria-labelledby="panelTitle">
+      <div class="panel-h">
+        <h2 id="panelTitle"></h2>
+        <button class="msg-x" type="button" id="panelClose" aria-label="סגירה">✕</button>
+      </div>
+      <div id="panelBody"></div>
+    </div>
     <div class="doc" id="doc"></div>
   </section>
 </main>
-
-<div class="drawer" id="findDrawer" hidden role="dialog" aria-modal="true" aria-label="חיפוש">
-  <div class="drawer-in">
-    <div class="drawer-head">
-      <input id="q" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
-             placeholder="עירייה, פרגזיה, שכונה או אתר" aria-label="חיפוש">
-      <button class="ico" id="findClose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div class="drawer-body" id="qres"></div>
-  </div>
-</div>
 
 <div class="drawer" id="infoDrawer" hidden role="dialog" aria-modal="true" aria-labelledby="infoTitle">
   <div class="drawer-in">
@@ -87,39 +80,6 @@
       <button class="ico" id="infoClose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="drawer-body doc" id="infoBody"></div>
-  </div>
-</div>
-
-<div class="modal" id="mineModal" hidden role="dialog" aria-modal="true" aria-labelledby="mineTitle">
-  <div class="modal-in">
-    <h2 id="mineTitle">נקודה משלי</h2>
-    <p class="note" id="mineWhere"></p>
-    <label class="fld-l" for="mineName">שם</label>
-    <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי">
-    <label class="fld-l" for="mineDesc">תיאור</label>
-    <textarea id="mineDesc" rows="4" placeholder="מה שחשוב לזכור על המקום הזה"></textarea>
-    <button class="cta" id="mineSave">שמירה</button>
-    <button class="cta cta-2" id="mineGoogle">פתיחה במפות גוגל</button>
-    <button class="cta cta-2" id="mineDelete" hidden>מחיקת הנקודה</button>
-    <button class="cta cta-2" id="mineCancel">ביטול</button>
-  </div>
-</div>
-
-<div class="modal" id="impModal" hidden role="dialog" aria-modal="true" aria-labelledby="impTitle">
-  <div class="modal-in">
-    <h2 id="impTitle">ייבוא נקודות</h2>
-    <p class="note" id="impNote"></p>
-    <textarea id="impText" rows="7" dir="ltr" spellcheck="false"></textarea>
-    <button class="cta" id="impSave">ייבוא</button>
-    <button class="cta cta-2" id="impCancel">סגירה</button>
-  </div>
-</div>
-
-<div class="modal" id="srcModal" hidden role="dialog" aria-modal="true" aria-labelledby="srcTitle">
-  <div class="modal-in">
-    <h2 id="srcTitle"></h2>
-    <div id="srcBody"></div>
-    <button class="cta" id="srcClose">סגירה</button>
   </div>
 </div>
 
