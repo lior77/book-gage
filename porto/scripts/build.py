@@ -614,6 +614,12 @@ def main():
             "freg_pop_sum": sum(known) if known else None,
             "ine": osm_ine.get(mun),
         }
+        # The official number of the municipality inside the district: the last
+        # two digits of its DICOFRE code. 13 is Porto district; 12 is Porto, 01
+        # is Amarante. This is what appears on forms, in INE tables and in CAOP,
+        # and it is what the app prints, rather than a number of its own.
+        if rec["ine"] and len(str(rec["ine"])) == 4:
+            rec["code"] = str(rec["ine"])[2:]
         if mun in osm_pop:
             rec["pop2021"] = osm_pop[mun]
             rec["density"] = round(osm_pop[mun] / area, 1)

@@ -43,6 +43,10 @@ const html = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // CAOP spells the merged parishes "União das freguesias de X"; the source
 // document and porto_city.json both use the bare X.
+// The number printed for a municipality is its official one — the last two
+// digits of the DICOFRE code — not a number the app made up. `num` is still the
+// identity everything is keyed on internally; it is never shown.
+const munCode = m => (m && m.code) || String(m && m.num || '');
 const bare = s => String(s || '').replace(/^União das freguesias de\s+/i, '');
 const latlng = c => [c[1], c[0]];   // *.center is [lon,lat]; *.ll is already [lat,lon]
 
@@ -381,7 +385,7 @@ function drawDistrict() {
         if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
         goMun(ft.properties.num);
       });
-      l.bindTooltip(`<b>${html(m.num + '. ' + m.he)}</b><br><span class="lat">${html(m.pt)}</span>`,
+      l.bindTooltip(`<b>${html(munCode(m) + ' · ' + m.he)}</b><br><span class="lat">${html(m.pt)}</span>`,
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
@@ -394,8 +398,8 @@ function drawDistrict() {
   }).addTo(map);
 
   LG.labels = L.layerGroup(D.mun.map(m => {
-    const mk = L.marker(latlng(m.center), { icon: numIcon(m.num), keyboard: false,
-      title: m.num + '. ' + m.he, riseOnHover: true });
+    const mk = L.marker(latlng(m.center), { icon: numIcon(munCode(m)), keyboard: false,
+      title: munCode(m) + ' · ' + m.he, riseOnHover: true });
     mk.on('click', () => {
       if (S.adding) return;
       if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
@@ -413,13 +417,13 @@ function renderDistrict() {
       <span class="row-body">
         <span class="row-t">${html(b.he)} <span class="lat">(${html(b.en)})</span></span>
         <span class="row-d">${html(b.sub_he)}</span>
-        <span class="row-m num">עיריות ${html(b.nums.join(', '))}</span>
+        <span class="row-m num">${html(b.nums.map(n => munCode(D.munByNum.get(n))).sort().join(' · '))}</span>
       </span></div>`).join('');
 
-  const list = D.mun.slice().sort((a, b) => a.num - b.num).map(m => {
+  const list = D.mun.slice().sort((a, b) => munCode(a).localeCompare(munCode(b))).map(m => {
     const chr = (m.profile.find(p => p.label === 'אופי') || {}).text || '';
     return `<button class="row" data-mun="${m.num}">
-      <span class="pin" style="--c:${html(m.fill)}">${m.num}</span>
+      <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
       <span class="row-body">
         <span class="row-t">${html(m.he)} <span class="lat">(${html(m.en)})</span></span>
         <span class="row-d">${html(chr)}</span>
@@ -451,8 +455,7 @@ function renderDistrict() {
       <h2>שלוש החגורות</h2>
       <p class="sub">קו בצבע החגורה מקיף במפה את העיריות שבה.</p>
       ${beltRows}
-      <p class="note">החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי, לא
-        חלוקה מנהלית רשמית.</p>
+
     </div>
 
     <div class="grp">18 העיריות — לפי המספור במפה</div>
@@ -545,7 +548,7 @@ function renderMun(num) {
   $('#doc').innerHTML = `
     <div class="card">
       <div class="hdr">
-        <span class="pin" style="--c:${html(m.fill)}">${m.num}</span>
+        <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
         <div><h1>${html(m.he)} <span class="en lat">(${html(m.en)})</span></h1>
           <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> רובעים</p></div>
       </div>
@@ -1298,7 +1301,7 @@ function runSearch(term) {
   const out = [];
   D.mun.forEach(m => {
     if (hit(m.he) || hit(m.pt) || hit(m.en)) out.push({
-      t: m.num + '. ' + m.he, s: m.pt, k: 'עירייה', go: `data-jump="mun:${m.num}"` });
+      t: munCode(m) + ' · ' + m.he, s: m.pt, k: 'עירייה', go: `data-jump="mun:${m.num}"` });
   });
   D.fre.forEach(f => {
     if (hit(f.he) || hit(f.pt)) out.push({
@@ -1396,6 +1399,70 @@ function renderInfo() {
     </div>`).join('');
 
   $('#infoBody').innerHTML = `
+    <h2>איך קוראים את המספרים</h2>
+    <p>לכל יחידה מנהלית בפורטוגל יש קוד רשמי אחד, <b>DICOFRE</b>, והוא בנוי
+      בשכבות. מחוז פורטו הוא <span class="num">13</span>; שתי הספרות שאחריו הן
+      העירייה, ושתיים נוספות הן הרובע:</p>
+    <pre>13 12 02
+▔▔ ▔▔ ▔▔
+│  │  └── רובע  (Bonfim)
+│  └───── עירייה (פורטו)
+└──────── מחוז  (פורטו)</pre>
+    <p>המספר שמופיע על כל עירייה במפה הוא <b>שתי הספרות הרשמיות שלה</b> —
+      פורטו היא <span class="num">12</span>, אמרנטה <span class="num">01</span>,
+      טרופה <span class="num">18</span>. זה הקוד שמופיע בטפסים, במסמכי מקרקעין
+      ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.</p>
+    <p class="note">מספרי הרובעים עדיין אינם הקודים הרשמיים: הם קיימים אצלי
+      לשבעת רובעי עיריית פורטו בלבד, ולשאר 236 חסר לי המקור. עד שיושלם, המספר
+      שמוצג לרובע הוא מספור פנימי של האפליקציה שנועד לקשור בין המפה לרשימה.</p>
+
+    <h2>מי מודד ומי סופר</h2>
+    <p>שני גופים שונים עומדים מאחורי כל מספר כאן, ותפקידם שונה לגמרי.</p>
+    <div class="card">
+      <h3>INE — <span class="lat">Instituto Nacional de Estatística</span></h3>
+      <p>הלשכה המרכזית לסטטיסטיקה של פורטוגל. אחראית על כל הסטטיסטיקה הרשמית,
+        והמוצר המרכזי שלה כאן הוא <b>Censos</b> — מפקד האוכלוסין שנערך כל עשר
+        שנים. <b>כל נתוני האוכלוסייה באפליקציה הם ממפקד 2021.</b></p>
+      <p class="note">INE נותן את <b>המספרים</b>.</p>
+    </div>
+    <div class="card">
+      <h3>CAOP — <span class="lat">Carta Administrativa Oficial de Portugal</span></h3>
+      <p>מפת הגבולות המנהליים הרשמית, שמפרסמת <b>DGT</b>
+        (<span class="lat">Direção-Geral do Território</span>) — לא INE. היא
+        קובעת איפה בדיוק עובר כל גבול. ממנה מגיעות כל הצורות על המפה, וכל שטח
+        בקמ״ר שמוצג כאן חושב מהפוליגונים עצמם ולא נלקח מטבלה.</p>
+      <p class="note">CAOP נותן את <b>הצורות</b>. קוד DICOFRE הוא מה שמחבר
+        ביניהם — אותו מזהה בשני המקורות, ולכן אפשר לצרף מספר לגבול בלי לנחש.</p>
+    </div>
+
+    <h2>NUTS III — החלוקה הרשמית של המחוז</h2>
+    <p><b>NUTS</b> הוא תקן אירופי לחלוקת שטח לצורך סטטיסטיקה והקצאת תקציבים.
+      בפורטוגל יש שלוש רמות; הרמה שבפועל משמשת היא <b>NUTS III</b>, ובה 25
+      יחידות. מה שמייחד אותה בפורטוגל: כל יחידה היא גם <b>גוף אמיתי</b> —
+      אזור מטרופוליני או התאגדות בין-עירונית עם מועצה ותקציב.</p>
+    <p><b>18 העיריות שבאפליקציה מתחלקות בין שתי יחידות כאלה:</b></p>
+    <div class="card">
+      <h3><span class="lat">Área Metropolitana do Porto</span> (AMP)</h3>
+      <p>11 מהעיריות כאן: פורטו, וילה נובה דה גאיה, מטוזיניוש, מאיה, גונדומאר,
+        ולונגו, וילה דו קונדה, פובואה דה וארזים, סנטו טירסו, טרופה ופארדש.
+        (ל-AMP שייכות עוד שש עיריות ממחוז אָבֵיירו.)</p>
+      <p>זהו מטרופולין אחד לכל דבר: <b>רשות תחבורה משותפת</b> — המטרו, כרטיס
+        <span class="lat">Andante</span> ותעריפי האזורים — ושוק עבודה אחד.
+        כאן חיים כ-1.44 מיליון מתושבי המחוז.</p>
+    </div>
+    <div class="card">
+      <h3><span class="lat">Tâmega e Sousa</span></h3>
+      <p>7 מהעיריות כאן: פנאפיאל, פאסוש דה פריירה, לוזאדה, פלגיירש, אמרנטה,
+        מרקו דה קנבזש ובאיאו. (ליחידה שייכות עוד ארבע עיריות ממחוזות אחרים.)</p>
+      <p>כלכלה נפרדת — רהיטים, נעליים וטקסטיל — <b>מחוץ למערכת התחבורה
+        המטרופולינית</b>, עם מחירי נדל״ן נמוכים משמעותית ואוכלוסייה מתכווצת.
+        כאן חיים כ-348 אלף תושבים.</p>
+    </div>
+    <p class="note">להבדל הזה יש משמעות מעשית: הוא קובע אם עירייה נמצאת בתוך
+      מערכת הכרטוס והמטרו של פורטו, לאן מגיעים כספי הפיתוח האירופיים, ובאיזו
+      יחידה INE מפרסם נתונים. שלוש החגורות שבמסך המחוז מארגנות את אותן 18
+      העיריות לפי מרחק ואופי, ולכן אינן חופפות לחלוקה הזאת.</p>
+
     <h2>מה יש כאן</h2>
     <p>המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני.
       הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.</p>
