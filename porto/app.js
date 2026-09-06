@@ -365,7 +365,10 @@ function drawDistrict() {
     }),
     onEachFeature: (ft, l) => {
       const m = D.munByNum.get(ft.properties.num);
-      l.on('click', () => goMun(ft.properties.num));
+      l.on('click', () => {
+        if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
+        goMun(ft.properties.num);
+      });
       l.bindTooltip(`<b>${html(m.num + '. ' + m.he)}</b><br><span class="lat">${html(m.pt)}</span>`,
         { sticky: true, className: 'tt' });
     },
@@ -381,7 +384,10 @@ function drawDistrict() {
   LG.labels = L.layerGroup(D.mun.map(m => {
     const mk = L.marker(latlng(m.center), { icon: numIcon(m.num), keyboard: false,
       title: m.num + '. ' + m.he, riseOnHover: true });
-    mk.on('click', () => goMun(m.num));
+    mk.on('click', () => {
+      if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
+      goMun(m.num);
+    });
     return mk;
   })).addTo(map);
 
@@ -582,7 +588,10 @@ function drawMine() {
     const mk = L.marker(p.ll, { icon: mineIcon(), zIndexOffset: 1200, title: p.name });
     mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : ''),
       { direction: 'top', className: 'tt' });
-    mk.on('click', () => openMine(p.id));
+    mk.on('click', () => {
+      if (isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
+      openMine(p.id);
+    });
     return mk;
   })).addTo(map);
 }
@@ -753,8 +762,9 @@ function renderZone(key) {
     ${z.pois.length ? `
       <div class="card">
         <h2>נקודות במפה</h2>
-        <p class="sub">כל נקודה שחורה במפה היא אתר או מוסד. לחיצה על נקודה מבליטה את
-          הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.</p>
+        <p class="sub">כל נקודה במפה היא אתר או מוסד, בצבע הקטגוריה שלה. לחיצה על
+          נקודה מבליטה את הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.
+          <b>לחיצה כפולה</b> — על הנקודה או על הרישום — פותחת אותה במפות גוגל.</p>
         <div class="chips">${chips}</div>
         <p class="note">מקור: OpenStreetMap contributors, ODbL. המיפוי התנדבותי
           ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.</p>
@@ -862,17 +872,59 @@ function redrawText() {
   applyHi();
 }
 
+/* --------------------------------------------------------- Google Maps --- */
+/* A second activation of the same thing within 450 ms opens it in Google Maps.
+   One tap keeps doing exactly what it did before.
+
+   Why a coordinate link and not the Google Maps API: their terms forbid storing
+   or redrawing their data outside their own map, which is the whole of what
+   this app is, and an API key inside a file people pass around is a bill
+   waiting to be run up.  A plain URL with a latitude and a longitude asks for
+   none of that — no key, no account, nothing stored — and hands over the two
+   things Google is genuinely better at: Street View and directions. */
+const gmapsUrl = ll =>
+  'https://www.google.com/maps/search/?api=1&query=' + ll[0].toFixed(6) + '%2C' + ll[1].toFixed(6);
+
+let lastTap = { key: '', t: 0 };
+function isSecondTap(key) {
+  const now = Date.now();
+  const again = key === lastTap.key && now - lastTap.t < 450;
+  lastTap = { key, t: again ? 0 : now };   // a third tap starts over
+  return again;
+}
+
+function openInGoogle(ll, name) {
+  const url = gmapsUrl(ll);
+  let w = null;
+  try { w = window.open(url, '_blank', 'noopener'); } catch (e) { w = null; }
+  if (!w) {
+    // a sandboxed frame can refuse to open a window, and refuses in silence
+    mapNote(`הדפדפן חסם את פתיחת החלון. אפשר לפתוח ידנית:
+      <a href="${html(url)}" target="_blank" rel="noopener">${html(name || 'מפות גוגל')}</a>`, true);
+  }
+}
+
 /* --------------------------------------------------------- highlighting --- */
 // One record is "picked" at a time, and both halves show it: the row gets a
 // frame and scrolls into view, the shape or dot on the map gets a heavy ring.
 function pick(hi, from) {
+  if (isSecondTap(hi.kind + ':' + hi.id)) {
+    const z = zoneOf(S.zone);
+    const it = hi.kind === 'bairro'
+      ? z.bairros.find(b => b.letter === hi.id)
+      : z.pois[Number(hi.id)];
+    if (it && it.ll) { openInGoogle(it.ll, it.name || it.he || it.en); return; }
+  }
   const same = S.hi && S.hi.kind === hi.kind && String(S.hi.id) === String(hi.id);
   S.hi = same ? null : hi;
   applyHi(from);
 }
 // Every parish has a level of its own now, so a tap on one opens it.  The
 // second argument is kept because the map and the list both call this.
-function pickFre(f) { goZone(D.freKey(f)); }
+function pickFre(f) {
+  if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), f.he || f.pt); return; }
+  goZone(D.freKey(f));
+}
 
 function applyHi(from) {
   const hi = S.hi;
@@ -1185,6 +1237,9 @@ function renderInfo() {
 
     <h2>רישוי וייחוס</h2>
     ${s.license_notices.map(n => `<p>${html(n)}</p>`).join('')}
+    <p class="note">לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל —
+      קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש
+      של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.</p>
     <p class="note">האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו,
       המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.</p>`;
 }
@@ -1208,6 +1263,9 @@ function wire() {
   $('#mineSave').addEventListener('click', commitMine);
   $('#mineCancel').addEventListener('click', closeMine);
   $('#mineDelete').addEventListener('click', deleteMine);
+  $('#mineGoogle').addEventListener('click', () => {
+    if (mineEditing) openInGoogle(mineEditing.ll, mineEditing.name);
+  });
   $('#mineModal').addEventListener('click', e => { if (e.target.id === 'mineModal') closeMine(); });
   $('#layerPanel').addEventListener('click', e => {
     const b = e.target.closest('[data-lay]');
@@ -1258,9 +1316,19 @@ function wire() {
       return;
     }
     const mine = e.target.closest('[data-mine]');
-    if (mine) { openMine(mine.dataset.mine); return; }
+    if (mine) {
+      const p = D.mine.find(x => x.id === mine.dataset.mine);
+      if (p && isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
+      openMine(mine.dataset.mine);
+      return;
+    }
     const mun = e.target.closest('[data-mun]');
-    if (mun) { goMun(Number(mun.dataset.mun)); return; }
+    if (mun) {
+      const m = D.munByNum.get(Number(mun.dataset.mun));
+      if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
+      goMun(m.num);
+      return;
+    }
     const fre = e.target.closest('[data-fre]');
     if (fre) { pickFre(D.freByKey.get(fre.dataset.fre), 'list'); return; }
     const hi = e.target.closest('[data-hi]');
