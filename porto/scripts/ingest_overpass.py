@@ -299,11 +299,19 @@ def ingest_bairros(pois_feats, quarters):
         "meta": {
             "source": "OpenStreetMap via Overpass",
             "licence": "ODbL — © OpenStreetMap contributors",
-            "retrieved": "2026-09-05",
+            "retrieved": "2026-09-06",
             "note_he": "מתחת לפרגזיה אין בפורטוגל שכבה מנהלית רשמית. השמות אינם "
                        "רשמיים ואין להם גבולות — הנקודות מסמנות איפה השכונה נמצאת, "
                        "לא את מרכזה המדויק ולא את שטחה.",
         },
+        # Recorded rather than silently dropped: a targeted Overpass query over
+        # eastern Porto returned nothing for these, so they are absent from OSM
+        # and not merely un-matched by the rules above. Without a coordinate the
+        # app lists them but puts no letter on the map.
+        "not_in_osm": [{"quarter": q, "he": he, "en": en,
+                        "note": "לא קיים ב-OpenStreetMap. שאילתה ייעודית על אזור "
+                                "מזרח פורטו לא החזירה שום אובייקט בשם הזה."}
+                       for q, he, en in missing],
         "items": items,
     }
 

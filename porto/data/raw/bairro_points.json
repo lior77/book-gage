@@ -2,9 +2,17 @@
  "meta": {
   "source": "OpenStreetMap via Overpass",
   "licence": "ODbL — © OpenStreetMap contributors",
-  "retrieved": "2026-09-05",
+  "retrieved": "2026-09-06",
   "note_he": "מתחת לפרגזיה אין בפורטוגל שכבה מנהלית רשמית. השמות אינם רשמיים ואין להם גבולות — הנקודות מסמנות איפה השכונה נמצאת, לא את מרכזה המדויק ולא את שטחה."
  },
+ "not_in_osm": [
+  {
+   "quarter": 3,
+   "he": "מטדורו",
+   "en": "Matadouro",
+   "note": "לא קיים ב-OpenStreetMap. שאילתה ייעודית על אזור מזרח פורטו לא החזירה שום אובייקט בשם הזה."
+  }
+ ],
  "items": [
   {
    "quarter": 1,
@@ -167,13 +175,13 @@
    "he": "בונפים (סביב הכנסייה)",
    "en": "Bonfim",
    "ll": [
-    41.152711,
-    -8.597613
+    41.15107,
+    -8.593957
    ],
    "matched": "Bonfim",
-   "kind": "boundary=administrative",
-   "confidence": "approx",
-   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Bonfim״ (boundary=administrative) ששמו זהה."
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
   },
   {
    "quarter": 2,
@@ -375,13 +383,13 @@
    "he": "מרכז פרניוש",
    "en": "Paranhos (centro)",
    "ll": [
-    41.173513,
-    -8.605898
+    41.173946,
+    -8.605824
    ],
    "matched": "Paranhos",
-   "kind": "boundary=administrative",
-   "confidence": "approx",
-   "note": "מיקום מקורב: אין ב-OSM אובייקט של השכונה עצמה, והנקודה נלקחה מ״Paranhos״ (boundary=administrative) ששמו זהה."
+   "kind": "place=suburb",
+   "confidence": "reported",
+   "note": "נקודת השכונה מ-OSM, מקור יחיד."
   },
   {
    "quarter": 4,
@@ -683,5 +691,5 @@
    "note": "נקודת השכונה מ-OSM, מקור יחיד."
   }
  ],
- "generated": "2026-09-05"
+ "generated": "2026-09-06"
 }
