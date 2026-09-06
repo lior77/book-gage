@@ -54,6 +54,21 @@ jobs:
           echo "--- assets that went in:"
           unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -c 'assets/site/' || true
 
+      # Whether an update installs over an existing copy — keeping the points
+      # the user saved — or is refused for a signature mismatch depends
+      # entirely on the debug key being the same one every build.  Gradle
+      # creates ~/.android/debug.keystore when it is missing, with a fresh
+      # random key, so this prints what was actually used rather than assuming.
+      - name: Which key signed it
+        working-directory: porto/android
+        run: |
+          echo "keystore present: $(test -f ~/.android/debug.keystore && echo yes || echo no)"
+          sha256sum ~/.android/debug.keystore || true
+          APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort | tail -1)
+          echo "apksigner: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk \
+            | grep -i 'SHA-256 digest\|Subject' || true
+
       - uses: actions/upload-artifact@v4
         with:
           name: porto-atlas-apk
