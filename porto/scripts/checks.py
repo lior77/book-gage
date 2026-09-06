@@ -11,6 +11,10 @@ Rules enforced (from BRIEF.md):
      because INE published the two at different moments)
   5. density == population / area
   6. every geometry is valid and lies inside the district bounding box
+  7. what the app draws matches what it lists: the parish numbers run 1..N with
+     no gaps and no repeats, every parish has a description whose origin is
+     recorded, every bairro has a letter, and every belt outline names the
+     municipalities it encloses
 
 Exit code 0 = all green, 1 = at least one hard failure.
 """
@@ -156,6 +160,54 @@ def main():
     if missing:
         fail("%d freguesias have no polygon, e.g. %s" % (len(missing), sorted(missing)[:3]))
 
+    # ---- 7. what the app draws matches what it lists -----------------------
+    by_mun = {}
+    for f in fre:
+        by_mun.setdefault(f["mun_num"], []).append(f)
+    for num, rows in sorted(by_mun.items()):
+        got = sorted(r.get("n") for r in rows)
+        if got != list(range(1, len(rows) + 1)):
+            fail("municipality %d: parish numbers are %s, expected 1..%d"
+                 % (num, got, len(rows)))
+        if any(not r.get("colour") for r in rows):
+            fail("municipality %d: a parish has no map colour" % num)
+    for m in mun:
+        if not m.get("fill"):
+            fail("%s: no map fill colour" % m["pt"])
+
+    # A description is allowed to be missing, but it is never allowed to be
+    # present without saying where it came from.
+    no_origin = [f["pt"] for f in fre if f.get("note") and not f.get("note_origin")]
+    if no_origin:
+        fail("%d descriptions do not record their origin, e.g. %s"
+             % (len(no_origin), no_origin[:3]))
+    origins = {}
+    for f in fre:
+        if f.get("note"):
+            o = f.get("note_origin")
+            origins[o] = origins.get(o, 0) + 1
+    for o in origins:
+        if o not in ("pdf", "app"):
+            fail("unknown note_origin %r" % o)
+    if origins.get("app") and "freguesia.note" not in sources["fields"]:
+        fail("descriptions written for the app are not documented in sources.json")
+
+    letters = [b for q in city["quarters"] for b in q["bairros"] if not b.get("letter")]
+    if letters:
+        fail("%d bairros have no letter" % len(letters))
+    for q in city["quarters"]:
+        seen = [b.get("letter") for b in q["bairros"] if b.get("letter")]
+        if len(set(seen)) != len(seen):
+            fail("quarter %d repeats a bairro letter" % q["num"])
+        for b in q["bairros"]:
+            # no coordinate is fine; a coordinate with no confidence is not
+            if b.get("ll") and not b.get("confidence"):
+                fail("bairro %s has a point but no confidence" % b["en"])
+    belts = load("boundaries_belts.geojson")["features"]
+    covered = sorted(n for ft in belts for n in ft["properties"]["nums"])
+    if covered != list(range(1, 19)):
+        fail("the belt outlines cover %s, not all 18 municipalities" % covered)
+
     # ---- city --------------------------------------------------------------
     if len(city["quarters"]) != 7:
         fail("expected 7 Porto city quarters, got %d" % len(city["quarters"]))
@@ -166,6 +218,8 @@ def main():
     # ---- report -----------------------------------------------------------
     print("municipalities %d   freguesias %d   city quarters %d   bairros %d"
           % (len(mun), len(fre), len(city["quarters"]), n_bairros))
+    print("freguesias with a description %d/%d (%d of them written for the app)"
+          % (sum(1 for f in fre if f.get("note")), len(fre), origins.get("app", 0)))
     print("freguesias with population %d/%d, with Hebrew name %d/%d, with area %d/%d"
           % (sum(1 for f in fre if "pop2021" in f), len(fre),
              sum(1 for f in fre if "he" in f), len(fre),

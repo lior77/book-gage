@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-05",
+  "generated": "2026-09-06",
   "license_notices": [
     "גבולות מנהליים: CAOP 2020, Direção-Geral do Território (DGT) — נתונים פתוחים.",
     "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
@@ -32,7 +32,10 @@
       "reference_year": 2021,
       "source": "נגזר: pop2021 / area_km2",
       "coverage": "18/18",
-      "derived_from": ["municipio.pop2021", "municipio.area_km2"]
+      "derived_from": [
+        "municipio.pop2021",
+        "municipio.area_km2"
+      ]
     },
     "municipio.dist_porto_km": {
       "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
@@ -90,6 +93,20 @@
       "source": "נגזר: pop2021 / area_km2",
       "coverage": "243/243"
     },
+    "freguesia.note": {
+      "label_he": "תיאור הפרגזיה",
+      "value_type": "text",
+      "source": "140 מתוך 243 מהמסמך המקורי porto_district_map_a3.pdf. 103 הנותרות נכתבו עבור האפליקציה ונשמרות ב-data/raw/freguesia_notes_app.json",
+      "coverage": "243/243",
+      "caveat_he": "אין מקור רשמי שמפרסם טקסט תיאורי לפרגזיה — מוסדות הסטטיסטיקה מפרסמים מספרים, לא תיאורים. לכן 103 התיאורים שנוספו נכתבו מידע כללי ולא הועתקו ממקור. הם מתארים מיקום, נוף ואופי, ואינם מכילים נתונים מספריים: כל מספר באפליקציה בא ממקור מתועד. השדה note_origin מסמן כל תיאור כזה, והאפליקציה מציגה עליו תווית. יש לאמת כל פרט שמשפיע על החלטה."
+    },
+    "freguesia.number": {
+      "label_he": "מספר הפרגזיה במפה",
+      "value_type": "integer",
+      "source": "מספור של האפליקציה (scripts/build.py, number_parishes). הסדר נלקח מהמסמך המקורי בשתים-עשרה העיריות שהוא מפרט, ובשש הנותרות לפי גודל אוכלוסייה, מהגדולה לקטנה",
+      "coverage": "243/243",
+      "caveat_he": "אינו מספור רשמי ואין לו קיום מחוץ לאפליקציה. תפקידו היחיד הוא לקשור בין המפה לרשימה. פורטו היא היוצאת מן הכלל: שבע הפרגזיות שלה הן שבעת רבעי העיר, והאפליקציה מדפיסה להן את מספר הרובע כדי שרמה 2 ורמה 3 יסכימו ביניהן."
+    },
     "porto_city.quarter": {
       "label_he": "שבעת רבעי עיריית פורטו",
       "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",
@@ -102,6 +119,31 @@
       "retrieved": "2026-09-05",
       "coverage": "339 נקודות",
       "caveat_he": "נקודות בלבד, לא גבולות. מתחת לרמת הפרגזיה אין שכבה מנהלית רשמית בפורטוגל, ולכן אין גבולות שכונה באפליקציה."
+    },
+    "porto_city.bairro_letter": {
+      "label_he": "אות השכונה במפה",
+      "value_type": "text",
+      "source": "אות של האפליקציה (A, B, C…) לפי סדר השכונות במסמך המקורי; הנקודה שעליה היא מסומנת מגיעה מ-OpenStreetMap (place=neighbourhood/suburb/quarter בתוך הפרגזיה)",
+      "url": "https://www.openstreetmap.org/",
+      "coverage": "52/53",
+      "caveat_he": "לשכונות פורטו אין גבול רשמי, ולכן אין פוליגון — יש נקודה בלבד, והיא במרכז השכונה בקירוב. השכונה מטדורו (Matadouro) אינה קיימת ב-OSM ולכן אין לה נקודה, והאפליקציה אומרת זאת במפורש. שדה confidence על כל שכונה מבחין בין נקודה שהגיעה מ-OSM (reported) לנקודה שנגזרה בקירוב (approx)."
+    },
+    "porto_city.poi": {
+      "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, אוניברסיטה, מוזיאונים, אתרים)",
+      "value_type": "point",
+      "reference_year": 2026,
+      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/01_porto_pois.overpassql",
+      "url": "https://www.openstreetmap.org/",
+      "retrieved": "2026-09-06",
+      "coverage": "709 נקודות בשבעת הרבעים",
+      "caveat_he": "OSM הוא מיפוי התנדבותי: הכיסוי אינו אחיד, והרשימה אינה ממצה. בקטגוריית ״אתרים ומונומנטים״ יש בפורטו יותר מאלף רשומות, רובן פרט אדריכלי בודד; האפליקציה מציגה מהן את אלה שיש להן ערך ויקידאטה או ויקיפדיה, בלי בחירה ידנית. חובה לשמור על הייחוס ל-OpenStreetMap."
+    },
+    "district.belts": {
+      "label_he": "שלוש החגורות",
+      "value_type": "text",
+      "source": "המסמך המקורי porto_district_map_a3.pdf (porto_freg2.py, BELTS). קווי המתאר מחושבים באיחוד פוליגוני CAOP 2020 של העיריות שבכל חגורה",
+      "coverage": "3/3",
+      "caveat_he": "החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי ולא חלוקה מנהלית רשמית. ברמה הרשמית מחוז פורטו מחולק לשתי יחידות NUTS III — Área Metropolitana do Porto ו-Tâmega e Sousa — והן אינן חופפות לחגורות."
     }
   },
   "missing": {

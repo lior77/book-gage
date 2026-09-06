@@ -11,6 +11,7 @@ Inputs (all under data/raw/):
   caop2020_porto_*.geojson     official boundaries, 18 municipalities + 243 parishes
   census2021_freguesias_collected.json   the 131 parish populations the PDF was missing
   hebrew_translit_new.json     Hebrew names for those 103 newly added parishes
+  freguesia_notes_app.json     descriptions for the 103 parishes the PDF never described
   osm/porto_freguesias.geojson OSM: Porto city parishes + 190 neighbourhood places
 
 Outputs (data/processed/ and data/sources.json).  Nothing is invented: a field
@@ -314,6 +315,7 @@ def main():
     caop_fre = json.load(open(os.path.join(RAW, "caop2020_porto_freguesias.geojson")))
     collected = json.load(open(os.path.join(RAW, "census2021_freguesias_collected.json")))
     translit = json.load(open(os.path.join(RAW, "hebrew_translit_new.json")))
+    app_notes = load_raw("freguesia_notes_app.json")
     osm = json.load(open(os.path.join(RAW, "osm", "porto_freguesias.geojson")))
     osm_mun = json.load(open(os.path.join(RAW, "osm", "porto_municipios.geojson")))
 
@@ -340,6 +342,7 @@ def main():
         fre_by_mun.setdefault(ft["properties"]["mun"], []).append(ft)
 
     warnings = []
+    app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
 
     # ---- parishes -----------------------------------------------------------
     freguesias = []
@@ -383,6 +386,16 @@ def main():
             if "pop2021" not in rec and caop_name in extra_pop:
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
+            if "note" not in rec and (n, caop_name) in app_note_of:
+                # CONFIDENCE: approx. No official source publishes descriptive
+                # text for a parish, so these 103 were written for the app.
+                # They carry no figures — every number in the record above comes
+                # from a documented source. note_origin marks them so the UI can
+                # say so, and they live in one raw file so they stay editable.
+                rec["note"] = app_note_of[(n, caop_name)]
+                rec["note_origin"] = "app"
+            elif "note" in rec:
+                rec["note_origin"] = "pdf"
             if "he" not in rec and caop_name in extra_he:
                 # CONFIDENCE: not verified. These 103 Hebrew names were written
                 # for the app from the pronunciation rules the source document
@@ -563,8 +576,12 @@ def main():
              len(belt_fc["features"])))
     n_pop = sum(1 for f in freguesias if "pop2021" in f)
     n_he = sum(1 for f in freguesias if "he" in f)
+    n_note = sum(1 for f in freguesias if "note" in f)
+    n_app = sum(1 for f in freguesias if f.get("note_origin") == "app")
     print("freguesias with population 2021: %d/%d   with Hebrew name: %d/%d"
           % (n_pop, len(freguesias), n_he, len(freguesias)))
+    print("freguesias with a description: %d/%d   of them written for the app: %d"
+          % (n_note, len(freguesias), n_app))
 
 
 if __name__ == "__main__":
