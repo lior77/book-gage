@@ -25,7 +25,12 @@ const S = {
   fLand: 46,
   cats: null,          // level 3: which landmark categories are shown
   hi: null,            // { kind, id } — the record highlighted on both halves
+  view: 'split',       // split | map | text — which half fills the screen
+  letters: true,       // draw the locality letters
+  mine: true,          // draw the points the user added
+  adding: false,       // waiting for a tap on the map to place a new point
 };
+const MINE_KEY = 'porto-mine-v1';
 const D = {};
 
 /* ------------------------------------------------------------ formatting --- */
@@ -37,6 +42,17 @@ const html = s => String(s == null ? '' : s)
 // document and porto_city.json both use the bare X.
 const bare = s => String(s || '').replace(/^União das freguesias de\s+/i, '');
 const latlng = c => [c[1], c[0]];   // *.center is [lon,lat]; *.ll is already [lat,lon]
+
+/* A colour per category, so a dot says what it is before it is tapped.  Nine
+   hues that hold up on a light map, on a dark one, and on bare background when
+   the tiles are off; landmarks keep the black they had, because they are the
+   largest group by far and a neutral reads as "everything else". */
+const CAT_COLOUR = {
+  station: '#1a73e8', hospital: '#d93025', university: '#7b1fa2',
+  museum: '#c2790b', culture: '#d81b60', market: '#f57c00',
+  civic: '#455a64', landmark: '#101010', green: '#2e7d32',
+};
+const MINE_COLOUR = '#00897b';
 
 function isDark() {
   const t = document.documentElement.dataset.theme;
@@ -381,7 +397,8 @@ function renderDistrict() {
     </div>
 
     <div class="grp">18 העיריות — לפי המספור במפה</div>
-    <div class="rows">${list}</div>`;
+    <div class="rows">${list}</div>
+    ${mineList(null)}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -492,6 +509,79 @@ function renderMun(num) {
   $('#paneText').scrollTop = 0;
 }
 
+/* -------------------------------------------------------- my own points --- */
+/* Points the user marks are theirs, not data: they are kept apart from
+   everything sourced, drawn in their own colour and shape, and stored only in
+   this browser.  Nothing is uploaded, and the app says so — there is no server
+   here to upload to.  localStorage can be cleared by the browser, so the panel
+   offers a copy of them as text. */
+function loadMine() {
+  try {
+    const a = JSON.parse(localStorage.getItem(MINE_KEY) || '[]');
+    D.mine = Array.isArray(a) ? a.filter(p => p && Array.isArray(p.ll)) : [];
+  } catch (e) { D.mine = []; }
+}
+function saveMine() {
+  try { localStorage.setItem(MINE_KEY, JSON.stringify(D.mine)); }
+  catch (e) { mapNote('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.', true); }
+}
+const mineIcon = () => L.divIcon({ className: 'me-pin', iconSize: [16, 16], iconAnchor: [8, 8],
+  html: '<span style="display:block;width:12px;height:12px;margin:2px;' +
+        'background:' + MINE_COLOUR + ';border:2px solid #fff;' +
+        'box-shadow:0 0 0 1px rgba(0,0,0,.45);transform:rotate(45deg)"></span>' });
+
+function drawMine() {
+  if (LG.mine) { map.removeLayer(LG.mine); delete LG.mine; }
+  if (!S.mine || !D.mine.length) return;
+  LG.mine = L.layerGroup(D.mine.map(p => {
+    const mk = L.marker(p.ll, { icon: mineIcon(), zIndexOffset: 1200, title: p.name });
+    mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : ''),
+      { direction: 'top', className: 'tt' });
+    mk.on('click', () => openMine(p.id));
+    return mk;
+  })).addTo(map);
+}
+
+let mineEditing = null;
+function openMine(id, ll) {
+  const p = id ? D.mine.find(x => x.id === id) : null;
+  mineEditing = p ? { ...p } : { id: 'p' + Date.now().toString(36), ll, name: '', desc: '' };
+  const at = freguesiaAt(mineEditing.ll[0], mineEditing.ll[1]);
+  $('#mineWhere').textContent = at
+    ? (at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he
+    : 'מחוץ למחוז פורטו';
+  $('#mineName').value = mineEditing.name || '';
+  $('#mineDesc').value = mineEditing.desc || '';
+  $('#mineDelete').hidden = !p;
+  $('#mineModal').hidden = false;
+  $('#mineName').focus();
+}
+function closeMine() { $('#mineModal').hidden = true; mineEditing = null; }
+
+function commitMine() {
+  const name = $('#mineName').value.trim();
+  if (!name) { $('#mineName').focus(); return; }
+  const rec = { ...mineEditing, name, desc: $('#mineDesc').value.trim(),
+    at: mineEditing.at || new Date().toISOString().slice(0, 10) };
+  const i = D.mine.findIndex(x => x.id === rec.id);
+  if (i < 0) D.mine.push(rec); else D.mine[i] = rec;
+  saveMine(); closeMine(); drawMine(); redrawText();
+}
+function deleteMine() {
+  D.mine = D.mine.filter(x => x.id !== mineEditing.id);
+  saveMine(); closeMine(); drawMine(); redrawText();
+}
+
+function toggleAdd() {
+  S.adding = !S.adding;
+  $('#addBtn').setAttribute('aria-pressed', String(S.adding));
+  $('#map').style.cursor = S.adding ? 'crosshair' : '';
+  const n = $('#addNote');
+  n.hidden = !S.adding;
+  if (S.adding) n.innerHTML = 'לחץ על המפה במקום שבו תרצה לסמן נקודה. ' +
+    '<button type="button" data-add="off">ביטול</button>';
+}
+
 /* ------------------------------------------------- level 3: תוך הפרגזיה --- */
 /* Every parish has this level, not only Porto's seven.  What fills it differs,
    and the app says which is which: Porto's quarters carry the 53 neighbourhoods
@@ -512,7 +602,7 @@ function drawZone(key) {
                fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
 
   // Locality letters — A, B, C… at the point OSM gives for the place.
-  LG.letters = L.layerGroup(z.bairros.filter(b => b.ll).map(b => {
+  LG.letters = L.layerGroup(!S.letters ? [] : z.bairros.filter(b => b.ll).map(b => {
     const mk = L.marker(b.ll, { icon: numIcon(b.letter, 'lbl-ltr'), keyboard: false,
       // the historic centre carries 341 dots; the letters have to stay on top
       zIndexOffset: 1000, title: b.letter + ' · ' + (b.he || b.en), riseOnHover: true });
@@ -525,8 +615,9 @@ function drawZone(key) {
   // highlights its record in the list, and tapping the record highlights the dot.
   LG.pois = L.layerGroup(z.pois.map((p, i) => {
     if (!S.cats.has(p.cat)) return null;
-    const mk = L.circleMarker(p.ll, poiStyle(false));
+    const mk = L.circleMarker(p.ll, poiStyle(false, p.cat));
     mk.__hi = { kind: 'poi', id: i };
+    mk.__cat = p.cat;
     mk.bindTooltip(`${html(p.name)}<br><span class="note">${html(D.poiLabel[p.cat] || p.cat)}</span>`,
       { direction: 'top', className: 'tt' });
     mk.on('click', () => pick({ kind: 'poi', id: i }, 'map'));
@@ -536,9 +627,11 @@ function drawZone(key) {
   fit(LG.edge.getBounds());
 }
 
-const poiStyle = on => on
-  ? { radius: 9, weight: 3, color: '#b7791f', fillColor: '#101010', fillOpacity: 1, opacity: 1 }
-  : { radius: 4.5, weight: 1.4, color: '#ffffff', fillColor: '#101010', fillOpacity: 1, opacity: 1 };
+const poiStyle = (on, cat) => on
+  ? { radius: 9, weight: 3, color: '#b7791f', fillColor: CAT_COLOUR[cat] || '#101010',
+      fillOpacity: 1, opacity: 1 }
+  : { radius: 4.5, weight: 1.4, color: '#ffffff', fillColor: CAT_COLOUR[cat] || '#101010',
+      fillOpacity: 1, opacity: 1 };
 
 function renderZone(key) {
   const f = D.freByKey.get(key);
@@ -565,14 +658,15 @@ function renderZone(key) {
   const pois = D.poiOrder.filter(c => byCat.has(c)).map(c => `<div class="grp">${html(D.poiLabel[c] || c)}
       <span class="note num">${byCat.get(c).length}</span></div>
     <div class="rows">${byCat.get(c).map(x => `<button class="row" data-hi="poi:${x.i}">
-        <span class="dot"></span>
+        <span class="dot" style="--c:${html(CAT_COLOUR[x.p.cat] || '#101010')}"></span>
         <span class="row-body"><span class="row-t lat">${html(x.p.name)}</span>
           <span class="row-m">${html(D.poiLabel[x.p.cat] || x.p.cat)} ·
             <span class="lat">${html(x.p.osm)}</span></span></span>
       </button>`).join('')}</div>`).join('');
 
   const chips = D.poiOrder.filter(c => z.pois.some(p => p.cat === c)).map(c =>
-    `<button class="chip${S.cats.has(c) ? ' is-on' : ''}" data-cat="${html(c)}">${html(D.poiLabel[c] || c)}
+    `<button class="chip${S.cats.has(c) ? ' is-on' : ''}" data-cat="${html(c)}">
+      <span class="chip-c" style="background:${html(CAT_COLOUR[c] || '#101010')}"></span>${html(D.poiLabel[c] || c)}
       <span class="num">${z.pois.filter(p => p.cat === c).length}</span></button>`).join('');
 
   $('#doc').innerHTML = `
@@ -615,8 +709,97 @@ function renderZone(key) {
           ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.</p>
       </div>
       ${shown.length ? pois : '<p class="note">לא נבחרה שום קטגוריה.</p>'}`
-      : '<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>'}`;
+      : '<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>'}
+    ${mineList(p => {
+      const at = freguesiaAt(p.ll[0], p.ll[1]);
+      return at && D.freKey(at) === key;
+    })}`;
   $('#paneText').scrollTop = 0;
+}
+
+/* The user's own points, listed.  `within` decides which ones: everything at
+   district level, the ones inside this parish at level 3. */
+function mineList(within) {
+  const rows = D.mine.filter(p => !within || within(p));
+  if (!rows.length) return '';
+  return `<div class="card">
+      <h2>הנקודות שלי <span class="note num">${rows.length}</span></h2>
+      <p class="sub">נשמרות בדפדפן הזה בלבד. לא נשלחות לשום מקום ולא מגובות —
+        ניקוי נתוני הדפדפן ימחק אותן.</p>
+    </div>
+    <div class="rows">${rows.map(p => `<button class="row" data-mine="${html(p.id)}">
+        <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
+        <span class="row-body">
+          <span class="row-t">${html(p.name)}</span>
+          ${p.desc ? `<span class="row-d">${html(p.desc)}</span>` : ''}
+          <span class="row-m num">${html(p.ll[0].toFixed(5))}, ${html(p.ll[1].toFixed(5))}
+            ${p.at ? ' · ' + html(p.at) : ''}</span>
+        </span></button>`).join('')}</div>`;
+}
+
+/* ------------------------------------------------------------ view mode --- */
+/* Three states, one button: both halves, the map alone, the text alone.  On a
+   phone this is the difference between reading a paragraph through a letterbox
+   and reading it. */
+const VIEW_NEXT = { split: 'map', map: 'text', text: 'split' };
+const VIEW_HE = { split: 'חצי מפה, חצי טקסט', map: 'מפה על כל המסך', text: 'טקסט על כל המסך' };
+
+function applyView() {
+  document.body.dataset.view = S.view;
+  $('#viewBtn').setAttribute('aria-label', 'פריסת המסך: ' + VIEW_HE[S.view]);
+  $('#viewBtn').setAttribute('title', VIEW_HE[S.view] + ' — לחיצה מחליפה');
+  // Leaflet has to be told its box changed; the ResizeObserver catches it too,
+  // but only after a frame, and the flash is visible
+  if (map) requestAnimationFrame(() => map.invalidateSize({ animate: false }));
+}
+function cycleView() {
+  S.view = VIEW_NEXT[S.view] || 'split';
+  applyView(); save();
+  mapNote(VIEW_HE[S.view]);
+  clearTimeout(cycleView._t);
+  cycleView._t = setTimeout(hideNote, 1600);
+}
+
+/* ------------------------------------------------------------- layers --- */
+function renderLayers() {
+  const z = S.level === 'zone' ? zoneOf(S.zone) : null;
+  const counts = {};
+  if (z) z.pois.forEach(p => { counts[p.cat] = (counts[p.cat] || 0) + 1; });
+
+  const row = (on, key, name, colour, square, n) =>
+    `<button class="lay" aria-pressed="${on}" data-lay="${html(key)}">
+       <span class="lay-x">✓</span>
+       ${colour ? `<span class="lay-c${square ? ' sq' : ''}" style="background:${html(colour)}"></span>` : ''}
+       <span class="lay-n">${html(name)}</span>
+       ${n === undefined ? '' : `<span class="lay-k">${n}</span>`}
+     </button>`;
+
+  let h = '<h3>שכבות</h3>' +
+    row(S.letters, 'letters', 'אותיות היישובים', '#cfe0f2', true) +
+    row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true, D.mine.length);
+  if (z && z.pois.length) {
+    h += '<h3>נקודות במפה</h3>' + D.poiOrder.filter(c => counts[c])
+      .map(c => row(S.cats.has(c), 'cat:' + c, D.poiLabel[c] || c, CAT_COLOUR[c], false, counts[c]))
+      .join('');
+  } else {
+    h += '<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הפרגזיה.</p>';
+  }
+  $('#layerPanel').innerHTML = h;
+}
+function toggleLayers(force) {
+  const p = $('#layerPanel');
+  const show = force === undefined ? p.hidden : force;
+  if (show) renderLayers();
+  p.hidden = !show;
+  $('#layersBtn').setAttribute('aria-expanded', String(show));
+}
+
+// after a change that alters what the text half should say
+function redrawText() {
+  if (S.level === 'district') renderDistrict();
+  else if (S.level === 'mun') renderMun(S.mun);
+  else renderZone(S.zone);
+  applyHi();
 }
 
 /* --------------------------------------------------------- highlighting --- */
@@ -661,7 +844,7 @@ function applyHi(from) {
   });
   if (LG.pois) LG.pois.eachLayer(l => {
     const on = hi && hi.kind === 'poi' && String(l.__hi.id) === String(hi.id);
-    l.setStyle(poiStyle(on));
+    l.setStyle(poiStyle(on, l.__cat));
     if (on) l.bringToFront();
   });
   // asked for from the list: make sure the thing is actually on screen
@@ -703,6 +886,8 @@ function goUp() {
 }
 
 function afterNav() {
+  drawMine();
+  if (!$('#layerPanel').hidden) renderLayers();
   const c = [];
   if (S.level === 'district') c.push('<span class="now">מחוז פורטו</span>');
   else {
@@ -779,7 +964,8 @@ function wireDivider() {
 function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
-      level: S.level, mun: S.mun, zone: S.zone,
+      level: S.level, mun: S.mun, zone: S.zone, view: S.view,
+      letters: S.letters, mine: S.mine,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
   } catch (e) { /* private mode */ }
@@ -788,6 +974,9 @@ function restore() {
   try {
     const o = JSON.parse(localStorage.getItem(KEY) || '{}');
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
+    if (typeof o.letters === 'boolean') S.letters = o.letters;
+    if (typeof o.mine === 'boolean') S.mine = o.mine;
+    if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
     if (typeof o.fLand === 'number') S.fLand = o.fLand;
     // an older build stored a Porto quarter number under `quarter`; it has no
@@ -943,6 +1132,36 @@ function wire() {
   $('#upBtn').addEventListener('click', goUp);
   $('#fitBtn').addEventListener('click', refit);
   $('#locBtn').addEventListener('click', toggleLocate);
+  $('#viewBtn').addEventListener('click', cycleView);
+  $('#layersBtn').addEventListener('click', () => toggleLayers());
+  $('#addBtn').addEventListener('click', toggleAdd);
+  $('#addNote').addEventListener('click', e => {
+    if (e.target.closest('[data-add="off"]')) toggleAdd();
+  });
+  map.on('click', e => {
+    if (!S.adding) return;
+    toggleAdd();
+    openMine(null, [e.latlng.lat, e.latlng.lng]);
+  });
+  $('#mineSave').addEventListener('click', commitMine);
+  $('#mineCancel').addEventListener('click', closeMine);
+  $('#mineDelete').addEventListener('click', deleteMine);
+  $('#mineModal').addEventListener('click', e => { if (e.target.id === 'mineModal') closeMine(); });
+  $('#layerPanel').addEventListener('click', e => {
+    const b = e.target.closest('[data-lay]');
+    if (!b) return;
+    const k = b.dataset.lay;
+    if (k === 'letters') { S.letters = !S.letters; }
+    else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
+    else if (k.startsWith('cat:')) {
+      const c = k.slice(4);
+      if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
+      if (!S.cats.size) S.cats.add(c);              // never leave the map blank
+    }
+    save();
+    if (S.level === 'zone') { drawZone(S.zone); renderZone(S.zone); }
+    drawMine(); renderLayers(); applyHi();
+  });
   $('#locNote').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -974,6 +1193,8 @@ function wire() {
       drawZone(S.zone); renderZone(S.zone); applyHi();
       return;
     }
+    const mine = e.target.closest('[data-mine]');
+    if (mine) { openMine(mine.dataset.mine); return; }
     const mun = e.target.closest('[data-mun]');
     if (mun) { goMun(Number(mun.dataset.mun)); return; }
     const fre = e.target.closest('[data-fre]');
@@ -1014,6 +1235,7 @@ function wire() {
     if (S.level === 'district') drawDistrict();
     else if (S.level === 'mun') drawMun(S.mun);
     else drawZone(S.zone);
+    drawMine();
     applyHi();
   });
 }
@@ -1040,6 +1262,8 @@ function wire() {
   };
   S.cats = new Set(D.poiOrder);
 
+  loadMine();
+  applyView();
   applySplit();
   initMap();
   wire();
