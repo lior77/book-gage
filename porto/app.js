@@ -1,40 +1,43 @@
-/* מחוז פורטו — app logic.
-   Data: data/processed/*.json built by scripts/build.py from the PDF project's
-   own texts, CAOP 2020 boundaries and INE Censos 2021.  Nothing is invented:
-   a field with no verified value renders as "אין נתון". */
+/* מחוז פורטו — split-screen app.
+   Data: data/processed/*.json, built by scripts/build.py from the source
+   document's own texts, CAOP 2020 boundaries, INE Censos 2021 and OSM.
+   Nothing here is invented: a field with no value renders "אין נתון", and every
+   number carries the source and the reference year it came with.
+
+   Three levels, one screen split in two:
+     district   18 numbered municipalities + the three belt outlines
+     mun        that municipality's numbered parishes
+     quarter    a Porto quarter: lettered neighbourhoods + black landmark dots
+*/
 'use strict';
 
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-const NBSP = ' ';
-
-const PALETTE = ['#eff6fb', '#d3e6f4', '#aed3ea', '#82badd', '#5499c7', '#2e6da4', '#164a7d'];
-const BELT_COLOUR = { 'החגורה העירונית': '#1B4F8C', 'החגורה הצפונית': '#2E7D32', 'החגורה המזרחית': '#6A1B9A' };
 const MISSING = 'אין נתון';
+const KEY = 'porto-split-v1';
 
-const S = {                       // app state
-  level: 'municipio',
-  indicator: 'pop2021',
+const S = {
+  level: 'district',   // district | mun | quarter
+  mun: null,           // municipality number, 1..18
+  quarter: null,       // Porto quarter number, 1..7
   tiles: true,
-  sort: 'pop2021',
-  compare: [],
-  filters: { maxDist: null, minPop: null, belts: [], railOnly: false, maxPrice: null },
-  sel: null,
+  fPort: 52,           // the map's share of the split, per orientation
+  fLand: 46,
+  cats: null,          // level 3: which landmark categories are shown
+  hi: null,            // { kind, id } — the record highlighted on both halves
 };
-const D = {};                     // loaded data
+const D = {};
 
 /* ------------------------------------------------------------ formatting --- */
 const nf = (v, dec) => v === null || v === undefined ? MISSING
-  : new Intl.NumberFormat('he-IL', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec === undefined ? 0 : dec }).format(v);
-
-function fmtVal(v, ind) {
-  if (v === null || v === undefined) return MISSING;
-  return nf(v, ind ? (ind.decimals ?? 0) : 0);
-}
+  : new Intl.NumberFormat('he-IL', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }).format(v);
 const html = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// CAOP spells the merged parishes "União das freguesias de X"; the source
+// document and porto_city.json both use the bare X.
+const bare = s => String(s || '').replace(/^União das freguesias de\s+/i, '');
+const latlng = c => [c[1], c[0]];   // *.center is [lon,lat]; *.ll is already [lat,lon]
 
-// Same rule the stylesheet uses: an explicit data-theme wins, otherwise the device.
 function isDark() {
   const t = document.documentElement.dataset.theme;
   if (t === 'dark') return true;
@@ -42,10 +45,22 @@ function isDark() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
+/* A number, its unit, and the year it refers to — the year is on screen next to
+   every value, and the whole chip opens the full source record. */
+function stat(label, val, unit, dec, srcKey) {
+  const f = D.sources.fields[srcKey] || {};
+  const has = val !== null && val !== undefined;
+  return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}">
+    <span class="stat-l">${html(label)}</span>
+    <span class="stat-v ${has ? 'num' : ''}">${has ? nf(val, dec) : MISSING}${has && unit ? ' ' + html(unit) : ''}</span>
+    <span class="stat-y">${f.reference_year ? html(f.reference_year) : 'מקור'}</span>
+  </button>`;
+}
+
 /* ------------------------------------------------------------- load data --- */
 // scripts/bundle_standalone.py inlines every data file into window.PORTO_DATA,
-// so the same code runs from a server, from a single file on file://, and from
-// a published page that is not allowed to fetch anything.
+// so the same code runs from a server, from one file on file://, and from a
+// published page that is not allowed to fetch anything.
 const STANDALONE = typeof window.PORTO_DATA === 'object' && window.PORTO_DATA !== null;
 
 async function j(path) {
@@ -59,652 +74,666 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, sources, bM, bF, bC] = await Promise.all([
+  const [ind, mun, fre, city, sources, bM, bB, bF, bC] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
     j('data/processed/porto_city.json'),
     j('data/sources.json'),
     j('data/processed/boundaries_municipios.geojson'),
+    j('data/processed/boundaries_belts.geojson'),
     j('data/processed/boundaries_freguesias.geojson'),
     j('data/processed/boundaries_porto_city.geojson'),
   ]);
-  D.indicators = ind.items;
   D.belts = mun.belts;
   D.mun = mun.items;
   D.fre = fre.items;
   D.city = city.quarters;
-  D.places = city.places;
   D.sources = sources;
-  D.bM = bM; D.bF = bF; D.bC = bC;
   D.generated = mun.generated;
+  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC;
 
   D.munByNum = new Map(D.mun.map(m => [m.num, m]));
   D.freKey = f => f.mun_num + '|' + f.pt;
   D.freByKey = new Map(D.fre.map(f => [D.freKey(f), f]));
-  D.indByKey = new Map(D.indicators.map(i => [i.key, i]));
-  D.mun.forEach(m => { m.rail = /מטרו|רכבת|מסילת/.test(m.transport || ''); });
-  D.fre.forEach(f => { f.mun_he = D.munByNum.get(f.mun_num).he; });
-}
-
-/* --------------------------------------------------------------- scaling --- */
-function quantiles(values, k) {
-  const v = values.filter(x => x !== null && x !== undefined).sort((a, b) => a - b);
-  if (!v.length) return null;
-  const cuts = [];
-  for (let i = 1; i < k; i++) cuts.push(v[Math.floor(i * v.length / k)]);
-  return { cuts, min: v[0], max: v[v.length - 1] };
-}
-function binOf(val, q) {
-  if (val === null || val === undefined || !q) return -1;
-  let i = 0;
-  while (i < q.cuts.length && val >= q.cuts[i]) i++;
-  return i;
-}
-const colourFor = (val, q) => { const b = binOf(val, q); return b < 0 ? null : PALETTE[b]; };
-
-/* ------------------------------------------------------------- filtering --- */
-function munPasses(m) {
-  const f = S.filters;
-  if (f.maxDist !== null && (m.dist_porto_km ?? 1e9) > f.maxDist) return false;
-  if (f.minPop !== null && (m.pop2021 ?? 0) < f.minPop) return false;
-  if (f.belts.length && !f.belts.includes(m.belt)) return false;
-  if (f.railOnly && !m.rail) return false;
-  if (f.maxPrice !== null && m.price_eur_m2 !== undefined && m.price_eur_m2 > f.maxPrice) return false;
-  return true;
-}
-const frePasses = f => munPasses(D.munByNum.get(f.mun_num));
-function activeFilterCount() {
-  const f = S.filters;
-  return (f.maxDist !== null) + (f.minPop !== null) + (f.belts.length ? 1 : 0) +
-    (f.railOnly ? 1 : 0) + (f.maxPrice !== null);
+  D.freByMun = new Map();
+  D.fre.forEach(f => {
+    if (!D.freByMun.has(f.mun_num)) D.freByMun.set(f.mun_num, []);
+    D.freByMun.get(f.mun_num).push(f);
+    f.mun_he = D.munByNum.get(f.mun_num).he;
+  });
+  D.freByMun.forEach(list => list.sort((a, b) => a.n - b.n));
+  D.quarterByNum = new Map(D.city.map(q => [q.num, q]));
+  // Porto's seven parishes *are* the seven city quarters; keep one numbering
+  // for both so level 2 and level 3 agree.
+  D.quarterOfFre = new Map(D.city.map(q => [q.en, q.num]));
+  D.fre.filter(f => f.mun_num === 1).forEach(f => { f.q = D.quarterOfFre.get(bare(f.pt)) || null; });
+  D.totPop = D.mun.reduce((a, m) => a + (m.pop2021 || 0), 0);
+  D.totArea = D.mun.reduce((a, m) => a + (m.area_km2 || 0), 0);
+  D.totPoi = D.city.reduce((a, q) => a + q.pois.length, 0);
 }
 
 /* ------------------------------------------------------------------- map --- */
-let map, tileLayer, layerM, layerF, layerC, placeLayer;
+let map, tileLayer;
+const LG = {};                      // the layers currently on the map
+let fitBounds = null;               // what the "fit" button goes back to
+
+function stroke() { return isDark() ? 'rgba(232,236,243,.55)' : 'rgba(20,25,34,.45)'; }
 
 function initMap() {
   map = L.map('map', {
+    // Every gesture stays on: the map can be panned, pinched and zoomed
+    // freely inside its half, and the divider changes how big that half is.
     zoomControl: true, attributionControl: false,
-    minZoom: 8, maxZoom: 17, tap: true,
+    dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true,
+    boxZoom: false, keyboard: true, tap: true,
+    minZoom: 7, maxZoom: 19,
     // the district and the city are both wide and short; with whole-number
     // zoom only, fitBounds lands a level short and leaves them half-size
     zoomSnap: 0.25, zoomDelta: 0.5,
   });
-  map.setView([41.22, -8.25], 9);
+  map.zoomControl.setPosition('topright');
+  map.setView([41.22, -8.35], 9);
+
   tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 17, crossOrigin: true,
-    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19, crossOrigin: true, attribution: '© OpenStreetMap contributors',
   });
   // No connection, or a host that will not load third-party images: drop the
-  // background rather than leaving the user staring at empty grey squares.
-  let tileErrors = 0;
+  // background rather than leave the user staring at empty grey squares.
+  let errs = 0;
   tileLayer.on('tileerror', () => {
-    if (++tileErrors < 6 || !map.hasLayer(tileLayer)) return;
+    if (++errs < 6 || !map.hasLayer(tileLayer)) return;
     map.removeLayer(tileLayer);
     S.tiles = false;
     $('#tilesBtn').setAttribute('aria-pressed', 'false');
-    const note = $('#tileNote');
-    note.hidden = false;
-    note.textContent = 'רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים זמינים.';
-    setTimeout(() => { note.hidden = true; }, 6000);
+    const n = $('#tileNote');
+    n.hidden = false;
+    n.textContent = 'רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים זמינים.';
+    setTimeout(() => { n.hidden = true; }, 6000);
   });
   if (S.tiles) tileLayer.addTo(map);
 
-  const stroke = getComputedStyle(document.body).getPropertyValue('--card').trim() || '#fff';
-  const baseStyle = () => ({ weight: 1, color: stroke, opacity: .85, fillOpacity: .82 });
+  // The map half changes size when the divider moves and when the phone turns.
+  new ResizeObserver(() => {
+    if (map._rafSize) cancelAnimationFrame(map._rafSize);
+    map._rafSize = requestAnimationFrame(() => map.invalidateSize({ animate: false }));
+  }).observe($('#map'));
+}
 
-  layerM = L.geoJSON(D.bM, {
-    style: baseStyle,
+function clearMap() {
+  Object.keys(LG).forEach(k => { if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; } });
+}
+
+function numIcon(text, cls) {
+  return L.divIcon({
+    className: 'lbl' + (cls ? ' ' + cls : ''), html: html(text),
+    iconSize: [24, 24], iconAnchor: [12, 12],
+  });
+}
+
+function fit(b, pad) {
+  if (!b || !b.isValid()) return;
+  fitBounds = b;
+  map.fitBounds(b, { padding: pad || [16, 16] });
+}
+function refit() { if (fitBounds) map.fitBounds(fitBounds, { padding: [16, 16] }); }
+
+/* --------------------------------------------------------- level 1: מחוז --- */
+function drawDistrict() {
+  clearMap();
+  LG.mun = L.geoJSON(D.bM, {
+    style: ft => ({
+      color: stroke(), weight: 1, opacity: .9,
+      fillColor: (D.munByNum.get(ft.properties.num) || {}).fill || '#ddd', fillOpacity: .8,
+    }),
     onEachFeature: (ft, l) => {
-      l.on('click', () => selectMun(ft.properties.num, false));
-      l.bindTooltip(() => tipMun(ft.properties.num), { direction: 'top', sticky: true, className: 'tt' });
+      const m = D.munByNum.get(ft.properties.num);
+      l.on('click', () => goMun(ft.properties.num));
+      l.bindTooltip(`<b>${html(m.num + '. ' + m.he)}</b><br><span class="lat">${html(m.pt)}</span>`,
+        { sticky: true, className: 'tt' });
     },
-  });
-  layerF = L.geoJSON(D.bF, {
-    style: baseStyle,
+  }).addTo(map);
+
+  // The grouping line the source document draws: one outline per belt, in the
+  // belt's own colour, over the municipality fills.
+  LG.belts = L.geoJSON(D.bB, {
+    interactive: false,
+    style: ft => ({ color: ft.properties.colour, weight: 3.5, opacity: .95, fill: false, lineJoin: 'round' }),
+  }).addTo(map);
+
+  LG.labels = L.layerGroup(D.mun.map(m => {
+    const mk = L.marker(latlng(m.center), { icon: numIcon(m.num), keyboard: false,
+      title: m.num + '. ' + m.he, riseOnHover: true });
+    mk.on('click', () => goMun(m.num));
+    return mk;
+  })).addTo(map);
+
+  fit(LG.mun.getBounds());
+}
+
+function renderDistrict() {
+  const beltRows = D.belts.map(b => `<div class="belt">
+      <span class="belt-sw" style="--c:${html(b.colour)}"></span>
+      <span class="row-body">
+        <span class="row-t">${html(b.he)} <span class="lat">(${html(b.en)})</span></span>
+        <span class="row-d">${html(b.sub_he)}</span>
+        <span class="row-m num">עיריות ${html(b.nums.join(', '))}</span>
+      </span></div>`).join('');
+
+  const list = D.mun.slice().sort((a, b) => a.num - b.num).map(m => {
+    const chr = (m.profile.find(p => p.label === 'אופי') || {}).text || '';
+    return `<button class="row" data-mun="${m.num}">
+      <span class="pin" style="--c:${html(m.fill)}">${m.num}</span>
+      <span class="row-body">
+        <span class="row-t">${html(m.he)} <span class="lat">(${html(m.en)})</span></span>
+        <span class="row-d">${html(chr)}</span>
+        <span class="row-m">${html(m.belt)} · <span class="num">${nf(m.pop2021)}</span> תושבים ·
+          <span class="num">${nf(m.area_km2, 1)}</span> קמ״ר ·
+          <span class="num">${nf(m.n_freguesias)}</span> פרגזיות</span>
+      </span>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>`;
+  }).join('');
+
+  $('#doc').innerHTML = `
+    <div class="card">
+      <h1>מחוז פורטו <span class="en lat">(Distrito do Porto)</span></h1>
+      <p class="lead">18 עיריות ו-243 פרגזיות בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי
+        במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה: כאן חיים
+        <span class="num">${nf(D.totPop)}</span> תושבים על
+        <span class="num">${nf(D.totArea, 1)}</span> קמ״ר.</p>
+      <div class="stats">
+        ${stat('תושבים', D.totPop, '', 0, 'municipio.pop2021')}
+        ${stat('שטח', D.totArea, 'קמ״ר', 1, 'municipio.area_km2')}
+        ${stat('צפיפות', D.totPop / D.totArea, 'לקמ״ר', 0, 'municipio.density')}
+      </div>
+      <p class="note">כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו.
+        מספרי העיריות במפה הם המספרים מהמסמך המקורי.</p>
+    </div>
+
+    <div class="card">
+      <h2>שלוש החגורות</h2>
+      <p class="sub">קו בצבע החגורה מקיף במפה את העיריות שבה.</p>
+      ${beltRows}
+      <p class="note">החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי, לא
+        חלוקה מנהלית רשמית.</p>
+    </div>
+
+    <div class="grp">18 העיריות — לפי המספור במפה</div>
+    <div class="rows">${list}</div>`;
+  $('#paneText').scrollTop = 0;
+}
+
+/* ---------------------------------------------------- level 2: העירייה --- */
+function freFeatures(num) {
+  if (num === 1) return D.bC;      // Porto: the seven quarters, already numbered
+  return { type: 'FeatureCollection',
+    features: D.bF.features.filter(ft => ft.properties.mun_num === num) };
+}
+function freOfFeature(num, props) {
+  if (num === 1) {
+    const q = D.quarterByNum.get(props.num);
+    return D.fre.find(f => f.mun_num === 1 && bare(f.pt) === q.en);
+  }
+  return D.freByKey.get(props.mun_num + '|' + props.name);
+}
+// The number the app prints for a parish: Porto keeps the city-quarter number,
+// everyone else uses build.py's per-municipality 1..N.
+const freNum = f => (f.mun_num === 1 ? f.q : f.n);
+
+function drawMun(num) {
+  clearMap();
+  const rows = D.freByMun.get(num) || [];
+  const colourOf = new Map(rows.map(f => [freNum(f), f.colour]));
+
+  LG.edge = L.geoJSON({ type: 'FeatureCollection',
+      features: D.bM.features.filter(ft => ft.properties.num === num) },
+    { interactive: false, style: { color: isDark() ? '#e8ecf3' : '#101010',
+      weight: 3, opacity: .8, fill: false } }).addTo(map);
+
+  LG.fre = L.geoJSON(freFeatures(num), {
+    style: ft => {
+      const f = freOfFeature(num, ft.properties);
+      return { color: stroke(), weight: 1, opacity: .9,
+        fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd', fillOpacity: .78 };
+    },
     onEachFeature: (ft, l) => {
-      const key = ft.properties.mun_num + '|' + ft.properties.name;
-      l.on('click', () => selectFre(key, false));
-      l.bindTooltip(() => tipFre(key), { direction: 'top', sticky: true, className: 'tt' });
+      const f = freOfFeature(num, ft.properties);
+      if (!f) return;
+      l.feature.__key = D.freKey(f);
+      l.on('click', () => pickFre(f, 'map'));
+      l.bindTooltip(`<b>${html(freNum(f) + '. ' + (f.he || f.pt))}</b><br><span class="lat">${html(bare(f.pt))}</span>`,
+        { sticky: true, className: 'tt' });
     },
-  });
-  layerC = L.geoJSON(D.bC, {
-    style: baseStyle,
-    onEachFeature: (ft, l) => {
-      l.on('click', () => selectCity(ft.properties.num, false));
-      l.bindTooltip(() => {
-        const q = D.city.find(c => c.num === ft.properties.num);
-        return `<b>${html(q.he)}</b><br>${nf(q.pop2021)} תושבים`;
-      }, { direction: 'top', sticky: true, className: 'tt' });
-    },
-  });
-  placeLayer = L.layerGroup(D.places.map(p => L.circleMarker(p.ll, {
-    radius: 3, weight: 1, color: '#c2410c', fillColor: '#fb923c', fillOpacity: .9,
-  }).bindTooltip(p.name, { direction: 'top', className: 'tt' })));
+  }).addTo(map);
 
-  map.on('zoomend', syncPlaces);
-  drawLevel();
+  LG.labels = L.layerGroup(rows.map(f => {
+    const mk = L.marker(latlng(f.center), { icon: numIcon(freNum(f)), keyboard: false,
+      title: freNum(f) + '. ' + (f.he || f.pt), riseOnHover: true });
+    mk.__key = D.freKey(f);
+    mk.on('click', () => pickFre(f, 'map'));
+    return mk;
+  })).addTo(map);
+
+  fit(LG.fre.getBounds());
 }
 
-function tipMun(num) {
-  const m = D.munByNum.get(num), ind = D.indByKey.get(S.indicator);
-  const v = m[S.indicator];
-  return `<b>${html(m.he)}</b> <span class="lat">${html(m.pt)}</span><br>` +
-    `${html(ind.label_he)}: ${fmtVal(v, ind)}${v == null ? '' : NBSP + html(ind.unit || '')}`;
-}
-function tipFre(key) {
-  const f = D.freByKey.get(key), ind = D.indByKey.get(S.indicator);
-  const v = f[S.indicator];
-  const nm = f.he ? f.he : f.pt;
-  return `<b>${html(nm)}</b><br><span class="lat">${html(f.pt)}</span><br>` +
-    `${html(f.mun_he)} · ${html(ind.label_he)}: ${fmtVal(v, ind)}`;
-}
-
-function currentSet() {
-  if (S.level === 'municipio') return { rows: D.mun, layer: layerM, pass: munPasses, key: r => r.num };
-  if (S.level === 'freguesia') return { rows: D.fre, layer: layerF, pass: frePasses, key: D.freKey };
-  return { rows: D.city, layer: layerC, pass: () => true, key: r => r.num };
-}
-
-function drawLevel(fit) {
-  const same = layerOf(S.level);
-  [layerM, layerF, layerC, placeLayer].forEach(l => {
-    if (l !== same && map.hasLayer(l)) map.removeLayer(l);
-  });
-  const { rows, layer, pass } = currentSet();
-  if (!map.hasLayer(layer)) { layer.addTo(map); fit = fit !== false; }
-  syncPlaces();
-
-  const ind = D.indByKey.get(S.indicator);
-  const vals = rows.filter(pass).map(r => r[S.indicator]).filter(v => v != null);
-  const q = quantiles(vals, PALETTE.length);
-  // a neutral translucent stroke reads against every fill in the ramp, and also
-  // against bare background when the tile layer is off or offline
-  const stroke = isDark() ? 'rgba(232,236,243,.45)' : 'rgba(20,25,34,.35)';
-
-  layer.eachLayer(l => {
-    const p = l.feature.properties;
-    let row, ok;
-    if (S.level === 'municipio') { row = D.munByNum.get(p.num); ok = munPasses(row); }
-    else if (S.level === 'freguesia') { row = D.freByKey.get(p.mun_num + '|' + p.name); ok = frePasses(row); }
-    else { row = D.city.find(c => c.num === p.num); ok = true; }
-    const c = colourFor(row ? row[S.indicator] : null, q);
-    l.setStyle({
-      color: stroke, weight: S.level === 'freguesia' ? .7 : 1,
-      fillColor: c || 'transparent',
-      fillOpacity: ok ? (c ? .84 : .12) : .06,
-      opacity: ok ? .85 : .25,
-      dashArray: c ? null : '2,3',
-    });
-  });
-  highlight();
-
-  if (fit) fitLayer(layer);
-  renderLegend(q, ind, vals.length, rows.filter(pass).length);
-}
-
-// 339 neighbourhood points cover the city in orange when zoomed out; show them
-// only once the map is close enough for them to mean something.
-function syncPlaces() {
-  const want = S.level === 'city' && map.getZoom() >= 12.5;
-  if (want && !map.hasLayer(placeLayer)) placeLayer.addTo(map);
-  if (!want && map.hasLayer(placeLayer)) map.removeLayer(placeLayer);
-}
-
-function layerOf(level) {
-  return level === 'municipio' ? layerM : level === 'freguesia' ? layerF : layerC;
-}
-
-// Outline whatever the sheet is showing, so a selected area stays findable even
-// when its fill sits at the pale end of the ramp.
-function highlight() {
-  const layer = layerOf(S.level);
-  if (!layer) return;
-  const dark = isDark();
-  layer.eachLayer(l => {
-    const p = l.feature.properties;
-    let on = false;
-    if (S.sel && S.level === 'municipio' && S.sel.kind === 'mun') on = p.num === S.sel.id;
-    if (S.sel && S.level === 'freguesia' && S.sel.kind === 'fre') on = (p.mun_num + '|' + p.name) === S.sel.id;
-    if (S.sel && S.level === 'city' && S.sel.kind === 'city') on = p.num === S.sel.id;
-    if (on) {
-      l.setStyle({ color: dark ? '#ffd166' : '#b3261e', weight: 3, opacity: 1 });
-      l.bringToFront();
-    }
-  });
-}
-
-// Both the whole-layer fit and the single-area zoom are deferred a frame, so a
-// selection made in the same tick as a level change must be able to cancel the
-// layer fit that would otherwise land after it.
-let fitToken = 0;
-
-function fitLayer(layer) {
-  // invalidateSize first: on the initial draw Leaflet may still be holding the
-  // container size from before the CSS layout settled, which fits the district
-  // into a fraction of the screen.
-  const mine = ++fitToken;
-  requestAnimationFrame(() => {
-    if (mine !== fitToken) return;
-    map.invalidateSize({ animate: false });
-    try {
-      map.fitBounds(layer.getBounds(), { padding: [8, 8], animate: false });
-    } catch (e) { /* layer has no drawable bounds */ }
-    syncPlaces();
-  });
-}
-
-function renderLegend(q, ind, have, total) {
-  const el = $('#legend');
-  if (!q) {
-    el.hidden = false;
-    el.innerHTML = `<b>${html(ind.label_he)}</b><div class="lg-row">${MISSING} לאף אזור</div>` +
-      (ind.fetch ? `<div class="lg-src">להשלמה: <code>${html(ind.fetch)}</code></div>` : '');
-    return;
-  }
-  const edges = [q.min, ...q.cuts, q.max];
-  let rows = '';
-  for (let i = PALETTE.length - 1; i >= 0; i--) {
-    const a = edges[i], b = edges[i + 1];
-    if (a === undefined || b === undefined) continue;
-    rows += `<div class="lg-row"><i class="lg-sw" style="background:${PALETTE[i]}"></i>` +
-      `<span class="num">${fmtVal(a, ind)}–${fmtVal(b, ind)}</span></div>`;
-  }
-  el.hidden = false;
-  el.innerHTML = `<b>${html(ind.label_he)}${ind.unit ? ' (' + html(ind.unit) + ')' : ''}</b>${rows}` +
-    `<div class="lg-src">${have}/${total} אזורים · ${ind.reference_year ? html(ind.reference_year) : ''}` +
-    (have < total ? ` · השאר: ${MISSING}` : '') + `</div>`;
-}
-
-/* ----------------------------------------------------------------- sheet --- */
-function openSheet(inner) {
-  const sh = $('#sheet');
-  sh.hidden = false;
-  $('#sheetScroll').innerHTML = inner;
-  $('#sheetScroll').scrollTop = 0;
-}
-function closeSheet() {
-  $('#sheet').hidden = true;
-  S.sel = null;
-  if (map) drawLevel(false);
-}
-
-function srcChip(key) {
-  const f = D.sources.fields[key];
-  if (!f) return '';
-  const y = f.reference_year ? f.reference_year : '';
-  return `<span class="chip" data-src="${html(key)}">${html(y)}${y ? ' · ' : ''}מקור${NBSP}ℹ︎</span>`;
-}
-
-function kpi(label, value, unit, year, opts) {
-  opts = opts || {};
-  if (value === null || value === undefined) {
-    return `<div class="kpi no"><div class="k-l">${html(label)}</div>` +
-      `<div class="k-v">${MISSING}</div>` +
-      (opts.fetch ? `<div class="k-y">להשלמה: <code>${html(opts.fetch)}</code></div>` : '') +
-      `</div>`;
-  }
-  return `<div class="kpi"><div class="k-l">${html(label)}` +
-    (opts.info ? `<span class="k-i" data-info="${html(opts.info)}">i</span>` : '') + `</div>` +
-    `<div class="k-v num">${html(value)}${unit ? `<span class="k-u">${NBSP}${html(unit)}</span>` : ''}</div>` +
-    (year ? `<div class="k-y">${html(year)}</div>` : '') + `</div>`;
-}
-
-function gapBlock(gaps) {
-  if (!gaps.length) return '';
-  return `<div class="gap">
-    <b>${MISSING}:</b> ${gaps.map(g => html(g.label_he)).join(' · ')}
-    <details><summary>איך משלימים</summary>
-      ${gaps.map(g => `<pre>python3 ${html(g.fetch || '')}</pre>`).join('')}
-      <pre>python3 scripts/build.py &amp;&amp; python3 scripts/checks.py</pre>
-      <p class="note">הסקריפטים האלה צריכים גישה חופשית לרשת. אחרי הרצה, השדות
-        האלה יופיעו כאן, בהשוואה, בסינון וכשכבת צבע במפה — בלי לגעת בקוד.</p>
-    </details></div>`;
-}
-
-function munSheet(num) {
+function renderMun(num) {
   const m = D.munByNum.get(num);
-  const kids = D.fre.filter(f => f.mun_num === num)
-    .sort((a, b) => (b.pop2021 ?? -1) - (a.pop2021 ?? -1));
-  const beltCol = BELT_COLOUR[m.belt] || m.colour;
+  const rows = D.freByMun.get(num) || [];
+  const isPorto = num === 1;
 
-  let k = '';
-  k += kpi('תושבים', nf(m.pop2021), '', 'מפקד 2021');
-  k += kpi('שטח', nf(m.area_km2, 2), 'קמ״ר', 'CAOP 2020');
-  k += kpi('צפיפות', nf(m.density), 'נפש/קמ״ר', 'מפקד 2021');
-  k += kpi('מרחק מפורטו', num === 1 ? '0' : nf(m.dist_porto_km, 1), 'ק״מ', 'קו אווירי');
-  k += kpi('פרגזיות', nf(m.n_freguesias), '', 'CAOP 2020');
-  const gaps = [];
-  for (const key of ['price_eur_m2', 'median_age', 'median_income', 'foreign_pct', 'crimes_per_1000']) {
-    const ind = D.indByKey.get(key);
-    if (!ind) continue;
-    if (m[key] === undefined || m[key] === null) { gaps.push(ind); continue; }
-    k += kpi(ind.label_he, nf(m[key], ind.decimals ?? 1), ind.unit, ind.reference_year,
-      { info: ind.warning_he });
+  const profile = m.profile.map(p =>
+    `<div><dt>${html(p.label)}</dt><dd>${html(p.text)}</dd></div>`).join('');
+
+  const list = rows.map(f => {
+    const n = freNum(f);
+    const q = isPorto ? D.quarterByNum.get(n) : null;
+    const desc = q ? q.desc : (f.note || '');
+    const flag = !q && f.note && f.note_origin === 'app'
+      ? '<span class="flag">תיאור שנכתב לאפליקציה</span>' : '';
+    return `<button class="row row-full" data-fre="${html(D.freKey(f))}">
+      <span class="pin" style="--c:${html(f.colour)}">${n}</span>
+      <span class="row-body">
+        <span class="row-t">${html(f.he || f.pt)} <span class="lat">(${html(bare(f.pt))})</span>${flag}</span>
+        <span class="row-d">${desc ? html(desc) : '<span class="muted">' + MISSING + ' — אין תיאור לפרגזיה הזו</span>'}</span>
+        <span class="row-m"><span class="num">${nf(f.pop2021)}</span> תושבים (2021) ·
+          <span class="num">${nf(f.area_km2, 2)}</span> קמ״ר ·
+          <span class="num">${nf(f.density)}</span> לקמ״ר${q ? ' · <span class="num">' + q.bairros.length + '</span> שכונות' : ''}</span>
+      </span>
+      ${q ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
+    </button>`;
+  }).join('');
+
+  $('#doc').innerHTML = `
+    <div class="card">
+      <div class="hdr">
+        <span class="pin" style="--c:${html(m.fill)}">${m.num}</span>
+        <div><h1>${html(m.he)} <span class="en lat">(${html(m.en)})</span></h1>
+          <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> פרגזיות</p></div>
+      </div>
+      <div class="stats">
+        ${stat('תושבים', m.pop2021, '', 0, 'municipio.pop2021')}
+        ${stat('שטח', m.area_km2, 'קמ״ר', 2, 'municipio.area_km2')}
+        ${stat('צפיפות', m.density, 'לקמ״ר', 0, 'municipio.density')}
+        ${stat('מפורטו', m.dist_porto_km, 'ק״מ', 1, 'municipio.dist_porto_km')}
+      </div>
+      <dl class="kv">${profile}
+        <div><dt>תחבורה</dt><dd>${html(m.transport)}</dd></div></dl>
+    </div>
+
+    <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הפרגזיות'} — לפי המספור במפה</div>
+    ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
+    <div class="rows">${list}</div>
+    ${isPorto ? '' : `<p class="note" style="margin-block-start:10px">המספור של הפרגזיות הוא מספור של האפליקציה
+      ולא מספור רשמי; הוא נועד לקשור בין המפה לרשימה. סדר הפרגזיות נלקח מהמסמך
+      המקורי היכן שהוא מפרט אותן, ובשש העיריות שהוא לא מפרט — לפי גודל אוכלוסייה.</p>`}`;
+  $('#paneText').scrollTop = 0;
+}
+
+/* -------------------------------------------------- level 3: רובע פורטו --- */
+function drawQuarter(qn) {
+  clearMap();
+  const q = D.quarterByNum.get(qn);
+
+  LG.edge = L.geoJSON({ type: 'FeatureCollection',
+      features: D.bC.features.filter(ft => ft.properties.num === qn) },
+    { interactive: false,
+      style: { color: stroke(), weight: 2, opacity: .9, fillColor: q.colour, fillOpacity: .35 } }).addTo(map);
+
+  // Neighbourhood letters — A, B, C… at the point OSM gives for the bairro.
+  LG.letters = L.layerGroup(q.bairros.filter(b => b.ll).map(b => {
+    const mk = L.marker(b.ll, { icon: numIcon(b.letter, 'lbl-ltr'), keyboard: false,
+      // the historic centre carries 341 dots; the letters have to stay on top
+      zIndexOffset: 1000, title: b.letter + ' · ' + b.he, riseOnHover: true });
+    mk.__hi = { kind: 'bairro', id: b.letter };
+    mk.on('click', () => pick({ kind: 'bairro', id: b.letter }, 'map'));
+    return mk;
+  })).addTo(map);
+
+  // Landmarks: black dots, nothing written on the map itself.  Tapping a dot
+  // highlights its record in the list, and tapping the record highlights the dot.
+  LG.pois = L.layerGroup(q.pois.map((p, i) => {
+    if (!S.cats.has(p.cat)) return null;
+    const mk = L.circleMarker(p.ll, poiStyle(false));
+    mk.__hi = { kind: 'poi', id: i };
+    mk.bindTooltip(`${html(p.name)}<br><span class="note">${html(D.poiLabel[p.cat] || p.cat)}</span>`,
+      { direction: 'top', className: 'tt' });
+    mk.on('click', () => pick({ kind: 'poi', id: i }, 'map'));
+    return mk;
+  }).filter(Boolean)).addTo(map);
+
+  fit(LG.edge.getBounds());
+}
+
+const poiStyle = on => on
+  ? { radius: 9, weight: 3, color: '#b7791f', fillColor: '#101010', fillOpacity: 1, opacity: 1 }
+  : { radius: 4.5, weight: 1.4, color: '#ffffff', fillColor: '#101010', fillOpacity: 1, opacity: 1 };
+
+function renderQuarter(qn) {
+  const q = D.quarterByNum.get(qn);
+  const f = D.fre.find(x => x.mun_num === 1 && bare(x.pt) === q.en);
+
+  const bairros = q.bairros.map(b => `<button class="row row-full" data-hi="bairro:${html(b.letter)}">
+      <span class="pin pin-sq" style="--c:#cfe0f2">${html(b.letter)}</span>
+      <span class="row-body">
+        <span class="row-t">${html(b.he)} <span class="lat">(${html(b.en)})</span>
+          ${b.ll ? '' : '<span class="flag">אין נקודה במפה</span>'}</span>
+        <span class="row-d">${html(b.desc || '')}</span>
+        ${b.note_src ? `<span class="row-m">${html(b.note_src)}</span>` : ''}
+      </span></button>`).join('');
+
+  const shown = q.pois.map((p, i) => ({ p, i })).filter(x => S.cats.has(x.p.cat));
+  const byCat = new Map();
+  shown.forEach(x => {
+    if (!byCat.has(x.p.cat)) byCat.set(x.p.cat, []);
+    byCat.get(x.p.cat).push(x);
+  });
+  const pois = D.poiOrder.filter(c => byCat.has(c)).map(c => `<div class="grp">${html(D.poiLabel[c] || c)}
+      <span class="note num">${byCat.get(c).length}</span></div>
+    <div class="rows">${byCat.get(c).map(x => `<button class="row" data-hi="poi:${x.i}">
+        <span class="dot"></span>
+        <span class="row-body"><span class="row-t lat">${html(x.p.name)}</span>
+          <span class="row-m">${html(D.poiLabel[x.p.cat] || x.p.cat)} ·
+            <span class="lat">${html(x.p.osm)}</span></span></span>
+      </button>`).join('')}</div>`).join('');
+
+  const chips = D.poiOrder.filter(c => q.pois.some(p => p.cat === c)).map(c =>
+    `<button class="chip${S.cats.has(c) ? ' is-on' : ''}" data-cat="${html(c)}">${html(D.poiLabel[c] || c)}
+      <span class="num">${q.pois.filter(p => p.cat === c).length}</span></button>`).join('');
+
+  $('#doc').innerHTML = `
+    <div class="card">
+      <div class="hdr">
+        <span class="pin" style="--c:${html(q.colour)}">${q.num}</span>
+        <div><h1>${html(q.he)}</h1>
+          <p class="sub lat">${html(q.en)}</p></div>
+      </div>
+      <div class="stats">
+        ${stat('תושבים', q.pop2021, '', 0, 'freguesia.pop2021')}
+        ${f ? stat('שטח', f.area_km2, 'קמ״ר', 2, 'freguesia.area_km2') : ''}
+        ${f ? stat('צפיפות', f.density, 'לקמ״ר', 0, 'freguesia.density') : ''}
+      </div>
+      <p class="lead">${html(q.desc)}</p>
+    </div>
+
+    <div class="grp">${q.bairros.length} שכונות — האותיות במפה</div>
+    <div class="rows">${bairros}</div>
+    <p class="note" style="margin-block:8px 12px">לשכונות אין גבול רשמי. האות במפה
+      מסומנת על נקודת השכונה כפי שהיא ב-OpenStreetMap, במרכזה בקירוב.</p>
+
+    <div class="card">
+      <h2>נקודות במפה</h2>
+      <p class="sub">כל נקודה שחורה במפה היא אתר או מוסד. לחיצה על נקודה מבליטה את
+        הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.</p>
+      <div class="chips">${chips}</div>
+      <p class="note">מקור: OpenStreetMap contributors, ODbL.</p>
+    </div>
+    ${shown.length ? pois : '<p class="note">לא נבחרה שום קטגוריה.</p>'}`;
+  $('#paneText').scrollTop = 0;
+}
+
+/* --------------------------------------------------------- highlighting --- */
+// One record is "picked" at a time, and both halves show it: the row gets a
+// frame and scrolls into view, the shape or dot on the map gets a heavy ring.
+function pick(hi, from) {
+  const same = S.hi && S.hi.kind === hi.kind && String(S.hi.id) === String(hi.id);
+  S.hi = same ? null : hi;
+  applyHi(from);
+}
+function pickFre(f, from) {
+  // A Porto quarter has a level of its own, so it opens; every other parish
+  // has nothing below it, so it just lights up on both halves.
+  if (f.mun_num === 1 && f.q) { goQuarter(f.q); return; }
+  pick({ kind: 'fre', id: D.freKey(f) }, from);
+}
+
+function applyHi(from) {
+  const hi = S.hi;
+  // the text half
+  $$('#doc .row.is-hi').forEach(el => el.classList.remove('is-hi'));
+  if (hi) {
+    const sel = hi.kind === 'fre'
+      ? `[data-fre="${CSS.escape(hi.id)}"]`
+      : `[data-hi="${hi.kind}:${CSS.escape(String(hi.id))}"]`;
+    const el = $('#doc ' + sel);
+    if (el) {
+      el.classList.add('is-hi');
+      if (from === 'map') el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
   }
-
-  const fields = m.profile.map(f =>
-    `<div class="fld"><dt>${html(f.label)}</dt><dd>${html(f.text)}</dd></div>`).join('');
-
-  const rows = kids.map(f => `<tr class="tap" data-fre="${html(D.freKey(f))}">
-      <td>${html(f.he || f.pt)}<div class="sub lat">${html(f.pt)}</div></td>
-      <td class="n">${f.pop2021 == null ? MISSING : nf(f.pop2021)}</td>
-      <td class="n">${nf(f.area_km2, 1)}</td>
-      <td class="n">${f.density == null ? '—' : nf(f.density)}</td></tr>`).join('');
-
-  const inCmp = S.compare.includes(num);
-  return `
-  <div class="sh-head">
-    <div style="flex:1">
-      <h2>${html(m.he)}</h2>
-      <div class="sub lat">${html(m.pt === m.en ? m.pt : m.pt + ' · ' + m.en)}</div>
-    </div>
-    <button class="sh-x" data-close aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  </div>
-  <div class="chips">
-    <span class="chip belt" style="background:${beltCol}">${html(m.belt || '')}</span>
-    <span class="chip">עירייה ${m.num} מתוך 18</span>
-    ${m.ine ? `<span class="chip">קוד INE <span class="lat">${html(m.ine)}</span></span>` : ''}
-    <span class="chip ${inCmp ? 'on' : ''}" data-cmp="${m.num}">${inCmp ? '✓ בהשוואה' : '+ להשוואה'}</span>
-  </div>
-  <div class="kpis">${k}</div>
-  ${gapBlock(gaps)}
-  <div class="fld"><dt>תחבורה לפורטו</dt><dd>${html(m.transport || MISSING)}</dd></div>
-  <div class="fields"><dl>${fields}</dl></div>
-  <details class="acc" open><summary>${kids.length} פרגזיות</summary>
-    <table class="mini"><thead><tr><th>פרגזיה</th><th class="n">תושבים</th>
-      <th class="n">קמ״ר</th><th class="n">צפיפות</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td><b>סכום</b></td><td class="n"><b>${nf(m.freg_pop_sum)}</b></td>
-        <td class="n"><b>${nf(kids.reduce((s, f) => s + f.area_km2, 0), 1)}</b></td><td></td></tr></tfoot>
-    </table>
-    ${m.freg_pop_sum && m.pop2021 && m.freg_pop_sum !== m.pop2021 ? `<p class="note">
-      סכום הפרגזיות ${nf(m.freg_pop_sum)} מול ${nf(m.pop2021)} לעירייה — הפרש
-      ${nf(Math.abs(m.freg_pop_sum - m.pop2021))} (${nf(100 * (m.freg_pop_sum - m.pop2021) / m.pop2021, 2)}%),
-      נובע מגרסאות פרסום שונות של מפקד 2021.</p>` : ''}
-  </details>
-  ${num === 1 ? `<button class="bl" data-goto-city="1"><b>שבעת רבעי העיר ו-53 השכונות ›</b>
-     <span class="sub">מפה ותיאור לכל רובע</span></button>` : ''}
-  <div class="chips" style="margin-top:10px">${srcChip('municipio.pop2021')}${srcChip('municipio.area_km2')}</div>`;
+  // the map half
+  if (LG.fre) LG.fre.eachLayer(l => {
+    const on = hi && hi.kind === 'fre' && l.feature.__key === hi.id;
+    l.setStyle({ weight: on ? 3.5 : 1, color: on ? '#b7791f' : stroke(), fillOpacity: on ? .92 : .78 });
+    if (on) l.bringToFront();
+  });
+  if (LG.labels) LG.labels.eachLayer(l => {
+    const on = hi && hi.kind === 'fre' && l.__key === hi.id;
+    const e = l.getElement(); if (e) e.classList.toggle('is-hi', !!on);
+  });
+  if (LG.letters) LG.letters.eachLayer(l => {
+    const on = hi && hi.kind === 'bairro' && l.__hi.id === hi.id;
+    const e = l.getElement(); if (e) e.classList.toggle('is-hi', !!on);
+  });
+  if (LG.pois) LG.pois.eachLayer(l => {
+    const on = hi && hi.kind === 'poi' && String(l.__hi.id) === String(hi.id);
+    l.setStyle(poiStyle(on));
+    if (on) l.bringToFront();
+  });
+  // asked for from the list: make sure the thing is actually on screen
+  if (hi && from === 'list') {
+    let ll = null;
+    if (hi.kind === 'fre') {
+      const f = D.freByKey.get(hi.id);
+      if (f) ll = latlng(f.center);
+    } else if (hi.kind === 'bairro') {
+      const b = D.quarterByNum.get(S.quarter).bairros.find(x => x.letter === hi.id);
+      if (b && b.ll) ll = b.ll;
+    } else if (hi.kind === 'poi') {
+      const p = D.quarterByNum.get(S.quarter).pois[Number(hi.id)];
+      if (p) ll = p.ll;
+    }
+    if (ll && !map.getBounds().pad(-0.12).contains(ll)) map.panTo(ll, { animate: true });
+  }
 }
 
-function freSheet(key) {
-  const f = D.freByKey.get(key);
-  const m = D.munByNum.get(f.mun_num);
-  let k = '';
-  k += kpi('תושבים', f.pop2021 == null ? null : nf(f.pop2021), '', 'מפקד 2021');
-  k += kpi('שטח', nf(f.area_km2, 2), 'קמ״ר', 'CAOP 2020');
-  k += kpi('צפיפות', f.density == null ? null : nf(f.density), 'נפש/קמ״ר', 'מפקד 2021');
-  const pInd = D.indByKey.get('price_eur_m2');
-  const gaps = [];
-  if (f.price_eur_m2 === undefined || f.price_eur_m2 === null) gaps.push(pInd);
-  else k += kpi(pInd.label_he, nf(f.price_eur_m2), pInd.unit, pInd.reference_year);
-
-  return `
-  <div class="sh-head">
-    <div style="flex:1">
-      <h2>${html(f.he || f.pt)}</h2>
-      <div class="sub lat">${html(f.pt)}${f.en && f.en !== f.pt ? ' · ' + html(f.en) : ''}</div>
-    </div>
-    <button class="sh-x" data-close aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  </div>
-  <div class="chips">
-    <span class="chip" data-mun="${m.num}">בעירייה ${html(m.he)} ›</span>
-    ${f.he_origin === 'app' ? '<span class="chip">תעתיק עברי נוסף באפליקציה</span>' : ''}
-    ${f.pop_src === 'collected' ? '<span class="chip">אוכלוסייה הושלמה כאן</span>' : ''}
-  </div>
-  <div class="kpis">${k}</div>
-  ${gapBlock(gaps)}
-  ${f.note ? `<div class="fld"><dt>תיאור</dt><dd>${html(f.note)}</dd></div>` : `
-    <p class="note">למסמך המקורי אין תיאור לפרגזיה הזאת — היא אחת מ-103 הפרגזיות
-    שהיו חסרות בו לגמרי.</p>`}
-  <div class="chips" style="margin-top:10px">${srcChip('freguesia.pop2021')}${srcChip('freguesia.area_km2')}${srcChip('freguesia.he')}</div>`;
+/* ------------------------------------------------------------ navigation --- */
+function goDistrict() {
+  S.level = 'district'; S.mun = null; S.quarter = null; S.hi = null;
+  drawDistrict(); renderDistrict(); afterNav();
+}
+function goMun(num) {
+  S.level = 'mun'; S.mun = num; S.quarter = null; S.hi = null;
+  drawMun(num); renderMun(num); afterNav();
+}
+function goQuarter(qn) {
+  S.level = 'quarter'; S.mun = 1; S.quarter = qn; S.hi = null;
+  S.cats = new Set(D.poiOrder);
+  drawQuarter(qn); renderQuarter(qn); afterNav();
+}
+function goUp() {
+  if (S.level === 'quarter') goMun(1);
+  else if (S.level === 'mun') goDistrict();
 }
 
-function citySheet(num) {
-  const q = D.city.find(c => c.num === num);
-  const b = q.bairros.map(x => `<div class="fld"><dt>${html(x.he)} <span class="sub lat">${html(x.en)}</span></dt>
-      <dd>${html(x.desc)}</dd></div>`).join('');
-  return `
-  <div class="sh-head">
-    <div style="flex:1"><h2>${html(q.he)}</h2><div class="sub lat">${html(q.en)}</div></div>
-    <button class="sh-x" data-close aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  </div>
-  <div class="chips"><span class="chip belt" style="background:${q.colour};color:#1b1b1b">רובע ${q.num} מ-7</span>
-    <span class="chip" data-mun="1">עיריית פורטו ›</span></div>
-  <div class="kpis">${kpi('תושבים', nf(q.pop2021), '', 'מפקד 2021')}</div>
-  <p>${html(q.desc)}</p>
-  <details class="acc" open><summary>${q.bairros.length} שכונות — ${html(q.bairros_title_he)}</summary>
-    <div class="fields">${b}</div>
-    <p class="note">מתחת לרמת הפרגזיה אין בפורטוגל שכבה מנהלית רשמית, ולכן אין
-      גבולות שכונה. הנקודות הכתומות במפה הן <span class="lat">place=neighbourhood/quarter/suburb</span>
-      מ-OpenStreetMap — נקודות בלבד.</p>
-  </details>`;
+function afterNav() {
+  const c = [];
+  if (S.level === 'district') c.push('<span class="now">מחוז פורטו</span>');
+  else {
+    c.push('<button data-go="district">מחוז פורטו</button>');
+    const m = D.munByNum.get(S.mun);
+    if (S.level === 'mun') c.push('<span class="sep">›</span><span class="now">' + html(m.he) + '</span>');
+    else {
+      c.push('<span class="sep">›</span><button data-go="mun">' + html(m.he) + '</button>');
+      const q = D.quarterByNum.get(S.quarter);
+      c.push('<span class="sep">›</span><span class="now">' + html(q.bairros_title_he || q.he) + '</span>');
+    }
+  }
+  $('#crumb').innerHTML = c.join('');
+  $('#upBtn').hidden = S.level === 'district';
+  save();
 }
 
-function selectMun(num, fly) {
-  S.sel = { kind: 'mun', id: num };
-  openSheet(munSheet(num));
-  highlight();
-  if (fly !== false) zoomTo(layerM, p => p.num === num);
+/* --------------------------------------------------------------- divider --- */
+const landscape = () => window.matchMedia('(orientation:landscape)').matches;
+
+function applySplit() {
+  const f = landscape() ? S.fLand : S.fPort;
+  $('#split').style.setProperty('--f', f + '%');
+  const d = $('#divider');
+  d.setAttribute('aria-orientation', landscape() ? 'vertical' : 'horizontal');
+  d.setAttribute('aria-valuenow', String(Math.round(f)));
 }
-function selectFre(key, fly) {
-  S.sel = { kind: 'fre', id: key };
-  openSheet(freSheet(key));
-  highlight();
-  if (fly !== false) zoomTo(layerF, p => p.mun_num + '|' + p.name === key);
+function setSplit(f) {
+  f = Math.max(15, Math.min(85, f));
+  if (landscape()) S.fLand = f; else S.fPort = f;
+  applySplit(); save();
 }
-function selectCity(num, fly) {
-  S.sel = { kind: 'city', id: num };
-  openSheet(citySheet(num));
-  highlight();
-  if (fly !== false) zoomTo(layerC, p => p.num === num);
-}
-function zoomTo(layer, test) {
-  const mine = ++fitToken;                       // cancels any pending layer fit
-  requestAnimationFrame(() => {
-    if (mine !== fitToken) return;
-    map.invalidateSize({ animate: false });
-    // keep the selected area in the strip of map the bottom sheet does not cover
-    const sheet = $('#sheet');
-    const cover = sheet.hidden ? 0 : Math.min(sheet.getBoundingClientRect().height,
-      $('#map').getBoundingClientRect().height - 140);
-    layer.eachLayer(l => {
-      if (!test(l.feature.properties)) return;
-      // fit into the height that stays visible, then slide the view down so the
-      // area lands in that strip rather than under the sheet
-      map.fitBounds(l.getBounds(), { padding: [18, 18 + cover / 2], animate: false });
-      if (cover) map.panBy([0, cover / 2], { animate: false });
-    });
-    syncPlaces();
+
+function wireDivider() {
+  const d = $('#divider');
+  let id = null;
+  const frac = e => {
+    const r = $('#split').getBoundingClientRect();
+    // portrait: the map is the top half.  landscape: row-reverse in RTL puts
+    // the map against the left edge, so the map's width grows to the right.
+    return landscape() ? (e.clientX - r.left) / r.width * 100
+                       : (e.clientY - r.top) / r.height * 100;
+  };
+  d.addEventListener('pointerdown', e => {
+    id = e.pointerId; d.setPointerCapture(id);
+    document.body.classList.add('is-dragging');
+    e.preventDefault();
+  });
+  d.addEventListener('pointermove', e => { if (id !== null) setSplit(frac(e)); });
+  const end = () => {
+    if (id === null) return;
+    try { d.releasePointerCapture(id); } catch (err) { /* already gone */ }
+    id = null; document.body.classList.remove('is-dragging');
+  };
+  d.addEventListener('pointerup', end);
+  d.addEventListener('pointercancel', end);
+  d.addEventListener('dblclick', () => setSplit(50));
+  d.addEventListener('keydown', e => {
+    const cur = landscape() ? S.fLand : S.fPort;
+    const k = e.key;
+    const step = (landscape() ? (k === 'ArrowLeft' ? -3 : k === 'ArrowRight' ? 3 : 0)
+                              : (k === 'ArrowUp' ? -3 : k === 'ArrowDown' ? 3 : 0));
+    if (!step && k !== 'Home') return;
+    e.preventDefault();
+    setSplit(k === 'Home' ? 50 : cur + step);
+  });
+  window.matchMedia('(orientation:landscape)').addEventListener('change', () => {
+    applySplit();
+    setTimeout(() => map.invalidateSize({ animate: false }), 60);
   });
 }
 
-/* ------------------------------------------------------------------ list --- */
-function sortOptions() {
-  const lvl = S.level === 'city' ? 'municipio' : S.level;
-  return D.indicators.filter(i => i.levels.includes(lvl) && i.available !== false);
+/* ----------------------------------------------------------------- state --- */
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      level: S.level, mun: S.mun, quarter: S.quarter,
+      tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
+    }));
+  } catch (e) { /* private mode */ }
 }
-function fillSelects() {
-  const lvl = S.level === 'city' ? 'municipio' : S.level;
-  const opts = D.indicators.filter(i => i.levels.includes(lvl));
-  const mk = i => `<option value="${i.key}"${i.key === S.indicator ? ' selected' : ''}>` +
-    html(i.label_he) + (i.available === false ? ' — ' + MISSING : '') + '</option>';
-  $('#indicator').innerHTML = opts.map(mk).join('');
-  if (!opts.some(i => i.key === S.indicator)) { S.indicator = opts[0].key; $('#indicator').value = S.indicator; }
-  const so = sortOptions();
-  $('#sortBy').innerHTML = so.map(i =>
-    `<option value="${i.key}"${i.key === S.sort ? ' selected' : ''}>${html(i.label_he)}</option>`).join('') +
-    `<option value="name"${S.sort === 'name' ? ' selected' : ''}>שם</option>`;
-}
-
-function renderList() {
-  const ind = D.indByKey.get(S.sort) || D.indByKey.get('pop2021');
-  let rows, mkRow;
-  if (S.level === 'city') {
-    rows = D.city.slice();
-    $('#listTitle').textContent = '7 רבעי עיריית פורטו';
-    rows.sort((a, b) => b.pop2021 - a.pop2021);
-    mkRow = q => `<button class="row" data-city="${q.num}">
-        <i class="row-bar" style="background:${q.colour}"></i>
-        <span class="row-main"><span class="row-t">${html(q.he)}</span>
-          <span class="row-s lat">${html(q.en)}</span></span>
-        <span class="row-v"><b class="num">${nf(q.pop2021)}</b><span>תושבים</span></span></button>`;
-  } else if (S.level === 'freguesia') {
-    rows = D.fre.filter(frePasses);
-    $('#listTitle').textContent = `${rows.length} פרגזיות`;
-    rows.sort(cmp(S.sort, f => f.he || f.pt));
-    mkRow = f => `<button class="row" data-fre="${html(D.freKey(f))}">
-        <i class="row-bar" style="background:${BELT_COLOUR[D.munByNum.get(f.mun_num).belt] || '#888'}"></i>
-        <span class="row-main"><span class="row-t">${html(f.he || f.pt)}</span>
-          <span class="row-s">${html(f.mun_he)} · <span class="lat">${html(f.pt)}</span></span></span>
-        <span class="row-v"><b class="num">${fmtVal(f[S.sort], ind)}</b><span>${html(ind.unit || '')}</span></span></button>`;
-  } else {
-    rows = D.mun.filter(munPasses);
-    $('#listTitle').textContent = `${rows.length} עיריות`;
-    rows.sort(cmp(S.sort, m => m.he));
-    mkRow = m => {
-      const on = S.compare.includes(m.num);
-      return `<div class="row" data-mun="${m.num}">
-        <i class="row-bar" style="background:${BELT_COLOUR[m.belt] || m.colour}"></i>
-        <span class="row-main"><span class="row-t">${html(m.he)}</span>
-          <span class="row-s lat">${html(m.pt)}</span></span>
-        <span class="row-v"><b class="num">${fmtVal(m[S.sort], ind)}</b><span>${html(ind.unit || '')}</span></span>
-        <span class="row-pick ${on ? 'on' : ''}" data-cmp="${m.num}" role="checkbox"
-          aria-checked="${on}" aria-label="להשוואה"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
-      </div>`;
-    };
-  }
-  $('#rows').innerHTML = rows.length ? rows.map(mkRow).join('')
-    : `<p class="muted" style="padding:14px">אין אזורים שעומדים בסינון.</p>`;
-}
-function cmp(key, nameOf) {
-  if (key === 'name') return (a, b) => nameOf(a).localeCompare(nameOf(b), 'he');
-  const ind = D.indByKey.get(key);
-  const asc = ind && ind.high_is === 'low';
-  return (a, b) => {
-    const x = a[key], y = b[key];
-    if (x == null && y == null) return 0;
-    if (x == null) return 1;
-    if (y == null) return -1;
-    return asc ? x - y : y - x;
-  };
-}
-
-/* --------------------------------------------------------------- compare --- */
-function toggleCompare(num) {
-  const i = S.compare.indexOf(num);
-  if (i >= 0) S.compare.splice(i, 1);
-  else if (S.compare.length < 4) S.compare.push(num);
-  else { S.compare.shift(); S.compare.push(num); }
-  save(); renderCompare(); renderList();
-  if (S.sel && S.sel.kind === 'mun') openSheet(munSheet(S.sel.id));
-}
-
-function renderCompare() {
-  const chips = D.mun.filter(m => S.compare.includes(m.num))
-    .map(m => `<span class="chip on" data-cmp="${m.num}">${html(m.he)} ✕</span>`).join('');
-  $('#cmpChips').innerHTML = chips;
-  $('#cmpAll').innerHTML = D.mun.map(m =>
-    `<span class="chip ${S.compare.includes(m.num) ? 'on' : ''}" data-cmp="${m.num}">${html(m.he)}</span>`).join('');
-  $('#cmpHint').textContent = S.compare.length < 2
-    ? 'בחרו 2–4 עיריות — מהמפה, מהרשימה או מהתפריט כאן.'
-    : `${S.compare.length} עיריות בהשוואה.`;
-
-  const sel = S.compare.map(n => D.munByNum.get(n));
-  if (sel.length < 2) { $('#cmpBody').innerHTML = ''; return; }
-
-  const keys = D.indicators.filter(i => i.levels.includes('municipio') &&
-    sel.some(m => m[i.key] !== undefined && m[i.key] !== null));
-  let head = `<tr><th>אינדיקטור</th>${sel.map(m => `<th>${html(m.he)}</th>`).join('')}</tr>`;
-  let body = '';
-  for (const ind of keys) {
-    const vals = sel.map(m => m[ind.key]);
-    const nums = vals.filter(v => v != null);
-    const best = ind.high_is === 'low' ? Math.min(...nums) : Math.max(...nums);
-    body += `<tr><td>${html(ind.label_he)}${ind.unit ? ` <span class="sub">${html(ind.unit)}</span>` : ''}` +
-      `${ind.reference_year ? `<div class="sub">${ind.reference_year}</div>` : ''}</td>` +
-      vals.map(v => `<td class="${v != null && v === best && ind.high_is !== 'neutral' ? 'best' : ''}">` +
-        `${fmtVal(v, ind)}</td>`).join('') + '</tr>';
-  }
-  body += `<tr><td>חגורה</td>${sel.map(m => `<td>${html((m.belt || '').replace('החגורה ', ''))}</td>`).join('')}</tr>`;
-  body += `<tr><td>מסילה לפורטו</td>${sel.map(m => `<td>${m.rail ? 'כן' : 'לא'}</td>`).join('')}</tr>`;
-  body += `<tr><td>פרגזיות</td>${sel.map(m => `<td>${m.n_freguesias}</td>`).join('')}</tr>`;
-
-  let bars = '';
-  for (const ind of keys) {
-    const vals = sel.map(m => m[ind.key]).filter(v => v != null);
-    if (!vals.length) continue;
-    const max = Math.max(...vals);
-    bars += `<div class="bars"><h3>${html(ind.label_he)}<span>${html(ind.unit || '')}` +
-      `${ind.reference_year ? ' · ' + ind.reference_year : ''}</span></h3>` +
-      sel.map(m => {
-        const v = m[ind.key];
-        const w = v == null ? 0 : Math.max(2, 100 * v / max);
-        return `<div class="bar"><span class="bar-n">${html(m.he)}</span>
-          <span class="bar-t"><span class="bar-f" style="width:${w}%;background:${BELT_COLOUR[m.belt] || m.colour}"></span></span>
-          <span class="bar-v">${fmtVal(v, ind)}</span></div>`;
-      }).join('') + '</div>';
-  }
-
-  const missing = D.indicators.filter(i => i.available === false && i.levels.includes('municipio'));
-  $('#cmpBody').innerHTML =
-    `<table class="cmp-tbl"><thead>${head}</thead><tbody>${body}</tbody></table>${bars}` +
-    (missing.length ? `<div class="card"><h3>לא נכנס להשוואה</h3><p class="note">
-      ${missing.map(i => html(i.label_he)).join(', ')} — ${MISSING} לאף עירייה.
-      ראו לשונית ״מקורות״ לאופן ההשלמה.</p></div>` : '') +
-    sel.map(m => `<details class="acc"><summary>${html(m.he)} — הפרופיל מהמסמך</summary>
-      <div class="fields"><dl>${m.profile.map(f =>
-      `<div class="fld"><dt>${html(f.label)}</dt><dd>${html(f.text)}</dd></div>`).join('')}</dl></div>
-      </details>`).join('');
+function restore() {
+  try {
+    const o = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
+    if (typeof o.fPort === 'number') S.fPort = o.fPort;
+    if (typeof o.fLand === 'number') S.fLand = o.fLand;
+    if (o.level) { S.level = o.level; S.mun = o.mun; S.quarter = o.quarter; }
+  } catch (e) { /* nothing stored */ }
 }
 
 /* ---------------------------------------------------------------- search --- */
-function fold(s) {
-  return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-}
 function runSearch(term) {
-  const t = fold(term.trim());
+  const t = term.trim().toLowerCase();
   if (t.length < 2) {
-    $('#qres').innerHTML = `<p class="muted" style="padding:14px">
-      אפשר לחפש עירייה, פרגזיה, רובע או שכונה — בעברית, פורטוגזית או אנגלית.
-      סה״כ ${D.mun.length} עיריות, ${D.fre.length} פרגזיות,
-      ${D.city.reduce((s, q) => s + q.bairros.length, 0)} שכונות בפורטו
-      ו-${D.places.length} נקודות OSM.</p>`;
+    $('#qres').innerHTML = '<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>';
     return;
   }
+  const hit = s => String(s || '').toLowerCase().includes(t);
   const out = [];
-  const hit = (...xs) => xs.some(x => fold(x).includes(t));
-  D.mun.forEach(m => { if (hit(m.he, m.pt, m.en)) out.push({ t: 'עירייה', n: m.he, s: m.pt, a: `data-mun="${m.num}"` }); });
-  D.fre.forEach(f => { if (hit(f.he, f.pt, f.en)) out.push({ t: 'פרגזיה', n: f.he || f.pt, s: `${f.mun_he} · ${f.pt}`, a: `data-fre="${html(D.freKey(f))}"` }); });
-  D.city.forEach(q => {
-    if (hit(q.he, q.en)) out.push({ t: 'רובע בפורטו', n: q.he, s: q.en, a: `data-city="${q.num}"` });
-    q.bairros.forEach(b => { if (hit(b.he, b.en)) out.push({ t: 'שכונה בפורטו', n: b.he, s: `${q.he} · ${b.en}`, a: `data-city="${q.num}"` }); });
+  D.mun.forEach(m => {
+    if (hit(m.he) || hit(m.pt) || hit(m.en)) out.push({
+      t: m.num + '. ' + m.he, s: m.pt, k: 'עירייה', go: `data-jump="mun:${m.num}"` });
   });
-  const seenPlace = new Set();
-  D.places.forEach(p => {
-    if (!hit(p.name) || seenPlace.has(p.name)) return;   // OSM repeats some names
-    seenPlace.add(p.name);
-    out.push({ t: 'נקודת OSM', n: p.name, s: p.kind, a: `data-ll="${p.ll[0]},${p.ll[1]}"` });
+  D.fre.forEach(f => {
+    if (hit(f.he) || hit(f.pt)) out.push({
+      t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he,
+      k: f.mun_num === 1 ? 'רובע בפורטו' : 'פרגזיה',
+      go: f.mun_num === 1 && f.q ? `data-jump="quarter:${f.q}"` : `data-jump="fre:${html(D.freKey(f))}"` });
+  });
+  D.city.forEach(q => {
+    q.bairros.forEach(b => {
+      if (hit(b.he) || hit(b.en)) out.push({
+        t: b.letter + ' · ' + b.he, s: b.en + ' · ' + (q.bairros_title_he || q.he),
+        k: 'שכונה', go: `data-jump="bairro:${q.num}:${html(b.letter)}"` });
+    });
+    q.pois.forEach((p, i) => {
+      if (hit(p.name)) out.push({
+        t: p.name, s: (D.poiLabel[p.cat] || p.cat) + ' · ' + (q.bairros_title_he || q.he),
+        k: 'נקודה', go: `data-jump="poi:${q.num}:${i}"` });
+    });
   });
 
   $('#qres').innerHTML = out.length
-    ? out.slice(0, 80).map(r => `<button class="row" ${r.a}>
-        <span class="row-main"><span class="row-t">${html(r.n)}</span>
-          <span class="row-s lat">${html(r.s)}</span></span>
-        <span class="row-v"><span>${html(r.t)}</span></span></button>`).join('') +
-    (out.length > 80 ? `<p class="muted" style="padding:8px 4px">${out.length} תוצאות, מוצגות 80.</p>` : '')
-    : `<p class="muted" style="padding:14px">אין תוצאות ל״${html(term)}״.</p>`;
+    ? '<div class="rows">' + out.slice(0, 60).map(r => `<button class="row" ${r.go}>
+        <span class="row-body"><span class="row-t">${html(r.t)}</span>
+          <span class="row-m"><span class="lat">${html(r.s)}</span></span></span>
+        <span class="note">${html(r.k)}</span></button>`).join('') + '</div>' +
+      (out.length > 60 ? `<p class="note" style="margin-block-start:8px">${out.length} תוצאות, מוצגות 60.</p>` : '')
+    : `<p class="note">אין תוצאות ל״${html(term)}״.</p>`;
 }
 
-/* ------------------------------------------------------------------ info --- */
+function jump(spec) {
+  const i = spec.indexOf(':');
+  const kind = spec.slice(0, i), rest = spec.slice(i + 1);
+  if (kind === 'mun') goMun(Number(rest));
+  else if (kind === 'quarter') goQuarter(Number(rest));
+  else if (kind === 'fre') {
+    const f = D.freByKey.get(rest);
+    if (!f) return;
+    goMun(f.mun_num);
+    S.hi = { kind: 'fre', id: rest }; applyHi('list');
+  } else if (kind === 'bairro') {
+    const [qn, letter] = rest.split(':');
+    goQuarter(Number(qn));
+    S.hi = { kind: 'bairro', id: letter }; applyHi('list');
+  } else if (kind === 'poi') {
+    const [qn, ix] = rest.split(':');
+    goQuarter(Number(qn));
+    S.hi = { kind: 'poi', id: Number(ix) }; applyHi('list');
+  }
+  $('#findDrawer').hidden = true;
+}
+
+/* ------------------------------------------------------ sources and info --- */
+function showSource(key) {
+  const f = D.sources.fields[key];
+  if (!f) return;
+  $('#srcTitle').textContent = f.label_he || key;
+  $('#srcBody').innerHTML = `
+    <p class="note"><code>${html(key)}</code></p>
+    ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
+    <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
+    ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
+    ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
+    ${f.caveat_he ? `<div class="warn">${html(f.caveat_he)}</div>` : ''}
+    ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`;
+  $('#srcModal').hidden = false;
+}
+
 function renderInfo() {
   const s = D.sources;
   const fields = Object.entries(s.fields).map(([k, f]) => `<div class="card">
       <h3>${html(f.label_he || k)}</h3>
       <p class="note"><code>${html(k)}</code></p>
-      ${f.reference_year ? `<p>שנת ייחוס: <b>${html(f.reference_year)}</b></p>` : ''}
+      ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
       <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
       ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
       ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
@@ -718,25 +747,26 @@ function renderInfo() {
       <p>${html(m.why_he)}</p>
       ${m.important_he ? `<div class="warn">${html(m.important_he)}</div>` : ''}
       ${m.decision_he ? `<p>${html(m.decision_he)}</p>` : ''}
-      ${m.fetch ? `<pre>python3 ${html(m.fetch)}\npython3 scripts/build.py &amp;&amp; python3 scripts/checks.py</pre>` : ''}
-      ${(m.candidate_sources || []).map(u => `<p class="note"><a href="${html(u)}" target="_blank" rel="noopener">${html(u)}</a></p>`).join('')}
+      ${(m.candidate_sources || []).map(u =>
+        `<p class="note"><a href="${html(u)}" target="_blank" rel="noopener">${html(u)}</a></p>`).join('')}
     </div>`).join('');
 
   $('#infoBody').innerHTML = `
     <h2>מה יש כאן</h2>
-    <p>כל הידע מהמסמך <span class="lat">porto_district_map_a3.pdf</span> — 18 פרופילי
-      עיריות, 243 פרגזיות, שבעת רבעי עיריית פורטו ו-53 השכונות שלה — עם גבולות
-      רשמיים, אוכלוסייה, שטח וצפיפות.</p>
+    <p>המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני.
+      הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.</p>
     <ul>
-      <li>18 עיריות · 243 פרגזיות · 7 רבעים · 53 שכונות · ${D.places.length} נקודות OSM</li>
-      <li>אוכלוסיית 2021 לכל 243 הפרגזיות (במסמך היו 119 מתוכן)</li>
-      <li>שטח וצפיפות לכל 18 העיריות ו-243 הפרגזיות</li>
+      <li>18 עיריות · 243 פרגזיות · 7 רבעי פורטו · 53 שכונות ·
+        <span class="num">${D.totPoi}</span> נקודות במפה</li>
+      <li>אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הפרגזיות</li>
       <li>נבנה: <span class="lat">${html(D.generated)}</span></li>
     </ul>
+    <p class="note">מספרי העיריות הם המספרים מהמסמך המקורי. מספרי הפרגזיות
+      והאותיות של השכונות הם של האפליקציה, נועדו לקשור בין המפה לרשימה, ואינם
+      מספור רשמי.</p>
     ${STANDALONE
-      ? `<p class="note">זהו קובץ בודד ועצמאי — כל הנתונים נמצאים בתוכו והוא עובד
-         בלי רשת ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-
-         <span class="lat">porto/data/raw/</span>.</p>`
+      ? `<p class="note">זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת
+         ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-<span class="lat">porto/data/raw/</span>.</p>`
       : `<p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">פתיחת המסמך המקורי (PDF, 19 עמודים)</a></p>`}
 
     <h2>מה עוד חסר</h2>
@@ -748,197 +778,80 @@ function renderInfo() {
 
     <h2>רישוי וייחוס</h2>
     ${s.license_notices.map(n => `<p>${html(n)}</p>`).join('')}
-    <p class="note">האפליקציה עובדת גם בלי רשת. בלי חיבור, אריחי הרקע לא ייטענו —
+    <p class="note">האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו,
       המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.</p>`;
-}
-
-/* --------------------------------------------------------------- filters --- */
-function renderFilters() {
-  const dists = D.mun.map(m => m.dist_porto_km).filter(v => v != null);
-  const maxD = Math.ceil(Math.max(...dists));
-  const pops = D.mun.map(m => m.pop2021).filter(v => v != null);
-  const maxP = Math.max(...pops);
-  const f = S.filters;
-  const priceInd = D.indByKey.get('price_eur_m2');
-  const prices = D.mun.map(m => m.price_eur_m2).filter(v => v != null);
-
-  $('#filtBody').innerHTML = `
-    <div class="f-grp">
-      <h3>מרחק אווירי מפורטו <span class="f-val" id="vDist">${f.maxDist === null ? 'הכול' : 'עד ' + f.maxDist + ' ק״מ'}</span></h3>
-      <input type="range" id="fDist" min="0" max="${maxD}" step="1" value="${f.maxDist === null ? maxD : f.maxDist}">
-    </div>
-    <div class="f-grp">
-      <h3>אוכלוסייה מינימלית <span class="f-val" id="vPop">${f.minPop === null ? 'הכול' : 'מ-' + nf(f.minPop)}</span></h3>
-      <input type="range" id="fPop" min="0" max="${maxP}" step="1000" value="${f.minPop === null ? 0 : f.minPop}">
-    </div>
-    <div class="f-grp">
-      <h3>חגורה</h3>
-      ${D.belts.map(b => `<label class="sw"><input type="checkbox" class="fBelt" value="${html(b.he)}"
-          ${f.belts.includes(b.he) ? 'checked' : ''}><span style="color:${b.colour};font-weight:700">■</span>
-          ${html(b.he)} <span class="muted">(${b.nums.length})</span></label>`).join('')}
-    </div>
-    <div class="f-grp">
-      <label class="sw"><input type="checkbox" id="fRail" ${f.railOnly ? 'checked' : ''}>
-        רק עיריות עם מטרו או רכבת לפורטו</label>
-      <p class="note">נגזר מטקסט התחבורה במסמך המקורי.</p>
-    </div>
-    <div class="f-grp">
-      <h3>מחיר למ״ר <span class="f-val" id="vPrice">${prices.length ? (f.maxPrice === null ? 'הכול' : 'עד ' + nf(f.maxPrice)) : MISSING}</span></h3>
-      ${prices.length
-      ? `<input type="range" id="fPrice" min="${Math.floor(Math.min(...prices))}" max="${Math.ceil(Math.max(...prices))}" step="25" value="${f.maxPrice === null ? Math.ceil(Math.max(...prices)) : f.maxPrice}">`
-      : `<p class="note">אין נתוני מחיר. להשלמה: <code>${html(priceInd.fetch)}</code>, ואז
-           <code>scripts/build.py</code> — והמסנן הזה יופעל מעצמו.</p>`}
-    </div>`;
-
-  const bind = (id, out, fmt, set) => {
-    const el = $(id); if (!el) return;
-    el.addEventListener('input', () => { set(+el.value); $(out).textContent = fmt(+el.value); });
-  };
-  bind('#fDist', '#vDist', v => v >= maxD ? 'הכול' : 'עד ' + v + ' ק״מ',
-    v => { f.maxDist = v >= maxD ? null : v; });
-  bind('#fPop', '#vPop', v => v <= 0 ? 'הכול' : 'מ-' + nf(v),
-    v => { f.minPop = v <= 0 ? null : v; });
-  if (prices.length) {
-    const hi = Math.ceil(Math.max(...prices));
-    bind('#fPrice', '#vPrice', v => v >= hi ? 'הכול' : 'עד ' + nf(v),
-      v => { f.maxPrice = v >= hi ? null : v; });
-  }
-  $$('.fBelt').forEach(cb => cb.addEventListener('change', () => {
-    f.belts = $$('.fBelt').filter(x => x.checked).map(x => x.value);
-  }));
-  const rail = $('#fRail');
-  if (rail) rail.addEventListener('change', () => { f.railOnly = rail.checked; });
-}
-function applyFilters() {
-  const n = activeFilterCount();
-  const b = $('#filterBadge');
-  b.hidden = n === 0; b.textContent = n;
-  save(); drawLevel(); renderList();
-}
-
-/* ----------------------------------------------------------- persistence --- */
-function save() {
-  try {
-    localStorage.setItem('porto.v1', JSON.stringify({
-      level: S.level, indicator: S.indicator, tiles: S.tiles,
-      sort: S.sort, compare: S.compare, filters: S.filters,
-    }));
-  } catch (e) { /* private mode, blocked storage — the app works without it */ }
-}
-function restore() {
-  try {
-    const raw = localStorage.getItem('porto.v1');
-    if (!raw) return;
-    const o = JSON.parse(raw);
-    if (o && typeof o === 'object') {
-      if (o.level) S.level = o.level;
-      if (o.indicator) S.indicator = o.indicator;
-      if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
-      if (o.sort) S.sort = o.sort;
-      if (Array.isArray(o.compare)) S.compare = o.compare.slice(0, 4);
-      if (o.filters) Object.assign(S.filters, o.filters);
-    }
-  } catch (e) { /* ignore corrupt or unreadable storage */ }
-}
-
-/* ------------------------------------------------------------------ view --- */
-function showView(name) {
-  $$('.view').forEach(v => v.classList.toggle('is-on', v.id === 'view-' + name));
-  $$('.tab').forEach(t => {
-    const on = t.dataset.view === name;
-    t.classList.toggle('is-on', on); t.setAttribute('aria-selected', on);
-  });
-  $('.top').style.display = (name === 'map' || name === 'list') ? '' : 'none';
-  document.querySelector('main').style.insetBlockStart =
-    (name === 'map' || name === 'list') ? 'var(--top-h)' : 'calc(var(--safe-t) + 4px)';
-  if (name === 'map') setTimeout(() => map.invalidateSize(), 60);
-  if (name === 'compare') renderCompare();
-  if (name === 'info') renderInfo();
-  if (name === 'search') $('#q').focus({ preventScroll: true });
 }
 
 /* ------------------------------------------------------------------ wire --- */
 function wire() {
-  $$('#levelSeg .seg-b').forEach(b => b.addEventListener('click', () => {
-    S.level = b.dataset.level;
-    $$('#levelSeg .seg-b').forEach(x => {
-      const on = x === b; x.classList.toggle('is-on', on); x.setAttribute('aria-selected', on);
-    });
-    closeSheet(); fillSelects(); save(); drawLevel(); renderList();
-  }));
-
-  $('#indicator').addEventListener('change', e => {
-    S.indicator = e.target.value; save(); drawLevel();
+  $('#upBtn').addEventListener('click', goUp);
+  $('#fitBtn').addEventListener('click', refit);
+  $('#crumb').addEventListener('click', e => {
+    const b = e.target.closest('[data-go]');
+    if (!b) return;
+    if (b.dataset.go === 'district') goDistrict(); else goMun(S.mun);
   });
-  $('#sortBy').addEventListener('change', e => { S.sort = e.target.value; save(); renderList(); });
-
   $('#tilesBtn').addEventListener('click', () => {
     S.tiles = !S.tiles;
-    $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));
     if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
+    $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));
     save();
   });
 
-  $('#filterBtn').addEventListener('click', () => { renderFilters(); $('#filters').hidden = false; });
-  $('#filtClose').addEventListener('click', () => { $('#filters').hidden = true; });
-  $('#filtApply').addEventListener('click', () => { $('#filters').hidden = true; applyFilters(); });
-  $('#filtClear').addEventListener('click', () => {
-    S.filters = { maxDist: null, minPop: null, belts: [], railOnly: false, maxPrice: null };
-    renderFilters(); applyFilters();
+  // one delegated handler for the whole text half
+  $('#doc').addEventListener('click', e => {
+    const src = e.target.closest('[data-src]');
+    if (src) { showSource(src.dataset.src); return; }
+    const cat = e.target.closest('[data-cat]');
+    if (cat) {
+      const c = cat.dataset.cat;
+      if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
+      if (!S.cats.size) S.cats.add(c);              // never leave the map blank
+      drawQuarter(S.quarter); renderQuarter(S.quarter); applyHi();
+      return;
+    }
+    const mun = e.target.closest('[data-mun]');
+    if (mun) { goMun(Number(mun.dataset.mun)); return; }
+    const fre = e.target.closest('[data-fre]');
+    if (fre) { pickFre(D.freByKey.get(fre.dataset.fre), 'list'); return; }
+    const hi = e.target.closest('[data-hi]');
+    if (hi) {
+      const [kind, id] = hi.dataset.hi.split(':');
+      pick({ kind, id: kind === 'poi' ? Number(id) : id }, 'list');
+    }
   });
-  $('#filters').addEventListener('click', e => { if (e.target.id === 'filters') $('#filters').hidden = true; });
 
-  $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
-
-  $('#grab').addEventListener('click', () => $('#sheet').classList.toggle('big'));
-
+  $('#findBtn').addEventListener('click', () => {
+    $('#findDrawer').hidden = false;
+    runSearch($('#q').value);
+    $('#q').focus();
+  });
+  $('#findClose').addEventListener('click', () => { $('#findDrawer').hidden = true; });
   $('#q').addEventListener('input', e => runSearch(e.target.value));
-
-  // one delegated handler for every data-* action in the document
-  document.addEventListener('click', e => {
-    const t = e.target.closest('[data-mun],[data-fre],[data-city],[data-cmp],[data-close],[data-src],[data-info],[data-ll],[data-goto-city]');
-    if (!t) return;
-    if (t.dataset.close !== undefined) { closeSheet(); return; }
-    if (t.dataset.cmp !== undefined) { e.stopPropagation(); toggleCompare(+t.dataset.cmp); return; }
-    if (t.dataset.src !== undefined) { alertSource(t.dataset.src); return; }
-    if (t.dataset.info !== undefined) { window.alert(t.dataset.info); return; }
-    if (t.dataset.gotoCity !== undefined) {
-      S.level = 'city';
-      $$('#levelSeg .seg-b').forEach(x => x.classList.toggle('is-on', x.dataset.level === 'city'));
-      fillSelects(); drawLevel(); renderList(); showView('map'); closeSheet(); return;
-    }
-    if (t.dataset.ll !== undefined) {
-      const [la, lo] = t.dataset.ll.split(',').map(Number);
-      showView('map'); map.setView([la, lo], 15); return;
-    }
-    if (t.dataset.mun !== undefined) { showView('map'); ensureLevel('municipio'); selectMun(+t.dataset.mun); return; }
-    if (t.dataset.fre !== undefined) { showView('map'); ensureLevel('freguesia'); selectFre(t.dataset.fre); return; }
-    if (t.dataset.city !== undefined) { showView('map'); ensureLevel('city'); selectCity(+t.dataset.city); return; }
+  $('#qres').addEventListener('click', e => {
+    const b = e.target.closest('[data-jump]');
+    if (b) jump(b.dataset.jump);
   });
 
-  window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
-}
+  $('#infoBtn').addEventListener('click', () => { renderInfo(); $('#infoDrawer').hidden = false; });
+  $('#infoClose').addEventListener('click', () => { $('#infoDrawer').hidden = true; });
+  $('#srcClose').addEventListener('click', () => { $('#srcModal').hidden = true; });
+  $('#srcModal').addEventListener('click', e => { if (e.target.id === 'srcModal') $('#srcModal').hidden = true; });
 
-function ensureLevel(lvl) {
-  if (S.level === lvl) return;
-  S.level = lvl;
-  $$('#levelSeg .seg-b').forEach(x => {
-    const on = x.dataset.level === lvl;
-    x.classList.toggle('is-on', on); x.setAttribute('aria-selected', on);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('#srcModal').hidden) $('#srcModal').hidden = true;
+    else if (!$('#findDrawer').hidden) $('#findDrawer').hidden = true;
+    else if (!$('#infoDrawer').hidden) $('#infoDrawer').hidden = true;
+    else goUp();
   });
-  fillSelects(); save(); drawLevel(); renderList();
-}
 
-function alertSource(key) {
-  const f = D.sources.fields[key];
-  if (!f) return;
-  const lines = [f.label_he, '', 'מקור: ' + (f.source || ''),
-    f.reference_year ? 'שנת ייחוס: ' + f.reference_year : '',
-    f.coverage ? 'כיסוי: ' + f.coverage : '',
-    f.validation_he ? '' + f.validation_he : '',
-    f.caveat_he ? '' + f.caveat_he : '',
-    f.url || ''].filter(Boolean);
-  window.alert(lines.join('\n'));
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (S.level === 'district') drawDistrict();
+    else if (S.level === 'mun') drawMun(S.mun);
+    else drawQuarter(S.quarter);
+    applyHi();
+  });
 }
 
 /* ------------------------------------------------------------------ boot --- */
@@ -953,17 +866,30 @@ function alertSource(key) {
       ' — יש להריץ את האפליקציה משרת (למשל python3 -m http.server), לא כקובץ מקומי.';
     return;
   }
-  fillSelects();
+  // Category labels and their order come from build.py, which also decides
+  // which POIs make it into the file at all.
+  D.poiOrder = ['station', 'hospital', 'university', 'museum', 'culture', 'market', 'landmark', 'green'];
+  D.poiLabel = {
+    station: 'תחנות מטרו ורכבת', hospital: 'בתי חולים', university: 'אוניברסיטה והשכלה',
+    museum: 'מוזיאונים וגלריות', culture: 'תיאטרון, ספריות ותרבות', market: 'שווקים',
+    landmark: 'אתרים ומונומנטים', green: 'פארקים, גנים וחופים',
+  };
+  S.cats = new Set(D.poiOrder);
+
+  applySplit();
   initMap();
-  renderList();
   wire();
+  wireDivider();
   $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));
-  applyFilters();
-  runSearch('');
+
+  if (S.level === 'quarter' && D.quarterByNum.has(S.quarter)) goQuarter(S.quarter);
+  else if (S.level === 'mun' && D.munByNum.has(S.mun)) goMun(S.mun);
+  else goDistrict();
+
   $('#boot').remove();
 
   // The standalone build has nothing to precache: it is already one file.
   if (!STANDALONE && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode unavailable */ });
+    navigator.serviceWorker.register('sw.js').catch(() => { /* offline unavailable */ });
   }
 })();

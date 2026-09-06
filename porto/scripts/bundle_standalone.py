@@ -25,6 +25,7 @@ DATA_FILES = [
     "data/processed/porto_city.json",
     "data/sources.json",
     "data/processed/boundaries_municipios.geojson",
+    "data/processed/boundaries_belts.geojson",
     "data/processed/boundaries_freguesias.geojson",
     "data/processed/boundaries_porto_city.geojson",
 ]

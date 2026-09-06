@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
-<title>מחוז פורטו — נתונים ואזורים</title>
-<meta name="description" content="כל הידע הוויזואלי והטקסטואלי על 18 עיריות ו-243 פרגזיות במחוז פורטו, עם מפה, השוואה וסינון.">
+<title>מחוז פורטו — מפה ונתונים</title>
+<meta name="description" content="מסך מחולק לשניים: מפה של מחוז פורטו מצד אחד, וכל הידע על 18 העיריות, 243 הפרגזיות ו-53 שכונות פורטו מצד שני.">
 <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#1b4f8c" media="(prefers-color-scheme: light)">
 <meta name="mobile-web-app-capable" content="yes">
@@ -21,99 +21,71 @@
 <div id="boot" class="boot"><div class="boot-in"><div class="spin"></div><p>טוען את נתוני המחוז…</p></div></div>
 
 <header class="top">
-  <div class="top-row">
-    <div class="seg" id="levelSeg" role="tablist" aria-label="רמת תצוגה">
-      <button class="seg-b is-on" data-level="municipio" role="tab" aria-selected="true">המחוז · 18 עיריות</button>
-      <button class="seg-b" data-level="freguesia" role="tab" aria-selected="false">243 פרגזיות</button>
-      <button class="seg-b" data-level="city" role="tab" aria-selected="false">פורטו העיר</button>
-    </div>
-  </div>
-  <div class="top-row top-row2">
-    <label class="pick">
-      <span class="pick-l">צבע לפי</span>
-      <select id="indicator" aria-label="אינדיקטור לצביעת המפה"></select>
-    </label>
-    <button class="icon-b" id="filterBtn" aria-label="סינון">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
-      <span class="badge" id="filterBadge" hidden>0</span>
-    </button>
-    <button class="icon-b" id="tilesBtn" aria-label="מפת רקע" aria-pressed="true">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
-    </button>
-  </div>
+  <button class="ico" id="upBtn" aria-label="חזרה לרמה שמעל" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <nav class="crumb" id="crumb" aria-label="מסלול ניווט"></nav>
+  <button class="ico" id="findBtn" aria-label="חיפוש">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+  </button>
+  <button class="ico" id="tilesBtn" aria-label="רקע המפה" aria-pressed="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
+  </button>
+  <button class="ico" id="infoBtn" aria-label="מקורות ומידע חסר">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+  </button>
 </header>
 
-<main>
-  <section id="view-map" class="view is-on">
+<!-- The two halves.  Portrait: map above, text below.  Landscape: map at the
+     start of the line (left, in this RTL layout) and the text beside it.
+     --f is the share of the split the map gets; the divider drags it. -->
+<main class="split" id="split" style="--f:52%">
+  <section class="pane pane-map" id="paneMap" aria-label="מפה">
     <div id="map" role="application" aria-label="מפת מחוז פורטו"></div>
+    <div class="map-tools">
+      <button class="mt" id="fitBtn" aria-label="התאמת המפה למסך">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </div>
     <p class="tile-note" id="tileNote" role="status" hidden></p>
-    <div class="legend" id="legend" hidden></div>
     <p class="attrib">© OpenStreetMap contributors · גבולות: CAOP 2020, DGT</p>
   </section>
 
-  <section id="view-list" class="view">
-    <div class="list-head">
-      <h2 id="listTitle">18 העיריות</h2>
-      <label class="pick pick-sm">
-        <span class="pick-l">מיון</span>
-        <select id="sortBy" aria-label="מיון הרשימה"></select>
-      </label>
-    </div>
-    <div id="rows" class="rows"></div>
-  </section>
+  <div class="divider" id="divider" role="separator" tabindex="0"
+       aria-orientation="horizontal" aria-label="הזזת הקו משנה את גודל המפה"
+       aria-valuemin="15" aria-valuemax="85" aria-valuenow="52"><span class="grip"></span></div>
 
-  <section id="view-compare" class="view">
-    <div class="cmp-head">
-      <h2>השוואה</h2>
-      <p class="muted" id="cmpHint">בחרו 2–4 עיריות מהמפה או מהרשימה, או מהתפריט כאן.</p>
-      <div class="chips" id="cmpChips"></div>
-      <details class="add">
-        <summary>הוספת עירייה</summary>
-        <div class="chips" id="cmpAll"></div>
-      </details>
-    </div>
-    <div id="cmpBody"></div>
-  </section>
-
-  <section id="view-search" class="view">
-    <div class="srch">
-      <input id="q" type="search" inputmode="search" autocomplete="off"
-             placeholder="עירייה, פרגזיה, שכונה — בעברית, פורטוגזית או אנגלית" aria-label="חיפוש">
-    </div>
-    <div id="qres" class="rows"></div>
-  </section>
-
-  <section id="view-info" class="view">
-    <div class="doc" id="infoBody"></div>
+  <section class="pane pane-text" id="paneText" aria-label="נתונים">
+    <div class="doc" id="doc"></div>
   </section>
 </main>
 
-<nav class="tabs" role="tablist" aria-label="ניווט">
-  <button class="tab is-on" data-view="map" role="tab" aria-selected="true">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2zM9 3v16M15 5v16"/></svg><span>מפה</span></button>
-  <button class="tab" data-view="list" role="tab" aria-selected="false">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>רשימה</span></button>
-  <button class="tab" data-view="compare" role="tab" aria-selected="false">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V9M12 20V4M19 20v-7"/></svg><span>השוואה</span></button>
-  <button class="tab" data-view="search" role="tab" aria-selected="false">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span>חיפוש</span></button>
-  <button class="tab" data-view="info" role="tab" aria-selected="false">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>מקורות</span></button>
-</nav>
-
-<div class="sheet" id="sheet" hidden role="dialog" aria-modal="false" aria-labelledby="sheetTitle">
-  <button class="grab" id="grab" aria-label="הרחבה או צמצום של הפאנל"><span></span></button>
-  <div class="sheet-scroll" id="sheetScroll"></div>
+<div class="drawer" id="findDrawer" hidden role="dialog" aria-modal="true" aria-label="חיפוש">
+  <div class="drawer-in">
+    <div class="drawer-head">
+      <input id="q" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
+             placeholder="עירייה, פרגזיה, שכונה או אתר" aria-label="חיפוש">
+      <button class="ico" id="findClose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="drawer-body" id="qres"></div>
+  </div>
 </div>
 
-<div class="drawer" id="filters" hidden role="dialog" aria-modal="true" aria-labelledby="filtTitle">
+<div class="drawer" id="infoDrawer" hidden role="dialog" aria-modal="true" aria-labelledby="infoTitle">
   <div class="drawer-in">
-    <div class="drawer-head"><h2 id="filtTitle">סינון</h2>
-      <button class="txt-b" id="filtClear">איפוס</button>
-      <button class="icon-b" id="filtClose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="drawer-head">
+      <h2 id="infoTitle">מקורות, דיוק ומה שחסר</h2>
+      <button class="ico" id="infoClose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div class="drawer-body" id="filtBody"></div>
-    <button class="cta" id="filtApply">הצגת התוצאות</button>
+    <div class="drawer-body doc" id="infoBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="srcModal" hidden role="dialog" aria-modal="true" aria-labelledby="srcTitle">
+  <div class="modal-in">
+    <h2 id="srcTitle"></h2>
+    <div id="srcBody"></div>
+    <button class="cta" id="srcClose">סגירה</button>
   </div>
 </div>
 

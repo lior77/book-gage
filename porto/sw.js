@@ -3,7 +3,7 @@
    precached (there are millions of them) — tiles you have already looked at are
    kept in a small runtime cache, and without a connection the map simply falls
    back to the vector boundaries, which are local. */
-const VERSION = 'porto-2026-09-05';
+const VERSION = 'porto-2026-09-06';
 const SHELL = VERSION + '-shell';
 const TILES = VERSION + '-tiles';
 const TILE_LIMIT = 400;
@@ -32,6 +32,7 @@ const ASSETS = [
   './data/processed/freguesias.json',
   './data/processed/porto_city.json',
   './data/processed/boundaries_municipios.geojson',
+  './data/processed/boundaries_belts.geojson',
   './data/processed/boundaries_freguesias.geojson',
   './data/processed/boundaries_porto_city.geojson',
 ];
