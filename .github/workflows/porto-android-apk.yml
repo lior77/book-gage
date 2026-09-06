@@ -107,12 +107,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp porto/android/app/build/outputs/apk/debug/app-debug.apk /tmp/porto-atlas.apk
+          VER=$(cat porto/VERSION)
+          SRC=porto/android/app/build/outputs/apk/debug/app-debug.apk
+          # Two names for one file: the version tells you what you are holding,
+          # and the fixed name keeps a link that never has to be reissued.
+          cp "$SRC" "/tmp/portoland-$VER.apk"
+          cp "$SRC" /tmp/portoland-latest.apk
           TAG=porto-atlas
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --target "$GITHUB_SHA" \
-              --title "אטלס מחוז פורטו — אפליקציית אנדרואיד" \
+              --title "פורטולנד — אפליקציית אנדרואיד" \
               --notes-file porto/android/RELEASE_NOTES.md
           fi
-          gh release upload "$TAG" /tmp/porto-atlas.apk --clobber
-          gh release view "$TAG" --json url,assets --jq '.url, (.assets[].url)'
+          gh release edit "$TAG" --title "פורטולנד $VER — אפליקציית אנדרואיד" \
+            --notes-file porto/android/RELEASE_NOTES.md
+          gh release upload "$TAG" "/tmp/portoland-$VER.apk" /tmp/portoland-latest.apk --clobber
+          echo "version $VER"
+          gh release view "$TAG" --json assets --jq '.assets[].url'
