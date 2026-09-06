@@ -1,4 +1,4 @@
-/* מחוז פורטו — split-screen shell.
+/* פורטולנד — split-screen shell.
    One screen, two halves: the map and the text that goes with it.  The split
    follows the way the phone is held — map above the text in portrait, map at
    the start of the line in landscape — and the divider between them is
@@ -6,11 +6,21 @@
    Tuned for a 6.7" Android phone (Galaxy A56, 1080x2340) and scales up. */
 
 :root{
-  --bg:#f4f5f7; --card:#ffffff; --ink:#141922; --ink-2:#5a6473; --line:#dfe3e9;
-  --accent:#1b4f8c; --accent-ink:#ffffff; --warn:#8a4b00; --warn-bg:#fff5e6;
-  --miss:#8a8f98; --shadow:0 2px 10px rgba(16,24,40,.08);
-  --hi:#fff3cd; --hi-line:#b7791f;
+  /* Neutrals carry a slight cool bias — the district is river and Atlantic, and
+     a flat grey reads as unchosen. The accent is azulejo blue, the one colour
+     the subject actually wears. */
+  --bg:#eef1f5; --card:#ffffff; --ink:#141b26; --ink-2:#5b6779; --line:#dde3ec;
+  --accent:#15568f; --accent-ink:#ffffff;
+  --warn:#8a5000; --warn-bg:#fdf3e3; --good:#1c7a4a; --bad:#b3261e;
+  --miss:#8b95a4;
+  --hi:#fff3d6; --hi-line:#b7791f;
   --dot:#101010; --dot-ring:#ffffff;
+  /* one shadow, spent only on things that genuinely float */
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 6px 20px rgba(16,24,40,.10);
+  /* radii by role, not one stamped on everything */
+  --r-card:14px; --r-ctl:10px; --r-pill:999px;
+  /* a spacing scale, so gaps repeat instead of being invented per block */
+  --s1:4px; --s2:6px; --s3:8px; --s4:12px; --s5:16px; --s6:22px;
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
 }
@@ -18,17 +28,21 @@
    an explicit data-theme when a host stamps one on the root element. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0f172a; --card:#182136; --ink:#e8ecf3; --ink-2:#9aa6ba; --line:#28324a;
-    --accent:#6fa8dc; --accent-ink:#0f172a; --warn:#ffd28a; --warn-bg:#3a2c12;
-    --miss:#7d879b; --shadow:0 2px 12px rgba(0,0,0,.4);
+    --bg:#0e1420; --card:#18202e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
+    --accent:#6ea8dd; --accent-ink:#0e1420;
+    --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
+    --miss:#7b8698;
     --hi:#3a3312; --hi-line:#e0b040;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0f172a; --card:#182136; --ink:#e8ecf3; --ink-2:#9aa6ba; --line:#28324a;
-  --accent:#6fa8dc; --accent-ink:#0f172a; --warn:#ffd28a; --warn-bg:#3a2c12;
-  --miss:#7d879b; --shadow:0 2px 12px rgba(0,0,0,.4);
-  --hi:#3a3312; --hi-line:#e0b040;
+    --bg:#0e1420; --card:#18202e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
+    --accent:#6ea8dd; --accent-ink:#0e1420;
+    --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
+    --miss:#7b8698;
+    --hi:#3a3312; --hi-line:#e0b040;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
 }
 
 *{box-sizing:border-box}
@@ -36,15 +50,22 @@
    otherwise beat the user-agent [hidden] rule regardless of specificity */
 [hidden]{display:none!important}
 html{height:100%}
+/* No web font on purpose: the app has to open with no network at all, and a
+   face fetched from a CDN would fall back silently on the one device that
+   matters. Character comes from the scale, the weights and the numerals. */
 body{
   margin:0; height:100dvh; display:flex; flex-direction:column; overflow:hidden;
   background:var(--bg); color:var(--ink);
   font:400 16px/1.55 system-ui,-apple-system,"Noto Sans Hebrew","Heebo",Arial,sans-serif;
   -webkit-text-size-adjust:100%; overscroll-behavior:none;
+  font-variant-numeric:tabular-nums;
 }
-h1,h2,h3{margin:0 0 .35em; line-height:1.25; font-weight:700}
-h1{font-size:1.2rem} h2{font-size:1.1rem} h3{font-size:1rem}
-p{margin:0 0 .7em}
+h1,h2,h3{margin:0; line-height:1.22; font-weight:700; text-wrap:balance}
+h1{font-size:1.24rem; letter-spacing:-.01em}
+h2{font-size:1.06rem; letter-spacing:-.005em}
+h3{font-size:.92rem}
+p{margin:0}
+.doc p + p{margin-block-start:.55em}
 button,select,input{font:inherit; color:inherit}
 button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 /* icon glyphs only — must never touch Leaflet's own <svg> overlay pane, which
@@ -53,7 +74,8 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
     stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:0 0 auto}
 .chev{width:18px; height:18px; color:var(--ink-2)}
 .muted{color:var(--ink-2)}
-.num{font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:isolate}
+.num{direction:ltr; unicode-bidi:isolate}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
 .lat{direction:ltr; unicode-bidi:isolate; display:inline-block}
 
 /* ---------- boot ---------- */
@@ -66,18 +88,17 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 .boot.err .spin{display:none}
 
 /* ---------- top bar ---------- */
-.top{flex:0 0 auto; display:flex; align-items:center; gap:2px; z-index:30;
-     padding:calc(var(--safe-t) + 5px) 6px 5px; background:var(--card);
-     border-block-end:1px solid var(--line)}
-.ico{display:grid; place-items:center; width:40px; height:40px; border-radius:10px;
-     color:var(--ink); position:relative}
-.ico:active{background:var(--bg)}
-.ico[aria-pressed="false"]{color:var(--miss)}
+.top{flex:0 0 auto; display:flex; align-items:center; gap:var(--s1); z-index:30;
+     padding:calc(var(--safe-t) + var(--s2)) var(--s2) var(--s2);
+     background:var(--card); border-block-end:1px solid var(--line)}
+.ico{display:grid; place-items:center; width:40px; height:40px;
+     border-radius:var(--r-ctl); color:var(--ink-2); position:relative}
+.ico:active{background:var(--bg); color:var(--ink)}
 #upBtn svg{transform:scaleX(1)}         /* the RTL "back" arrow points right */
 .crumb{flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px;
        overflow-x:auto; scrollbar-width:none; white-space:nowrap}
 .crumb::-webkit-scrollbar{display:none}
-.crumb button,.crumb span{font-size:.9rem; font-weight:600; padding:4px 2px}
+.crumb button,.crumb span{font-size:.9rem; font-weight:600; padding:var(--s1) 2px}
 .crumb button{color:var(--accent); text-decoration:underline}
 .crumb .sep{color:var(--miss); font-weight:400}
 .crumb .now{color:var(--ink)}
@@ -102,12 +123,15 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 #map{position:absolute; inset:0; background:var(--bg)}
 .pane-text{flex:1 1 0; overflow-y:auto; overscroll-behavior:contain;
            -webkit-overflow-scrolling:touch; background:var(--bg)}
-.doc{padding:10px 12px calc(var(--safe-b) + 24px)}
+.doc{padding:var(--s4) var(--s4) calc(var(--safe-b) + 28px);
+     display:flex; flex-direction:column; gap:var(--s4); max-width:72ch;
+     margin-inline:auto}
 
 .divider{flex:0 0 18px; position:relative; display:grid; place-items:center;
          background:var(--card); border-block:1px solid var(--line);
          cursor:row-resize; touch-action:none; user-select:none}
-.divider .grip{display:block; width:46px; height:4px; border-radius:2px; background:var(--line)}
+.divider .grip{display:block; width:44px; height:4px; border-radius:var(--r-pill);
+               background:var(--line)}
 .divider:active .grip,.divider:focus-visible .grip{background:var(--accent)}
 .divider:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
 @media (orientation:landscape){
@@ -118,46 +142,50 @@ body.is-dragging{cursor:inherit}
 body.is-dragging #map{pointer-events:none}
 
 /* ---------- map furniture ---------- */
-.map-tools{position:absolute; z-index:500; inset-block-start:8px; inset-inline-end:8px;
-           display:flex; flex-direction:column; gap:6px}
-.mt{display:grid; place-items:center; width:36px; height:36px; border-radius:9px;
-    background:var(--card); color:var(--ink); border:1px solid var(--line);
-    box-shadow:var(--shadow)}
-.attrib{position:absolute; z-index:500; inset-block-end:0; inset-inline:0; margin:0;
-        padding:2px 6px; font-size:10px; color:var(--ink-2);
-        background:color-mix(in srgb,var(--card) 78%,transparent);
-        text-align:start; pointer-events:none}
-.tile-note{position:absolute; z-index:510; inset-block-start:52px; inset-inline:10px;
-           margin:0; padding:8px 10px; font-size:.8rem; border-radius:9px;
-           background:var(--warn-bg); color:var(--warn); box-shadow:var(--shadow)}
-/* clears Leaflet's zoom control on one side and the map tools on the other */
-.map-note{position:absolute; z-index:510; inset-block-start:52px; inset-inline:52px;
-          padding:9px 11px; font-size:.82rem; border-radius:10px; background:var(--card);
-          color:var(--ink); border:1px solid var(--line); box-shadow:var(--shadow)}
-.map-note.bad{background:var(--warn-bg); color:var(--warn); border-color:currentColor}
-.map-note button{display:block; margin-block-start:6px; color:var(--accent);
-                 font-weight:700; font-size:.82rem; text-decoration:underline}
-.map-note .x{position:absolute; inset-block-start:4px; inset-inline-end:6px; margin:0;
-             font-weight:700; color:var(--ink-2); text-decoration:none; padding:2px 6px}
+.map-tools{position:absolute; z-index:500; inset-block-start:var(--s3);
+           inset-inline-end:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
+.mt{display:grid; place-items:center; width:38px; height:38px;
+    border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
+    border:1px solid var(--line); box-shadow:var(--shadow)}
+.mt:active{background:var(--bg)}
+.mt[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink);
+    border-color:var(--accent)}
+/* Messages live at the top of the text half. Over the map they covered the
+   thing they were about, and in map-only view there was nowhere to put them. */
+.msgs:empty{display:none}
+.msgs{padding:var(--s4) var(--s4) 0}
+.msg{display:flex; gap:var(--s3); align-items:flex-start; padding:var(--s4);
+     border-radius:var(--r-card); background:var(--card);
+     border:1px solid var(--line); border-inline-start:3px solid var(--accent);
+     font-size:.87rem; line-height:1.5}
+.msg.bad{border-inline-start-color:var(--warn); background:var(--warn-bg); color:var(--warn)}
+.msg-body{flex:1 1 auto; min-width:0}
+.msg-body button,.msg-body a{display:inline-block; margin-block-start:var(--s2);
+     color:var(--accent); font-weight:700; text-decoration:underline}
+.msg.bad .msg-body button,.msg.bad .msg-body a{color:inherit}
+.msg-x{flex:0 0 auto; width:26px; height:26px; border-radius:var(--r-ctl);
+       display:grid; place-items:center; color:var(--ink-2); font-size:.8rem}
+.msg-x:active{background:var(--bg)}
 /* the "you are here" dot: a device position, never a data point, so it is the
    one mark on the map that is neither numbered nor black */
 .me{width:16px; height:16px; border-radius:50%; background:#1a73e8;
     border:3px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.4)}
-/* the layer panel hangs under the map tools, on the same side */
-.panel{position:absolute; z-index:520; inset-block-start:8px; inset-inline-end:52px;
-       width:min(230px,72vw); max-height:calc(100% - 26px); overflow-y:auto;
-       padding:8px 10px; border-radius:12px; background:var(--card);
-       border:1px solid var(--line); box-shadow:var(--shadow); font-size:.84rem}
-.panel h3{font-size:.76rem; color:var(--ink-2); margin:6px 0 3px}
-.panel h3:first-child{margin-block-start:0}
-.lay{display:flex; align-items:center; gap:7px; width:100%; padding:5px 2px;
-     text-align:start; border-radius:7px}
+.panel{margin:var(--s4) var(--s4) 0; padding:var(--s4);
+       border-radius:var(--r-card); background:var(--card);
+       border:1px solid var(--line); font-size:.86rem}
+.panel-h{display:flex; align-items:center; gap:var(--s3);
+         margin-block-end:var(--s3)}
+.panel-h h2{flex:1 1 auto}
+.panel h3{font-size:.74rem; font-weight:700; color:var(--ink-2);
+          letter-spacing:.04em; margin:var(--s4) 0 var(--s1)}
+.lay{display:flex; align-items:center; gap:var(--s3); width:100%;
+     padding:var(--s2) var(--s2); text-align:start; border-radius:var(--r-ctl)}
 .lay:active{background:var(--bg)}
 .lay-n{flex:1 1 auto; min-width:0}
-.lay-c{flex:0 0 auto; width:13px; height:13px; border-radius:50%;
-       box-shadow:0 0 0 1.5px var(--dot-ring),0 0 0 2.5px rgba(0,0,0,.25)}
+.lay-c{flex:0 0 auto; width:14px; height:14px; border-radius:50%;
+       box-shadow:0 0 0 1.5px var(--card),0 0 0 2.5px var(--line)}
 .lay-c.sq{border-radius:4px}
-.lay-x{flex:0 0 auto; width:17px; height:17px; border-radius:5px; display:grid;
+.lay-x{flex:0 0 auto; width:19px; height:19px; border-radius:6px; display:grid;
        place-items:center; border:1.6px solid var(--line); color:transparent;
        font-size:.7rem; font-weight:700; line-height:1}
 .lay[aria-pressed="true"] .lay-x{background:var(--accent); border-color:var(--accent);
@@ -174,89 +202,95 @@ body.is-dragging #map{pointer-events:none}
 .cta-2#mineDelete{color:#b3261e; border-color:#b3261e}
 
 .leaflet-container{font:inherit; background:var(--bg)}
-.leaflet-control-zoom a{color:var(--ink)!important; background:var(--card)!important;
-  border-color:var(--line)!important}
 .tt{background:var(--card); color:var(--ink); border:1px solid var(--line);
     box-shadow:var(--shadow); font-size:.8rem; direction:rtl}
 .tt::before{border-top-color:var(--line)!important}
 
 /* number badge on the map, and its twin in the list */
-.lbl{display:grid; place-items:center; width:24px; height:24px; border-radius:50%;
-     font:700 12px/1 system-ui,sans-serif; color:#101010; background:#fff;
-     border:2px solid #101010; box-shadow:0 1px 3px rgba(0,0,0,.35);
-     direction:ltr; cursor:pointer}
+.lbl{display:grid; place-items:center; width:25px; height:25px;
+     border-radius:var(--r-pill); font:700 12px/1 system-ui,sans-serif;
+     color:#101010; background:#fff; border:2px solid #101010;
+     box-shadow:0 1px 4px rgba(0,0,0,.35); direction:ltr; cursor:pointer}
 .lbl.is-hi{background:var(--hi-line); color:#fff}
-.lbl-ltr{border-radius:6px; border-color:#1b4f8c; color:#1b4f8c}
-.lbl-ltr.is-hi{background:#1b4f8c; color:#fff}
+.lbl-ltr{border-radius:7px; border-color:#15568f; color:#15568f}
+.lbl-ltr.is-hi{background:#15568f; color:#fff}
 
 /* ---------- text half ---------- */
-.card{background:var(--card); border:1px solid var(--line); border-radius:12px;
-      padding:10px 12px; margin-block-end:10px}
-.lead{font-size:.95rem}
-.sub{font-size:.82rem; color:var(--ink-2); margin-block-end:.5em}
-.hdr{display:flex; align-items:flex-start; gap:8px; margin-block-end:6px}
+.card{background:var(--card); border:1px solid var(--line);
+      border-radius:var(--r-card); padding:var(--s5);
+      display:flex; flex-direction:column; gap:var(--s3)}
+.lead{font-size:.95rem; line-height:1.6}
+.sub{font-size:.82rem; color:var(--ink-2)}
+.hdr{display:flex; align-items:flex-start; gap:var(--s3)}
 .hdr .pin{margin-block-start:2px}
+.hdr > div{min-width:0}
 .hdr h1,.hdr h2{margin:0}
 .en{font-size:.85rem; color:var(--ink-2); font-weight:600}
 
-.pin{flex:0 0 auto; display:grid; place-items:center; min-width:26px; height:26px;
-     padding:0 5px; border-radius:50%; background:var(--c,var(--line));
+.pin{flex:0 0 auto; display:grid; place-items:center; min-width:27px; height:27px;
+     padding:0 var(--s2); border-radius:var(--r-pill); background:var(--c,var(--line));
      color:#101010; font:700 13px/1 system-ui,sans-serif; direction:ltr;
-     border:1.5px solid rgba(0,0,0,.35)}
+     box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.3)}
 .pin-sq{border-radius:7px}
 .dot{flex:0 0 auto; width:11px; height:11px; border-radius:50%; background:var(--c,var(--dot));
      box-shadow:0 0 0 1.5px var(--dot-ring),0 0 0 2.5px rgba(0,0,0,.25); margin:7px 2px}
 .dot.mine{border-radius:3px; transform:rotate(45deg)}
 
-.rows{display:flex; flex-direction:column; gap:8px}
-.row{display:flex; align-items:flex-start; gap:9px; width:100%;
-     background:var(--card); border:1px solid var(--line); border-radius:12px;
-     padding:9px 10px}
+.rows{display:flex; flex-direction:column; gap:var(--s2)}
+.row{display:flex; align-items:flex-start; gap:var(--s3); width:100%;
+     background:var(--card); border:1px solid var(--line);
+     border-radius:var(--r-card); padding:var(--s4)}
 .row:active{background:var(--bg)}
-.row.is-hi{border-color:var(--hi-line); background:var(--hi); box-shadow:0 0 0 2px var(--hi-line) inset}
+.row.is-hi{border-color:var(--hi-line); background:var(--hi);
+     box-shadow:inset 0 0 0 1px var(--hi-line)}
 .row-body{flex:1 1 auto; min-width:0}
-.row-t{display:block; font-weight:700; font-size:.97rem}
-.row-t .lat{font-weight:600; font-size:.85rem; color:var(--ink-2)}
-.row-d{display:block; font-size:.86rem; color:var(--ink-2); margin-block-start:2px}
-.row-m{display:block; font-size:.78rem; color:var(--ink-2); margin-block-start:4px}
+.row-t{display:block; font-weight:700; font-size:.97rem; line-height:1.35}
+.row-t .lat{font-weight:600; font-size:.84rem; color:var(--ink-2)}
+.row-d{display:block; font-size:.87rem; color:var(--ink-2); line-height:1.55;
+       margin-block-start:var(--s1)}
+.row-m{display:block; font-size:.76rem; color:var(--miss); margin-block-start:var(--s2)}
 .row-full .row-d{color:var(--ink); font-size:.9rem}
 
-.belt{display:flex; align-items:flex-start; gap:9px; padding:8px 0;
+.belt{display:flex; align-items:flex-start; gap:var(--s3); padding:var(--s3) 0;
       border-block-end:1px solid var(--line)}
 .belt:last-child{border-block-end:0}
 .belt-sw{flex:0 0 auto; width:16px; height:16px; border-radius:4px; margin-block-start:4px;
          background:var(--c); box-shadow:0 0 0 1px rgba(0,0,0,.2)}
 
-.stats{display:flex; flex-wrap:wrap; gap:6px; margin-block:6px 8px}
-.stat{display:flex; flex-direction:column; gap:1px; padding:6px 9px; border-radius:10px;
-      background:var(--bg); border:1px solid var(--line); min-width:88px}
-.stat-l{font-size:.72rem; color:var(--ink-2)}
-.stat-v{font-weight:700; font-size:.95rem}
-.stat-y{font-size:.68rem; color:var(--miss)}
-.stat.no .stat-v{color:var(--miss); font-weight:600}
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+       gap:var(--s2)}
+.stat{display:flex; flex-direction:column; gap:1px; padding:var(--s3) var(--s4);
+      border-radius:var(--r-ctl); background:var(--bg); border:1px solid var(--line);
+      text-align:start}
+.stat-l{font-size:.68rem; font-weight:600; letter-spacing:.03em; color:var(--ink-2);
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stat-v{font-weight:700; font-size:1.12rem; line-height:1.2}
+.stat-y{font-size:.66rem; color:var(--miss)}
+.stat.no .stat-v{color:var(--miss); font-size:.92rem; font-weight:600}
 
 .kv{margin:0; font-size:.9rem}
-.kv div{display:flex; gap:6px; padding:3px 0; border-block-end:1px dotted var(--line)}
+.kv div{display:flex; gap:var(--s3); padding:var(--s2) 0; border-block-end:1px solid var(--line)}
 .kv div:last-child{border-block-end:0}
 .kv dt{flex:0 0 76px; font-weight:700; color:var(--ink-2); font-size:.82rem}
 .kv dd{margin:0; flex:1 1 auto}
 
-.chips{display:flex; flex-wrap:wrap; gap:6px; margin-block-end:8px}
-.chip{padding:5px 10px; border-radius:999px; font-size:.8rem; font-weight:600;
-      background:var(--card); border:1px solid var(--line); color:var(--ink-2)}
+.chips{display:flex; flex-wrap:wrap; gap:var(--s2)}
+.chip{padding:var(--s2) var(--s4); border-radius:var(--r-pill); font-size:.8rem;
+      font-weight:600; background:var(--card); border:1px solid var(--line);
+      color:var(--ink-2)}
 .chip.is-on{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
 .chip{display:inline-flex; align-items:center; gap:5px}
 .chip-c{width:10px; height:10px; border-radius:50%; flex:0 0 auto;
         box-shadow:0 0 0 1px rgba(255,255,255,.85),0 0 0 2px rgba(0,0,0,.25)}
-.grp{margin-block:12px 6px; font-size:.85rem; font-weight:700; color:var(--ink-2);
-     display:flex; align-items:center; gap:6px}
+.grp{font-size:.78rem; font-weight:700; letter-spacing:.04em; color:var(--ink-2);
+     display:flex; align-items:center; gap:var(--s3); margin-block-start:var(--s2)}
 .grp::after{content:""; flex:1 1 auto; height:1px; background:var(--line)}
-.warn{background:var(--warn-bg); color:var(--warn); border-radius:9px;
-      padding:7px 9px; font-size:.82rem; margin-block-end:8px}
+.warn{background:var(--warn-bg); color:var(--warn); border-radius:var(--r-ctl);
+      padding:var(--s3) var(--s4); font-size:.82rem}
 .note{font-size:.78rem; color:var(--ink-2)}
-.flag{display:inline-block; font-size:.7rem; font-weight:700; padding:1px 6px;
-      border-radius:999px; background:var(--warn-bg); color:var(--warn);
-      vertical-align:middle; margin-inline-start:4px}
+.flag{display:inline-block; font-size:.68rem; font-weight:700; padding:1px var(--s2);
+      border-radius:var(--r-pill); background:var(--warn-bg); color:var(--warn);
+      vertical-align:middle; margin-inline-start:var(--s1)}
 .doc a{color:var(--accent)}
 .doc pre{background:var(--bg); border:1px solid var(--line); border-radius:9px;
          padding:8px; overflow-x:auto; font-size:.78rem; direction:ltr; text-align:start}
@@ -266,19 +300,25 @@ body.is-dragging #map{pointer-events:none}
 .drawer{position:fixed; inset:0; z-index:70; display:flex; flex-direction:column;
         background:var(--bg)}
 .drawer-in{display:flex; flex-direction:column; min-height:0; height:100%}
-.drawer-head{flex:0 0 auto; display:flex; align-items:center; gap:8px;
-             padding:calc(var(--safe-t) + 8px) 8px 8px; background:var(--card);
-             border-block-end:1px solid var(--line)}
+.drawer-head{flex:0 0 auto; display:flex; align-items:center; gap:var(--s3);
+             padding:calc(var(--safe-t) + var(--s4)) var(--s4) var(--s4);
+             background:var(--card); border-block-end:1px solid var(--line)}
 .drawer-head h2{flex:1 1 auto; margin:0}
-.drawer-head input{flex:1 1 auto; min-width:0; padding:9px 12px; border-radius:10px;
-                   border:1px solid var(--line); background:var(--bg)}
+.drawer-head input{flex:1 1 auto; min-width:0; padding:var(--s3) var(--s4);
+                   border-radius:var(--r-ctl); border:1px solid var(--line);
+                   background:var(--bg)}
 .drawer-body{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch;
-             padding:10px 12px calc(var(--safe-b) + 24px)}
+             padding:var(--s4) var(--s4) calc(var(--safe-b) + 28px);
+             display:flex; flex-direction:column; gap:var(--s4);
+             max-width:72ch; margin-inline:auto; width:100%}
 .modal{position:fixed; inset:0; z-index:80; display:grid; place-items:end center;
        background:rgba(8,12,20,.5); padding:0}
 .modal-in{width:100%; max-width:560px; max-height:82dvh; overflow-y:auto;
-          background:var(--card); border-radius:16px 16px 0 0;
-          padding:14px 14px calc(var(--safe-b) + 14px); box-shadow:var(--shadow)}
-.cta{display:block; width:100%; margin-block-start:10px; padding:12px;
-     border-radius:11px; background:var(--accent); color:var(--accent-ink);
+          background:var(--card);
+          border-start-start-radius:18px; border-start-end-radius:18px;
+          padding:var(--s5) var(--s5) calc(var(--safe-b) + var(--s5));
+          box-shadow:var(--shadow)}
+.cta{display:block; width:100%; margin-block-start:var(--s4); padding:var(--s4);
+     border-radius:var(--r-ctl); background:var(--accent); color:var(--accent-ink);
      font-weight:700; text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}

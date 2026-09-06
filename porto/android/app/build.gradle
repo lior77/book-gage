@@ -4,12 +4,17 @@ android {
     namespace 'app.porto.atlas'
     compileSdk 34
 
+    // One version, in one file, read by the app and by the release name.
+    def appVersion = rootProject.file('../VERSION').text.trim()
+
     defaultConfig {
         applicationId "app.porto.atlas"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        // 1.2.3 -> 10203, so the code always rises with the name
+        versionCode appVersion.tokenize('.').withIndex()
+                .sum { part, i -> (part as int) * (int) Math.pow(100, 2 - i) } as int
+        versionName appVersion
     }
 
     // A stable signing key, when one is provided.  Without it Gradle invents a

@@ -724,7 +724,9 @@ def main():
             json.dump(obj, fh, ensure_ascii=False, separators=(",", ":"))
         written.append((name, os.path.getsize(path)))
 
+    version = open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
     dump("indicators.json", {"generated": date.today().isoformat(),
+                             "app_version": version,
                              "items": indicators})
     dump("municipios.json", {"generated": date.today().isoformat(),
                              "belts": belts, "items": municipios})

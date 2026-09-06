@@ -68,9 +68,11 @@ function isDark() {
 function stat(label, val, unit, dec, srcKey) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
+  // The unit rides on the label line, not beside the number: on a narrow tile it
+  // wrapped under the figure and broke the baseline across the row.
   return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}">
-    <span class="stat-l">${html(label)}</span>
-    <span class="stat-v ${has ? 'num' : ''}">${has ? nf(val, dec) : MISSING}${has && unit ? ' ' + html(unit) : ''}</span>
+    <span class="stat-l">${html(label)}${unit ? ' · ' + html(unit) : ''}</span>
+    <span class="stat-v ${has ? 'num' : ''}">${has ? nf(val, dec) : MISSING}</span>
     <span class="stat-y">${f.reference_year ? html(f.reference_year) : 'מקור'}</span>
   </button>`;
 }
@@ -113,6 +115,7 @@ async function load() {
   D.zones = zones.zones;
   D.sources = sources;
   D.generated = mun.generated;
+  D.version = ind.app_version || '';
   D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW; D.bG = bG;
   // an undefined layer renders as nothing at all, in silence; say so instead
   for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW, bG })) {
@@ -156,7 +159,9 @@ function initMap() {
   map = L.map('map', {
     // Every gesture stays on: the map can be panned, pinched and zoomed
     // freely inside its half, and the divider changes how big that half is.
-    zoomControl: true, attributionControl: false,
+    // no +/- buttons: pinch, double tap and the fit control cover it, and the
+    // corner they took is worth more to the map than to a duplicate gesture
+    zoomControl: false, attributionControl: false,
     dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true,
     boxZoom: false, keyboard: true, tap: true,
     minZoom: 7, maxZoom: 19,
@@ -164,7 +169,6 @@ function initMap() {
     // zoom only, fitBounds lands a level short and leaves them half-size
     zoomSnap: 0.25, zoomDelta: 0.5,
   });
-  map.zoomControl.setPosition('topright');
   map.setView([41.22, -8.35], 9);
 
   tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -177,11 +181,7 @@ function initMap() {
     if (++errs < 6 || !map.hasLayer(tileLayer)) return;
     map.removeLayer(tileLayer);
     S.tiles = false;
-    $('#tilesBtn').setAttribute('aria-pressed', 'false');
-    const n = $('#tileNote');
-    n.hidden = false;
-    n.textContent = 'רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים זמינים.';
-    setTimeout(() => { n.hidden = true; }, 6000);
+    mapNote('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.');
   });
   if (S.tiles) tileLayer.addTo(map);
 
@@ -275,13 +275,19 @@ function freguesiaAt(lat, lon) {
   return null;
 }
 
+/* Every message the app has to give lands in the same place: the top of the
+   text half.  Over the map they covered the thing being talked about, and on a
+   phone in map-only view there was nowhere for them to go. */
 function mapNote(inner, bad) {
-  const n = $('#locNote');
-  n.className = 'map-note' + (bad ? ' bad' : '');
-  n.innerHTML = '<button class="x" type="button" data-close="1" aria-label="סגירה">✕</button>' + inner;
-  n.hidden = false;
+  const n = $('#msgs');
+  n.innerHTML = `<div class="msg${bad ? ' bad' : ''}">
+      <div class="msg-body">${inner}</div>
+      <button class="msg-x" type="button" data-close="1" aria-label="סגירת ההודעה">✕</button>
+    </div>`;
+  if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
+  $('#paneText').scrollTop = 0;
 }
-function hideNote() { $('#locNote').hidden = true; }
+function hideNote() { $('#msgs').innerHTML = ''; }
 
 function showMe(pos) {
   const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
@@ -698,10 +704,9 @@ function toggleAdd() {
   S.adding = !S.adding;
   $('#addBtn').setAttribute('aria-pressed', String(S.adding));
   $('#map').style.cursor = S.adding ? 'crosshair' : '';
-  const n = $('#addNote');
-  n.hidden = !S.adding;
-  if (S.adding) n.innerHTML = 'לחץ על המפה במקום שבו תרצה לסמן נקודה. ' +
-    '<button type="button" data-add="off">ביטול</button>';
+  if (S.adding) mapNote('לחץ על המפה במקום שבו תרצה לסמן נקודה. ' +
+    '<button type="button" data-add="off">ביטול</button>');
+  else hideNote();
 }
 
 /* ------------------------------------------------- level 3: תוך הפרגזיה --- */
@@ -909,6 +914,7 @@ function renderLayers() {
      </button>`;
 
   let h = '<h3>שכבות</h3>' +
+    row(S.tiles, 'tiles', 'רקע המפה (רחובות)', 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
     row(S.water, 'water', 'נהרות ומים', '#4a9ad4', true) +
     row(S.green, 'green', 'שטחים ירוקים וחופים', '#5aa860', true) +
     row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true, D.mine.length);
@@ -927,12 +933,20 @@ function renderLayers() {
   } else {
     h += '<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הפרגזיה.</p>';
   }
-  $('#layerPanel').innerHTML = h;
+  $('#layerPanel').innerHTML = `<div class="panel-h">
+      <h2>שכבות המפה</h2>
+      <button class="msg-x" type="button" id="layClose" aria-label="סגירת התפריט">✕</button>
+    </div>` + h;
 }
 function toggleLayers(force) {
   const p = $('#layerPanel');
   const show = force === undefined ? p.hidden : force;
-  if (show) renderLayers();
+  if (show) {
+    renderLayers();
+    // the menu is in the text half, so it has to be on screen to be used
+    if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
+    $('#paneText').scrollTop = 0;
+  }
   p.hidden = !show;
   $('#layersBtn').setAttribute('aria-expanded', String(show));
 }
@@ -1310,6 +1324,10 @@ function renderInfo() {
     <h2>מקור לכל שדה</h2>
     ${fields}
 
+    <h2>גרסה</h2>
+    <p>פורטולנד <span class="lat num">${html(D.version)}</span> ·
+      הנתונים נבנו ב-<span class="lat">${html(D.generated)}</span></p>
+
     <h2>רישוי וייחוס</h2>
     ${s.license_notices.map(n => `<p>${html(n)}</p>`).join('')}
     <p class="note">לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל —
@@ -1327,9 +1345,6 @@ function wire() {
   $('#viewBtn').addEventListener('click', cycleView);
   $('#layersBtn').addEventListener('click', () => toggleLayers());
   $('#addBtn').addEventListener('click', toggleAdd);
-  $('#addNote').addEventListener('click', e => {
-    if (e.target.closest('[data-add="off"]')) toggleAdd();
-  });
   map.on('click', e => {
     if (!S.adding) return;
     toggleAdd();
@@ -1348,10 +1363,15 @@ function wire() {
   });
   $('#mineModal').addEventListener('click', e => { if (e.target.id === 'mineModal') closeMine(); });
   $('#layerPanel').addEventListener('click', e => {
+    if (e.target.closest('#layClose')) { toggleLayers(false); return; }
     const b = e.target.closest('[data-lay]');
     if (!b) return;
     const k = b.dataset.lay;
-    if (k === 'letters') { S.letters = !S.letters; }
+    if (k === 'tiles') {
+      S.tiles = !S.tiles;
+      if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
+    }
+    else if (k === 'letters') { S.letters = !S.letters; }
     else if (k === 'water') { S.water = !S.water; applyNature(); }
     else if (k === 'green') { S.green = !S.green; applyNature(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
@@ -1364,9 +1384,10 @@ function wire() {
     if (S.level === 'zone') { drawZone(S.zone); renderZone(S.zone); }
     drawMine(); renderLayers(); applyHi();
   });
-  $('#locNote').addEventListener('click', e => {
+  $('#msgs').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
+    if (b.dataset.add === 'off') { toggleAdd(); return; }
     if (b.dataset.close || b.dataset.loc === 'back') { hideNote(); }
     if (b.dataset.loc === 'back') refit();
     if (b.dataset.jump) { jump(b.dataset.jump); hideNote(); }
@@ -1375,12 +1396,6 @@ function wire() {
     const b = e.target.closest('[data-go]');
     if (!b) return;
     if (b.dataset.go === 'district') goDistrict(); else goMun(S.mun);
-  });
-  $('#tilesBtn').addEventListener('click', () => {
-    S.tiles = !S.tiles;
-    if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
-    $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));
-    save();
   });
 
   // one delegated handler for the whole text half
@@ -1486,7 +1501,6 @@ function wire() {
   initNature();
   wire();
   wireDivider();
-  $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));
 
   if (S.level === 'zone' && D.freByKey.has(S.zone)) goZone(S.zone);
   else if (S.level === 'mun' && D.munByNum.has(S.mun)) goMun(S.mun);

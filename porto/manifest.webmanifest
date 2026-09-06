@@ -1,6 +1,6 @@
 {
-  "name": "מחוז פורטו — נתונים ואזורים",
-  "short_name": "מחוז פורטו",
+  "name": "פורטולנד — מחוז פורטו",
+  "short_name": "פורטולנד",
   "description": "18 עיריות, 243 פרגזיות ו-53 שכונות בפורטו: מפה, אינדיקטורים, השוואה וסינון — עובד גם בלי רשת.",
   "lang": "he",
   "dir": "rtl",
@@ -11,16 +11,49 @@
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#1b4f8c",
-  "categories": ["travel", "utilities", "education"],
+  "categories": [
+    "travel",
+    "utilities",
+    "education"
+  ],
   "icons": [
-    { "src": "icons/favicon-32.png", "sizes": "32x32", "type": "image/png" },
-    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "השוואת עיריות", "url": "./index.html#compare" },
-    { "name": "חיפוש מקום", "url": "./index.html#search" }
+    {
+      "name": "השוואת עיריות",
+      "url": "./index.html#compare"
+    },
+    {
+      "name": "חיפוש מקום",
+      "url": "./index.html#search"
+    }
   ]
 }

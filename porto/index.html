@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
-<title>מחוז פורטו — מפה ונתונים</title>
-<meta name="description" content="מסך מחולק לשניים: מפה של מחוז פורטו מצד אחד, וכל הידע על 18 העיריות, 243 הפרגזיות ו-53 שכונות פורטו מצד שני.">
+<title>פורטולנד</title>
+<meta name="description" content="פורטולנד — מפה וכל הידע על מחוז פורטו: 18 עיריות, 243 פרגזיות, 1,773 יישובים ו-1,530 אתרים, בלי רשת.">
 <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#1b4f8c" media="(prefers-color-scheme: light)">
 <meta name="mobile-web-app-capable" content="yes">
@@ -25,14 +25,8 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
   </button>
   <nav class="crumb" id="crumb" aria-label="מסלול ניווט"></nav>
-  <button class="ico" id="viewBtn" aria-label="פריסת המסך">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
-  </button>
   <button class="ico" id="findBtn" aria-label="חיפוש">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
-  </button>
-  <button class="ico" id="tilesBtn" aria-label="רקע המפה" aria-pressed="true">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
   </button>
   <button class="ico" id="infoBtn" aria-label="מקורות ומידע חסר">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
@@ -46,6 +40,9 @@
   <section class="pane pane-map" id="paneMap" aria-label="מפה">
     <div id="map" role="application" aria-label="מפת מחוז פורטו"></div>
     <div class="map-tools">
+      <button class="mt" id="viewBtn" aria-label="פריסת המסך">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
+      </button>
       <button class="mt" id="fitBtn" aria-label="התאמת המפה למסך">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
@@ -59,11 +56,6 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </div>
-    <p class="tile-note" id="tileNote" role="status" hidden></p>
-    <div class="map-note" id="locNote" role="status" hidden></div>
-    <div class="panel" id="layerPanel" hidden role="group" aria-label="שכבות המפה"></div>
-    <div class="map-note" id="addNote" role="status" hidden></div>
-    <p class="attrib">© OpenStreetMap contributors · גבולות: CAOP 2020, DGT</p>
   </section>
 
   <div class="divider" id="divider" role="separator" tabindex="0"
@@ -71,6 +63,8 @@
        aria-valuemin="15" aria-valuemax="85" aria-valuenow="52"><span class="grip"></span></div>
 
   <section class="pane pane-text" id="paneText" aria-label="נתונים">
+    <div class="msgs" id="msgs" role="status" aria-live="polite"></div>
+    <div class="panel" id="layerPanel" hidden role="group" aria-label="שכבות המפה"></div>
     <div class="doc" id="doc"></div>
   </section>
 </main>
