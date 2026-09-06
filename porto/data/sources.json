@@ -127,6 +127,26 @@
       "coverage": "1,530 נקודות ב-243 פרגזיות",
       "caveat_he": "שאילתת המורשת דורשת מכל אובייקט גם name וגם wikidata או heritage. בלי התנאי הזה יש במחוז אלפי רשומות historic שרובן פרט אדריכלי בודד, ומפה שמסמנת את כולן אינה אומרת דבר. אף נקודה לא נבחרה ידנית. המיפוי התנדבותי ואינו אחיד."
     },
+    "map.water": {
+      "label_he": "נהרות ומים (שכבת מפה)",
+      "value_type": "geometry",
+      "reference_year": 2026,
+      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/07_district_water.overpassql",
+      "url": "https://www.openstreetmap.org/",
+      "retrieved": "2026-09-06",
+      "coverage": "270 אובייקטים בתוך המחוז",
+      "caveat_he": "הגיאומטריה נחתכה לגבול המחוז, פושטה לסובלנות של כ-20 מ׳, והוסרו ממנה גופי מים קטנים מ-3,000 מ״ר. זו שכבת תצוגה: היא נועדה להראות איפה עובר הנהר, לא למדוד ממנה מרחקים או שטחים. 180 אובייקטים נפלו מחוץ למחוז ו-62 היו קטנים מכדי להיראות."
+    },
+    "map.green": {
+      "label_he": "שטחים ירוקים וחופים (שכבת מפה)",
+      "value_type": "geometry",
+      "reference_year": 2026,
+      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/08_district_green.overpassql",
+      "url": "https://www.openstreetmap.org/",
+      "retrieved": "2026-09-06",
+      "coverage": "361 שטחים בתוך המחוז",
+      "caveat_he": "פארקים, גנים, שמורות טבע וחופים בלבד — בכוונה בלי landuse=forest ובלי natural=wood, כי כל מזרח המחוז מיוער ופוליגון שמכסה חצי מפה לא אומר דבר. הגיאומטריה נחתכה לגבול המחוז, פושטה לכ-13 מ׳, והוסרו שטחים קטנים מ-2,000 מ״ר. אין להסיק מכאן ״אחוז שטח ירוק״: המיפוי התנדבותי ואינו אחיד."
+    },
     "porto_city.quarter": {
       "label_he": "שבעת רבעי עיריית פורטו",
       "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",

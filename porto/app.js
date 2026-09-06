@@ -27,6 +27,8 @@ const S = {
   hi: null,            // { kind, id } — the record highlighted on both halves
   view: 'split',       // split | map | text — which half fills the screen
   letters: true,       // draw the locality letters
+  water: true,         // rivers and lakes
+  green: true,         // parks, gardens and beaches
   mine: true,          // draw the points the user added
   adding: false,       // waiting for a tap on the map to place a new point
 };
@@ -90,12 +92,14 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, zones, sources, bM, bB, bF, bC] = await Promise.all([
+  const [ind, mun, fre, city, zones, bW, bG, sources, bM, bB, bF, bC] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
     j('data/processed/porto_city.json'),
     j('data/processed/zones.json'),
+    j('data/processed/boundaries_water.geojson'),
+    j('data/processed/boundaries_green.geojson'),
     j('data/sources.json'),
     j('data/processed/boundaries_municipios.geojson'),
     j('data/processed/boundaries_belts.geojson'),
@@ -109,7 +113,11 @@ async function load() {
   D.zones = zones.zones;
   D.sources = sources;
   D.generated = mun.generated;
-  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC;
+  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW; D.bG = bG;
+  // an undefined layer renders as nothing at all, in silence; say so instead
+  for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW, bG })) {
+    if (!v || !Array.isArray(v.features)) throw new Error('layer ' + k + ' did not load');
+  }
 
   D.munByNum = new Map(D.mun.map(m => [m.num, m]));
   D.freKey = f => f.mun_num + '|' + f.pt;
@@ -140,6 +148,9 @@ const LG = {};                      // the layers currently on the map
 let fitBounds = null;               // what the "fit" button goes back to
 
 function stroke() { return isDark() ? 'rgba(232,236,243,.55)' : 'rgba(20,25,34,.45)'; }
+// the contour that says "this is the municipality you picked": solid, not the
+// translucent line every other boundary uses, or it disappears among them
+function edge() { return isDark() ? '#f2f5fa' : '#10151f'; }
 
 function initMap() {
   map = L.map('map', {
@@ -179,6 +190,35 @@ function initMap() {
     if (map._rafSize) cancelAnimationFrame(map._rafSize);
     map._rafSize = requestAnimationFrame(() => map.invalidateSize({ animate: false }));
   }).observe($('#map'));
+}
+
+const NAT = {};   // the two layers that belong to every level, not to one
+
+function initNature() {
+  // Their own pane, above the filled boundaries so a river is not buried under
+  // a parish colour, below the markers so it never covers a letter or a dot.
+  map.createPane('nature');
+  map.getPane('nature').style.zIndex = 450;
+  map.getPane('nature').style.pointerEvents = 'none';
+
+  NAT.water = L.geoJSON(D.bW, {
+    pane: 'nature', interactive: false,
+    style: ft => /LineString/.test(ft.geometry.type)
+      ? { color: '#2f7fc1', weight: 1.8, opacity: .85, fill: false }
+      : { color: '#2f7fc1', weight: .8, opacity: .8, fillColor: '#4a9ad4', fillOpacity: .55 },
+  });
+  NAT.green = L.geoJSON(D.bG, {
+    pane: 'nature', interactive: false,
+    style: { color: '#3f8a45', weight: .8, opacity: .75, fillColor: '#5aa860', fillOpacity: .45 },
+  });
+  applyNature();
+}
+function applyNature() {
+  [['water', S.water], ['green', S.green]].forEach(([k, on]) => {
+    if (!NAT[k]) return;
+    if (on && !map.hasLayer(NAT[k])) NAT[k].addTo(map);
+    if (!on && map.hasLayer(NAT[k])) map.removeLayer(NAT[k]);
+  });
 }
 
 function clearMap() {
@@ -445,6 +485,11 @@ function drawMun(num) {
     },
   }).addTo(map);
 
+  // the outer border of the municipality, over the parish fills
+  LG.munEdge = L.geoJSON({ type: 'FeatureCollection',
+      features: D.bM.features.filter(ft => ft.properties.num === num) },
+    { interactive: false, style: { color: edge(), weight: 3, opacity: .95, fill: false } }).addTo(map);
+
   LG.labels = L.layerGroup(rows.map(f => {
     const mk = L.marker(latlng(f.center), { icon: numIcon(freNum(f)), keyboard: false,
       title: freNum(f) + '. ' + (f.he || f.pt), riseOnHover: true });
@@ -600,6 +645,12 @@ function drawZone(key) {
     { interactive: false,
       style: { color: stroke(), weight: 2, opacity: .9,
                fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
+
+  // The municipality this parish sits in, so level 3 still says where you are.
+  LG.munEdge = L.geoJSON({ type: 'FeatureCollection',
+      features: D.bM.features.filter(ft => ft.properties.num === f.mun_num) },
+    { interactive: false,
+      style: { color: edge(), weight: 2, opacity: .55, fill: false, dashArray: '6,4' } }).addTo(map);
 
   // Locality letters — A, B, C… at the point OSM gives for the place.
   LG.letters = L.layerGroup(!S.letters ? [] : z.bairros.filter(b => b.ll).map(b => {
@@ -775,8 +826,17 @@ function renderLayers() {
      </button>`;
 
   let h = '<h3>שכבות</h3>' +
-    row(S.letters, 'letters', 'אותיות היישובים', '#cfe0f2', true) +
+    row(S.water, 'water', 'נהרות ומים', '#4a9ad4', true) +
+    row(S.green, 'green', 'שטחים ירוקים וחופים', '#5aa860', true) +
     row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true, D.mine.length);
+  // the letters only exist at level 3, and they are neighbourhoods in Porto and
+  // localities everywhere else — the row says which, and counts them like the
+  // other rows do
+  if (z) {
+    h += row(S.letters, 'letters',
+      z.origin === 'pdf' ? 'אותיות השכונות' : 'אותיות היישובים',
+      '#cfe0f2', true, z.bairros.filter(b => b.ll).length);
+  }
   if (z && z.pois.length) {
     h += '<h3>נקודות במפה</h3>' + D.poiOrder.filter(c => counts[c])
       .map(c => row(S.cats.has(c), 'cat:' + c, D.poiLabel[c] || c, CAT_COLOUR[c], false, counts[c]))
@@ -965,7 +1025,7 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view,
-      letters: S.letters, mine: S.mine,
+      letters: S.letters, mine: S.mine, water: S.water, green: S.green,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
   } catch (e) { /* private mode */ }
@@ -976,6 +1036,8 @@ function restore() {
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
+    if (typeof o.water === 'boolean') S.water = o.water;
+    if (typeof o.green === 'boolean') S.green = o.green;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
     if (typeof o.fLand === 'number') S.fLand = o.fLand;
@@ -1152,6 +1214,8 @@ function wire() {
     if (!b) return;
     const k = b.dataset.lay;
     if (k === 'letters') { S.letters = !S.letters; }
+    else if (k === 'water') { S.water = !S.water; applyNature(); }
+    else if (k === 'green') { S.green = !S.green; applyNature(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
     else if (k.startsWith('cat:')) {
       const c = k.slice(4);
@@ -1266,6 +1330,7 @@ function wire() {
   applyView();
   applySplit();
   initMap();
+  initNature();
   wire();
   wireDivider();
   $('#tilesBtn').setAttribute('aria-pressed', String(S.tiles));

@@ -409,6 +409,78 @@ def build_zones(freguesias, city):
     return zones, stats
 
 
+# Display layers: the rivers and the open ground.  Both come back from Overpass
+# with full geometry, and both arrive far too heavy to ship — 11 MB between them
+# — so they are clipped to the district, dropped below a size that would be a
+# single pixel anyway, and simplified.  The tolerances are chosen for a map that
+# tops out at zoom 19: 20 m on a river bank, 13 m on a park edge.
+LAYER_SPECS = [
+    ("district_water.geojson", "boundaries_water.geojson", 0.0002, 3000,
+     ("waterway", "natural", "water", "landuse")),
+    ("district_green.geojson", "boundaries_green.geojson", 0.00012, 2000,
+     ("leisure", "natural", "landuse")),
+]
+
+
+def layer_geoms(mun_fc):
+    """Clip, filter and simplify the water and green exports for the map."""
+    from shapely.geometry import shape, mapping
+    from shapely.ops import unary_union
+    district = unary_union([shape(f["geometry"]).buffer(0) for f in mun_fc["features"]])
+    out = {}
+    for src, dest, tol, min_m2, tags in LAYER_SPECS:
+        path = os.path.join(RAW, src)
+        if not os.path.exists(path):
+            out[dest] = None
+            continue
+        doc = json.load(open(path, encoding="utf-8"))
+        fc = {"type": "FeatureCollection", "features": []}
+        stats = {"kept": 0, "outside": 0, "small": 0}
+        for ft in doc["features"]:
+            gt = ft["geometry"]["type"]
+            if gt == "Point":
+                continue
+            try:
+                g = shape(ft["geometry"])
+                if gt in ("Polygon", "MultiPolygon"):
+                    g = g.buffer(0)
+            except Exception:
+                continue
+            if g.is_empty or not g.intersects(district):
+                stats["outside"] += 1
+                continue
+            if gt in ("Polygon", "MultiPolygon") and g.area * 111320 * 111320 * 0.56 < min_m2:
+                stats["small"] += 1
+                continue
+            g = g.intersection(district)
+            if g.is_empty:
+                stats["outside"] += 1
+                continue
+            g = g.simplify(tol, preserve_topology=True)
+            if g.is_empty:
+                continue
+            p = ft["properties"]
+            props = {"name": p.get("name") or ""}
+            for t in tags:
+                if p.get(t):
+                    props["kind"] = "%s=%s" % (t, p[t])
+                    break
+            fc["features"].append({"type": "Feature", "properties": props,
+                                   "geometry": round_geom(mapping(g))})
+            stats["kept"] += 1
+        out[dest] = (fc, stats)
+    return out
+
+
+def round_geom(g, nd=5):
+    """5 decimals is about a metre: past that the file is storing noise."""
+    def r(c):
+        if isinstance(c[0], (int, float)):
+            return [round(c[0], nd), round(c[1], nd)]
+        return [r(x) for x in c]
+    return {"type": g["type"], "coordinates": r(g["coordinates"])}
+
+
 # ------------------------------------------------------------------- build ---
 def main():
     dist_km = read_dist()
@@ -662,6 +734,16 @@ def main():
                              "quarters": city, "places": places})
     dump("zones.json", {"generated": date.today().isoformat(), "zones": zones})
     dump("boundaries_municipios.geojson", mun_fc)
+    layers = layer_geoms(mun_fc)
+    layer_report = []
+    for dest, got in layers.items():
+        if not got:
+            continue
+        fc, st = got
+        dump(dest, fc)
+        layer_report.append("%s: %d kept, %d outside the district, %d too small to see"
+                            % (dest.replace("boundaries_", "").replace(".geojson", ""),
+                               st["kept"], st["outside"], st["small"]))
     dump("boundaries_belts.geojson", belt_fc)
     dump("boundaries_freguesias.geojson", fre_fc)
     dump("boundaries_porto_city.geojson", city_bounds)
@@ -679,6 +761,8 @@ def main():
              len(belt_fc["features"])))
     n_pop = sum(1 for f in freguesias if "pop2021" in f)
     n_he = sum(1 for f in freguesias if "he" in f)
+    for line in layer_report:
+        print("layer " + line)
     print("level 3: %d parishes from the document, %d from OSM, %d with nothing to show"
           % (zone_stats["porto"], zone_stats["osm"], zone_stats["empty"]))
     print("         %d letters, %d dots" % (zone_stats["letters"], zone_stats["pois"]))
