@@ -150,7 +150,10 @@ PENDING_INDICATORS = [
     {"key": "foreign_pct", "label_he": "אחוז תושבים זרים", "unit": "%",
      "fetch": "scripts/fetch_pordata.py --indicator foreign", "levels": ["municipio"]},
     {"key": "median_age", "label_he": "גיל חציוני", "unit": "שנים",
-     "fetch": "scripts/fetch_ine.py --indicator median_age", "levels": ["municipio"]},
+     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"],
+     "warning_he": "אם קובץ המפקד מפרסם גיל חציוני — זה הערך שלו. אם יש בו רק פסי "
+                   "גיל, הערך מחושב באינטרפולציה ומסומן כמקורב; ובפסים הרחבים של "
+                   "INE (25–64) הסקריפט מסרב לחשב."},
     {"key": "median_income", "label_he": "הכנסה חציונית", "unit": "€/שנה",
      "fetch": "scripts/fetch_ine.py --indicator income", "levels": ["municipio"]},
     {"key": "crimes_per_1000", "label_he": "עבירות רשומות לאלף תושבים", "unit": "לאלף",
@@ -159,6 +162,16 @@ PENDING_INDICATORS = [
                    "violenta e grave לפי מחוז ופיקוד משטרתי בלבד, ולא לפי עירייה."},
     {"key": "price_eur_m2", "label_he": "מחיר למ״ר", "unit": "€/מ״ר",
      "fetch": "scripts/fetch_idealista.py", "levels": ["municipio", "freguesia"]},
+    # One INE Censos 2021 download fills all five of these at once, for the 18
+    # municipalities and the 243 freguesias together.
+    {"key": "ageing_index", "label_he": "מדד הזדקנות", "unit": "65+/0-14 ×100",
+     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+    {"key": "pct_65plus", "label_he": "אחוז בני 65+", "unit": "%",
+     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+    {"key": "pct_0_14", "label_he": "אחוז בני 0–14", "unit": "%",
+     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+    {"key": "pop_growth_pct", "label_he": "שינוי אוכלוסייה 2011→2021", "unit": "%",
+     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
 ]
 
 
