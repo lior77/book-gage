@@ -64,6 +64,42 @@ def coords_of(geom):
         fail("unexpected geometry type %s" % t)
 
 
+
+
+def point_in_ring(x, y, ring):
+    """Ray casting. ring is [[lon,lat], ...]."""
+    inside = False
+    n = len(ring)
+    for i in range(n):
+        j = (i - 1) % n
+        xi, yi = ring[i][0], ring[i][1]
+        xj, yj = ring[j][0], ring[j][1]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+            inside = not inside
+    return inside
+
+
+def ring_distance_m(x, y, ring):
+    """Shortest distance from a point to a ring, in metres.
+
+    To the segments, not just the vertices: a parish outline can run half a
+    kilometre between two vertices, and measuring to the nearest corner turns a
+    point sitting on the boundary into one that looks a field away.
+    """
+    import math
+    k = math.cos(math.radians(y))
+    best = float("inf")
+    for i in range(len(ring)):
+        ax, ay = ring[i - 1][0], ring[i - 1][1]
+        bx, by = ring[i][0], ring[i][1]
+        ax, bx, px = (ax - x) * k, (bx - x) * k, 0.0
+        ay, by, py = ay - y, by - y, 0.0
+        dx, dy = bx - ax, by - ay
+        d2 = dx * dx + dy * dy
+        t = 0.0 if d2 == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / d2))
+        best = min(best, math.hypot(ax + t * dx, ay + t * dy))
+    return best * 111320
+
 def main():
     mun = load("municipios.json")["items"]
     fre = load("freguesias.json")["items"]
@@ -215,6 +251,33 @@ def main():
                 fail("%s: point %r has no coordinate" % (key, r["name"]))
     if zones and "freguesia.locality" not in sources["fields"]:
         fail("the level-3 localities are not documented in sources.json")
+
+    # A letter drawn outside the shape it belongs to is the one map error a
+    # reader cannot talk themselves out of.  The tolerance is the difference
+    # between the CAOP outline the app draws and the OSM one the points were
+    # matched against — tens of metres — and nothing more.
+    OUTSIDE_TOL_M = 150
+    fre_poly = {}
+    for ft in load("boundaries_freguesias.geojson")["features"]:
+        rings = (ft["geometry"]["coordinates"] if ft["geometry"]["type"] == "Polygon"
+                 else [r for poly in ft["geometry"]["coordinates"] for r in poly[:1]])
+        fre_poly["%d|%s" % (ft["properties"]["mun_num"], ft["properties"]["name"])] = rings
+    stray = []
+    for key, z in zones.items():
+        rings = fre_poly.get(key)
+        if not rings:
+            continue
+        for b in z["bairros"]:
+            if not b.get("ll"):
+                continue
+            lon, lat = b["ll"][1], b["ll"][0]
+            if any(point_in_ring(lon, lat, r) for r in rings):
+                continue
+            d = min(ring_distance_m(lon, lat, r) for r in rings)
+            if d > OUTSIDE_TOL_M:
+                stray.append("%s %s (%s) is %.0f m outside" % (key, b["letter"], b.get("en"), d))
+    if stray:
+        fail("%d map letters fall outside their own parish: %s" % (len(stray), stray[:3]))
 
     letters = [b for q in city["quarters"] for b in q["bairros"] if not b.get("letter")]
     if letters:

@@ -60,6 +60,14 @@ import porto_city  # noqa: E402
 
 VERIFIED, REPORTED, APPROX = "verified", "reported", "approx"
 
+# A name match is not a location.  Porto has a "São Roque" in Campanhã and a
+# neighbourhood called São Roque in Bonfim, and matching on the name alone put
+# Bonfim's letter 1.4 km away, inside the next quarter.  A match is only
+# accepted if it also lands in the right quarter; the tolerance covers the
+# difference between the CAOP outline and the OSM one, which runs to a few tens
+# of metres, and nothing more.
+OUTSIDE_TOL_M = 150
+
 # Category, in priority order: the first rule that matches a feature wins, and
 # the order is also the order the app numbers them in.
 CATEGORIES = [
@@ -238,7 +246,7 @@ def ingest_bairros(pois_feats, quarters):
                 return "%s=%s" % (k, p[k]) if p[k] != "yes" else k
         return "אובייקט"
 
-    items, missing = [], []
+    items, missing, wrong = [], [], []
     for qnum in sorted(porto_city.BAIRROS):
         for cell in porto_city.BAIRROS[qnum][3]:
             he, en = cell[3], cell[4]
@@ -276,6 +284,14 @@ def ingest_bairros(pois_feats, quarters):
 
             p = hit["properties"]
             lon, lat = hit["geometry"]["coordinates"]
+            poly = quarters.get(qnum)
+            if poly is not None and not poly.contains(Point(lon, lat)):
+                off = poly.distance(Point(lon, lat)) * 111320
+                if off > OUTSIDE_TOL_M:
+                    # Same name, wrong place. Better no letter than a letter in
+                    # the wrong quarter, so this is recorded and dropped.
+                    wrong.append((qnum, he, en, p["name"], off))
+                    continue
             rec = {"quarter": qnum, "he": he, "en": en,
                    "ll": [round(lat, 6), round(lon, 6)],
                    "matched": p["name"], "kind": kind_of(p)}
@@ -301,6 +317,9 @@ def ingest_bairros(pois_feats, quarters):
           % (len(items), n_rep, len(items) - n_rep))
     for q, he, en in missing:
         print("       ✗ רובע %d · %s (%s) — אין נקודה" % (q, he, en))
+    for q, he, en, name, off in wrong:
+        print("       ✗ רובע %d · %s (%s) — נמצא ״%s״ אבל %.0f מ׳ מחוץ לרובע, נדחה"
+              % (q, he, en, name, off))
     return {
         "meta": {
             "source": "OpenStreetMap via Overpass",
@@ -314,6 +333,14 @@ def ingest_bairros(pois_feats, quarters):
         # eastern Porto returned nothing for these, so they are absent from OSM
         # and not merely un-matched by the rules above. Without a coordinate the
         # app lists them but puts no letter on the map.
+        # Found by name, but the object sits outside the quarter the document
+        # puts the neighbourhood in. Dropped rather than drawn in the wrong
+        # place, and recorded here so the app can say what happened.
+        "wrong_place": [{"quarter": q, "he": he, "en": en, "matched": name,
+                         "metres_outside": round(off),
+                         "note": "נמצא ב-OSM אובייקט בשם ״%s״, אבל הוא %d מ׳ מחוץ "
+                                 "לרובע הזה — כנראה מקום אחר באותו שם. לא סומן." % (name, round(off))}
+                        for q, he, en, name, off in wrong],
         "not_in_osm": [{"quarter": q, "he": he, "en": en,
                         "note": "לא קיים ב-OpenStreetMap. שאילתה ייעודית על אזור "
                                 "מזרח פורטו לא החזירה שום אובייקט בשם הזה."}

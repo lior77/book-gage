@@ -266,12 +266,16 @@ def city_extras(city):
     stats = {"letters": 0, "no_point": 0, "pois": 0}
 
     by_key = {}
-    absent = set()
+    absent, wrong = set(), {}
     if pts:
         for r in pts["items"]:
             by_key[(r["quarter"], r["en"])] = r
         for r in pts.get("not_in_osm", []):
             absent.add((r["quarter"], r["en"]))
+        # a name match that landed outside the quarter: the ingest dropped it,
+        # and the app says that rather than leaving a blank
+        for r in pts.get("wrong_place", []):
+            wrong[(r["quarter"], r["en"])] = r["note"]
 
     selected = []
     if pois:
@@ -295,9 +299,10 @@ def city_extras(city):
                 # No coordinate: the app lists the bairro and draws no letter.
                 b["confidence"] = "none"
                 b["note_src"] = ("אין ל" + b["he"] + " נקודה במפה. "
-                                 + ("לא קיים ב-OpenStreetMap."
-                                    if (q["num"], b["en"]) in absent
-                                    else "לא נמצאה התאמה בנתוני OSM."))
+                                 + wrong.get((q["num"], b["en"]),
+                                             "לא קיים ב-OpenStreetMap."
+                                             if (q["num"], b["en"]) in absent
+                                             else "לא נמצאה התאמה בנתוני OSM."))
                 stats["no_point"] += 1
 
         mine = [r for r in selected if r.get("quarter") == q["num"]]

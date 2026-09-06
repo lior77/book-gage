@@ -5,6 +5,24 @@
   "retrieved": "2026-09-06",
   "note_he": "מתחת לפרגזיה אין בפורטוגל שכבה מנהלית רשמית. השמות אינם רשמיים ואין להם גבולות — הנקודות מסמנות איפה השכונה נמצאת, לא את מרכזה המדויק ולא את שטחה."
  },
+ "wrong_place": [
+  {
+   "quarter": 2,
+   "he": "סאו רוקה",
+   "en": "São Roque",
+   "matched": "São Roque",
+   "metres_outside": 1391,
+   "note": "נמצא ב-OSM אובייקט בשם ״São Roque״, אבל הוא 1391 מ׳ מחוץ לרובע הזה — כנראה מקום אחר באותו שם. לא סומן."
+  },
+  {
+   "quarter": 5,
+   "he": "בואוישטה (קצה מזרחי)",
+   "en": "Boavista",
+   "matched": "Boavista",
+   "metres_outside": 292,
+   "note": "נמצא ב-OSM אובייקט בשם ״Boavista״, אבל הוא 292 מ׳ מחוץ לרובע הזה — כנראה מקום אחר באותו שם. לא סומן."
+  }
+ ],
  "not_in_osm": [
   {
    "quarter": 3,
@@ -192,19 +210,6 @@
     -8.601628
    ],
    "matched": "Fontaínhas",
-   "kind": "place=neighbourhood",
-   "confidence": "reported",
-   "note": "נקודת השכונה מ-OSM, מקור יחיד."
-  },
-  {
-   "quarter": 2,
-   "he": "סאו רוקה",
-   "en": "São Roque",
-   "ll": [
-    41.161499,
-    -8.577
-   ],
-   "matched": "São Roque",
    "kind": "place=neighbourhood",
    "confidence": "reported",
    "note": "נקודת השכונה מ-OSM, מקור יחיד."
@@ -491,19 +496,6 @@
     -8.651211
    ],
    "matched": "Pinheiro Manso",
-   "kind": "place=neighbourhood",
-   "confidence": "reported",
-   "note": "נקודת השכונה מ-OSM, מקור יחיד."
-  },
-  {
-   "quarter": 5,
-   "he": "בואוישטה (קצה מזרחי)",
-   "en": "Boavista",
-   "ll": [
-    41.157648,
-    -8.637497
-   ],
-   "matched": "Boavista",
    "kind": "place=neighbourhood",
    "confidence": "reported",
    "note": "נקודת השכונה מ-OSM, מקור יחיד."
