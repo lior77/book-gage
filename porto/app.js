@@ -108,6 +108,9 @@ async function load() {
   // for both so level 2 and level 3 agree.
   D.quarterOfFre = new Map(D.city.map(q => [q.en, q.num]));
   D.fre.filter(f => f.mun_num === 1).forEach(f => { f.q = D.quarterOfFre.get(bare(f.pt)) || null; });
+  // Porto's list is printed with the quarter numbers, so it has to be ordered
+  // by them too, not by the per-municipality numbering build.py assigned.
+  D.freByMun.get(1).sort((a, b) => (a.q || 99) - (b.q || 99));
   D.totPop = D.mun.reduce((a, m) => a + (m.pop2021 || 0), 0);
   D.totArea = D.mun.reduce((a, m) => a + (m.area_km2 || 0), 0);
   D.totPoi = D.city.reduce((a, q) => a + q.pois.length, 0);
