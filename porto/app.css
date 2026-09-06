@@ -123,6 +123,19 @@ body.is-dragging #map{pointer-events:none}
 .tile-note{position:absolute; z-index:510; inset-block-start:52px; inset-inline:10px;
            margin:0; padding:8px 10px; font-size:.8rem; border-radius:9px;
            background:var(--warn-bg); color:var(--warn); box-shadow:var(--shadow)}
+/* clears Leaflet's zoom control on one side and the map tools on the other */
+.map-note{position:absolute; z-index:510; inset-block-start:52px; inset-inline:52px;
+          padding:9px 11px; font-size:.82rem; border-radius:10px; background:var(--card);
+          color:var(--ink); border:1px solid var(--line); box-shadow:var(--shadow)}
+.map-note.bad{background:var(--warn-bg); color:var(--warn); border-color:currentColor}
+.map-note button{display:block; margin-block-start:6px; color:var(--accent);
+                 font-weight:700; font-size:.82rem; text-decoration:underline}
+.map-note .x{position:absolute; inset-block-start:4px; inset-inline-end:6px; margin:0;
+             font-weight:700; color:var(--ink-2); text-decoration:none; padding:2px 6px}
+/* the "you are here" dot: a device position, never a data point, so it is the
+   one mark on the map that is neither numbered nor black */
+.me{width:16px; height:16px; border-radius:50%; background:#1a73e8;
+    border:3px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.4)}
 .leaflet-container{font:inherit; background:var(--bg)}
 .leaflet-control-zoom a{color:var(--ink)!important; background:var(--card)!important;
   border-color:var(--line)!important}

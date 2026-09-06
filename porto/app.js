@@ -181,6 +181,122 @@ function fit(b, pad) {
 }
 function refit() { if (fitBounds) map.fitBounds(fitBounds, { padding: [16, 16] }); }
 
+/* ------------------------------------------------------------- where am I --- */
+/* The device position, from the browser's own geolocation API.  It is read on
+   the phone and drawn on the phone: nothing here sends a coordinate anywhere,
+   there is no server to send it to, and the app keeps no history of it.
+   The browser only hands it over on a secure origin (https, or localhost) and
+   only after the user says yes; opened as a file:// page it is refused, and
+   that refusal is reported rather than swallowed. */
+let meMark = null, meRing = null, meWatch = null;
+
+function ringInside(pt, ring) {
+  // ray casting; ring is [[lon,lat],...]
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > pt[1]) !== (yj > pt[1]) &&
+        pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function polyHas(pt, coords, type) {
+  const polys = type === 'Polygon' ? [coords] : coords;
+  return polys.some(rings =>
+    ringInside(pt, rings[0]) && !rings.slice(1).some(h => ringInside(pt, h)));
+}
+// Which parish is this point in?  The polygons are the official CAOP ones the
+// app already draws, so the answer is as good as the boundary itself.
+function freguesiaAt(lat, lon) {
+  const pt = [lon, lat];
+  for (const ft of D.bF.features) {
+    if (polyHas(pt, ft.geometry.coordinates, ft.geometry.type)) {
+      return D.freByKey.get(ft.properties.mun_num + '|' + ft.properties.name) || null;
+    }
+  }
+  return null;
+}
+
+function mapNote(inner, bad) {
+  const n = $('#locNote');
+  n.className = 'map-note' + (bad ? ' bad' : '');
+  n.innerHTML = '<button class="x" type="button" data-close="1" aria-label="סגירה">✕</button>' + inner;
+  n.hidden = false;
+}
+function hideNote() { $('#locNote').hidden = true; }
+
+function showMe(pos) {
+  const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
+  const ll = [lat, lon];
+  if (!meMark) {
+    meMark = L.marker(ll, {
+      icon: L.divIcon({ className: 'me', iconSize: [16, 16], iconAnchor: [8, 8] }),
+      interactive: false, keyboard: false, zIndexOffset: 900,
+    }).addTo(map);
+    // the accuracy circle is the honest part: a phone indoors can be 200 m out
+    meRing = L.circle(ll, { radius: acc, color: '#1a73e8', weight: 1,
+      fillColor: '#1a73e8', fillOpacity: .12, interactive: false }).addTo(map);
+  } else {
+    meMark.setLatLng(ll);
+    meRing.setLatLng(ll).setRadius(acc);
+  }
+
+  const f = freguesiaAt(lat, lon);
+  const m = f ? D.munByNum.get(f.mun_num) : null;
+  if (f) {
+    map.setView(ll, Math.max(map.getZoom(), 14));
+    mapNote(`אתה ב<b>${html(f.he || f.pt)}</b>, ${html(m.he)} ·
+      דיוק ${nf(Math.round(acc))} מ׳
+      <button type="button" data-jump="fre:${html(D.freKey(f))}">פתיחת הפרגזיה</button>`);
+  } else {
+    // Anywhere else on earth: say so, and say how far, instead of dropping the
+    // map on an empty spot in the ocean.
+    const km = Math.round(map.distance(ll, [41.14961, -8.61099]) / 1000);
+    map.setView(ll, 9);
+    mapNote(`המיקום שלך אינו בתוך מחוז פורטו — כ-${nf(km)} ק״מ ממרכז פורטו.
+      דיוק ${nf(Math.round(acc))} מ׳.
+      <button type="button" data-loc="back">חזרה למפת המחוז</button>`, true);
+  }
+}
+
+function locError(err) {
+  stopLocate();
+  const why = {
+    1: 'לא ניתנה הרשאת מיקום. אפשר לאשר אותה מהאייקון שליד כתובת האתר בדפדפן.',
+    2: 'הטלפון לא הצליח לקבוע מיקום. כדאי לבדוק שה-GPS דלוק ולנסות שוב בחוץ.',
+    3: 'קביעת המיקום ארכה יותר מדי. נסה שוב.',
+  }[err && err.code] || 'לא הצלחתי לקבל מיקום.';
+  mapNote(why, true);
+}
+
+function stopLocate() {
+  if (meWatch !== null) { navigator.geolocation.clearWatch(meWatch); meWatch = null; }
+  if (meMark) { map.removeLayer(meMark); meMark = null; }
+  if (meRing) { map.removeLayer(meRing); meRing = null; }
+  $('#locBtn').setAttribute('aria-pressed', 'false');
+}
+
+function toggleLocate() {
+  if (meWatch !== null) { stopLocate(); hideNote(); return; }
+  if (!navigator.geolocation) {
+    mapNote('הדפדפן הזה לא תומך באיתור מיקום.', true); return;
+  }
+  // https or localhost only.  Saying this plainly beats a silent failure that
+  // looks like a bug: the standalone file opened from the phone's storage is
+  // a file:// page, and no browser will hand it a position.
+  if (!window.isSecureContext) {
+    mapNote(`הדפדפן נותן מיקום רק בחיבור מאובטח. הדף הזה נפתח מ־
+      <span class="lat">${html(location.protocol)}</span>, ולכן המיקום חסום.
+      הקישור המקוון (https) יעבוד.`, true);
+    return;
+  }
+  $('#locBtn').setAttribute('aria-pressed', 'true');
+  mapNote('מחפש מיקום…');
+  meWatch = navigator.geolocation.watchPosition(showMe, locError, {
+    enableHighAccuracy: true, maximumAge: 15000, timeout: 20000,
+  });
+}
+
 /* --------------------------------------------------------- level 1: מחוז --- */
 function drawDistrict() {
   clearMap();
@@ -789,6 +905,14 @@ function renderInfo() {
 function wire() {
   $('#upBtn').addEventListener('click', goUp);
   $('#fitBtn').addEventListener('click', refit);
+  $('#locBtn').addEventListener('click', toggleLocate);
+  $('#locNote').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.close || b.dataset.loc === 'back') { hideNote(); }
+    if (b.dataset.loc === 'back') refit();
+    if (b.dataset.jump) { jump(b.dataset.jump); hideNote(); }
+  });
   $('#crumb').addEventListener('click', e => {
     const b = e.target.closest('[data-go]');
     if (!b) return;
