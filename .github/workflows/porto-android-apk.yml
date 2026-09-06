@@ -71,27 +71,9 @@ jobs:
           cp porto/android/app/build/outputs/apk/debug/app-debug.apk /tmp/porto-atlas.apk
           TAG=porto-atlas
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" \
-              --target "$GITHUB_SHA" \
+            gh release create "$TAG" --target "$GITHUB_SHA" \
               --title "אטלס מחוז פורטו — אפליקציית אנדרואיד" \
-              --notes "$(cat <<'NOTES'
-### התקנה
-
-1. מורידים את `porto-atlas.apk` מהקישור למטה.
-2. לוחצים על הקובץ. אנדרואיד יבקש לאשר **התקנת אפליקציות לא ידועות** — מאשרים לאפליקציה שממנה פתחתם.
-3. Play Protect יזהיר על מפתח לא מוכר. **Install anyway.** זה נורמלי לכל APK שלא מחנות; החתימה היא חתימת debug.
-
-### מה יש בפנים
-
-18 עיריות, 243 פרגזיות, 1,773 יישובים ושכונות, 1,530 אתרים ומוסדות, נהרות ושטחים ירוקים — הכל בתוך הקובץ. **עובד בלי רשת.** בלי חשבון, בלי אנליטיקס, בלי שרת.
-
-הרשאת מיקום מוצגת רק כשלוחצים על כפתור האיתור, והקואורדינטה נקראת ומצוירת במכשיר בלבד — היא לא נשלחת לשום מקום. אפשר לשלול מהאפליקציה את הרשאת האינטרנט והיא תעבוד במלואה, רק בלי אריחי רקע המפה.
-
-### ייחוס
-
-גבולות: CAOP 2020, DGT. אוכלוסייה: INE, Censos 2021. יישובים, אתרים, נהרות ושטחים ירוקים ואריחי המפה: © OpenStreetMap contributors, ODbL.
-NOTES
-)"
+              --notes-file porto/android/RELEASE_NOTES.md
           fi
           gh release upload "$TAG" /tmp/porto-atlas.apk --clobber
-          echo "APK: $(gh release view "$TAG" --json url --jq .url)"
+          gh release view "$TAG" --json url,assets --jq '.url, (.assets[].url)'
