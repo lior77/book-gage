@@ -121,8 +121,11 @@ jobs:
           fi
           gh release edit "$TAG" --title "פורטולנד $VER — אפליקציית אנדרואיד" \
             --notes-file porto/android/RELEASE_NOTES.md
-          gh release upload "$TAG" "/tmp/portoland-$VER.apk" /tmp/portoland-latest.apk --clobber
-          # the name the first build used, before the app had a name of its own
-          gh release delete-asset "$TAG" porto-atlas.apk --yes 2>/dev/null || true
+          # The name the first build used, before the app had one of its own.
+          # It was deleted once and that broke a link already handed out, so it
+          # stays: a download URL that has been given to somebody is a promise.
+          cp "$SRC" /tmp/porto-atlas.apk
+          gh release upload "$TAG" \
+            "/tmp/portoland-$VER.apk" /tmp/portoland-latest.apk /tmp/porto-atlas.apk --clobber
           echo "version $VER"
           gh release view "$TAG" --json assets --jq '.assets[].url'
