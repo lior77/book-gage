@@ -486,7 +486,18 @@ def selftest():
     return 1 if failures else 0
 
 
+BANNER = (
+    "\n  ┌─────────────────────────────────────────────────────────────┐\n"
+    "  │  זהו סקריפט Python. מריצים אותו במחשב, בשורת הפקודה.        │\n"
+    "  │  הוא *לא* שאילתת Overpass ואין להדביק אותו, או את הפלט      │\n"
+    "  │  שלו, ב-overpass-turbo — שם זה ייתן parse error.            │\n"
+    "  └─────────────────────────────────────────────────────────────┘\n")
+
+
 def main():
+    # Printed on every run: the Overpass queries and this script look alike from
+    # the outside, and pasting either one into the other's tool fails obscurely.
+    print(BANNER)
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("path", nargs="?", help="the INE .xlsx or .csv")
     ap.add_argument("--inspect", action="store_true", help="show the structure and stop")

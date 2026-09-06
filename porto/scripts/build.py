@@ -183,6 +183,130 @@ def load_extra():
     return json.load(open(path, encoding="utf-8"))
 
 
+def load_raw(name):
+    """Optional raw file produced by ingest_overpass.py."""
+    path = os.path.join(RAW, name)
+    if not os.path.exists(path):
+        return None
+    return json.load(open(path, encoding="utf-8"))
+
+
+# ----------------------------------------------------------- app palettes ---
+def read_mcol():
+    """The 18 municipality colours the PDF prints, read out of porto_map.py.
+
+    Reusing them means the app and the printed page show the same district.
+    """
+    txt = open(os.path.join(RAW, "pdf_source", "porto_map.py"), encoding="utf-8").read()
+    block = re.search(r"^MCOL\s*=\s*\{(.*?)\}", txt, re.S | re.M).group(1)
+    return {int(k): v for k, v in re.findall(r"(\d+)\s*:\s*\"(#[0-9A-Fa-f]{6})\"", block)}
+
+
+# A ring of pastels for the parishes inside one municipality. Neighbouring
+# numbers land on different hues, and every one of them takes dark text.
+PARISH_PALETTE = [
+    "#F6C99A", "#9CC7E8", "#A8D9C9", "#C9DF9B", "#F3AFAF", "#CDB6E0",
+    "#F2D98C", "#8FCFD6", "#E9B5CE", "#B9C9EC", "#D8DE93", "#F0BFA0",
+]
+
+
+def number_parishes(freguesias):
+    """Give every parish the number and colour the map shows on it.
+
+    Order follows the source document wherever it has one — the seven Porto
+    quarters keep the document's own 1-7, municipalities 2-12 keep the order
+    of their parish list — and falls back to population, largest first, for
+    the six municipalities the document never listed.
+    """
+    by_mun = {}
+    for f in freguesias:
+        by_mun.setdefault(f["mun_num"], []).append(f)
+    for num, rows in by_mun.items():
+        rows.sort(key=lambda f: (f.get("_order", 10 ** 6), -(f.get("pop2021") or 0), f["pt"]))
+        for i, f in enumerate(rows, 1):
+            f["n"] = i
+            f["colour"] = PARISH_PALETTE[(i - 1) % len(PARISH_PALETTE)]
+            f.pop("_order", None)
+
+
+def belt_outlines(belts, mun_geom, name_of):
+    """One outline per belt, as the union of its municipalities.
+
+    The PDF draws these as a thick coloured line around each group; computing
+    the union keeps the line on the real boundary instead of tracing it.
+    """
+    from shapely.ops import unary_union
+    fc = {"type": "FeatureCollection", "features": []}
+    for b in belts:
+        merged = unary_union([mun_geom[name_of[n]] for n in b["nums"]]).buffer(0)
+        fc["features"].append({
+            "type": "Feature",
+            "properties": {"he": b["he"], "en": b["en"], "colour": b["colour"],
+                           "nums": b["nums"]},
+            "geometry": simplify(merged, 0.0004),
+        })
+    return fc
+
+
+# The categories always shown; everything else needs a notability signal.
+POI_CORE = {"station", "hospital", "university", "museum", "culture", "market"}
+POI_LABEL = {"station": "תחנות מטרו ורכבת", "hospital": "בתי חולים",
+             "university": "אוניברסיטה והשכלה", "museum": "מוזיאונים וגלריות",
+             "culture": "תיאטרון, ספריות ותרבות", "market": "שווקים",
+             "landmark": "אתרים ומונומנטים", "green": "פארקים, גנים וחופים"}
+
+
+def city_extras(city):
+    """Attach the bairro letters and the POI dots to each Porto quarter."""
+    pts = load_raw("bairro_points.json")
+    pois = load_raw("pois.json")
+    stats = {"letters": 0, "no_point": 0, "pois": 0}
+
+    by_key = {}
+    absent = set()
+    if pts:
+        for r in pts["items"]:
+            by_key[(r["quarter"], r["en"])] = r
+        for r in pts.get("not_in_osm", []):
+            absent.add((r["quarter"], r["en"]))
+
+    selected = []
+    if pois:
+        for r in pois["items"]:
+            # CONFIDENCE: every one of these is "reported" — an OSM coordinate
+            # from a single contributor. The record carries that and its note.
+            if r["cat"] in POI_CORE or r.get("notable"):
+                selected.append(r)
+
+    for q in city:
+        for i, b in enumerate(q["bairros"]):
+            # A, B, C ... AA, AB for a quarter with more than 26
+            b["letter"] = (chr(65 + i) if i < 26
+                           else "A" + chr(65 + i - 26))
+            hit = by_key.get((q["num"], b["en"]))
+            if hit:
+                b["ll"] = hit["ll"]
+                b["confidence"] = hit["confidence"]
+                if hit["confidence"] != "verified":
+                    b["note_src"] = hit["note"]
+                stats["letters"] += 1
+            else:
+                # No coordinate: the app lists the bairro and draws no letter.
+                b["confidence"] = "none"
+                b["note_src"] = ("אין ל" + b["he"] + " נקודה במפה. "
+                                 + ("לא קיים ב-OpenStreetMap."
+                                    if (q["num"], b["en"]) in absent
+                                    else "לא נמצאה התאמה בנתוני OSM."))
+                stats["no_point"] += 1
+
+        mine = [r for r in selected if r.get("quarter") == q["num"]]
+        mine.sort(key=lambda r: (list(POI_LABEL).index(r["cat"]), r["name"]))
+        q["pois"] = [{"name": r["name"], "cat": r["cat"], "ll": r["ll"],
+                      "osm": r.get("osm", "")} for r in mine]
+        stats["pois"] += len(mine)
+    return stats
+
+
 # ------------------------------------------------------------------- build ---
 def main():
     dist_km = read_dist()
@@ -224,12 +348,13 @@ def main():
         pool = {ft["properties"]["name"]: ft for ft in fre_by_mun[mun]}
         pdf_rows = porto_freg3.FREG3.get(n, [])
         taken = {}
-        for he, en, pop, note in pdf_rows:
+        for order, (he, en, pop, note) in enumerate(pdf_rows):
             cand, score = match_one(en, [k for k in pool if k not in taken])
             if cand is None or score < 0.34:
                 warnings.append("no CAOP match for parish %r in %s (score %.2f)" % (en, mun, score))
                 continue
-            taken[cand] = {"he": he, "en": en, "pop": pop, "note": note, "score": score}
+            taken[cand] = {"he": he, "en": en, "pop": pop, "note": note,
+                           "score": score, "order": order}
 
         extra_pop = collected["values"].get(mun, {})
         extra_he = translit.get(mun, {})
@@ -249,6 +374,7 @@ def main():
                 rec["he"] = src["he"]
                 rec["he_origin"] = "pdf"
                 rec["en"] = src["en"]
+                rec["_order"] = src["order"]
                 if src["note"]:
                     rec["note"] = src["note"]
                 if src["pop"] is not None:
@@ -268,6 +394,8 @@ def main():
                 rec["density"] = round(rec["pop2021"] / rec["area_km2"], 1)
             freguesias.append(rec)
 
+    number_parishes(freguesias)
+
     # ---- municipalities -----------------------------------------------------
     belt_of = {}
     belts = []
@@ -277,6 +405,7 @@ def main():
         for m in nums:
             belt_of[m] = he
 
+    mcol = read_mcol()
     municipios = []
     for mun in MUNICIPALITIES:
         n = NUM[mun]
@@ -288,6 +417,9 @@ def main():
         known = [f["pop2021"] for f in kids if "pop2021" in f]
         rec = {
             "num": n, "pt": mun, "en": en, "he": he, "colour": colour,
+            # the pastel the PDF prints for this municipality, so the app's
+            # opening map and page 1 of the document are the same picture
+            "fill": mcol.get(n, "#dddddd"),
             "belt": belt_of.get(n), "area_km2": round(area, 2),
             "dist_porto_km": dist_km.get(n),
             "transport": porto_freg2.TRANSPORT.get(n),
@@ -393,6 +525,9 @@ def main():
         warnings.append("merged indicator %s: %d municipalities, %d freguesias"
                         % (spec["key"], n_m, n_f))
 
+    city_stats = city_extras(city)
+    belt_fc = belt_outlines(belts, mun_geom, {NUM[m]: m for m in MUNICIPALITIES})
+
     os.makedirs(OUT, exist_ok=True)
     written = []
 
@@ -411,6 +546,7 @@ def main():
     dump("porto_city.json", {"generated": date.today().isoformat(),
                              "quarters": city, "places": places})
     dump("boundaries_municipios.geojson", mun_fc)
+    dump("boundaries_belts.geojson", belt_fc)
     dump("boundaries_freguesias.geojson", fre_fc)
     dump("boundaries_porto_city.geojson", city_bounds)
 
@@ -422,6 +558,9 @@ def main():
             print("  -", w)
     print("\n%d municipalities, %d freguesias, %d city quarters, %d OSM places"
           % (len(municipios), len(freguesias), len(city), len(places)))
+    print("bairro letters placed %d, without a point %d;  POI dots %d;  belt outlines %d"
+          % (city_stats["letters"], city_stats["no_point"], city_stats["pois"],
+             len(belt_fc["features"])))
     n_pop = sum(1 for f in freguesias if "pop2021" in f)
     n_he = sum(1 for f in freguesias if "he" in f)
     print("freguesias with population 2021: %d/%d   with Hebrew name: %d/%d"

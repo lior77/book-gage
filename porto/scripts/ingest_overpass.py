@@ -141,6 +141,11 @@ def ingest_pois(quarters):
         kept.append({
             "name": name, "cat": cat, "ll": [round(lat, 6), round(lon, 6)],
             "osm": p.get("@id", ""), "tags": len(p),
+            # A wikidata or wikipedia link is the one notability signal in the
+            # data. Porto holds 1255 named "landmarks", most of them a single
+            # listed doorway; the app uses this flag to keep the well-known ones
+            # without anybody hand-picking a list.
+            "notable": bool(p.get("wikidata") or p.get("wikipedia")),
         })
 
     # OSM often holds the same place twice, as a node and as a way. Collapse
