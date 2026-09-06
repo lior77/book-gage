@@ -122,5 +122,7 @@ jobs:
           gh release edit "$TAG" --title "פורטולנד $VER — אפליקציית אנדרואיד" \
             --notes-file porto/android/RELEASE_NOTES.md
           gh release upload "$TAG" "/tmp/portoland-$VER.apk" /tmp/portoland-latest.apk --clobber
+          # the name the first build used, before the app had a name of its own
+          gh release delete-asset "$TAG" porto-atlas.apk --yes 2>/dev/null || true
           echo "version $VER"
           gh release view "$TAG" --json assets --jq '.assets[].url'
