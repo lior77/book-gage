@@ -240,11 +240,20 @@ def main():
                 fail("DICOFRE %s is on two parishes: %s and %s"
                      % (f["dicofre"], seen[f["dicofre"]], f["pt"]))
             seen[f["dicofre"]] = f["pt"]
-        elif f.get("split2025"):
+        if f.get("split2025"):
             if not all(k.get("code") and k.get("pt") for k in f["split2025"]):
                 fail("%s: a 2025 successor has no code or no name" % f["pt"])
-        else:
-            fail("%s: neither an official code nor 2025 successors" % f["pt"])
+            # A split that does not account for everyone the census counted is
+            # worse than no split at all, because it looks like a breakdown.
+            pops = [k["pop2021"] for k in f["split2025"] if "pop2021" in k]
+            if pops and len(pops) != len(f["split2025"]):
+                fail("%s: some 2025 successors carry a population and some do not"
+                     % f["pt"])
+            if pops and sum(pops) != f.get("pop2021"):
+                fail("%s: successors add to %d, the census counted %s"
+                     % (f["pt"], sum(pops), f.get("pop2021")))
+        if not f.get("dicofre"):
+            fail("%s: no official code" % f["pt"])
     # ---- 7c. the census figures -------------------------------------------
     # A municipality is the sum of its parishes, exactly: both come out of one
     # INE file. Anything else means the two levels drifted apart again.
@@ -260,12 +269,14 @@ def main():
                  % (m["pt"], m.get("pop2021"), s_))
     # Every share is a share, every count is positive, and a value is never
     # present without a source record behind it.
-    SHARES = ("pct_65plus", "pct_0_14", "foreign_pct", "vacant_pct",
+    SHARES = ("pct_65plus", "pct_0_14", "foreign_pct", "education_pct",
+              "unemployment_pct", "vacant_pct",
               "second_home_pct", "owner_pct", "rented_pct", "parking_pct",
               "repair_pct", "deep_repair_pct", "pre1946_pct", "since2011_pct")
     for level, rows in (("municipio", mun), ("freguesia", fre)):
         for r in rows:
-            for key in ("median_age", "ageing_index") + SHARES[:3]:
+            for key in ("median_age", "ageing_index", "education_pct",
+                        "unemployment_pct") + SHARES[:3]:
                 if key in r and "%s.%s" % (level, key) not in sources["fields"]:
                     fail("%s.%s has no source record" % (level, key))
             for key in SHARES:

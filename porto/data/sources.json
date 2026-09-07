@@ -16,7 +16,7 @@
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
    "coverage": "18/18",
-   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר."
+   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר. בנוסף: אותו קובץ עצמאי מגיע לאותו מספר ב-216 מ-218 הרובעים; שני ההפרשים הם אותם 33 תושבים שגבול 2025 העביר מרובע לרובע, כפי שטבלת ההמרה צופה."
   },
   "municipio.area_km2": {
    "label_he": "שטח (קמ״ר)",
@@ -78,7 +78,7 @@
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
    "coverage": "243/243",
-   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר."
+   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר. בנוסף: אותו קובץ עצמאי מגיע לאותו מספר ב-216 מ-218 הרובעים; שני ההפרשים הם אותם 33 תושבים שגבול 2025 העביר מרובע לרובע, כפי שטבלת ההמרה צופה."
   },
   "freguesia.area_km2": {
    "label_he": "שטח רובע (קמ״ר)",
@@ -248,7 +248,7 @@
    "coverage": "18/18 · 243/243",
    "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה",
    "confidence": "approx",
-   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב."
+   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב. אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "freguesia.median_age": {
    "label_he": "גיל חציוני",
@@ -260,7 +260,7 @@
    "coverage": "18/18 · 243/243",
    "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה",
    "confidence": "approx",
-   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב."
+   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב. אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "municipio.ageing_index": {
    "label_he": "מדד הזדקנות",
@@ -270,7 +270,9 @@
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
    "coverage": "18/18 · 243/243",
-   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE"
+   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "freguesia.ageing_index": {
    "label_he": "מדד הזדקנות",
@@ -280,7 +282,9 @@
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
    "coverage": "18/18 · 243/243",
-   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE"
+   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "municipio.pct_65plus": {
    "label_he": "אחוז בני 65+",
@@ -289,7 +293,9 @@
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
-   "coverage": "18/18 · 243/243"
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "freguesia.pct_65plus": {
    "label_he": "אחוז בני 65+",
@@ -298,7 +304,9 @@
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
-   "coverage": "18/18 · 243/243"
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "municipio.pct_0_14": {
    "label_he": "אחוז בני 0–14",
@@ -307,7 +315,9 @@
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
-   "coverage": "18/18 · 243/243"
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "freguesia.pct_0_14": {
    "label_he": "אחוז בני 0–14",
@@ -316,7 +326,9 @@
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
-   "coverage": "18/18 · 243/243"
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "municipio.foreign_pct": {
    "label_he": "אחוז בעלי אזרחות זרה",
@@ -326,7 +338,9 @@
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
    "coverage": "18/18 · 243/243",
-   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר"
+   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
   },
   "freguesia.foreign_pct": {
    "label_he": "אחוז בעלי אזרחות זרה",
@@ -336,7 +350,68 @@
    "url": "https://mapas.ine.pt/download/index2021.phtml",
    "retrieved": "2026-09-07",
    "coverage": "18/18 · 243/243",
-   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר"
+   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.education_pct": {
+   "label_he": "בעלי השכלה גבוהה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.education_pct": {
+   "label_he": "בעלי השכלה גבוהה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.unemployment_pct": {
+   "label_he": "שיעור אבטלה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, חלקי האוכלוסייה הפעילה כלכלית.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.unemployment_pct": {
+   "label_he": "שיעור אבטלה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, חלקי האוכלוסייה הפעילה כלכלית.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.split2025": {
+   "label_he": "פילוח אוכלוסייה בין הרובעים שהחליפו יחידה שפורקה",
+   "value_type": "integer",
+   "reference_year": 2021,
+   "source": "INE — טבלת המרה בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025 (BGRI2021_to_CAOP2025_reassignment.csv)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "25/25",
+   "validation_he": "בכל אחת מ-25 היחידות שפורקו, סכום היורשים שווה בדיוק לאוכלוסיית היחידה כפי שהמפקד סופר אותה. יחידה שלא הייתה מסתדרת — הפילוח שלה לא היה נכנס בכלל.",
+   "caveat_he": "מספרי תושבים בלבד. הגבולות של רובעי 2025 אינם באפליקציה, ולכן היורשים מוצגים כרשימה ולא כשכבה על המפה."
   }
  },
  "missing": {

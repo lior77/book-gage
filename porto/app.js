@@ -82,6 +82,8 @@ function peopleStats(o, lvl) {
       ${stat('בני 65+', o.pct_65plus, '%', 1, lvl + '.pct_65plus')}
       ${stat('מדד הזדקנות', o.ageing_index, '', 1, lvl + '.ageing_index')}
       ${stat('אזרחות זרה', o.foreign_pct, '%', 1, lvl + '.foreign_pct')}
+      ${stat('השכלה גבוהה', o.education_pct, '%', 1, lvl + '.education_pct')}
+      ${stat('אבטלה', o.unemployment_pct, '%', 1, lvl + '.unemployment_pct')}
     </div>
     <p class="note">הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון
       בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14.</p>
@@ -537,6 +539,27 @@ function splitNote(f) {
     `<span class="lat" dir="ltr">${html(s.pt)} (${html(s.dicofre)})</span>`).join(' · ');
   return 'ברפורמת 2025 חולק ל־' + f.split2025.length + ' רובעים נפרדים: ' + kids;
 }
+// The same split as a table, for the card: how the 2021 population divided
+// between the parishes that replaced the unit. The shares come from the census
+// sub-sections themselves, and they add up to the unit's own total exactly.
+function splitTable(f) {
+  const kids = (f.split2025 || []).filter(s => s.pop2021 != null);
+  if (!kids.length) return '';
+  return `<div class="card">
+    <h2>מה החליף אותו — 2025</h2>
+    <div class="rows">${kids.map(s => `<div class="row row-full">
+      <span class="pin pin-sq" style="--c:#dfe6ef">${html(s.code)}</span>
+      <span class="row-body">
+        <span class="row-t lat" dir="ltr">${html(s.pt)}</span>
+        <span class="row-m"><span class="num">${nf(s.pop2021)}</span> תושבים (2021) ·
+          <span class="num">${nf(100 * s.pop2021 / f.pop2021, 1)}</span>% מהיחידה ·
+          קוד <span class="lat num">${html(s.dicofre)}</span></span>
+      </span></div>`).join('')}</div>
+    <p class="note">החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של
+      מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות
+      עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.</p>
+  </div>`;
+}
 
 function drawMun(num) {
   clearMap();
@@ -957,6 +980,7 @@ function renderZone(key) {
         ? '<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>' : ''}
     </div>
 
+    ${splitTable(f)}
     ${peopleStats(f, 'freguesia')}
     ${housingStats(f, 'freguesia')}
 

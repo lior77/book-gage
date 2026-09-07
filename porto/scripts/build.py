@@ -174,6 +174,10 @@ PENDING_INDICATORS = [
      "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
     {"key": "pop_growth_pct", "label_he": "שינוי אוכלוסייה 2011→2021", "unit": "%",
      "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
+    {"key": "education_pct", "label_he": "בעלי השכלה גבוהה", "unit": "%",
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
+    {"key": "unemployment_pct", "label_he": "אבטלה", "unit": "%",
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
 ]
 
 

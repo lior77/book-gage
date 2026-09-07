@@ -96,12 +96,16 @@
     {
      "code": "33",
      "dicofre": "131733",
-     "pt": "Grijó"
+     "pt": "Grijó",
+     "pop2021": 10608,
+     "subsections": 101
     },
     {
      "code": "44",
      "dicofre": "131744",
-     "pt": "Sermonde"
+     "pt": "Sermonde",
+     "pop2021": 1410,
+     "subsections": 17
     }
    ]
   },
@@ -114,12 +118,16 @@
     {
      "code": "34",
      "dicofre": "131734",
-     "pt": "Gulpilhares"
+     "pt": "Gulpilhares",
+     "pop2021": 11572,
+     "subsections": 95
     },
     {
      "code": "46",
      "dicofre": "131746",
-     "pt": "Valadares"
+     "pt": "Valadares",
+     "pop2021": 10750,
+     "subsections": 92
     }
    ]
   },
@@ -132,12 +140,16 @@
     {
      "code": "36",
      "dicofre": "131736",
-     "pt": "Mafamude"
+     "pt": "Mafamude",
+     "pop2021": 38610,
+     "subsections": 200
     },
     {
      "code": "47",
      "dicofre": "131747",
-     "pt": "Vilar do Paraíso"
+     "pt": "Vilar do Paraíso",
+     "pop2021": 14234,
+     "subsections": 100
     }
    ]
   },
@@ -148,19 +160,18 @@
    "dicofre": "131728",
    "split2025": [
     {
-     "code": "37",
-     "dicofre": "131737",
-     "pt": "Olival"
-    },
-    {
      "code": "38",
      "dicofre": "131738",
-     "pt": "Pedroso"
+     "pt": "Pedroso",
+     "pop2021": 18429,
+     "subsections": 179
     },
     {
      "code": "43",
      "dicofre": "131743",
-     "pt": "Seixezelo"
+     "pt": "Seixezelo",
+     "pop2021": 1797,
+     "subsections": 22
     }
    ]
   },
@@ -173,17 +184,30 @@
     {
      "code": "32",
      "dicofre": "131732",
-     "pt": "Crestuma"
+     "pt": "Crestuma",
+     "pop2021": 2411,
+     "subsections": 21
     },
     {
      "code": "35",
      "dicofre": "131735",
-     "pt": "Lever"
+     "pt": "Lever",
+     "pop2021": 2625,
+     "subsections": 33
+    },
+    {
+     "code": "37",
+     "dicofre": "131737",
+     "pt": "Olival",
+     "pop2021": 5399,
+     "subsections": 62
     },
     {
      "code": "40",
      "dicofre": "131740",
-     "pt": "Sandim"
+     "pt": "Sandim",
+     "pop2021": 5521,
+     "subsections": 80
     }
    ]
   },
@@ -196,12 +220,16 @@
     {
      "code": "41",
      "dicofre": "131741",
-     "pt": "Santa Marinha"
+     "pt": "Santa Marinha",
+     "pop2021": 30315,
+     "subsections": 205
     },
     {
      "code": "42",
      "dicofre": "131742",
-     "pt": "São Pedro da Afurada"
+     "pt": "São Pedro da Afurada",
+     "pop2021": 3717,
+     "subsections": 32
     }
    ]
   },
@@ -214,12 +242,16 @@
     {
      "code": "39",
      "dicofre": "131739",
-     "pt": "Perosinho"
+     "pt": "Perosinho",
+     "pop2021": 6346,
+     "subsections": 59
     },
     {
      "code": "45",
      "dicofre": "131745",
-     "pt": "Serzedo"
+     "pt": "Serzedo",
+     "pop2021": 7399,
+     "subsections": 62
     }
    ]
   },
@@ -238,17 +270,23 @@
     {
      "code": "15",
      "dicofre": "130815",
-     "pt": "Custóias"
+     "pt": "Custóias",
+     "pop2021": 17754,
+     "subsections": 160
     },
     {
      "code": "16",
      "dicofre": "130816",
-     "pt": "Guifões"
+     "pt": "Guifões",
+     "pop2021": 9174,
+     "subsections": 91
     },
     {
      "code": "19",
      "dicofre": "130819",
-     "pt": "Leça do Balio"
+     "pt": "Leça do Balio",
+     "pop2021": 17117,
+     "subsections": 165
     }
    ]
   },
@@ -261,12 +299,16 @@
     {
      "code": "18",
      "dicofre": "130818",
-     "pt": "Leça da Palmeira"
+     "pt": "Leça da Palmeira",
+     "pop2021": 19000,
+     "subsections": 213
     },
     {
      "code": "20",
      "dicofre": "130820",
-     "pt": "Matosinhos"
+     "pt": "Matosinhos",
+     "pop2021": 30034,
+     "subsections": 197
     }
    ]
   },
@@ -279,17 +321,23 @@
     {
      "code": "17",
      "dicofre": "130817",
-     "pt": "Lavra"
+     "pt": "Lavra",
+     "pop2021": 10830,
+     "subsections": 144
     },
     {
      "code": "21",
      "dicofre": "130821",
-     "pt": "Perafita"
+     "pt": "Perafita",
+     "pop2021": 13332,
+     "subsections": 148
     },
     {
      "code": "22",
      "dicofre": "130822",
-     "pt": "Santa Cruz do Bispo"
+     "pt": "Santa Cruz do Bispo",
+     "pop2021": 5484,
+     "subsections": 59
     }
    ]
   },
@@ -302,12 +350,16 @@
     {
      "code": "23",
      "dicofre": "130823",
-     "pt": "São Mamede de Infesta"
+     "pt": "São Mamede de Infesta",
+     "pop2021": 22844,
+     "subsections": 182
     },
     {
      "code": "24",
      "dicofre": "130824",
-     "pt": "Senhora da Hora"
+     "pt": "Senhora da Hora",
+     "pop2021": 26988,
+     "subsections": 197
     }
    ]
   },
@@ -434,12 +486,16 @@
     {
      "code": "07",
      "dicofre": "131507",
-     "pt": "Campo"
+     "pt": "Campo",
+     "pop2021": 8889,
+     "subsections": 168
     },
     {
      "code": "08",
      "dicofre": "131508",
-     "pt": "Sobrado"
+     "pt": "Sobrado",
+     "pop2021": 6387,
+     "subsections": 125
     }
    ]
   },
@@ -524,12 +580,16 @@
     {
      "code": "40",
      "dicofre": "131640",
-     "pt": "Fornelo"
+     "pt": "Fornelo",
+     "pop2021": 1305,
+     "subsections": 11
     },
     {
      "code": "45",
      "dicofre": "131645",
-     "pt": "Vairão"
+     "pt": "Vairão",
+     "pop2021": 1106,
+     "subsections": 17
     }
    ]
   },
@@ -542,12 +602,16 @@
     {
      "code": "39",
      "dicofre": "131639",
-     "pt": "Canidelo"
+     "pt": "Canidelo",
+     "pop2021": 912,
+     "subsections": 12
     },
     {
      "code": "41",
      "dicofre": "131641",
-     "pt": "Malta"
+     "pt": "Malta",
+     "pop2021": 1309,
+     "subsections": 12
     }
    ]
   },
@@ -560,12 +624,16 @@
     {
      "code": "42",
      "dicofre": "131642",
-     "pt": "Retorta"
+     "pt": "Retorta",
+     "pop2021": 1241,
+     "subsections": 11
     },
     {
      "code": "44",
      "dicofre": "131644",
-     "pt": "Tougues"
+     "pt": "Tougues",
+     "pop2021": 803,
+     "subsections": 11
     }
    ]
   },
@@ -578,12 +646,16 @@
     {
      "code": "38",
      "dicofre": "131638",
-     "pt": "Arcos"
+     "pt": "Arcos",
+     "pop2021": 747,
+     "subsections": 17
     },
     {
      "code": "43",
      "dicofre": "131643",
-     "pt": "Rio Mau"
+     "pt": "Rio Mau",
+     "pop2021": 1896,
+     "subsections": 22
     }
    ]
   },
@@ -656,17 +728,23 @@
     {
      "code": "18",
      "dicofre": "131318",
-     "pt": "Argivai"
+     "pt": "Argivai",
+     "pop2021": 2198,
+     "subsections": 23
     },
     {
      "code": "20",
      "dicofre": "131320",
-     "pt": "Beiriz"
+     "pt": "Beiriz",
+     "pop2021": 4001,
+     "subsections": 53
     },
     {
      "code": "22",
      "dicofre": "131322",
-     "pt": "Póvoa de Varzim"
+     "pt": "Póvoa de Varzim",
+     "pop2021": 29236,
+     "subsections": 230
     }
    ]
   },
@@ -679,12 +757,16 @@
     {
      "code": "16",
      "dicofre": "131316",
-     "pt": "Aguçadoura"
+     "pt": "Aguçadoura",
+     "pop2021": 4198,
+     "subsections": 47
     },
     {
      "code": "21",
      "dicofre": "131321",
-     "pt": "Navais"
+     "pt": "Navais",
+     "pop2021": 1191,
+     "subsections": 21
     }
    ]
   },
@@ -697,17 +779,23 @@
     {
      "code": "17",
      "dicofre": "131317",
-     "pt": "Amorim"
+     "pt": "Amorim",
+     "pop2021": 2898,
+     "subsections": 31
     },
     {
      "code": "19",
      "dicofre": "131319",
-     "pt": "Aver-o-Mar"
+     "pt": "Aver-o-Mar",
+     "pop2021": 8884,
+     "subsections": 98
     },
     {
      "code": "23",
      "dicofre": "131323",
-     "pt": "Terroso"
+     "pt": "Terroso",
+     "pop2021": 2471,
+     "subsections": 34
     }
    ]
   },
@@ -816,12 +904,16 @@
     {
      "code": "12",
      "dicofre": "131812",
-     "pt": "Alvarelhos"
+     "pt": "Alvarelhos",
+     "pop2021": 3249,
+     "subsections": 65
     },
     {
      "code": "13",
      "dicofre": "131813",
-     "pt": "Guidões"
+     "pt": "Guidões",
+     "pop2021": 1520,
+     "subsections": 38
     }
    ]
   },
@@ -1146,12 +1238,16 @@
     {
      "code": "20",
      "dicofre": "130920",
-     "pt": "Arreigada"
+     "pt": "Arreigada",
+     "pop2021": 1819,
+     "subsections": 28
     },
     {
      "code": "22",
      "dicofre": "130922",
-     "pt": "Frazão"
+     "pt": "Frazão",
+     "pop2021": 4008,
+     "subsections": 77
     }
    ]
   },
@@ -1176,12 +1272,16 @@
     {
      "code": "24",
      "dicofre": "130924",
-     "pt": "Modelos"
+     "pt": "Modelos",
+     "pop2021": 1491,
+     "subsections": 32
     },
     {
      "code": "25",
      "dicofre": "130925",
-     "pt": "Paços de Ferreira"
+     "pt": "Paços de Ferreira",
+     "pop2021": 8178,
+     "subsections": 95
     }
    ]
   },
@@ -1206,17 +1306,23 @@
     {
      "code": "21",
      "dicofre": "130921",
-     "pt": "Codessos"
+     "pt": "Codessos",
+     "pop2021": 1032,
+     "subsections": 25
     },
     {
      "code": "23",
      "dicofre": "130923",
-     "pt": "Lamoso"
+     "pt": "Lamoso",
+     "pop2021": 1628,
+     "subsections": 40
     },
     {
      "code": "26",
      "dicofre": "130926",
-     "pt": "Sanfins de Ferreira"
+     "pt": "Sanfins de Ferreira",
+     "pop2021": 2884,
+     "subsections": 65
     }
    ]
   },
@@ -1301,12 +1407,16 @@
     {
      "code": "33",
      "dicofre": "130533",
-     "pt": "Barrosas (Santo Estêvão)"
+     "pt": "Barrosas (Santo Estêvão)",
+     "pop2021": 1037,
+     "subsections": 10
     },
     {
      "code": "34",
      "dicofre": "130534",
-     "pt": "Lustosa"
+     "pt": "Lustosa",
+     "pop2021": 4778,
+     "subsections": 46
     }
    ]
   },
@@ -1655,12 +1765,16 @@
     {
      "code": "42",
      "dicofre": "130742",
-     "pt": "Paços de Gaiolo"
+     "pt": "Paços de Gaiolo",
+     "pop2021": 807,
+     "subsections": 33
     },
     {
      "code": "43",
      "dicofre": "130743",
-     "pt": "Penhalonga"
+     "pt": "Penhalonga",
+     "pop2021": 1716,
+     "subsections": 50
     }
    ]
   },

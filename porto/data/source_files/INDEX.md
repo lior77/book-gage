@@ -5,7 +5,7 @@
 וישרוד. הקבצים המעובדים שהאפליקציה קוראת יושבים ב-`data/raw/`; כאן שמור
 המקור, כדי שתמיד אפשר יהיה לבנות הכל מחדש מאפס ולבדוק מה בדיוק הגיע.
 
-סך הכל 34 קבצים, 86.3 MB.
+סך הכל 36 קבצים, 87.4 MB.
 
 
 ## INE — מפקד 2021
@@ -27,6 +27,8 @@
 | `GRID1K21_PORTUGAL.zip` | 11.3 MB | 2026-09-07 | רשת של קילומטר על קילומטר לכל פורטוגל (GeoPackage), 33 משתנים ממפקד 2021. |
 | `GRID1K21_variaveis.txt` | 2 KB | 2026-09-07 | מילון 33 המשתנים של קובץ הרשת. |
 | `Lugares2021_variaveis.csv` | 445 B | 2026-09-07 | מילון המשתנים של קובץ ה-Lugares — אוכלוסייה, בניינים, דירות ומשקי בית לכל יישוב, עם קוד וקוד רובע. **קובץ הנתונים עצמו (`C21_LUGF_PT.gpkg`) עדיין לא הגיע — ההעלאה נכשלה.** |
+| `BGRI2021_to_CAOP2025_reassignment.csv` | 7 KB | 2026-09-07 | טבלת המרה: לאיזה רובע 2025 עבר כל תת-מקטע סטטיסטי של מפקד 2021, וכמה תושבים עברו איתו. ממנה מגיע פילוח האוכלוסייה של 25 היחידות שפורקו. |
+| `Portugal_Property_Baseline_v2.csv` | 1.1 MB | 2026-09-07 | 3,049 רובעים על מפת 2025 עם גיל, הזדקנות, אזרחות, השכלה, אבטלה ובניינים — נגזר מתת-המקטעים בדרך אחרת. משמש כמקור שני לאימות, לא כמקור הנתונים עצמם (scripts/crosscheck_baseline.py). |
 
 ## ייצואים מ-overpass-turbo
 
@@ -109,4 +111,6 @@ cab24c704b4b8b2a1882174704c79a8a  screenshots/05_app_layout.jpg
 c87172131ce62e0b3c28cde70dfad9f0  screenshots/06_app_layout.jpg
 ef3388d539d01f7b619aba8eca8aef9c  app/porto-standalone-1.1.html
 f350578a4a0307040fa7701322e8e13b  ine/Lugares2021_variaveis.csv
+3dd0c77568c66d4b2ff9084b294b47a5  ine/BGRI2021_to_CAOP2025_reassignment.csv
+5f60326de997bd12d8e2369c43fae677  ine/Portugal_Property_Baseline_v2.csv
 ```

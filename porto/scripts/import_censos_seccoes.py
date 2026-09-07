@@ -142,6 +142,13 @@ def derived(v):
         "foreign_pct": pct(v.get("N_INDIVIDUOS_NAC_ESTRANGEIRA"), n),
         # INE's own definition: people 65 and over per hundred under 15
         "ageing_index": round(100.0 * old / young, 1) if young else None,
+        # A share of everybody, children included — that is how INE presents it
+        "education_pct": pct(v.get("N_INDIVIDUO_ENSINCOMP_SUP"), n),
+        # Unemployed out of the economically active, the standard rate
+        "unemployment_pct": pct(
+            (v.get("N_INDIVIDUOS_DESEMPREGADOS_1EMP", 0)
+             + v.get("N_INDIVIDUOS_DESEMPREGADOS_NOVOEMP", 0)),
+            v.get("N_INDIVIDUOS_COM_ATIVIDADE_ECONOMICA")),
     }
     return {k: val for k, val in out.items() if val is not None}
 
@@ -185,7 +192,8 @@ def main():
     path = os.path.join(RAW, "extra_indicators.json")
     if os.path.exists(path):
         extra = json.load(open(path, encoding="utf-8"))
-    keys = ("median_age", "pct_65plus", "pct_0_14", "foreign_pct", "ageing_index")
+    keys = ("median_age", "pct_65plus", "pct_0_14", "foreign_pct", "ageing_index",
+            "education_pct", "unemployment_pct")
     meta = {
         "median_age": {"reference_year": 2021, "decimals": 1, "high_is": "neutral",
                        "confidence": "approx",
@@ -203,6 +211,14 @@ def main():
                                    "נספר כאן."},
         "ageing_index": {"reference_year": 2021, "decimals": 1, "high_is": "neutral",
                          "source_he": "נגזר: בני 65+ לכל מאה בני 0–14, מפקד INE 2021"},
+        "education_pct": {"reference_year": 2021, "decimals": 1, "high_is": "neutral",
+                          "source_he": "מפקד INE 2021 — בעלי השכלה על-תיכונית מלאה",
+                          "note_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך "
+                                     "INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר."},
+        "unemployment_pct": {"reference_year": 2021, "decimals": 1, "high_is": "low",
+                             "source_he": "מפקד INE 2021 — מובטלים מתוך כוח העבודה",
+                             "note_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, "
+                                        "חלקי האוכלוסייה הפעילה כלכלית."},
     }
     for key in keys:
         block = {"meta": dict(meta[key]),
