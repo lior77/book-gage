@@ -1,0 +1,11 @@
+Nome da Variável;Descrição
+MUNICÍPIO; Município (Código 4 dígitos, CAOP2020)
+FREGUESIA;Freguesia (Código 6 dígitos, CAOP2020)
+LG_COD;Código de lugar
+LG_DSG;Designação do lugar
+STATUS_FR;Nº de freguesias a que pertence o lugar
+N_EDIFICIOS_CLASSICOS;Nº  de edifícios clássicos por lugar
+N_ALOJAMENTOS_TOTAL;Nº de alojamentos por lugar
+N_AGREGADOS_DOMESTICOS_PRIVADO;Nº de agregados por lugar
+N_INDIVIDUOS;População residente por lugar	
+	

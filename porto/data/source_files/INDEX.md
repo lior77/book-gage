@@ -5,7 +5,7 @@
 וישרוד. הקבצים המעובדים שהאפליקציה קוראת יושבים ב-`data/raw/`; כאן שמור
 המקור, כדי שתמיד אפשר יהיה לבנות הכל מחדש מאפס ולבדוק מה בדיוק הגיע.
 
-סך הכל 33 קבצים, 86.3 MB.
+סך הכל 34 קבצים, 86.3 MB.
 
 
 ## INE — מפקד 2021
@@ -26,6 +26,7 @@
 | `FS2021_Seccao_variaveis.pdf` | 57 KB | 2026-09-07 | אותו מילון כ-PDF. |
 | `GRID1K21_PORTUGAL.zip` | 11.3 MB | 2026-09-07 | רשת של קילומטר על קילומטר לכל פורטוגל (GeoPackage), 33 משתנים ממפקד 2021. |
 | `GRID1K21_variaveis.txt` | 2 KB | 2026-09-07 | מילון 33 המשתנים של קובץ הרשת. |
+| `Lugares2021_variaveis.csv` | 445 B | 2026-09-07 | מילון המשתנים של קובץ ה-Lugares — אוכלוסייה, בניינים, דירות ומשקי בית לכל יישוב, עם קוד וקוד רובע. **קובץ הנתונים עצמו (`C21_LUGF_PT.gpkg`) עדיין לא הגיע — ההעלאה נכשלה.** |
 
 ## ייצואים מ-overpass-turbo
 
@@ -107,4 +108,5 @@ a89e4d5888f9f93e94fdf692309d9694  ine/GRID1K21_PORTUGAL.zip
 cab24c704b4b8b2a1882174704c79a8a  screenshots/05_app_layout.jpg
 c87172131ce62e0b3c28cde70dfad9f0  screenshots/06_app_layout.jpg
 ef3388d539d01f7b619aba8eca8aef9c  app/porto-standalone-1.1.html
+f350578a4a0307040fa7701322e8e13b  ine/Lugares2021_variaveis.csv
 ```
