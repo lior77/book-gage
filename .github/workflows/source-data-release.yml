@@ -1,0 +1,42 @@
+# A place to hand me large files.
+#
+# The environment I run in cannot reach SharePoint, Google Drive or any other
+# host outside the allow-list, and the chat upload widget gives up well before
+# a 100 MB archive. GitHub release assets it can fetch — that is how the APK is
+# delivered — and they take up to 2 GB each without bloating the clone.
+#
+# This workflow only creates the empty release to upload into. It runs when the
+# file itself is pushed, because workflow_dispatch is only offered for workflows
+# that already sit on the default branch, and this one lives on a feature branch.
+name: Source data release
+
+on:
+  push:
+    paths:
+      - '.github/workflows/source-data-release.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the release if it is not there yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG=source-data
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists"
+          else
+            gh release create "$TAG" \
+              --title "קבצי מקור — נתונים גולמיים לפורטולנד" \
+              --notes-file .github/workflows/source-data-notes.md \
+              --target "${GITHUB_SHA}"
+          fi
+          gh release view "$TAG" --json url,assets \
+            --jq '.url, (.assets[]?.name)'
