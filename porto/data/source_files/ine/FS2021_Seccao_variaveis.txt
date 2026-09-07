@@ -1,0 +1,179 @@
+Ficheiro Sintese por Secção - Censos 2021;
+Variável ;Descritivo
+N_EDIFICIOS_CLASSICOS;Nº de edifícios clássicos 
+N_EDIFICIOS_CLASSICOS_1OU2_ALOJ;Nº de edifícios clássicos, construídos para ter 1 ou 2 alojamentos
+N_EDIFICIOS_CLASSICOS_3OUMAIS_ALOJ;Nº de edifícios clássicos, construídos para ter 3 ou mais alojamentos
+N_EDIFICIOS_CLASSICOS_OUTRO;Nº de edifícios clássicos de outro tipo
+N_EDIFICIOS_1OU2_PISOS;Nº de edificios com 1 ou2 pisos
+N_EDIFICIOS_3OU4_PISOS;Nº de edificios com 3 ou 4 pisos
+N_EDIFICIOS_5OU_MAIS_PISOS;Nº de edificios com 5 ou mais pisos
+N_EDIFICIOS_SEM_ELEVADOR;Nº de edificios sem elevador
+N_EDIFICIOS_COM_ELEVADOR;Nº de edificios com elevador
+N_EDIFICIOS_EXCLUS_RESIDENCIAL;Nº de edifícios exclusivamente residenciais
+N_EDIFICIOS_PINCIPAL_RESIDENCIAL;Nº de edifícios pricipalmente residenciais
+N_EDIFICIOS_PINCIPAL_NAO_RESIDENCIAL;Nº de edifícios pricipalmente não residenciais
+N_EDIFICIOS_CONSTR_ANTES_1919;Nº de edificios construídos antes de 1919
+N_EDIFICIOS_CONSTR_1919A1945;Nº de edificios construídos entre 1919 e 1945
+N_EDIFICIOS_CONSTR_1946A1960;Nº de edificios construídos entre 1946 e 1960
+N_EDIFICIOS_CONSTR_1961A1980;Nº de edificios construídos entre 1960 e 1980
+N_EDIFICIOS_CONSTR_1981A1990;Nº de edificios construídos entre 1981e 1990
+N_EDIFICIOS_CONSTR_1991A2000;Nº de edificios construídos entre 1991e 2000
+N_EDIFICIOS_CONSTR_2001A2005;Nº de edificios construídos entre 2001 e 2005
+N_EDIFICIOS_CONSTR_2006A2010;Nº de edificios construídos entre 2006 e 2010
+N_EDIFICIOS_CONSTR_2011A2015;Nº de edificios construídos entre 2011 e 2015
+N_EDIFICIOS_CONSTR_2016A2021;Nº de edificios construídos entre 2016 e 2021
+N_EDIFICIOS_COM_NEC_REPARACAO;Nº de edificios com necessidades de reparação
+N_EDIFICIOS_COM_NEC_REPARACAO_LIGEIRAS;Nº de edificios com necessidades de reparações ligeiras
+N_EDIFICIOS_COM_NEC_REPARACAO_MEDIAS;Nº de edificios com necessidades de reparações médias
+N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS;Nº de edificios com necessidades de reparações profundas
+N_EDIFICIOS_SEM_NEC_REPARACAO;Nº de edificios sem necessidades de reparação
+N_ALOJAMENTOS_TOTAL;Nº de alojamentos total
+N_ALOJAMENTOS_FAMILIARES;Nº de alojamentos familiares
+N_ALOJAMENTOS_FAM_CLASSICOS;Nº de alojamentos familiares clássicos 
+N_ALOJAMENTOS_FAM_N_CLASSICOS;Nº de alojamentos familiares não clássicos
+N_ALOJAMENTOS_COLECTIVOS;Nº de alojamentos colectivos
+N_CLASSICOS_RES_HABITUAL;Nº de alojamentos familiares clássicos de residência habitual 
+N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA;Nº de alojamentos familiares clássicos de residência secundária
+N_ALOJAMENTOS_VAGOS_TOTAL;Nº de alojamentos familiares clássicos vagos
+N_ALOJAMENTOS_FAM_CLASS_VAGOS_VEND_ARRE;Nº de alojamentos familiares clássicos vagos para venda ou arrendamento
+N_ALOJAMENTOS_FAM_CLASS_VAGOS_OUTR_MOTIVOS;Nº de alojamentos familiares clássicos vagos por outros motivos
+N_RHABITUAL_ACESSIVEL_CADEIRAS_RODAS;Nº de alojamentos familiares clássicos de residência habitual acessíveis a cadeira de rodas
+N_RHABITUAL_NAO_ACESSIVEL_CADEIRAS_RODAS;Nº de alojamentos familiares clássicos de residência habitual não acessíveis a cadeira de rodas
+N_RHABITUAL_COM_ESTACIONAMENTO;Nº de alojamentos familiares clássicos de residência habitual com estacionamento
+N_RHABITUAL_SEM_ESTACIONAMENTO;Nº de alojamentos familiares clássicos de residência habitual sem estacionamento
+N_RHABITUAL_PROP_OCUP;Nº de alojamentos familiares clássicos de residência habitual propriedade dos ocupantes
+N_RHABITUAL_ARRENDADOS;Nº de alojamentos familiares clássicos de residência habitual arrendados
+N_RHABITUAL_OCUPADOS_OUTR_SITUACAO;Nº de alojamentos familiares clássicos de residência habitual, outra situação
+N_RHABITUAL_AREA_49;Nº de alojamentos familiares clássicos de residência habitual, por escalão da área útil do alojamento até 49 m²
+N_RHABITUAL_AREA_50_99;Nº de alojamentos familiares clássicos de residência habitual, por escalão da área útil do alojamento de 50 a 99 m²
+N_RHABITUAL_AREA_100_149;Nº de alojamentos familiares clássicos de residência habitual, por escalão da área útil do alojamento de 100 a 149 m²
+N_RHABITUAL_AREA_150_199;Nº de alojamentos familiares clássicos de residência habitual, por escalão da área útil do alojamento de 150 a 199 m²
+N_RHABITUAL_AREA_200MAIS;Nº de alojamentos familiares clássicos de residência habitual, por escalão da área útil do alojamento de 200 ou mais m²
+N_RHABITUAL_1_2_DIV;Nº de alojamentos familiares clássicos de residência habitual, com 1 ou 2 divisões
+N_RHABITUAL_3_4_DIV;Nº de alojamentos familiares clássicos de residência habitual, com 3 ou 4 divisões
+N_RHABITUAL_5_MAIS_DIV;Nº de alojamentos familiares clássicos de residência habitual, com 5 ou mais divisões
+N_AGREGADOS_DOMESTICOS_PRIVADOS;Nº de agregados domésticos privados
+N_AGREGADOS_INSTITUCIONAIS;Nº de agregados domésticos institucionais
+N_ADP_1OU2_PESSOAS;Nº de agregados domésticos privados com 1 ou 2 pessoas
+N_ADP_3OU4_PESSOAS;Nº de agregados domésticos privados com 3 ou 4 pessoas
+N_ADP_5EMAIS_PESSOAS;Nº de agregados domésticos privados com 5 ou mais pessoas
+N_INDIVIDUOS;Nº total de indivíduos
+N_INDIVIDUOS_H;Nº de indivíduos do sexo masculino
+N_INDIVIDUOS_M;Nº de indivíduos do sexo feminino
+N_INDIVIDUOS_0A14;Nº de indivíduos com idade entre os 0 e os 14 anos
+N_INDIVIDUOS_15A24;Nº de indivíduos com idade entre os 15 e os 24 anos
+N_INDIVIDUOS_25A64;Nº de indivíduos com idade entre os 25 e os 64 anos
+N_INDIVIDUOS_65_OU_MAIS;Nº de indivíduos com 65 ou mais anos de idade 
+N_INDIVIDUOS_0A14_H;Nº de indivíduos com idade entre os 0 e os 14 anos - Homens
+N_INDIVIDUOS_15A24_H;Nº de indivíduos com idade entre os 15 e os 24 anos - Homens
+N_INDIVIDUOS_25A64_H;Nº de indivíduos com idade entre os 25 e os 64 anos - Homens
+N_INDIVIDUOS_65_OU_MAIS_H;Nº de indivíduos com 65 ou mais anos de idade - Homens 
+N_INDIVIDUOS_0A14_M;Nº de indivíduos com idade entre os 0 e os 14 anos - Mulheres
+N_INDIVIDUOS_15A24_M;Nº de indivíduos com idade entre os 15 e os 24 anos - Mulheres
+N_INDIVIDUOS_25A64_M;Nº de indivíduos com idade entre os 25 e os 64 anos - Mulheres
+N_INDIVIDUOS_65_OU_MAIS_M;Nº de indivíduos com 65 ou mais anos de idade - Mulheres 
+N_INDIVIDUOS_0A4;Nº de indivíduos com idade entre os 0 e os 4 anos
+N_INDIVIDUOS_5A9;Nº de indivíduos com idade entre os 5e os 9 anos
+N_INDIVIDUOS_10A14;Nº de indivíduos com idade entre os 10 e os 14 anos
+N_INDIVIDUOS_15A19;Nº de indivíduos com idade entre os 15 e os 19 anos
+N_INDIVIDUOS_20A24;Nº de indivíduos com idade entre os 20 e os 24 anos
+N_INDIVIDUOS_25A29;Nº de indivíduos com idade entre os 25 e os 29 anos
+N_INDIVIDUOS_30A34;Nº de indivíduos com idade entre os 30 e os 34 anos
+N_INDIVIDUOS_35A39;Nº de indivíduos com idade entre os 35 e os 39 anos
+N_INDIVIDUOS_40A44;Nº de indivíduos com idade entre os 40 e os 44 anos
+N_INDIVIDUOS_45A49;Nº de indivíduos com idade entre os 45 e os 49 anos
+N_INDIVIDUOS_50A54;Nº de indivíduos com idade entre os 50 e os 54 anos
+N_INDIVIDUOS_55A59;Nº de indivíduos com idade entre os 55 e os 59 anos
+N_INDIVIDUOS_60A64;Nº de indivíduos com idade entre os 60 e os 64 anos
+N_INDIVIDUOS_65A69;Nº de indivíduos com idade entre os 65 e os 69 anos
+N_INDIVIDUOS_70A74;Nº de indivíduos com idade entre os 70 e os 74 anos
+N_INDIVIDUOS_75_OU_MAIS;Nº de indivíduos com 75 ou mais anos de idade 
+N_INDIVIDUOS_0A4_H;Nº de indivíduos com idade entre os 0 e os 4 anos - Homens
+N_INDIVIDUOS_5A9_H;Nº de indivíduos com idade entre os 5e os 9 anos - Homens
+N_INDIVIDUOS_10A14_H;Nº de indivíduos com idade entre os 10 e os 14 anos - Homens
+N_INDIVIDUOS_15A19_H;Nº de indivíduos com idade entre os 15 e os 19 anos - Homens
+N_INDIVIDUOS_20A24_H;Nº de indivíduos com idade entre os 20 e os 24 anos - Homens
+N_INDIVIDUOS_25A29_H;Nº de indivíduos com idade entre os 25 e os 29 anos - Homens
+N_INDIVIDUOS_30A34_H;Nº de indivíduos com idade entre os 30 e os 34 anos - Homens
+N_INDIVIDUOS_35A39_H;Nº de indivíduos com idade entre os 35 e os 39 anos - Homens
+N_INDIVIDUOS_40A44_H;Nº de indivíduos com idade entre os 40 e os 44 anos - Homens
+N_INDIVIDUOS_45A49_H;Nº de indivíduos com idade entre os 45 e os 49 anos - Homens
+N_INDIVIDUOS_50A54_H;Nº de indivíduos com idade entre os 50 e os 54 anos - Homens
+N_INDIVIDUOS_55A59_H;Nº de indivíduos com idade entre os 55 e os 59 anos - Homens
+N_INDIVIDUOS_60A64_H;Nº de indivíduos com idade entre os 60 e os 64 anos - Homens
+N_INDIVIDUOS_65A69_H;Nº de indivíduos com idade entre os 65 e os 69 anos - Homens
+N_INDIVIDUOS_70A74_H;Nº de indivíduos com idade entre os 70 e os 74 anos - Homens
+N_INDIVIDUOS_75_OU_MAIS_H;Nº de indivíduos com 75 ou mais anos de idade - Homens 
+N_INDIVIDUOS_0A4_M;Nº de indivíduos com idade entre os 0 e os 4 anos - Mulheres
+N_INDIVIDUOS_5A9_M;Nº de indivíduos com idade entre os 5e os 9 anos - Mulheres
+N_INDIVIDUOS_10A14_M;Nº de indivíduos com idade entre os 10 e os 14 anos - Mulheres
+N_INDIVIDUOS_15A19_M;Nº de indivíduos com idade entre os 15 e os 19 anos - Mulheres
+N_INDIVIDUOS_20A24_M;Nº de indivíduos com idade entre os 20 e os 24 anos - Mulheres
+N_INDIVIDUOS_25A29_M;Nº de indivíduos com idade entre os 25 e os 29 anos - Mulheres
+N_INDIVIDUOS_30A34_M;Nº de indivíduos com idade entre os 30 e os 34 anos - Mulheres
+N_INDIVIDUOS_35A39_M;Nº de indivíduos com idade entre os 35 e os 39 anos - Mulheres
+N_INDIVIDUOS_40A44_M;Nº de indivíduos com idade entre os 40 e os 44 anos - Mulheres
+N_INDIVIDUOS_45A49_M;Nº de indivíduos com idade entre os 45 e os 49 anos - Mulheres
+N_INDIVIDUOS_50A54_M;Nº de indivíduos com idade entre os 50 e os 54 anos - Mulheres
+N_INDIVIDUOS_55A59_M;Nº de indivíduos com idade entre os 55 e os 59 anos - Mulheres
+N_INDIVIDUOS_60A64_M;Nº de indivíduos com idade entre os 60 e os 64 anos - Mulheres
+N_INDIVIDUOS_65A69_M;Nº de indivíduos com idade entre os 65 e os 69 anos - Mulheres
+N_INDIVIDUOS_70A74_M;Nº de indivíduos com idade entre os 70 e os 74 anos - Mulheres
+N_INDIVIDUOS_75_OU_MAIS_M;Nº de indivíduos com 75 ou mais anos de idade - Mulheres 
+N_INDIVIDUO_ENSINCOMP_NENHUM;Nº de indivíduos sem nenhum nível de ensino completo
+N_INDIVIDUO_ENSINCOMP_1BAS;Nº de indivíduos com um nível de ensino completo - 1º ciclo
+N_INDIVIDUO_ENSINCOMP_2BAS;Nº de indivíduos com um nível de ensino completo - 2º ciclo
+N_INDIVIDUO_ENSINCOMP_3BAS;Nº de indivíduos com um nível de ensino completo - 3º ciclo
+N_INDIVIDUO_ENSINCOMP_SEC_E_POSSEC;Nº de indivíduos com um nível de ensino completo - Secundário ou pós secundário
+N_INDIVIDUO_ENSINCOMP_SUP;Nº de indivíduos com um nível de ensino completo - Superior
+N_INDIVIDUO_ENSINCOMP_NENHUM_H;Nº de indivíduos sem nenhum nível de ensino completo - Homens
+N_INDIVIDUO_ENSINCOMP_1BAS_H;Nº de indivíduos com um nível de ensino completo - 1º ciclo - Homens
+N_INDIVIDUO_ENSINCOMP_2BAS_H;Nº de indivíduos com um nível de ensino completo - 2º ciclo - Homens
+N_INDIVIDUO_ENSINCOMP_3BAS_H;Nº de indivíduos com um nível de ensino completo - 3º ciclo - Homens
+N_INDIVIDUO_ENSINCOMP_SEC_E_POSSEC_H;Nº de indivíduos com um nível de ensino completo - Secundário ou pós secundário - Homens
+N_INDIVIDUO_ENSINCOMP_SUP_H;Nº de indivíduos com um nível de ensino completo - Superior - Homens
+N_INDIVIDUO_ENSINCOMP_NENHUM_M;Nº de indivíduos sem nenhum nível de ensino completo - Mulheres
+N_INDIVIDUO_ENSINCOMP_1BAS_M;Nº de indivíduos com um nível de ensino completo - 1º ciclo - Mulheres
+N_INDIVIDUO_ENSINCOMP_2BAS_M;Nº de indivíduos com um nível de ensino completo - 2º ciclo - Mulheres
+N_INDIVIDUO_ENSINCOMP_3BAS_M;Nº de indivíduos com um nível de ensino completo - 3º ciclo - Mulheres
+N_INDIVIDUO_ENSINCOMP_SEC_E_POSSEC_M;Nº de indivíduos com um nível de ensino completo - Secundário ou pós secundário - Mulheres
+N_INDIVIDUO_ENSINCOMP_SUP_M;Nº de indivíduos com um nível de ensino completo - Superior - Mulheres
+N_INDIVIDUOS_COM_ATIVIDADE_ECONOMICA;Nº de indivíduos com atividade económica
+N_INDIVIDUOS_SEM_ATIVIDADE_ECONOMICA;Nº de indivíduos sem atividade económica
+N_INDIVIDUOS_EMPREGADOS;Nº de indivíduos com atividade económica empregados
+N_INDIVIDUOS_DESEMPREGADOS_1EMP;Nº de indivíduos com atividade económica desempregados à procura do 1º emprego
+N_INDIVIDUOS_DESEMPREGADOS_NOVOEMP;Nº de indivíduos com atividade económica desempregados à procura de novo emprego
+N_INDIVIDUOS_ESTUDANTES;Nº de indivíduos sem atividade estudantes
+N_INDIVIDUOS_DOMESTICOS;Nº de indivíduos sem atividade económica domésticos
+N_INDIVIDUOS_REFORMADOS;Nº de indivíduos sem atividade económica reformados
+N_INDIVIDUOS_EMPREG_SECT_PRIM;Nº de indivíduos com atividade económica empregados no setor primário
+N_INDIVIDUOS_EMPREG_SECT_SEC;Nº de indivíduos com atividade económica empregados no setor secundário
+N_INDIVIDUOS_EMPREG_SECT_TERC;Nº de indivíduos com atividade económica empregados no setor terciário
+N_INDIVIDUOS_NAC_ESTRANGEIRA;Nº de indivíduos com nacionalidade estrangeira
+N_INDIVIDUOS_RESID_FORA_PAIS;Nº de indivíduos que residiram fora de Portugal
+N_INDIVIDUOS_COM_ATIVIDADE_ECONOMICA_H;Nº de indivíduos com atividade económica - Homens
+N_INDIVIDUOS_SEM_ATIVIDADE_ECONOMICA_H;Nº de indivíduos sem atividade económica - Homens
+N_INDIVIDUOS_EMPREGADOS_H;Nº de indivíduos com atividade económica empregados - Homens
+N_INDIVIDUOS_DESEMPREGADOS_1EMP_H;Nº de indivíduos com atividade económica desempregados à procura do 1º emprego - Homens
+N_INDIVIDUOS_DESEMPREGADOS_NOVOEMP_H;Nº de indivíduos com atividade económica desempregados à procura de novo emprego - Homens
+N_INDIVIDUOS_ESTUDANTES_H;Nº de indivíduos sem atividade estudantes - Homens
+N_INDIVIDUOS_DOMESTICOS_H;Nº de indivíduos sem atividade económica domésticos - Homens
+N_INDIVIDUOS_REFORMADOS_H;Nº de indivíduos sem atividade económica reformados - Homens
+N_INDIVIDUOS_EMPREG_SECT_PRIM_H;Nº de indivíduos com atividade económica empregados no setor primário - Homens
+N_INDIVIDUOS_EMPREG_SECT_SEC_H;Nº de indivíduos com atividade económica empregados no setor secundário - Homens
+N_INDIVIDUOS_EMPREG_SECT_TERC_H;Nº de indivíduos com atividade económica empregados no setor terciário - Homens
+N_INDIVIDUOS_NAC_ESTRANGEIRA_H;Nº de indivíduos com nacionalidade estrangeira - Homens
+N_INDIVIDUOS_RESID_FORA_PAIS_H;Nº de indivíduos que residiram fora de Portugal - Homens
+N_INDIVIDUOS_COM_ATIVIDADE_ECONOMICA_M;Nº de indivíduos com atividade económica - Mulheres
+N_INDIVIDUOS_SEM_ATIVIDADE_ECONOMICA_M;Nº de indivíduos sem atividade económica - Mulheres
+N_INDIVIDUOS_EMPREGADOS_M;Nº de indivíduos com atividade económica empregados - Mulheres
+N_INDIVIDUOS_DESEMPREGADOS_1EMP_M;Nº de indivíduos com atividade económica desempregados à procura do 1º emprego - Mulheres
+N_INDIVIDUOS_DESEMPREGADOS_NOVOEMP_M;Nº de indivíduos com atividade económica desempregados à procura de novo emprego - Mulheres
+N_INDIVIDUOS_ESTUDANTES_M;Nº de indivíduos sem atividade estudantes - Mulheres
+N_INDIVIDUOS_DOMESTICOS_M;Nº de indivíduos sem atividade económica domésticos - Mulheres
+N_INDIVIDUOS_REFORMADOS_M;Nº de indivíduos sem atividade económica reformados - Mulheres
+N_INDIVIDUOS_EMPREG_SECT_PRIM_M;Nº de indivíduos com atividade económica empregados no setor primário - Mulheres
+N_INDIVIDUOS_EMPREG_SECT_SEC_M;Nº de indivíduos com atividade económica empregados no setor secundário - Mulheres
+N_INDIVIDUOS_EMPREG_SECT_TERC_M;Nº de indivíduos com atividade económica empregados no setor terciário - Mulheres
+N_INDIVIDUOS_NAC_ESTRANGEIRA_M;Nº de indivíduos com nacionalidade estrangeira - Mulheres
+N_INDIVIDUOS_RESID_FORA_PAIS_M;Nº de indivíduos que residiram fora de Portugal - Mulheres

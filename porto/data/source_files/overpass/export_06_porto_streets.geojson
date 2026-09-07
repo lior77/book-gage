@@ -1,0 +1,888 @@
+{
+  "type": "FeatureCollection",
+  "generator": "overpass-turbo",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+  "timestamp": "2026-09-05T23:51:20Z",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/24812056",
+        "bicycle": "yes",
+        "foot": "yes",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "maxheight": "5",
+        "maxheight:signed": "no",
+        "maxspeed": "50",
+        "name": "Rua Costa Cabral",
+        "oneway": "no",
+        "source": "Bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5832986,
+          41.1811079
+        ]
+      },
+      "id": "way/24812056"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/29036514",
+        "bridge": "yes",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "layer": "1",
+        "maxweight:signed": "no",
+        "name": "Rua de Costa Cabral",
+        "sidewalk:both": "separate",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.59043,
+          41.1690308
+        ]
+      },
+      "id": "way/29036514"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/30912960",
+        "highway": "residential",
+        "lit": "yes",
+        "name": "Travessa de Salgueiros",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6125842,
+          41.1595398
+        ]
+      },
+      "id": "way/30912960"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/31721081",
+        "highway": "secondary",
+        "lanes": "2",
+        "lit": "yes",
+        "maxspeed": "50",
+        "name": "Rua do Heroísmo",
+        "name:etymology": "Em homenagem à resistência liberal na batalha de 29 de setembro de 1832, que ocorreu nesta zona da cidade.",
+        "parking:right": "lane",
+        "parking:right:fee": "yes",
+        "parking:right:orientation": "parallel",
+        "sidewalk": "both",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5920961,
+          41.1465979
+        ]
+      },
+      "id": "way/31721081"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/39590262",
+        "highway": "residential",
+        "name": "Rua Sport Comércio e Salgueiros",
+        "oneway": "yes",
+        "sidewalk": "both",
+        "surface": "sett",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6124469,
+          41.1623674
+        ]
+      },
+      "id": "way/39590262"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/39598055",
+        "highway": "residential",
+        "lanes": "1",
+        "name": "Rua de Salgueiros",
+        "oneway": "yes",
+        "surface": "sett",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6165794,
+          41.1604488
+        ]
+      },
+      "id": "way/39598055"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/39654094",
+        "highway": "secondary",
+        "lanes": "2",
+        "name": "Rua do Carvalhido",
+        "oneway": "no",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6253236,
+          41.1677574
+        ]
+      },
+      "id": "way/39654094"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/161124159",
+        "access": "no",
+        "highway": "tertiary_link",
+        "lanes": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "psv:lanes": "designated",
+        "source": "Bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5832557,
+          41.1808896
+        ]
+      },
+      "id": "way/161124159"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/252543837",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5941336,
+          41.1670691
+        ]
+      },
+      "id": "way/252543837"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/307090815",
+        "highway": "living_street",
+        "motor_vehicle": "no",
+        "name": "Travessa de Salgueiros",
+        "surface": "paving_stones",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6136019,
+          41.1593149
+        ]
+      },
+      "id": "way/307090815"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/365407109",
+        "highway": "living_street",
+        "maxwidth": "2",
+        "name": "Travessa do Carvalhido",
+        "oneway": "yes",
+        "surface": "sett",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6249346,
+          41.1676528
+        ]
+      },
+      "id": "way/365407109"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/434879925",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5930078,
+          41.1676056
+        ]
+      },
+      "id": "way/434879925"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/477791560",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5845213,
+          41.1781731
+        ]
+      },
+      "id": "way/477791560"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/482331424",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "name": "Rua de Costa Cabral",
+        "name:etymology:wikidata": "Q130870",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6000662,
+          41.1647473
+        ]
+      },
+      "id": "way/482331424"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/482332561",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5833533,
+          41.1809419
+        ]
+      },
+      "id": "way/482332561"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/482332563",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "sidewalk": "both",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5837923,
+          41.1797368
+        ]
+      },
+      "id": "way/482332563"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/667433345",
+        "highway": "secondary",
+        "lanes": "2",
+        "lanes:backward": "1",
+        "lanes:forward": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "no",
+        "sidewalk:both": "separate",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5899366,
+          41.169339
+        ]
+      },
+      "id": "way/667433345"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/667433348",
+        "cycleway:right": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "lanes:forward": "1",
+        "lanes:psv:backward": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.58715,
+          41.1732581
+        ]
+      },
+      "id": "way/667433348"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/667433349",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5894462,
+          41.1696839
+        ]
+      },
+      "id": "way/667433349"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/743461568",
+        "highway": "secondary",
+        "lanes": "2",
+        "name": "Rua do Carvalhido",
+        "oneway": "no",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6255462,
+          41.1688029
+        ]
+      },
+      "id": "way/743461568"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/966302094",
+        "highway": "secondary",
+        "lanes": "2",
+        "lanes:forward": "1",
+        "lanes:psv:backward": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5853888,
+          41.1767412
+        ]
+      },
+      "id": "way/966302094"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/966302095",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "sidewalk:both": "separate",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5888173,
+          41.1704974
+        ]
+      },
+      "id": "way/966302095"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1017121215",
+        "highway": "secondary",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5913556,
+          41.1684934
+        ]
+      },
+      "id": "way/1017121215"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1017143694",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5939749,
+          41.1671243
+        ]
+      },
+      "id": "way/1017143694"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1019391558",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "name": "Rua de Costa Cabral",
+        "name:etymology:wikidata": "Q130870",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6028514,
+          41.1628153
+        ]
+      },
+      "id": "way/1019391558"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1021969060",
+        "cycleway:right": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "lanes:forward": "1",
+        "lanes:psv:backward": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5877365,
+          41.1721786
+        ]
+      },
+      "id": "way/1021969060"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1083211593",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "lit": "yes",
+        "name": "Rua de Costa Cabral",
+        "name:etymology:wikidata": "Q130870",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "sidewalk": "both",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5958674,
+          41.16655
+        ]
+      },
+      "id": "way/1083211593"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1083211594",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "name": "Rua de Costa Cabral",
+        "name:etymology:wikidata": "Q130870",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "surface": "asphalt",
+        "turn:lanes:backward": "slight_left",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5984834,
+          41.1657175
+        ]
+      },
+      "id": "way/1083211594"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1172588827",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "name": "Rua de Costa Cabral",
+        "name:etymology:wikidata": "Q130870",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5980881,
+          41.1658681
+        ]
+      },
+      "id": "way/1172588827"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1186568755",
+        "cycleway:left": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "lit": "yes",
+        "name": "Rua de Costa Cabral",
+        "name:etymology:wikidata": "Q130870",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "sidewalk": "both",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5976091,
+          41.1660363
+        ]
+      },
+      "id": "way/1186568755"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1188987787",
+        "highway": "residential",
+        "lanes": "1",
+        "name": "Rua de Salgueiros",
+        "oneway": "yes",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6163522,
+          41.1599222
+        ]
+      },
+      "id": "way/1188987787"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1188987802",
+        "highway": "pedestrian",
+        "name": "Travessa de Salgueiros",
+        "surface": "paving_stones",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6138975,
+          41.1593663
+        ]
+      },
+      "id": "way/1188987802"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1188987803",
+        "highway": "pedestrian",
+        "name": "Travessa de Salgueiros",
+        "ramp": "separate",
+        "surface": "paving_stones",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6139126,
+          41.159257
+        ]
+      },
+      "id": "way/1188987803"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1188987804",
+        "highway": "pedestrian",
+        "name": "Travessa de Salgueiros",
+        "surface": "paving_stones",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6140365,
+          41.1589598
+        ]
+      },
+      "id": "way/1188987804"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1188987805",
+        "highway": "pedestrian",
+        "name": "Travessa de Salgueiros",
+        "surface": "paving_stones",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.6139198,
+          41.1591458
+        ]
+      },
+      "id": "way/1188987805"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1208337188",
+        "highway": "secondary",
+        "lanes": "2",
+        "lanes:forward": "1",
+        "lanes:psv:backward": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5861824,
+          41.1753183
+        ]
+      },
+      "id": "way/1208337188"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1267564168",
+        "cycleway:right": "share_busway",
+        "highway": "secondary",
+        "lanes": "2",
+        "lanes:forward": "1",
+        "lanes:psv:backward": "1",
+        "name": "Rua de Costa Cabral",
+        "oneway": "yes",
+        "oneway:bicycle": "no",
+        "oneway:bus": "no",
+        "oneway:foot": "no",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5865341,
+          41.1745438
+        ]
+      },
+      "id": "way/1267564168"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1267568114",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "source": "bing",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5881216,
+          41.1715791
+        ]
+      },
+      "id": "way/1267568114"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1316240061",
+        "highway": "secondary",
+        "lane_markings": "no",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5906011,
+          41.1689291
+        ]
+      },
+      "id": "way/1316240061"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1456291565",
+        "highway": "secondary",
+        "name": "Rua de Costa Cabral",
+        "surface": "asphalt",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -8.5892523,
+          41.1698539
+        ]
+      },
+      "id": "way/1456291565"
+    }
+  ]
+}
