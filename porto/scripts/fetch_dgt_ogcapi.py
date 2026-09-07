@@ -189,21 +189,32 @@ def fetch_crus(outdir, crs=CRS84):
     for the reason it gives: the classes are not comparable between
     municipalities, so they must not end up in one merged layer.
     """
-    written = []
+    written, failed = [], []
     for dtcc, slug in sorted(CRUS_MUNICIPIOS.items()):
+        path = os.path.join(outdir, "crus_%s.geojson" % slug)
+        if os.path.exists(path):
+            print("   %-4s %-20s already here, skipping" % (dtcc, slug))
+            continue
         features, offset, matched = [], 0, None
-        while True:
-            query = {"f": "json", "limit": str(PAGE), "crs": crs,
-                     "dtcc": dtcc, "offset": str(offset)}
-            page = get("%s/collections/crus/items?%s"
-                       % (BASE, urllib.parse.urlencode(query)))
-            if matched is None:
-                matched = page.get("numberMatched")
-            got = page.get("features") or []
-            features.extend(got)
-            if len(got) < PAGE:
-                break
-            offset += PAGE
+        try:
+            while True:
+                query = {"f": "json", "limit": str(PAGE), "crs": crs,
+                         "dtcc": dtcc, "offset": str(offset)}
+                page = get("%s/collections/crus/items?%s"
+                           % (BASE, urllib.parse.urlencode(query)))
+                if matched is None:
+                    matched = page.get("numberMatched")
+                got = page.get("features") or []
+                features.extend(got)
+                if len(got) < PAGE:
+                    break
+                offset += PAGE
+        except SystemExit as exc:
+            # One municipality the server will not serve today is not a reason
+            # to throw away the seventeen it will.  Re-running picks it up.
+            print("   %-4s %-20s FAILED: %s" % (dtcc, slug, str(exc)[:70]))
+            failed.append(slug)
+            continue
         doc = {
             "type": "FeatureCollection",
             "_fetch": {
@@ -222,7 +233,6 @@ def fetch_crus(outdir, crs=CRS84):
             },
             "features": features,
         }
-        path = os.path.join(outdir, "crus_%s.geojson" % slug)
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(doc, fh, ensure_ascii=False)
         size = os.path.getsize(path)
@@ -236,6 +246,10 @@ def fetch_crus(outdir, crs=CRS84):
                         "sha256": digest, "crs": crs,
                         "request": doc["_fetch"]["request"],
                         "description": "CRUS, %s" % slug})
+    if failed:
+        print("   %d municipality/ies did not come down: %s"
+              % (len(failed), ", ".join(failed)))
+        print("   re-run the same command; what is already written is skipped")
     return written
 
 
