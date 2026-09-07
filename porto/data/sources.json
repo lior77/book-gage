@@ -1,11 +1,13 @@
 {
- "generated": "2026-09-06",
+ "generated": "2026-09-07",
  "license_notices": [
   "גבולות מנהליים: CAOP 2020, Direção-Geral do Território (DGT) — נתונים פתוחים.",
   "נתוני מפקד 2021 ברמת עירייה, רובע ומקטע סטטיסטי: INE — Censos 2021, Ficheiro Síntese por Secção.",
   "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
   "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה.",
-  "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL."
+  "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL.",
+  "CAOP 2025, ושכבות SRUP ו-CRUS: Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0.",
+  "מחירי מכירה ושכירות למ״ר: INE — Estatísticas de preços da habitação ao nível local, ו-Estatísticas de Rendas da Habitação ao nível local."
  ],
  "fields": {
   "municipio.pop2021": {
@@ -423,9 +425,12 @@
     "why_he": "שכבת הגבולות כאן היא CAOP 2020, כלומר חלוקת הרובעים של רפורמת 2013. ברפורמת 2025 בוטלו חלק מהאיחודים: במחוז פורטו 25 מ-243 היחידות פורקו ל-57 רובעים נפרדים. הקודים החדשים כבר באפליקציה, אבל הגבולות עצמם לא — לכך צריך את CAOP 2024 או 2025 מ-DGT.",
     "important_he": "פיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים: מפקד 2021 נספר לפי חלוקת 2013. כדי לפצל גם את הנתונים צריך את BGRI 2021 — קובץ הרשתות הסטטיסטיות של INE, שממנו אפשר לסכום אוכלוסייה לכל גבול חדש.",
     "candidate_sources": [
+     "https://ogcapi.dgterritorio.gov.pt/collections/freguesias",
      "https://www.dgterritorio.gov.pt/dados-abertos",
      "https://mapas.ine.pt/download/index2021.phtml"
-    ]
+    ],
+    "raw_data_arrived_he": "2026-09-07: הגבולות עצמם כאן — data/raw/dgt/caop_freguesias.geojson, 275 רובעים, ו-caop_municipios.geojson, 18 עיריות, מ-OGC API של DGT (ogcapi.dgterritorio.gov.pt). לכל פוליגון יש dtmnfr, כלומר DICOFRE, מה שהשכבה של 2020 מעולם לא נשאה. מול רשימת הקודים של האפליקציה יוצאים בדיוק 25 קודים שנעלמו ו-57 חדשים, כפי שסעיף why_he צופה. השדה נשאר כאן כי build.py עדיין בנוי סביב 243 רובעים ומשייך אותם בהתאמת שם מול שורות ה-PDF ולא לפי קוד; האפליקציה עוד לא מציגה את החלוקה החדשה. ראה docs/DATA-ACQUIRED.md.",
+    "fetch": "scripts/fetch_dgt_ogcapi.py caop_freguesias caop_municipios"
    },
    {
     "field": "housing.lift",
@@ -479,11 +484,14 @@
     "field": "municipio.price_eur_m2 / freguesia.price_eur_m2",
     "label_he": "מחיר למ״ר",
     "why_he": "idealista.pt/media, Confidencial Imobiliário ומדד הדיור של INE — כולם חסומים.",
-    "fetch": "scripts/fetch_idealista.py",
+    "fetch": "scripts/fetch_ine_habitacao.py",
     "candidate_sources": [
+     "https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=0012234&lang=PT",
      "https://www.idealista.pt/media/relatorios-preco-habitacao/",
      "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-    ]
+    ],
+    "raw_data_arrived_he": "2026-09-07: ine.pt מעולם לא היה חסום — check_network.py בדק ב-HEAD, ו-INE עונה ל-HEAD בסגירת החיבור. הסדרות כאן: data/raw/ine/ine_precos_venda.csv (מדד 0012234, מכירות, 2019Q4–2026Q1) ו-ine_rendas.csv (מדד 0014696, שכירות חדשה, 2020Q1–2026Q1). שני המדדים אומתו מול המטא-דאטה של INE ולא נלקחו מהזיכרון.",
+    "important_he": "שלוש הסתייגויות, וכולן חוסמות הצגה נאיבית: (1) המדד הוא חציון של 12 החודשים האחרונים, ולכן אסור לגזור ממנו שינוי רבעוני; (2) INE מסמן ערך מושמט ב-'-' וזה נשמר בעמודת flag, כשהערך נשאר ריק; (3) הגאוגרפיה היא NUTS-2024, כלומר חלוקת הרובעים של 2013. במחוז 13 יש מחיר ברמת רובע ל-112 רובעים בלבד, מהם 20 הם איחודים שפורקו ואינם קיימים ב-CAOP2025, ו-183 מ-275 הרובעים החדשים אין להם שורה כלל. אסור לתת לרובע חדש את המחיר של האיחוד שהוא היה חלק ממנו ולהציג אותו כמחיר של הרובע."
    },
    {
     "field": "bairro.boundary",

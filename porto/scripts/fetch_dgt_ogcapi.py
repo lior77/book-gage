@@ -12,6 +12,15 @@ That is the same data the SNIT/SRUP portal serves, reachable when snit. is not,
 and it comes back as GeoJSON with the Diário da República reference already on
 each polygon — which is exactly what docs/DATA-REQUEST.md asks for REN.
 
+It also carries CRUS, which settles the assumption in DATA-REQUEST.md item 7
+that municipal plans have no national repository: they do.  Every polygon
+keeps `designacao_no_plano`, the wording of the municipality's own plan, next
+to DGT's harmonised `classe_2021`/`categoria_2021`, plus the scale it was
+drawn at, the plan's publication date and whether it is still in force.  The
+warning in that item still stands and the field layout is what makes it
+keepable — the municipal wording is the data, and the harmonised class is
+DGT's reading of it, not a substitute for reading the regulation.
+
 Every layer is written whole, as the server returns it, with no reprojection,
 no simplification and no field renaming.  A `_fetch` block is added to the
 FeatureCollection recording the request that produced it.
@@ -57,6 +66,9 @@ LAYERS = {
     "ran": (
         "srup_ran", {"bbox": BBOX},
         "RAN, Reserva Agrícola Nacional, with the DR publication"),
+    "crus": (
+        "crus", {"bbox": BBOX},
+        "CRUS — land-use regime, each polygon keeping its own plan's wording"),
     "perigosidade_incendio": (
         "srup_perigosidade_inc_rural", {"bbox": BBOX},
         "Carta de Perigosidade de Incêndio Rural — five classes in `tipologia`"),
@@ -79,8 +91,19 @@ LAYERS = {
 
 PAGE = 500
 
+# Layers whose features are big enough that a full page makes the server
+# answer 500 instead of the data.  CRUS is the extreme case: 10 comes back,
+# 25 does not, so it pages in tens and takes a while.
+PAGE_OVERRIDE = {"crus": 10}
 
-def get(url, tries=4):
+
+def get(url, tries=8):
+    """One GET, retried patiently.
+
+    The server answers 500 in bursts under sustained paging — the same URL
+    that failed a minute ago succeeds later — so the backoff climbs to
+    minutes rather than treating a 500 as a verdict.
+    """
     last = None
     for attempt in range(tries):
         try:
@@ -91,14 +114,15 @@ def get(url, tries=4):
         except Exception as exc:      # noqa: BLE001
             last = exc
             if attempt < tries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(min(120, 5 * 2 ** attempt))
     raise SystemExit("giving up on %s\n  %s" % (url, last))
 
 
 def fetch_layer(name, outdir, crs=CRS84):
     collection, extra, what = LAYERS[name]
+    page = PAGE_OVERRIDE.get(name, PAGE)
     query = dict(extra)
-    query.update({"f": "json", "limit": str(PAGE), "crs": crs})
+    query.update({"f": "json", "limit": str(page), "crs": crs})
 
     features, offset, matched = [], 0, None
     while True:
@@ -114,9 +138,9 @@ def fetch_layer(name, outdir, crs=CRS84):
         features.extend(got)
         sys.stdout.write("\r   %d/%s" % (len(features), matched))
         sys.stdout.flush()
-        if len(got) < PAGE:
+        if len(got) < page:
             break
-        offset += PAGE
+        offset += page
     print()
 
     if matched is not None and len(features) != matched:

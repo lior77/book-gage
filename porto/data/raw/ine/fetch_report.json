@@ -1,0 +1,40 @@
+[
+  {
+    "file": "ine_precos_venda.csv",
+    "indicator_code": "0012234",
+    "dataset": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) por Localização geográfica (NUTS - 2024) e Categoria do alojamento familiar; Trimestral - INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022)",
+    "rows": 72618,
+    "periods": [
+      "2019Q4",
+      "2026Q1"
+    ],
+    "units": "Euro/ Metro quadrado (€/ m²)",
+    "publication_date": "2026-07-17",
+    "extracted": "2026-09-07T21:20:38.647+01:00",
+    "api_call": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012234&Dim1=<trimestre>&lang=PT",
+    "meta_call": "https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=0012234&lang=PT",
+    "missing_markers": {
+      "-": 30403
+    },
+    "sha256": "186cfc145bd6ae152c531cfc09831dc57eabaa56c0e313df6a58794994cfc252"
+  },
+  {
+    "file": "ine_rendas.csv",
+    "indicator_code": "0014696",
+    "dataset": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²) por Localização geográfica (NUTS - 2024); Trimestral - INE, Estatísticas de Rendas da Habitação ao nível local",
+    "rows": 15950,
+    "periods": [
+      "2020Q1",
+      "2026Q1"
+    ],
+    "units": "Euro/ Metro quadrado (€/ m²)",
+    "publication_date": "2026-06-26",
+    "extracted": "2026-09-07T21:21:29.129+01:00",
+    "api_call": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0014696&Dim1=<trimestre>&lang=PT",
+    "meta_call": "https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=0014696&lang=PT",
+    "missing_markers": {
+      "-": 4251
+    },
+    "sha256": "c1adc8f4921763174c23ae90292208fa8de20b7623dd7d9d4babe72be004c3e8"
+  }
+]
