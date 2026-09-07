@@ -271,6 +271,22 @@ INE, `Estatísticas de preços da habitação ao nível local`:
 פוליגון. הדרישה לצרף את ההפניה ל-Diário da República מסופקת על ידי המקור עצמו.
 ההסתייגות של DGT נשארת: בפער בין הווקטור לפרסום — הפרסום קובע.
 
+**מקור שני ל-REN, ועדיין לא נוצל:** `servicos.dgterritorio.pt` — שימו לב,
+**סיומת `.pt` ולא `.gov.pt`** — מגיש שירות WFS 2.0 נפרד לכל אזור,
+`SDISNITWFSSRUP_REN_NORTE`, עם שני סוגי ישויות: `gmgml:REN_Norte` (שטחים)
+ו-`Linhas_de_Agua_Norte` (קווי מים). ‏`DefaultCRS` הוא EPSG:3763 כמו CAOP,
+והשירות מכריז `ImplementsResultPaging`.
+
+**רשימת השדות שלו רחבה מזו שנרשמה מה-OGC API:** לצד `SERV_DR`, `SERV_LEI`,
+`SERV_HIPERLINK` ו-`LEI_TIPO` יש גם `ORIGEM_REN`, `DEPOSITO`, `TUTELA`,
+`IDESTADO`, `DESIGNACAO`, `DTCC`, `CONCELHO`, ו — החשובים —
+**`GEOMETRIA_DATA`, `GEOMETRIA_AUTOR` ו-`GEOMETRIA_RIGOR`**. אחרי שהתברר
+ש-`serv_data` בשכבת השריפות מחזיר את תאריך החוק ולא את שנת המפה, שדה שמצהיר
+במפורש על תאריך הגאומטריה הוא בדיוק מה שחסר. **צריך לבדוק אם הוא מאוכלס.**
+
+החיסרון: פלט GML בלבד (2.1.2 / 3.0.0 / 3.1.1 / 3.2), בלי GeoJSON. בלי GDAL
+בסביבה זה פרסור ידני, ולכן ה-OGC API נשאר המקור העיקרי וזה מקור האימות.
+
 **CRUS מבטל את ההנחה שאין מאגר PDM ארצי.** בכל פוליגון גם `designacao_no_plano`
 (הניסוח של תוכנית המתאר העירונית, כלשונו) וגם `classe_2021`/`categoria_2021`
 (הסיווג הארצי המתואם של DGT). **הניסוח העירוני הוא הנתון; הסיווג הארצי הוא
