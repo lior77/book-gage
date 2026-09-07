@@ -66,9 +66,6 @@ LAYERS = {
     "ran": (
         "srup_ran", {"bbox": BBOX},
         "RAN, Reserva Agrícola Nacional, with the DR publication"),
-    "crus": (
-        "crus", {"bbox": BBOX},
-        "CRUS — land-use regime, each polygon keeping its own plan's wording"),
     "perigosidade_incendio": (
         "srup_perigosidade_inc_rural", {"bbox": BBOX},
         "Carta de Perigosidade de Incêndio Rural — five classes in `tipologia`"),
@@ -91,10 +88,17 @@ LAYERS = {
 
 PAGE = 500
 
-# Layers whose features are big enough that a full page makes the server
-# answer 500 instead of the data.  CRUS is the extreme case: 10 comes back,
-# 25 does not, so it pages in tens and takes a while.
-PAGE_OVERRIDE = {"crus": 10}
+# CRUS is handled separately, one municipality at a time — see fetch_crus.
+# The 18 DICO codes of district 13, in the numbering CRUS uses in `dtcc`.
+CRUS_MUNICIPIOS = {
+    "1301": "amarante", "1302": "baiao", "1303": "felgueiras",
+    "1304": "gondomar", "1305": "lousada", "1306": "maia",
+    "1307": "marco_de_canaveses", "1308": "matosinhos",
+    "1309": "pacos_de_ferreira", "1310": "paredes", "1311": "penafiel",
+    "1312": "porto", "1313": "povoa_de_varzim", "1314": "santo_tirso",
+    "1315": "valongo", "1316": "vila_do_conde", "1317": "vila_nova_de_gaia",
+    "1318": "trofa",
+}
 
 
 def get(url, tries=8):
@@ -120,7 +124,7 @@ def get(url, tries=8):
 
 def fetch_layer(name, outdir, crs=CRS84):
     collection, extra, what = LAYERS[name]
-    per_page = PAGE_OVERRIDE.get(name, PAGE)
+    per_page = PAGE
     query = dict(extra)
     query.update({"f": "json", "limit": str(per_page), "crs": crs})
 
@@ -176,6 +180,65 @@ def fetch_layer(name, outdir, crs=CRS84):
             "request": doc["_fetch"]["request"], "description": what}
 
 
+def fetch_crus(outdir, crs=CRS84):
+    """CRUS, one municipality at a time — `pdm_<municipio>.gpkg`, in effect.
+
+    A bbox query against this collection answers 500 far more often than it
+    answers data, while the same request filtered on `dtcc` comes back.  One
+    file per municipality is also what DATA-REQUEST.md item 7 asks for, and
+    for the reason it gives: the classes are not comparable between
+    municipalities, so they must not end up in one merged layer.
+    """
+    written = []
+    for dtcc, slug in sorted(CRUS_MUNICIPIOS.items()):
+        features, offset, matched = [], 0, None
+        while True:
+            query = {"f": "json", "limit": str(PAGE), "crs": crs,
+                     "dtcc": dtcc, "offset": str(offset)}
+            page = get("%s/collections/crus/items?%s"
+                       % (BASE, urllib.parse.urlencode(query)))
+            if matched is None:
+                matched = page.get("numberMatched")
+            got = page.get("features") or []
+            features.extend(got)
+            if len(got) < PAGE:
+                break
+            offset += PAGE
+        doc = {
+            "type": "FeatureCollection",
+            "_fetch": {
+                "collection": "crus",
+                "source": "DGT OGC API Features, %s" % BASE,
+                "request": "%s/collections/crus/items?dtcc=%s&f=json&limit=%d&crs=%s"
+                           % (BASE, dtcc, PAGE, crs),
+                "crs": crs,
+                "filter": {"dtcc": dtcc},
+                "downloaded": date.today().isoformat(),
+                "server_numberMatched": matched,
+                "features_written": len(features),
+                "licence": "CC BY 4.0 — Direção-Geral do Território",
+                "note": "Classes are not comparable between municipalities; "
+                        "designacao_no_plano is each plan's own wording.",
+            },
+            "features": features,
+        }
+        path = os.path.join(outdir, "crus_%s.geojson" % slug)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, ensure_ascii=False)
+        size = os.path.getsize(path)
+        with open(path, "rb") as fh:
+            digest = hashlib.sha256(fh.read()).hexdigest()
+        print("   %-4s %-20s %5d/%-5s  %6.1f MB  %s"
+              % (dtcc, slug, len(features), matched, size / 1e6, digest[:12]))
+        written.append({"layer": "crus_%s" % slug,
+                        "file": os.path.basename(path), "collection": "crus",
+                        "features": len(features), "bytes": size,
+                        "sha256": digest, "crs": crs,
+                        "request": doc["_fetch"]["request"],
+                        "description": "CRUS, %s" % slug})
+    return written
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("layers", nargs="*", default=[],
@@ -190,15 +253,23 @@ def main():
     if args.list:
         for name, (coll, extra, what) in sorted(LAYERS.items()):
             print("%-24s %-32s %s" % (name, coll, what))
+        print("%-24s %-32s %s" % ("crus", "crus",
+              "land-use regime, one file per municipality (18 of them)"))
         return 0
 
     names = args.layers or sorted(LAYERS)
-    unknown = [n for n in names if n not in LAYERS]
+    unknown = [n for n in names if n not in LAYERS and n != "crus"]
     if unknown:
         raise SystemExit("unknown layer(s): %s\nrun --list to see them all"
                          % ", ".join(unknown))
     os.makedirs(args.out, exist_ok=True)
-    report = [fetch_layer(n, args.out, args.crs) for n in names]
+    report = []
+    for n in names:
+        if n == "crus":
+            print("crus                     CRUS, one municipality at a time")
+            report.extend(fetch_crus(args.out, args.crs))
+        else:
+            report.append(fetch_layer(n, args.out, args.crs))
     path = os.path.join(args.out, "fetch_report.json")
     existing = []
     if os.path.exists(path):

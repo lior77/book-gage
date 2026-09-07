@@ -180,8 +180,16 @@ View וניווט.
 
 ## מה עדיין חסר, ולמה
 
-הסביבה שבה נבנתה האפליקציה חוסמת ברמת מדיניות הרשת את `ine.pt`, `pordata.pt`,
-`geoapi.pt`, `idealista.pt`, ‏AIMA, ‏Wikipedia ו-Overpass. לכן חמישה שדות לא נכנסו:
+> **עדכון 2026-09-07:** `ine.pt` מעולם לא היה חסום — `check_network.py` בדק
+> ב-HEAD, ו-INE עונה ל-HEAD בסגירת החיבור. הנתונים הגולמיים של מחיר ושכירות
+> למ״ר, של גבולות CAOP2025, ושל אזורי ההצפה כבר במאגר תחת `data/raw/`.
+> **הם עדיין לא באפליקציה** — `build.py` בנוי סביב 243 הרובעים של 2013 ואין בו
+> שדה מחיר, ולכן הטבלה שלמטה נשארת נכונה מבחינת מה שהמשתמש רואה.
+> הפירוט המלא, כולל למה מחירי INE אינם מתחברים ישירות ל-275 הרובעים החדשים:
+> [`docs/DATA-ACQUIRED.md`](docs/DATA-ACQUIRED.md).
+
+הסביבה שבה נבנתה האפליקציה חסמה `pordata.pt`, `geoapi.pt`, `idealista.pt`,
+‏AIMA, ‏Wikipedia ו-Overpass. לכן חמישה שדות לא נכנסו:
 
 | שדה | איך להשלים |
 |---|---|
@@ -189,7 +197,7 @@ View וניווט.
 | גיל חציוני | `python3 scripts/fetch_ine.py --search "idade mediana"` ואז `--varcd` |
 | הכנסה חציונית | `python3 scripts/fetch_ine.py --indicator income` |
 | עבירות רשומות ל-1000 תושבים | `python3 scripts/fetch_pordata.py --indicator crime` |
-| מחיר למ״ר | `python3 scripts/fetch_idealista.py --print-instructions` |
+| מחיר למ״ר | הנתון הגולמי כבר ב-`data/raw/ine/` — ‏`python3 scripts/fetch_ine_habitacao.py` מרענן אותו. מה שחסר הוא השדה ב-`build.py`, ולפניו ההכרעה מה עושים עם 20 האיחודים שפורקו |
 
 אחרי כל אחד מהם:
 
