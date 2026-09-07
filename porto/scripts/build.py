@@ -149,9 +149,10 @@ BASE_INDICATORS = [
 # Listed so the UI can show them as explicitly missing rather than hide them.
 PENDING_INDICATORS = [
     {"key": "foreign_pct", "label_he": "אחוז תושבים זרים", "unit": "%",
-     "fetch": "scripts/fetch_pordata.py --indicator foreign", "levels": ["municipio"]},
+     "fetch": "scripts/import_censos_seccoes.py",
+     "levels": ["municipio", "freguesia"]},
     {"key": "median_age", "label_he": "גיל חציוני", "unit": "שנים",
-     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"],
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"],
      "warning_he": "אם קובץ המפקד מפרסם גיל חציוני — זה הערך שלו. אם יש בו רק פסי "
                    "גיל, הערך מחושב באינטרפולציה ומסומן כמקורב; ובפסים הרחבים של "
                    "INE (25–64) הסקריפט מסרב לחשב."},
@@ -166,13 +167,13 @@ PENDING_INDICATORS = [
     # One INE Censos 2021 download fills all five of these at once, for the 18
     # municipalities and the 243 freguesias together.
     {"key": "ageing_index", "label_he": "מדד הזדקנות", "unit": "65+/0-14 ×100",
-     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
     {"key": "pct_65plus", "label_he": "אחוז בני 65+", "unit": "%",
-     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
     {"key": "pct_0_14", "label_he": "אחוז בני 0–14", "unit": "%",
-     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
     {"key": "pop_growth_pct", "label_he": "שינוי אוכלוסייה 2011→2021", "unit": "%",
-     "fetch": "scripts/import_censos.py <קובץ INE>", "levels": ["municipio", "freguesia"]},
+     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
 ]
 
 
@@ -214,6 +215,66 @@ def read_official_codes():
         return {}
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)["freguesias"]
+
+
+# The housing block, as (field, numerator, denominator). A denominator of None
+# means the figure is a count and not a share. Every one of these is a Censos
+# 2021 variable read straight out of INE's file — nothing here is estimated,
+# and a unit missing the denominator simply has no value for that row.
+HOUSING = [
+    ("dwellings", ["N_ALOJAMENTOS_FAMILIARES"], None),
+    ("vacant_pct", ["N_ALOJAMENTOS_VAGOS_TOTAL"], "N_ALOJAMENTOS_FAM_CLASSICOS"),
+    ("second_home_pct", ["N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA"],
+     "N_ALOJAMENTOS_FAM_CLASSICOS"),
+    ("owner_pct", ["N_RHABITUAL_PROP_OCUP"], "N_CLASSICOS_RES_HABITUAL"),
+    ("rented_pct", ["N_RHABITUAL_ARRENDADOS"], "N_CLASSICOS_RES_HABITUAL"),
+    ("parking_pct", ["N_RHABITUAL_COM_ESTACIONAMENTO"], "N_CLASSICOS_RES_HABITUAL"),
+    ("buildings", ["N_EDIFICIOS_CLASSICOS"], None),
+    ("repair_pct", ["N_EDIFICIOS_COM_NEC_REPARACAO"], "N_EDIFICIOS_CLASSICOS"),
+    ("deep_repair_pct", ["N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS"],
+     "N_EDIFICIOS_CLASSICOS"),
+    ("pre1946_pct", ["N_EDIFICIOS_CONSTR_ANTES_1919", "N_EDIFICIOS_CONSTR_1919A1945"],
+     "N_EDIFICIOS_CLASSICOS"),
+    ("since2011_pct", ["N_EDIFICIOS_CONSTR_2011A2015", "N_EDIFICIOS_CONSTR_2016A2021"],
+     "N_EDIFICIOS_CLASSICOS"),
+    # No lift row. N_EDIFICIOS_COM_ELEVADOR and N_EDIFICIOS_SEM_ELEVADOR are
+    # transposed in INE's file: Baião, where 92% of buildings have one or two
+    # floors, comes out with 10 668 of 10 700 buildings "com elevador". The two
+    # add up to the total, so the counts are right and only the labels are
+    # swapped — but publishing a figure by guessing which header INE meant is
+    # exactly what this project does not do. Recorded under "what is missing".
+]
+
+
+def housing_block(census):
+    """The eleven housing figures, or nothing at all if the census row is absent."""
+    if not census:
+        return None
+    out = {}
+    for field, parts, whole in HOUSING:
+        if any(census.get(p) is None for p in parts):
+            continue
+        top = sum(census[p] for p in parts)
+        if whole is None:
+            out[field] = top
+        elif census.get(whole):
+            out[field] = round(100.0 * top / census[whole], 1)
+    return out or None
+
+
+def read_censos():
+    """Censos 2021 by DICOFRE, from import_censos_seccoes.py.
+
+    The census is the authority on population: the municipality figure and its
+    parishes come out of one file, so they add up. Without it the app falls
+    back on the source document and the hand-collected file, which do not.
+    """
+    path = os.path.join(RAW, "censos2021_ine.json")
+    if not os.path.exists(path):
+        return {}, {}
+    with open(path, encoding="utf-8") as fh:
+        d = json.load(fh)
+    return d.get("municipios", {}), d.get("freguesias", {})
 
 
 # A ring of pastels for the parishes inside one municipality. Neighbouring
@@ -527,6 +588,7 @@ def main():
 
     warnings = []
     codes = read_official_codes()
+    ine_mun, ine_fre = read_censos()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
 
     # ---- parishes -----------------------------------------------------------
@@ -564,11 +626,14 @@ def main():
             # successors instead and the UI says so.
             official = codes.get(mun + "|" + caop_name)
             if official:
-                if official.get("code"):
-                    rec["code"] = official["code"]
-                    rec["dicofre"] = official["dicofre"]
-                elif official.get("split2025"):
+                rec["code"] = official["code"]
+                rec["dicofre"] = official["dicofre"]
+                # A unit the 2025 reform split back into separate parishes: the
+                # code above is the one it held until then, and these are the
+                # parishes that replaced it.
+                if official.get("split2025"):
                     rec["split2025"] = official["split2025"]
+                    rec["code_until"] = 2025
             if src:
                 rec["he"] = src["he"]
                 rec["he_origin"] = "pdf"
@@ -579,6 +644,20 @@ def main():
                 if src["pop"] is not None:
                     rec["pop2021"] = int(src["pop"])
                     rec["pop_src"] = "pdf"
+            # The census figure wins over both the document and the collected
+            # file: it is the same publication the municipality total comes
+            # from, so a municipality equals the sum of its parishes exactly.
+            census = ine_fre.get(rec.get("dicofre", ""))
+            if census and census.get("N_INDIVIDUOS") is not None:
+                was = rec.get("pop2021")
+                rec["pop2021"] = int(census["N_INDIVIDUOS"])
+                rec["pop_src"] = "ine"
+                if was is not None and was != rec["pop2021"]:
+                    warnings.append("%s: population %d -> %d (INE Censos 2021)"
+                                    % (caop_name, was, rec["pop2021"]))
+            housing = housing_block(census)
+            if housing:
+                rec["housing"] = housing
             if "pop2021" not in rec and caop_name in extra_pop:
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
@@ -646,9 +725,19 @@ def main():
         if rec["ine"] and len(str(rec["ine"])) == 4:
             rec["code"] = str(rec["ine"])[2:]
             rec["dicofre"] = str(rec["ine"])
-        if mun in osm_pop:
+        census = ine_mun.get(rec.get("dicofre", ""))
+        if census and census.get("N_INDIVIDUOS") is not None:
+            rec["pop2021"] = int(census["N_INDIVIDUOS"])
+            rec["pop_src"] = "ine"
+            rec["nuts3"] = census.get("nuts3")
+            housing = housing_block(census)
+            if housing:
+                rec["housing"] = housing
+        elif mun in osm_pop:
             rec["pop2021"] = osm_pop[mun]
-            rec["density"] = round(osm_pop[mun] / area, 1)
+            rec["pop_src"] = "osm"
+        if rec.get("pop2021"):
+            rec["density"] = round(rec["pop2021"] / area, 1)
         municipios.append(rec)
 
     # ---- Porto city: 7 quarters and 53 bairros ------------------------------
@@ -726,13 +815,18 @@ def main():
         item.update({k: v for k, v in meta.items() if k != "values"})
         item["available"] = True
         n_m = n_f = 0
+        # by DICOFRE first: three parishes are named differently by CAOP and by
+        # INE (Vila Meã, Penhalonga, Vila Nova do Campo), and a join on the name
+        # silently drops them. The code is the same in both.
+        by_code = got.get("by_dicofre", {})
         for m in municipios:
-            v = got.get("municipios", {}).get(m["pt"])
+            v = by_code.get(m.get("dicofre")) or got.get("municipios", {}).get(m["pt"])
             if v is not None:
                 m[spec["key"]] = v
                 n_m += 1
         for f in freguesias:
-            v = got.get("freguesias", {}).get("%s|%s" % (f["mun"], f["pt"]))
+            v = (by_code.get(f.get("dicofre"))
+                 or got.get("freguesias", {}).get("%s|%s" % (f["mun"], f["pt"])))
             if v is not None:
                 f[spec["key"]] = v
                 n_f += 1

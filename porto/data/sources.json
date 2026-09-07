@@ -2,6 +2,7 @@
  "generated": "2026-09-06",
  "license_notices": [
   "גבולות מנהליים: CAOP 2020, Direção-Geral do Território (DGT) — נתונים פתוחים.",
+  "נתוני מפקד 2021 ברמת עירייה, רובע ומקטע סטטיסטי: INE — Censos 2021, Ficheiro Síntese por Secção.",
   "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
   "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה.",
   "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL."
@@ -11,11 +12,11 @@
    "label_he": "מספר תושבים (עירייה)",
    "value_type": "integer",
    "reference_year": 2021,
-   "source": "INE, Censos 2021 (resultados definitivos), דרך תג population/population:date על יחסי הגבול של OpenStreetMap (source=DGT CAOP 2022)",
-   "url": "https://www.openstreetmap.org/",
-   "retrieved": "2026-09-05",
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
    "coverage": "18/18",
-   "caveat_he": "הערכים תואמים את מפקד 2021, אך יש להעדיף אימות ישיר מול INE. הסקריפט scripts/fetch_ine.py עושה את זה במכונה עם גישה חופשית לרשת. הפרשים של עד 0.12% בין הערך הזה לסכום הרובעים מוסברים בגרסאות פרסום שונות של המפקד."
+   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר."
   },
   "municipio.area_km2": {
    "label_he": "שטח (קמ״ר)",
@@ -70,15 +71,14 @@
    "coverage": "243/243"
   },
   "freguesia.pop2021": {
-   "label_he": "אוכלוסיית רובע",
+   "label_he": "מספר תושבים (רובע)",
    "value_type": "integer",
    "reference_year": 2021,
-   "source": "pop_src=pdf — 119 ערכים מאומתים מהמסמך המקורי (מפקד INE 2021); pop_src=collected — 124 ערכים שנאספו כאן מערכי הוויקיפדיה הפורטוגזית של כל רובע, המצטטים את מפקד INE 2021",
-   "url": "https://pt.wikipedia.org/",
-   "retrieved": "2026-09-05",
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
    "coverage": "243/243",
-   "validation_he": "סכום הרובעים בכל אחת משבע העיריות שהושלמו הושווה לאוכלוסיית העירייה: באיאו -1, פנאפיאל -1, אמרנטה -3, מרקו -5, פלגיירש -7, פאסוש דה פריירה -27, לוזאדה +55 (מקסימום 0.12%). בפנאפיאל, שבעה ערכים שכבר היו מאומתים במסמך המקורי תואמים במדויק לערכים שנאספו כאן.",
-   "caveat_he": "חוק 25-A/2025 פיצל בחזרה חלק מאיחודי הרובעים של 2013. הנתונים כאן משקפים את חלוקת CAOP 2020 / מפקד 2021."
+   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר."
   },
   "freguesia.area_km2": {
    "label_he": "שטח רובע (קמ״ר)",
@@ -189,6 +189,154 @@
    "retrieved": "2026-09-05",
    "coverage": "18/18",
    "validation_he": "אומת מול פוליגוני CAOP: כל 275 יחידות הרובע במחוז נופלות בתוך העירייה שהספרות שלהן מציינות. הסדר כמעט אלף-ביתי ולא לגמרי — Paços de Ferreira הוא 09 ו-Paredes 10, וטרופה היא 18 כי נוצרה ב-1998."
+  },
+  "municipio.housing": {
+   "label_he": "דיור ובניינים",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "definitions_he": {
+    "מספר דירות": "N_ALOJAMENTOS_FAMILIARES — דירות למשפחות, מכל הסוגים",
+    "דירות ריקות": "N_ALOJAMENTOS_VAGOS_TOTAL מתוך N_ALOJAMENTOS_FAM_CLASSICOS",
+    "בית שני": "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA מתוך אותו מכנה",
+    "בבעלות הדיירים": "N_RHABITUAL_PROP_OCUP מתוך N_CLASSICOS_RES_HABITUAL",
+    "בשכירות": "N_RHABITUAL_ARRENDADOS מתוך אותו מכנה",
+    "עם חניה": "N_RHABITUAL_COM_ESTACIONAMENTO מתוך אותו מכנה",
+    "מספר בניינים": "N_EDIFICIOS_CLASSICOS",
+    "זקוקים לתיקון": "N_EDIFICIOS_COM_NEC_REPARACAO — כולל תיקונים קלים; שווה בדיוק לסכום קלים+בינוניים+עמוקים, ולכן התווית מאומתת",
+    "תיקון עמוק": "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS",
+    "נבנו לפני 1946": "ANTES_1919 + 1919A1945 מתוך N_EDIFICIOS_CLASSICOS",
+    "נבנו מ-2011": "2011A2015 + 2016A2021 מתוך אותו מכנה"
+   },
+   "validation_he": "כל חלוקה בקובץ נבדקה שהיא מסתכמת לשלם: מגורים+בית שני+ריקות = דירות קלאסיות; בעלות+שכירות+אחר = מגורי קבע; עם חניה+בלי חניה = מגורי קבע; עשר תקופות הבנייה = סך הבניינים.",
+   "caveat_he": "אין כאן שורת מעלית. שתי העמודות של INE — עם מעלית ובלי מעלית — מוחלפות בקובץ: בבאיאו, שבה 92% מהבניינים בני קומה או שתיים, יוצא ש-10,668 מתוך 10,700 בניינים ׳עם מעלית׳. הספירות נכונות והתוויות הפוכות, ולנחש איזו עמודה INE התכוונה זה בדיוק מה שהפרויקט הזה לא עושה."
+  },
+  "freguesia.housing": {
+   "label_he": "דיור ובניינים",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "243/243",
+   "definitions_he": {
+    "מספר דירות": "N_ALOJAMENTOS_FAMILIARES — דירות למשפחות, מכל הסוגים",
+    "דירות ריקות": "N_ALOJAMENTOS_VAGOS_TOTAL מתוך N_ALOJAMENTOS_FAM_CLASSICOS",
+    "בית שני": "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA מתוך אותו מכנה",
+    "בבעלות הדיירים": "N_RHABITUAL_PROP_OCUP מתוך N_CLASSICOS_RES_HABITUAL",
+    "בשכירות": "N_RHABITUAL_ARRENDADOS מתוך אותו מכנה",
+    "עם חניה": "N_RHABITUAL_COM_ESTACIONAMENTO מתוך אותו מכנה",
+    "מספר בניינים": "N_EDIFICIOS_CLASSICOS",
+    "זקוקים לתיקון": "N_EDIFICIOS_COM_NEC_REPARACAO — כולל תיקונים קלים; שווה בדיוק לסכום קלים+בינוניים+עמוקים, ולכן התווית מאומתת",
+    "תיקון עמוק": "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS",
+    "נבנו לפני 1946": "ANTES_1919 + 1919A1945 מתוך N_EDIFICIOS_CLASSICOS",
+    "נבנו מ-2011": "2011A2015 + 2016A2021 מתוך אותו מכנה"
+   },
+   "validation_he": "כל חלוקה בקובץ נבדקה שהיא מסתכמת לשלם: מגורים+בית שני+ריקות = דירות קלאסיות; בעלות+שכירות+אחר = מגורי קבע; עם חניה+בלי חניה = מגורי קבע; עשר תקופות הבנייה = סך הבניינים.",
+   "caveat_he": "אין כאן שורת מעלית. שתי העמודות של INE — עם מעלית ובלי מעלית — מוחלפות בקובץ: בבאיאו, שבה 92% מהבניינים בני קומה או שתיים, יוצא ש-10,668 מתוך 10,700 בניינים ׳עם מעלית׳. הספירות נכונות והתוויות הפוכות, ולנחש איזו עמודה INE התכוונה זה בדיוק מה שהפרויקט הזה לא עושה."
+  },
+  "municipio.median_age": {
+   "label_he": "גיל חציוני",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה",
+   "confidence": "approx",
+   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב."
+  },
+  "freguesia.median_age": {
+   "label_he": "גיל חציוני",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה",
+   "confidence": "approx",
+   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב."
+  },
+  "municipio.ageing_index": {
+   "label_he": "מדד הזדקנות",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE"
+  },
+  "freguesia.ageing_index": {
+   "label_he": "מדד הזדקנות",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE"
+  },
+  "municipio.pct_65plus": {
+   "label_he": "אחוז בני 65+",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243"
+  },
+  "freguesia.pct_65plus": {
+   "label_he": "אחוז בני 65+",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243"
+  },
+  "municipio.pct_0_14": {
+   "label_he": "אחוז בני 0–14",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243"
+  },
+  "freguesia.pct_0_14": {
+   "label_he": "אחוז בני 0–14",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243"
+  },
+  "municipio.foreign_pct": {
+   "label_he": "אחוז בעלי אזרחות זרה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר"
+  },
+  "freguesia.foreign_pct": {
+   "label_he": "אחוז בעלי אזרחות זרה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר"
   }
  },
  "missing": {
@@ -202,6 +350,14 @@
     "candidate_sources": [
      "https://www.dgterritorio.gov.pt/dados-abertos",
      "https://mapas.ine.pt/download/index2021.phtml"
+    ]
+   },
+   {
+    "field": "housing.lift",
+    "label_he": "בניינים עם מעלית",
+    "why_he": "שתי העמודות בקובץ INE — N_EDIFICIOS_COM_ELEVADOR ו-N_EDIFICIOS_SEM_ELEVADOR — מסומנות הפוך. הן מסתכמות יחד לסך הבניינים, כלומר הספירה תקינה, אבל בבאיאו יוצא שלכמעט כל בניין בן קומה אחת יש מעלית. לא אפרסם ערך על סמך ניחוש איזו עמודה היא איזו.",
+    "candidate_sources": [
+     "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_publicacoes"
     ]
    },
    {

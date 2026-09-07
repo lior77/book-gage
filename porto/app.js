@@ -70,6 +70,47 @@ function isDark() {
 
 /* A number, its unit, and the year it refers to — the year is on screen next to
    every value, and the whole chip opens the full source record. */
+// The two Censos 2021 blocks. Both cards show the same figures at their own
+// level, and one source record covers each block, because every figure inside
+// it comes out of the same INE file, the same table and the same year.
+function peopleStats(o, lvl) {
+  return `<div class="card">
+    <h2>אנשים — מפקד 2021</h2>
+    <div class="stats">
+      ${stat('גיל חציוני', o.median_age, 'שנים', 1, lvl + '.median_age')}
+      ${stat('בני 0–14', o.pct_0_14, '%', 1, lvl + '.pct_0_14')}
+      ${stat('בני 65+', o.pct_65plus, '%', 1, lvl + '.pct_65plus')}
+      ${stat('מדד הזדקנות', o.ageing_index, '', 1, lvl + '.ageing_index')}
+      ${stat('אזרחות זרה', o.foreign_pct, '%', 1, lvl + '.foreign_pct')}
+    </div>
+    <p class="note">הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון
+      בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14.</p>
+  </div>`;
+}
+function housingStats(o, lvl) {
+  const h = o.housing;
+  if (!h) return '';
+  const k = lvl + '.housing';
+  return `<div class="card">
+    <h2>דיור ובניינים — מפקד 2021</h2>
+    <div class="stats">
+      ${stat('דירות', h.dwellings, '', 0, k)}
+      ${stat('דירות ריקות', h.vacant_pct, '%', 1, k)}
+      ${stat('בית שני', h.second_home_pct, '%', 1, k)}
+      ${stat('בבעלות הדיירים', h.owner_pct, '%', 1, k)}
+      ${stat('בשכירות', h.rented_pct, '%', 1, k)}
+      ${stat('עם חניה', h.parking_pct, '%', 1, k)}
+      ${stat('בניינים', h.buildings, '', 0, k)}
+      ${stat('זקוקים לתיקון', h.repair_pct, '%', 1, k)}
+      ${stat('מהם תיקון עמוק', h.deep_repair_pct, '%', 1, k)}
+      ${stat('נבנו לפני 1946', h.pre1946_pct, '%', 1, k)}
+      ${stat('נבנו מ-2011', h.since2011_pct, '%', 1, k)}
+    </div>
+    <p class="note">׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה
+      כמעט בכל מקום; השורה שמתחתיו — תיקון עמוק — היא זו שמעידה על מצב הבניין.</p>
+  </div>`;
+}
+
 function stat(label, val, unit, dec, srcKey) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
@@ -451,7 +492,7 @@ function renderDistrict() {
         ${stat('צפיפות', D.totPop / D.totArea, 'לקמ״ר', 0, 'municipio.density')}
       </div>
       <p class="note">כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו.
-        מספרי העיריות במפה הם המספרים מהמסמך המקורי.</p>
+        המספרים על המפה הם קודי DICOFRE הרשמיים.</p>
     </div>
 
     <div class="card">
@@ -481,15 +522,12 @@ function freOfFeature(num, props) {
   return D.freByKey.get(props.mun_num + '|' + props.name);
 }
 // The number the app prints for a parish is the official one: the parish half
-// of its DICOFRE code (131202 -> 02). Twenty-five of the 243 units the app
-// draws were split back into separate parishes in 2025 and no longer have a
-// code of their own; the pin then carries the lowest of the successors with a
-// plus, and the text spells all of them out rather than inventing a number.
-const freNum = f => (f.code || (f.split2025 && f.split2025.length
-  ? f.split2025[0].code + '+' : '–'));
+// of its DICOFRE code (131202 -> 02), as INE counted it in 2021. The 25 units
+// the 2025 reform dissolved keep the code they held until then — it is the
+// code their figures were published under, and the card says what replaced them.
+const freNum = f => (f.code || '–');
 // Sorting key, so a municipality's parish list runs in the official order.
-const freOrder = f => (f.code
-  || (f.split2025 && f.split2025.length ? f.split2025[0].code : '99'));
+const freOrder = f => (f.code || '99');
 // One sentence for a unit the 2025 reform undid, naming its successors.
 // Returns HTML, not text: each successor is its own LTR island, or the Hebrew
 // paragraph around it reorders the code away from the name it belongs to.
@@ -551,9 +589,8 @@ function renderMun(num) {
     const desc = q ? q.desc : (f.note || '');
     const flag = !q && f.note && f.note_origin === 'app'
       ? '<span class="flag">תיאור שנכתב לאפליקציה</span>' : '';
-    const code = f.dicofre
-      ? `<span class="lat num">${html(f.dicofre)}</span>`
-      : '<span class="flag">פורק ב-2025</span>';
+    const code = `<span class="lat num">${html(f.dicofre || '')}</span>`
+      + (f.split2025 ? ' <span class="flag">פורק ב-2025</span>' : '');
     return `<button class="row row-full" data-fre="${html(D.freKey(f))}">
       <span class="pin" style="--c:${html(f.colour)}">${n}</span>
       <span class="row-body">
@@ -587,6 +624,9 @@ function renderMun(num) {
         <div><dt>תחבורה</dt><dd>${html(m.transport)}</dd></div></dl>
     </div>
 
+    ${peopleStats(m, 'municipio')}
+    ${housingStats(m, 'municipio')}
+
     <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הרובעים'} — לפי המספור במפה</div>
     ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
     <div class="rows">${list}</div>
@@ -596,8 +636,8 @@ function renderMun(num) {
     })}
     <p class="note" style="margin-block-start:10px">המספר על כל רובע הוא הקוד
       הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן
-      <span class="flag">פורק ב-2025</span> חדל להתקיים כיחידה ברפורמת 2025 ואין
-      לו עוד קוד משלו — מוצגים הרובעים שהחליפו אותו.</p>`;
+      <span class="flag">פורק ב-2025</span> חדל להתקיים כיחידה ברפורמת 2025, והקוד
+      שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.</p>`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -903,8 +943,9 @@ function renderZone(key) {
       </div>
       <p class="sub">${html(m.he)} · ${html(m.belt)}${f.dicofre
         ? ' · קוד רשמי <span class="lat num">' + html(f.dicofre) + '</span>' : ''}</p>
-      ${f.split2025 ? `<p class="note">${splitNote(f)}. הגבול והנתונים כאן הם
-        של היחידה כפי שהיא ב-CAOP 2020, ולכן אין לה קוד רשמי משלה יותר.</p>` : ''}
+      ${f.split2025 ? `<p class="note">${splitNote(f)}. הקוד שלמעלה הוא הקוד שהחזיקה
+        עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של
+        היחידה הזו.</p>` : ''}
       <div class="stats">
         ${stat('תושבים', f.pop2021, '', 0, 'freguesia.pop2021')}
         ${stat('שטח', f.area_km2, 'קמ״ר', 2, 'freguesia.area_km2')}
@@ -915,6 +956,9 @@ function renderZone(key) {
       ${f.note_origin === 'app'
         ? '<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>' : ''}
     </div>
+
+    ${peopleStats(f, 'freguesia')}
+    ${housingStats(f, 'freguesia')}
 
     ${z.bairros.length ? `
       <div class="grp">${z.bairros.length} ${curated ? 'שכונות' : 'יישובים ושכונות'} — האותיות במפה</div>
@@ -1414,6 +1458,8 @@ function renderInfo() {
       ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
       <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
       ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
+      ${f.definitions_he ? `<dl class="kv">${Object.entries(f.definitions_he).map(
+        ([t, v]) => `<div><dt>${html(t)}</dt><dd class="note">${html(v)}</dd></div>`).join('')}</dl>` : ''}
       ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
       ${f.caveat_he ? `<div class="warn">${html(f.caveat_he)}</div>` : ''}
       ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}
@@ -1518,6 +1564,9 @@ function renderInfo() {
       <li>18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·
         <span class="num">${D.totPoi}</span> נקודות במפה</li>
       <li>אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים</li>
+      <li>מפקד 2021 לכל יחידה: גיל חציוני, פילוח גיל, אזרחות זרה, ואחת-עשרה
+        שורות של דיור ובניינים — דירות ריקות, בעלות מול שכירות, חניה, מצב
+        הבניינים ותקופת הבנייה</li>
       <li>נבנה: <span class="lat">${html(D.generated)}</span></li>
     </ul>
     <p class="note">מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים.

@@ -245,6 +245,44 @@ def main():
                 fail("%s: a 2025 successor has no code or no name" % f["pt"])
         else:
             fail("%s: neither an official code nor 2025 successors" % f["pt"])
+    # ---- 7c. the census figures -------------------------------------------
+    # A municipality is the sum of its parishes, exactly: both come out of one
+    # INE file. Anything else means the two levels drifted apart again.
+    kids = {}
+    for f in fre:
+        kids.setdefault(f["mun_num"], []).append(f)
+    for m in mun:
+        if m.get("pop_src") != "ine":
+            continue
+        s_ = sum(f.get("pop2021", 0) for f in kids.get(m["num"], []))
+        if s_ != m.get("pop2021"):
+            fail("%s: municipality %s but its parishes add to %s"
+                 % (m["pt"], m.get("pop2021"), s_))
+    # Every share is a share, every count is positive, and a value is never
+    # present without a source record behind it.
+    SHARES = ("pct_65plus", "pct_0_14", "foreign_pct", "vacant_pct",
+              "second_home_pct", "owner_pct", "rented_pct", "parking_pct",
+              "repair_pct", "deep_repair_pct", "pre1946_pct", "since2011_pct")
+    for level, rows in (("municipio", mun), ("freguesia", fre)):
+        for r in rows:
+            for key in ("median_age", "ageing_index") + SHARES[:3]:
+                if key in r and "%s.%s" % (level, key) not in sources["fields"]:
+                    fail("%s.%s has no source record" % (level, key))
+            for key in SHARES:
+                v = r.get(key, r.get("housing", {}).get(key))
+                if v is not None and not 0 <= v <= 100:
+                    fail("%s %s: %s is %s, which is not a share"
+                         % (level, r["pt"], key, v))
+            if r.get("housing") and "%s.housing" % level not in sources["fields"]:
+                fail("%s.housing has no source record" % level)
+            age = r.get("median_age")
+            if age is not None and not 15 <= age <= 75:
+                fail("%s %s: median age %s is outside anything plausible"
+                     % (level, r["pt"], age))
+            if r.get("housing", {}).get("deep_repair_pct") is not None \
+                    and r["housing"]["deep_repair_pct"] > r["housing"]["repair_pct"]:
+                fail("%s %s: deep repairs exceed all repairs" % (level, r["pt"]))
+
     if "freguesia.number" not in sources["fields"]:
         fail("the parish numbering is not documented in sources.json")
     if "municipio.number" not in sources["fields"]:

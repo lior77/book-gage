@@ -1,27 +1,7 @@
 {
- "source": "OpenStreetMap ref:ine (relations tagged source=DGT - CAOP)",
- "licence": "ODbL — © OpenStreetMap contributors",
+ "code_source": "INE, Censos 2021 — Ficheiro Síntese por Secção (data/source_files/ine/FS2021_SeccaoTot.zip)",
+ "status_source": "OpenStreetMap ref:ine + start_date (relations tagged source=DGT - CAOP), ODbL",
  "district": "13",
- "municipality_names": {
-  "01": "Amarante",
-  "02": "Baião",
-  "03": "Felgueiras",
-  "04": "Gondomar",
-  "05": "Lousada",
-  "06": "Maia",
-  "07": "Marco de Canaveses",
-  "08": "Matosinhos",
-  "09": "Paços de Ferreira",
-  "10": "Paredes",
-  "11": "Penafiel",
-  "12": "Porto",
-  "13": "Póvoa de Varzim",
-  "14": "Santo Tirso",
-  "15": "Valongo",
-  "16": "Vila do Conde",
-  "17": "Vila Nova de Gaia",
-  "18": "Trofa"
- },
  "freguesias": {
   "Porto|Bonfim": {
    "mun": "Porto",
@@ -110,6 +90,8 @@
   "Vila Nova de Gaia|União das freguesias de Grijó e Sermonde": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Grijó e Sermonde",
+   "code": "25",
+   "dicofre": "131725",
    "split2025": [
     {
      "code": "33",
@@ -126,6 +108,8 @@
   "Vila Nova de Gaia|União das freguesias de Gulpilhares e Valadares": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Gulpilhares e Valadares",
+   "code": "26",
+   "dicofre": "131726",
    "split2025": [
     {
      "code": "34",
@@ -142,6 +126,8 @@
   "Vila Nova de Gaia|União das freguesias de Mafamude e Vilar do Paraíso": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Mafamude e Vilar do Paraíso",
+   "code": "27",
+   "dicofre": "131727",
    "split2025": [
     {
      "code": "36",
@@ -158,6 +144,8 @@
   "Vila Nova de Gaia|União das freguesias de Pedroso e Seixezelo": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Pedroso e Seixezelo",
+   "code": "28",
+   "dicofre": "131728",
    "split2025": [
     {
      "code": "37",
@@ -179,6 +167,8 @@
   "Vila Nova de Gaia|União das freguesias de Sandim, Olival, Lever e Crestuma": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Sandim, Olival, Lever e Crestuma",
+   "code": "29",
+   "dicofre": "131729",
    "split2025": [
     {
      "code": "32",
@@ -200,6 +190,8 @@
   "Vila Nova de Gaia|União das freguesias de Santa Marinha e São Pedro da Afurada": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Santa Marinha e São Pedro da Afurada",
+   "code": "30",
+   "dicofre": "131730",
    "split2025": [
     {
      "code": "41",
@@ -216,6 +208,8 @@
   "Vila Nova de Gaia|União das freguesias de Serzedo e Perosinho": {
    "mun": "Vila Nova de Gaia",
    "pt": "União das freguesias de Serzedo e Perosinho",
+   "code": "31",
+   "dicofre": "131731",
    "split2025": [
     {
      "code": "39",
@@ -238,6 +232,8 @@
   "Matosinhos|União das freguesias de Custóias, Leça do Balio e Guifões": {
    "mun": "Matosinhos",
    "pt": "União das freguesias de Custóias, Leça do Balio e Guifões",
+   "code": "11",
+   "dicofre": "130811",
    "split2025": [
     {
      "code": "15",
@@ -259,6 +255,8 @@
   "Matosinhos|União das freguesias de Matosinhos e Leça da Palmeira": {
    "mun": "Matosinhos",
    "pt": "União das freguesias de Matosinhos e Leça da Palmeira",
+   "code": "12",
+   "dicofre": "130812",
    "split2025": [
     {
      "code": "18",
@@ -275,6 +273,8 @@
   "Matosinhos|União das freguesias de Perafita, Lavra e Santa Cruz do Bispo": {
    "mun": "Matosinhos",
    "pt": "União das freguesias de Perafita, Lavra e Santa Cruz do Bispo",
+   "code": "13",
+   "dicofre": "130813",
    "split2025": [
     {
      "code": "17",
@@ -296,6 +296,8 @@
   "Matosinhos|União das freguesias de São Mamede de Infesta e Senhora da Hora": {
    "mun": "Matosinhos",
    "pt": "União das freguesias de São Mamede de Infesta e Senhora da Hora",
+   "code": "14",
+   "dicofre": "130814",
    "split2025": [
     {
      "code": "23",
@@ -426,6 +428,8 @@
   "Valongo|União das freguesias de Campo e Sobrado": {
    "mun": "Valongo",
    "pt": "União das freguesias de Campo e Sobrado",
+   "code": "06",
+   "dicofre": "131506",
    "split2025": [
     {
      "code": "07",
@@ -514,6 +518,8 @@
   "Vila do Conde|União das freguesias de Fornelo e Vairão": {
    "mun": "Vila do Conde",
    "pt": "União das freguesias de Fornelo e Vairão",
+   "code": "32",
+   "dicofre": "131632",
    "split2025": [
     {
      "code": "40",
@@ -530,6 +536,8 @@
   "Vila do Conde|União das freguesias de Malta e Canidelo": {
    "mun": "Vila do Conde",
    "pt": "União das freguesias de Malta e Canidelo",
+   "code": "33",
+   "dicofre": "131633",
    "split2025": [
     {
      "code": "39",
@@ -546,6 +554,8 @@
   "Vila do Conde|União das freguesias de Retorta e Tougues": {
    "mun": "Vila do Conde",
    "pt": "União das freguesias de Retorta e Tougues",
+   "code": "34",
+   "dicofre": "131634",
    "split2025": [
     {
      "code": "42",
@@ -562,6 +572,8 @@
   "Vila do Conde|União das freguesias de Rio Mau e Arcos": {
    "mun": "Vila do Conde",
    "pt": "União das freguesias de Rio Mau e Arcos",
+   "code": "35",
+   "dicofre": "131635",
    "split2025": [
     {
      "code": "38",
@@ -638,6 +650,8 @@
   "Póvoa de Varzim|União das freguesias da Póvoa de Varzim, Beiriz e Argivai": {
    "mun": "Póvoa de Varzim",
    "pt": "União das freguesias da Póvoa de Varzim, Beiriz e Argivai",
+   "code": "15",
+   "dicofre": "131315",
    "split2025": [
     {
      "code": "18",
@@ -659,6 +673,8 @@
   "Póvoa de Varzim|União das freguesias de Aguçadoura e Navais": {
    "mun": "Póvoa de Varzim",
    "pt": "União das freguesias de Aguçadoura e Navais",
+   "code": "14",
+   "dicofre": "131314",
    "split2025": [
     {
      "code": "16",
@@ -675,6 +691,8 @@
   "Póvoa de Varzim|União das freguesias de Aver-o-Mar, Amorim e Terroso": {
    "mun": "Póvoa de Varzim",
    "pt": "União das freguesias de Aver-o-Mar, Amorim e Terroso",
+   "code": "13",
+   "dicofre": "131313",
    "split2025": [
     {
      "code": "17",
@@ -792,6 +810,8 @@
   "Trofa|União das freguesias de Alvarelhos e Guidões": {
    "mun": "Trofa",
    "pt": "União das freguesias de Alvarelhos e Guidões",
+   "code": "09",
+   "dicofre": "131809",
    "split2025": [
     {
      "code": "12",
@@ -1120,6 +1140,8 @@
   "Paços de Ferreira|Frazão Arreigada": {
    "mun": "Paços de Ferreira",
    "pt": "Frazão Arreigada",
+   "code": "17",
+   "dicofre": "130917",
    "split2025": [
     {
      "code": "20",
@@ -1148,6 +1170,8 @@
   "Paços de Ferreira|Paços de Ferreira": {
    "mun": "Paços de Ferreira",
    "pt": "Paços de Ferreira",
+   "code": "18",
+   "dicofre": "130918",
    "split2025": [
     {
      "code": "24",
@@ -1176,6 +1200,8 @@
   "Paços de Ferreira|Sanfins Lamoso Codessos": {
    "mun": "Paços de Ferreira",
    "pt": "Sanfins Lamoso Codessos",
+   "code": "19",
+   "dicofre": "130919",
    "split2025": [
     {
      "code": "21",
@@ -1269,6 +1295,8 @@
   "Lousada|União das freguesias de Lustosa e Barrosas (Santo Estêvão)": {
    "mun": "Lousada",
    "pt": "União das freguesias de Lustosa e Barrosas (Santo Estêvão)",
+   "code": "30",
+   "dicofre": "130530",
    "split2025": [
     {
      "code": "33",
@@ -1621,6 +1649,8 @@
   "Marco de Canaveses|Penha Longa e Paços de Gaiolo": {
    "mun": "Marco de Canaveses",
    "pt": "Penha Longa e Paços de Gaiolo",
+   "code": "38",
+   "dicofre": "130738",
    "split2025": [
     {
      "code": "42",
