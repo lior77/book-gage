@@ -136,15 +136,14 @@ async function load() {
     D.freByMun.get(f.mun_num).push(f);
     f.mun_he = D.munByNum.get(f.mun_num).he;
   });
-  D.freByMun.forEach(list => list.sort((a, b) => a.n - b.n));
+  D.freByMun.forEach(list => list.sort((a, b) => freOrder(a).localeCompare(freOrder(b))));
   D.quarterByNum = new Map(D.city.map(q => [q.num, q]));
   // Porto's seven parishes *are* the seven city quarters; keep one numbering
   // for both so level 2 and level 3 agree.
   D.quarterOfFre = new Map(D.city.map(q => [q.en, q.num]));
   D.fre.filter(f => f.mun_num === 1).forEach(f => { f.q = D.quarterOfFre.get(bare(f.pt)) || null; });
-  // Porto's list is printed with the quarter numbers, so it has to be ordered
-  // by them too, not by the per-municipality numbering build.py assigned.
-  D.freByMun.get(1).sort((a, b) => (a.q || 99) - (b.q || 99));
+  // Porto's parishes are ordered by their official code like everyone else's;
+  // f.q stays as the link to the city quarter's 53 bairros, not as a label.
   D.totPop = D.mun.reduce((a, m) => a + (m.pop2021 || 0), 0);
   D.totArea = D.mun.reduce((a, m) => a + (m.area_km2 || 0), 0);
   D.totPoi = D.city.reduce((a, q) => a + q.pois.length, 0);
@@ -228,9 +227,13 @@ function clearMap() {
 }
 
 function numIcon(text, cls) {
+  // Official codes are two digits, and a unit the 2025 reform split shows its
+  // first successor with a plus — three characters, which need a wider pill or
+  // they spill out of the circle Leaflet sizes from iconSize.
+  const w = String(text).length > 2 ? 28 : 20;
   return L.divIcon({
     className: 'lbl' + (cls ? ' ' + cls : ''), html: html(text),
-    iconSize: [20, 20], iconAnchor: [10, 10],
+    iconSize: [w, 20], iconAnchor: [w / 2, 10],
   });
 }
 
@@ -477,9 +480,25 @@ function freOfFeature(num, props) {
   }
   return D.freByKey.get(props.mun_num + '|' + props.name);
 }
-// The number the app prints for a parish: Porto keeps the city-quarter number,
-// everyone else uses build.py's per-municipality 1..N.
-const freNum = f => (f.mun_num === 1 ? f.q : f.n);
+// The number the app prints for a parish is the official one: the parish half
+// of its DICOFRE code (131202 -> 02). Twenty-five of the 243 units the app
+// draws were split back into separate parishes in 2025 and no longer have a
+// code of their own; the pin then carries the lowest of the successors with a
+// plus, and the text spells all of them out rather than inventing a number.
+const freNum = f => (f.code || (f.split2025 && f.split2025.length
+  ? f.split2025[0].code + '+' : '–'));
+// Sorting key, so a municipality's parish list runs in the official order.
+const freOrder = f => (f.code
+  || (f.split2025 && f.split2025.length ? f.split2025[0].code : '99'));
+// One sentence for a unit the 2025 reform undid, naming its successors.
+// Returns HTML, not text: each successor is its own LTR island, or the Hebrew
+// paragraph around it reorders the code away from the name it belongs to.
+function splitNote(f) {
+  if (!f.split2025 || !f.split2025.length) return '';
+  const kids = f.split2025.map(s =>
+    `<span class="lat" dir="ltr">${html(s.pt)} (${html(s.dicofre)})</span>`).join(' · ');
+  return 'ברפורמת 2025 חולק ל־' + f.split2025.length + ' רובעים נפרדים: ' + kids;
+}
 
 function drawMun(num) {
   clearMap();
@@ -528,10 +547,13 @@ function renderMun(num) {
 
   const list = rows.map(f => {
     const n = freNum(f);
-    const q = isPorto ? D.quarterByNum.get(n) : null;
+    const q = isPorto ? D.quarterByNum.get(f.q) : null;
     const desc = q ? q.desc : (f.note || '');
     const flag = !q && f.note && f.note_origin === 'app'
       ? '<span class="flag">תיאור שנכתב לאפליקציה</span>' : '';
+    const code = f.dicofre
+      ? `<span class="lat num">${html(f.dicofre)}</span>`
+      : '<span class="flag">פורק ב-2025</span>';
     return `<button class="row row-full" data-fre="${html(D.freKey(f))}">
       <span class="pin" style="--c:${html(f.colour)}">${n}</span>
       <span class="row-body">
@@ -539,7 +561,9 @@ function renderMun(num) {
         <span class="row-d">${desc ? html(desc) : '<span class="muted">' + MISSING + ' — אין תיאור לרובע הזו</span>'}</span>
         <span class="row-m"><span class="num">${nf(f.pop2021)}</span> תושבים (2021) ·
           <span class="num">${nf(f.area_km2, 2)}</span> קמ״ר ·
-          <span class="num">${nf(f.density)}</span> לקמ״ר${q ? ' · <span class="num">' + q.bairros.length + '</span> שכונות' : ''}</span>
+          <span class="num">${nf(f.density)}</span> לקמ״ר${q ? ' · <span class="num">' + q.bairros.length + '</span> שכונות' : ''}
+          · ${code}</span>
+        ${f.split2025 ? `<span class="row-m">${splitNote(f)}</span>` : ''}
       </span>
       ${q ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
     </button>`;
@@ -550,7 +574,8 @@ function renderMun(num) {
       <div class="hdr">
         <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
         <div><h1>${html(m.he)} <span class="en lat">(${html(m.en)})</span></h1>
-          <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> רובעים</p></div>
+          <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> רובעים${m.dicofre
+            ? ' · קוד רשמי <span class="lat num">' + html(m.dicofre) + '</span>' : ''}</p></div>
       </div>
       <div class="stats">
         ${stat('תושבים', m.pop2021, '', 0, 'municipio.pop2021')}
@@ -569,9 +594,10 @@ function renderMun(num) {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && at.mun_num === num;
     })}
-    ${isPorto ? '' : `<p class="note" style="margin-block-start:10px">המספור של הרובעים הוא מספור של האפליקציה
-      ולא מספור רשמי; הוא נועד לקשור בין המפה לרשימה. סדר הרובעים נלקח מהמסמך
-      המקורי היכן שהוא מפרט אותן, ובשש העיריות שהוא לא מפרט — לפי גודל אוכלוסייה.</p>`}`;
+    <p class="note" style="margin-block-start:10px">המספר על כל רובע הוא הקוד
+      הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן
+      <span class="flag">פורק ב-2025</span> חדל להתקיים כיחידה ברפורמת 2025 ואין
+      לו עוד קוד משלו — מוצגים הרובעים שהחליפו אותו.</p>`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -875,7 +901,10 @@ function renderZone(key) {
         <div><h1>${html(f.he || f.pt)}</h1>
           <p class="sub lat">${html(f.en || f.pt)}</p></div>
       </div>
-      <p class="sub">${html(m.he)} · ${html(m.belt)}</p>
+      <p class="sub">${html(m.he)} · ${html(m.belt)}${f.dicofre
+        ? ' · קוד רשמי <span class="lat num">' + html(f.dicofre) + '</span>' : ''}</p>
+      ${f.split2025 ? `<p class="note">${splitNote(f)}. הגבול והנתונים כאן הם
+        של היחידה כפי שהיא ב-CAOP 2020, ולכן אין לה קוד רשמי משלה יותר.</p>` : ''}
       <div class="stats">
         ${stat('תושבים', f.pop2021, '', 0, 'freguesia.pop2021')}
         ${stat('שטח', f.area_km2, 'קמ״ר', 2, 'freguesia.area_km2')}
@@ -1300,12 +1329,14 @@ function runSearch(term) {
   const hit = s => String(s || '').toLowerCase().includes(t);
   const out = [];
   D.mun.forEach(m => {
-    if (hit(m.he) || hit(m.pt) || hit(m.en)) out.push({
+    if (hit(m.he) || hit(m.pt) || hit(m.en) || hit(m.dicofre)) out.push({
       t: munCode(m) + ' · ' + m.he, s: m.pt, k: 'עירייה', go: `data-jump="mun:${m.num}"` });
   });
   D.fre.forEach(f => {
-    if (hit(f.he) || hit(f.pt)) out.push({
-      t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he,
+    // the official code is searchable too: it is what appears on a form
+    if (hit(f.he) || hit(f.pt) || hit(f.dicofre)) out.push({
+      t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he
+        + (f.dicofre ? ' · ' + f.dicofre : ''),
       k: f.mun_num === 1 ? 'רובע בפורטו' : 'רובע',
       go: `data-jump="zone:${html(D.freKey(f))}"` });
   });
@@ -1412,9 +1443,26 @@ function renderInfo() {
       פורטו היא <span class="num">12</span>, אמרנטה <span class="num">01</span>,
       טרופה <span class="num">18</span>. זה הקוד שמופיע בטפסים, במסמכי מקרקעין
       ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.</p>
-    <p class="note">מספרי הרובעים עדיין אינם הקודים הרשמיים: הם קיימים אצלי
-      לשבעת רובעי עיריית פורטו בלבד, ולשאר 236 חסר לי המקור. עד שיושלם, המספר
-      שמוצג לרובע הוא מספור פנימי של האפליקציה שנועד לקשור בין המפה לרשימה.</p>
+    <p>המספר שעל כל רובע הוא באותו אופן <b>שתי הספרות הרשמיות שלו</b> בתוך
+      העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים
+      מגיעים מיחידות שמסומנות ב-OpenStreetMap עם <span class="lat">ref:ine</span>
+      ועם <span class="lat">source=DGT — CAOP</span>, כלומר הם הקוד שהמדינה
+      מפרסמת ולא מספור של האפליקציה.</p>
+    <p>הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר
+      האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא
+      מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף
+      הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.</p>
+    <p><b>רפורמת 2025.</b> חלק מהאיחודים של 2013 בוטלו, ורובעים שאוחדו חזרו
+      להיות יחידות נפרדות עם קודים חדשים. במחוז פורטו זה נוגע ל-25 מ-243
+      היחידות שהאפליקציה מציירת: הן פורקו ל-57 רובעים חדשים, והקוד של היחידה
+      המאוחדת בוטל. הגבולות והנתונים כאן הם CAOP 2020 — כלומר המפה של 2013 —
+      ולכן ל-25 האלה מוצג <span class="flag">פורק ב-2025</span> במקום קוד, ובכרטיס
+      של כל אחת מהן רשומים בשמם ובקודם הרובעים שהחליפו אותה. 218 הרובעים האחרים
+      לא נגעו ברפורמה והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.</p>
+    <p class="note">כדי שהאפליקציה תציג את 275 הרובעים של 2025 עצמם — ולא את
+      חלוקת 2020 עם הערה — צריך את שכבת הגבולות CAOP במהדורה 2024 או 2025.
+      אין לי אותה כאן, וכל נתוני האוכלוסייה שיש לי הם ממפקד 2021 שנספר לפי
+      חלוקת 2013, כך שפיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים.</p>
 
     <h2>מי מודד ומי סופר</h2>
     <p>שני גופים שונים עומדים מאחורי כל מספר כאן, ותפקידם שונה לגמרי.</p>
@@ -1472,9 +1520,9 @@ function renderInfo() {
       <li>אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים</li>
       <li>נבנה: <span class="lat">${html(D.generated)}</span></li>
     </ul>
-    <p class="note">מספרי העיריות הם המספרים מהמסמך המקורי. מספרי הרובעים
-      והאותיות של השכונות הם של האפליקציה, נועדו לקשור בין המפה לרשימה, ואינם
-      מספור רשמי.</p>
+    <p class="note">מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים.
+      האותיות של השכונות והיישובים הן של האפליקציה: הן נועדו לקשור בין המפה
+      לרשימה, ואין להן קיום מחוץ לאפליקציה.</p>
     ${STANDALONE
       ? `<p class="note">זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת
          ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-<span class="lat">porto/data/raw/</span>.</p>`

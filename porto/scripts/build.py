@@ -203,6 +203,19 @@ def read_mcol():
     return {int(k): v for k, v in re.findall(r"(\d+)\s*:\s*\"(#[0-9A-Fa-f]{6})\"", block)}
 
 
+def read_official_codes():
+    """The official DICOFRE code of every parish, from ingest_freguesia_codes.py.
+
+    Missing file is not fatal: the app then prints no official number rather
+    than a number of its own invention.
+    """
+    path = os.path.join(RAW, "freguesia_official_codes.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)["freguesias"]
+
+
 # A ring of pastels for the parishes inside one municipality. Neighbouring
 # numbers land on different hues, and every one of them takes dark text.
 PARISH_PALETTE = [
@@ -513,6 +526,7 @@ def main():
         fre_by_mun.setdefault(ft["properties"]["mun"], []).append(ft)
 
     warnings = []
+    codes = read_official_codes()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
 
     # ---- parishes -----------------------------------------------------------
@@ -544,6 +558,17 @@ def main():
                 "area_km2": round(area, 2),
                 "center": [round(pt.x, 5), round(pt.y, 5)],
             }
+            # The official number, not one of the app's own: the parish half of
+            # the DICOFRE code. A unit the 2025 reform split back into separate
+            # parishes has no code of its own any more, so it carries its
+            # successors instead and the UI says so.
+            official = codes.get(mun + "|" + caop_name)
+            if official:
+                if official.get("code"):
+                    rec["code"] = official["code"]
+                    rec["dicofre"] = official["dicofre"]
+                elif official.get("split2025"):
+                    rec["split2025"] = official["split2025"]
             if src:
                 rec["he"] = src["he"]
                 rec["he_origin"] = "pdf"
@@ -620,6 +645,7 @@ def main():
         # and it is what the app prints, rather than a number of its own.
         if rec["ine"] and len(str(rec["ine"])) == 4:
             rec["code"] = str(rec["ine"])[2:]
+            rec["dicofre"] = str(rec["ine"])
         if mun in osm_pop:
             rec["pop2021"] = osm_pop[mun]
             rec["density"] = round(osm_pop[mun] / area, 1)

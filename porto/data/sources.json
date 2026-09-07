@@ -1,240 +1,265 @@
 {
-  "generated": "2026-09-06",
-  "license_notices": [
-    "גבולות מנהליים: CAOP 2020, Direção-Geral do Território (DGT) — נתונים פתוחים.",
-    "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
-    "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה."
-  ],
-  "fields": {
-    "municipio.pop2021": {
-      "label_he": "מספר תושבים (עירייה)",
-      "value_type": "integer",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 (resultados definitivos), דרך תג population/population:date על יחסי הגבול של OpenStreetMap (source=DGT CAOP 2022)",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-05",
-      "coverage": "18/18",
-      "caveat_he": "הערכים תואמים את מפקד 2021, אך יש להעדיף אימות ישיר מול INE. הסקריפט scripts/fetch_ine.py עושה את זה במכונה עם גישה חופשית לרשת. הפרשים של עד 0.12% בין הערך הזה לסכום הרובעים מוסברים בגרסאות פרסום שונות של המפקד."
-    },
-    "municipio.area_km2": {
-      "label_he": "שטח (קמ״ר)",
-      "value_type": "number",
-      "reference_year": 2020,
-      "source": "מחושב מפוליגוני CAOP 2020 (DGT) בשטח גיאודזי על אליפסואיד WGS84 (geographiclib)",
-      "url": "https://www.dgterritorio.gov.pt/dados-abertos",
-      "retrieved": "2026-09-05",
-      "coverage": "18/18",
-      "validation_he": "תואם את השטחים הרשמיים שמפרסמת DGT עד הספרה האחרונה המודפסת (פורטו 41.42, אמרנטה 301.33, באיאו 174.52). סכום המחוז 2,331.6 קמ״ר."
-    },
-    "municipio.density": {
-      "label_he": "צפיפות אוכלוסין (נפש/קמ״ר)",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "נגזר: pop2021 / area_km2",
-      "coverage": "18/18",
-      "derived_from": [
-        "municipio.pop2021",
-        "municipio.area_km2"
-      ]
-    },
-    "municipio.dist_porto_km": {
-      "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
-      "value_type": "number",
-      "source": "porto_map.py (DIST) — מהמסמך המקורי",
-      "coverage": "18/18"
-    },
-    "municipio.transport": {
-      "label_he": "תחבורה לפורטו",
-      "value_type": "text",
-      "source": "porto_freg2.py (TRANSPORT) — מהמסמך המקורי",
-      "coverage": "18/18"
-    },
-    "municipio.profile": {
-      "label_he": "פרופיל (אופי, נדל״ן, שכונות, כלכלה, מגמה, יתרון, חיסרון)",
-      "value_type": "text",
-      "source": "porto_pages.py (PROFILES) — מהמסמך המקורי",
-      "coverage": "18/18"
-    },
-    "freguesia.name_pt": {
-      "label_he": "שם הרובע (פורטוגזית)",
-      "value_type": "text",
-      "reference_year": 2020,
-      "source": "CAOP 2020, DGT",
-      "coverage": "243/243"
-    },
-    "freguesia.he": {
-      "label_he": "שם הרובע (תעתיק עברי)",
-      "value_type": "text",
-      "source": "he_origin=pdf — 140 שמות מהמסמך המקורי; he_origin=app — 103 שמות שנוספו כאן לפי כללי ההגייה שנקבעו במסמך, וניתנים לעריכה ב-data/raw/hebrew_translit_new.json",
-      "coverage": "243/243"
-    },
-    "freguesia.pop2021": {
-      "label_he": "אוכלוסיית רובע",
-      "value_type": "integer",
-      "reference_year": 2021,
-      "source": "pop_src=pdf — 119 ערכים מאומתים מהמסמך המקורי (מפקד INE 2021); pop_src=collected — 124 ערכים שנאספו כאן מערכי הוויקיפדיה הפורטוגזית של כל רובע, המצטטים את מפקד INE 2021",
-      "url": "https://pt.wikipedia.org/",
-      "retrieved": "2026-09-05",
-      "coverage": "243/243",
-      "validation_he": "סכום הרובעים בכל אחת משבע העיריות שהושלמו הושווה לאוכלוסיית העירייה: באיאו -1, פנאפיאל -1, אמרנטה -3, מרקו -5, פלגיירש -7, פאסוש דה פריירה -27, לוזאדה +55 (מקסימום 0.12%). בפנאפיאל, שבעה ערכים שכבר היו מאומתים במסמך המקורי תואמים במדויק לערכים שנאספו כאן.",
-      "caveat_he": "חוק 25-A/2025 פיצל בחזרה חלק מאיחודי הרובעים של 2013. הנתונים כאן משקפים את חלוקת CAOP 2020 / מפקד 2021."
-    },
-    "freguesia.area_km2": {
-      "label_he": "שטח רובע (קמ״ר)",
-      "value_type": "number",
-      "reference_year": 2020,
-      "source": "מחושב מפוליגוני CAOP 2020 (DGT), שטח גיאודזי WGS84",
-      "coverage": "243/243"
-    },
-    "freguesia.density": {
-      "label_he": "צפיפות רובע",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "נגזר: pop2021 / area_km2",
-      "coverage": "243/243"
-    },
-    "freguesia.note": {
-      "label_he": "תיאור הרובע",
-      "value_type": "text",
-      "source": "140 מתוך 243 מהמסמך המקורי porto_district_map_a3.pdf. 103 הנותרות נכתבו עבור האפליקציה ונשמרות ב-data/raw/freguesia_notes_app.json",
-      "coverage": "243/243",
-      "caveat_he": "אין מקור רשמי שמפרסם טקסט תיאורי לרובע — מוסדות הסטטיסטיקה מפרסמים מספרים, לא תיאורים. לכן 103 התיאורים שנוספו נכתבו מידע כללי ולא הועתקו ממקור. הם מתארים מיקום, נוף ואופי, ואינם מכילים נתונים מספריים: כל מספר באפליקציה בא ממקור מתועד. השדה note_origin מסמן כל תיאור כזה, והאפליקציה מציגה עליו תווית. יש לאמת כל פרט שמשפיע על החלטה."
-    },
-    "freguesia.number": {
-      "label_he": "מספר הרובע במפה",
-      "value_type": "integer",
-      "source": "מספור של האפליקציה (scripts/build.py, number_parishes). הסדר נלקח מהמסמך המקורי בשתים-עשרה העיריות שהוא מפרט, ובשש הנותרות לפי גודל אוכלוסייה, מהגדולה לקטנה",
-      "coverage": "243/243",
-      "caveat_he": "אינו מספור רשמי ואין לו קיום מחוץ לאפליקציה. תפקידו היחיד הוא לקשור בין המפה לרשימה. פורטו היא היוצאת מן הכלל: שבע הרובעים שלה הן שבעת רבעי העיר, והאפליקציה מדפיסה להן את מספר הרובע כדי שרמה 2 ורמה 3 יסכימו ביניהן."
-    },
-    "freguesia.locality": {
-      "label_he": "יישובים ושכונות בתוך הרובע (האותיות במפה)",
-      "value_type": "point",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/04_district_places.overpassql. האות (A, B, C…) היא של האפליקציה; הסדר לפי סוג היישוב ואז לפי אוכלוסייה",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "1,773 יישובים ב-243 רובעים",
-      "caveat_he": "מתחת לרובע אין בפורטוגל שכבה מנהלית רשמית: ליישובים האלה אין גבול, ויש להם נקודה אחת בלבד, במרכז בקירוב. שבע הרובעים של פורטו הן היוצאות מן הכלל — שם 53 השכונות מגיעות מהמסמך המקורי ויש להן שם עברי ותיאור. ל-1,720 היישובים האחרים אין שם עברי ואין תיאור, כי לא נכתב כזה לאף אחד מהם ולא הומצא. המיפוי ב-OSM התנדבותי ואינו אחיד — היעדר יישוב אינו ראיה שאין שם דבר."
-    },
-    "freguesia.poi": {
-      "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, מוסדות, אתרים)",
-      "value_type": "point",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/05_district_services.overpassql ו-06_district_landmarks.overpassql",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "1,530 נקודות ב-243 רובעים",
-      "caveat_he": "שאילתת המורשת דורשת מכל אובייקט גם name וגם wikidata או heritage. בלי התנאי הזה יש במחוז אלפי רשומות historic שרובן פרט אדריכלי בודד, ומפה שמסמנת את כולן אינה אומרת דבר. אף נקודה לא נבחרה ידנית. המיפוי התנדבותי ואינו אחיד."
-    },
-    "map.water": {
-      "label_he": "נהרות ומים (שכבת מפה)",
-      "value_type": "geometry",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/07_district_water.overpassql",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "270 אובייקטים בתוך המחוז",
-      "caveat_he": "הגיאומטריה נחתכה לגבול המחוז, פושטה לסובלנות של כ-20 מ׳, והוסרו ממנה גופי מים קטנים מ-3,000 מ״ר. זו שכבת תצוגה: היא נועדה להראות איפה עובר הנהר, לא למדוד ממנה מרחקים או שטחים. 180 אובייקטים נפלו מחוץ למחוז ו-62 היו קטנים מכדי להיראות."
-    },
-    "porto_city.quarter": {
-      "label_he": "שבעת רבעי עיריית פורטו",
-      "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",
-      "reference_year": 2021,
-      "coverage": "7/7 רבעים, 53 שכונות"
-    },
-    "porto_city.places": {
-      "label_he": "נקודות שכונה בתוך העיר",
-      "source": "OpenStreetMap, place=neighbourhood|quarter|suburb (ODbL)",
-      "retrieved": "2026-09-05",
-      "coverage": "339 נקודות",
-      "caveat_he": "נקודות בלבד, לא גבולות. מתחת לרמת הרובע אין שכבה מנהלית רשמית בפורטוגל, ולכן אין גבולות שכונה באפליקציה."
-    },
-    "porto_city.bairro_letter": {
-      "label_he": "אות השכונה במפה",
-      "value_type": "text",
-      "source": "אות של האפליקציה (A, B, C…) לפי סדר השכונות במסמך המקורי; הנקודה שעליה היא מסומנת מגיעה מ-OpenStreetMap (place=neighbourhood/suburb/quarter בתוך הרובע)",
-      "url": "https://www.openstreetmap.org/",
-      "coverage": "52/53",
-      "caveat_he": "לשכונות פורטו אין גבול רשמי, ולכן אין פוליגון — יש נקודה בלבד, והיא במרכז השכונה בקירוב. השכונה מטדורו (Matadouro) אינה קיימת ב-OSM ולכן אין לה נקודה, והאפליקציה אומרת זאת במפורש. שדה confidence על כל שכונה מבחין בין נקודה שהגיעה מ-OSM (reported) לנקודה שנגזרה בקירוב (approx)."
-    },
-    "porto_city.poi": {
-      "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, אוניברסיטה, מוזיאונים, אתרים)",
-      "value_type": "point",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/01_porto_pois.overpassql",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "709 נקודות בשבעת הרבעים",
-      "caveat_he": "OSM הוא מיפוי התנדבותי: הכיסוי אינו אחיד, והרשימה אינה ממצה. בקטגוריית ״אתרים ומונומנטים״ יש בפורטו יותר מאלף רשומות, רובן פרט אדריכלי בודד; האפליקציה מציגה מהן את אלה שיש להן ערך ויקידאטה או ויקיפדיה, בלי בחירה ידנית. חובה לשמור על הייחוס ל-OpenStreetMap."
-    },
-    "district.belts": {
-      "label_he": "שלוש החגורות",
-      "value_type": "text",
-      "source": "המסמך המקורי porto_district_map_a3.pdf (porto_freg2.py, BELTS). קווי המתאר מחושבים באיחוד פוליגוני CAOP 2020 של העיריות שבכל חגורה",
-      "coverage": "3/3",
-      "caveat_he": "החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי ולא חלוקה מנהלית רשמית. ברמה הרשמית מחוז פורטו מחולק לשתי יחידות NUTS III — Área Metropolitana do Porto ו-Tâmega e Sousa — והן אינן חופפות לחגורות."
-    }
+ "generated": "2026-09-06",
+ "license_notices": [
+  "גבולות מנהליים: CAOP 2020, Direção-Geral do Território (DGT) — נתונים פתוחים.",
+  "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
+  "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה.",
+  "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL."
+ ],
+ "fields": {
+  "municipio.pop2021": {
+   "label_he": "מספר תושבים (עירייה)",
+   "value_type": "integer",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 (resultados definitivos), דרך תג population/population:date על יחסי הגבול של OpenStreetMap (source=DGT CAOP 2022)",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-05",
+   "coverage": "18/18",
+   "caveat_he": "הערכים תואמים את מפקד 2021, אך יש להעדיף אימות ישיר מול INE. הסקריפט scripts/fetch_ine.py עושה את זה במכונה עם גישה חופשית לרשת. הפרשים של עד 0.12% בין הערך הזה לסכום הרובעים מוסברים בגרסאות פרסום שונות של המפקד."
   },
-  "missing": {
-    "note_he": "השדות הבאים אינם באפליקציה כי לא הצלחתי לאמת ולו ערך אחד מהם מהסביבה שבה נבנתה: מדיניות הרשת חוסמת את ine.pt, pordata.pt, geoapi.pt, idealista.pt, AIMA, wikipedia ו-Overpass. לכל שדה יש סקריפט שמביא אותו במכונה עם רשת פתוחה, ואז build.py משלב אותו והאפליקציה מציגה אותו אוטומטית. עד אז מוצג 'אין נתון' — ולא אפס ולא הערכה.",
-    "items": [
-      {
-        "field": "municipio.foreign_pct",
-        "label_he": "אחוז תושבים זרים",
-        "why_he": "AIMA (לשעבר SEF) ו-PORDATA חסומים.",
-        "fetch": "scripts/fetch_pordata.py --indicator foreign",
-        "candidate_sources": [
-          "https://www.pordata.pt/municipios/populacao+estrangeira+com+estatuto+legal+de+residente+total+e+por+algumas+nacionalidades-45",
-          "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-        ]
-      },
-      {
-        "field": "municipio.median_age",
-        "label_he": "גיל חציוני",
-        "why_he": "PORDATA טוענת את הטבלאות ב-JavaScript; INE חסום.",
-        "fetch": "scripts/fetch_ine.py --indicator median_age",
-        "candidate_sources": [
-          "https://www.pordata.pt/municipios/idade+mediana+da+populacao-6",
-          "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-        ]
-      },
-      {
-        "field": "municipio.median_income",
-        "label_he": "הכנסה חציונית",
-        "why_he": "INE ו-PORDATA חסומים.",
-        "fetch": "scripts/fetch_ine.py --indicator income",
-        "candidate_sources": [
-          "https://www.pordata.pt/municipios/rendimento+bruto+declarado+por+sujeito+passivo+de+irs-124",
-          "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-        ]
-      },
-      {
-        "field": "municipio.crimes_per_1000",
-        "label_he": "עבירות רשומות לאלף תושבים",
-        "why_he": "PORDATA חסומה.",
-        "important_he": "זה סך העבירות הרשומות (crimes registados pelas polícias por 1000 habitantes) — לא 'פשיעה חמורה'. criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה. אסור להציג את האחד כאילו הוא האחר.",
-        "fetch": "scripts/fetch_pordata.py --indicator crime",
-        "candidate_sources": [
-          "https://www.pordata.pt/municipios/crimes+registados+pelas+policias+por+mil+habitantes-995"
-        ]
-      },
-      {
-        "field": "municipio.price_eur_m2 / freguesia.price_eur_m2",
-        "label_he": "מחיר למ״ר",
-        "why_he": "idealista.pt/media, Confidencial Imobiliário ומדד הדיור של INE — כולם חסומים.",
-        "fetch": "scripts/fetch_idealista.py",
-        "candidate_sources": [
-          "https://www.idealista.pt/media/relatorios-preco-habitacao/",
-          "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-        ]
-      },
-      {
-        "field": "bairro.boundary",
-        "label_he": "גבולות שכונה (מתחת לרובע)",
-        "why_he": "אין שכבה מנהלית רשמית מתחת לרובע בפורטוגל. ב-OSM יש בעיקר נקודות, לא פוליגונים. אפשרות מדויקת: subsecções estatísticas (BGRI) של INE — פוליגונים ממוספרים ללא שם.",
-        "decision_he": "לא הומצאו גבולות. האפליקציה מציגה את 53 השכונות של פורטו כטקסט ואת נקודות ה-OSM על המפה."
-      }
-    ]
+  "municipio.area_km2": {
+   "label_he": "שטח (קמ״ר)",
+   "value_type": "number",
+   "reference_year": 2020,
+   "source": "מחושב מפוליגוני CAOP 2020 (DGT) בשטח גיאודזי על אליפסואיד WGS84 (geographiclib)",
+   "url": "https://www.dgterritorio.gov.pt/dados-abertos",
+   "retrieved": "2026-09-05",
+   "coverage": "18/18",
+   "validation_he": "תואם את השטחים הרשמיים שמפרסמת DGT עד הספרה האחרונה המודפסת (פורטו 41.42, אמרנטה 301.33, באיאו 174.52). סכום המחוז 2,331.6 קמ״ר."
+  },
+  "municipio.density": {
+   "label_he": "צפיפות אוכלוסין (נפש/קמ״ר)",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "נגזר: pop2021 / area_km2",
+   "coverage": "18/18",
+   "derived_from": [
+    "municipio.pop2021",
+    "municipio.area_km2"
+   ]
+  },
+  "municipio.dist_porto_km": {
+   "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
+   "value_type": "number",
+   "source": "porto_map.py (DIST) — מהמסמך המקורי",
+   "coverage": "18/18"
+  },
+  "municipio.transport": {
+   "label_he": "תחבורה לפורטו",
+   "value_type": "text",
+   "source": "porto_freg2.py (TRANSPORT) — מהמסמך המקורי",
+   "coverage": "18/18"
+  },
+  "municipio.profile": {
+   "label_he": "פרופיל (אופי, נדל״ן, שכונות, כלכלה, מגמה, יתרון, חיסרון)",
+   "value_type": "text",
+   "source": "porto_pages.py (PROFILES) — מהמסמך המקורי",
+   "coverage": "18/18"
+  },
+  "freguesia.name_pt": {
+   "label_he": "שם הרובע (פורטוגזית)",
+   "value_type": "text",
+   "reference_year": 2020,
+   "source": "CAOP 2020, DGT",
+   "coverage": "243/243"
+  },
+  "freguesia.he": {
+   "label_he": "שם הרובע (תעתיק עברי)",
+   "value_type": "text",
+   "source": "he_origin=pdf — 140 שמות מהמסמך המקורי; he_origin=app — 103 שמות שנוספו כאן לפי כללי ההגייה שנקבעו במסמך, וניתנים לעריכה ב-data/raw/hebrew_translit_new.json",
+   "coverage": "243/243"
+  },
+  "freguesia.pop2021": {
+   "label_he": "אוכלוסיית רובע",
+   "value_type": "integer",
+   "reference_year": 2021,
+   "source": "pop_src=pdf — 119 ערכים מאומתים מהמסמך המקורי (מפקד INE 2021); pop_src=collected — 124 ערכים שנאספו כאן מערכי הוויקיפדיה הפורטוגזית של כל רובע, המצטטים את מפקד INE 2021",
+   "url": "https://pt.wikipedia.org/",
+   "retrieved": "2026-09-05",
+   "coverage": "243/243",
+   "validation_he": "סכום הרובעים בכל אחת משבע העיריות שהושלמו הושווה לאוכלוסיית העירייה: באיאו -1, פנאפיאל -1, אמרנטה -3, מרקו -5, פלגיירש -7, פאסוש דה פריירה -27, לוזאדה +55 (מקסימום 0.12%). בפנאפיאל, שבעה ערכים שכבר היו מאומתים במסמך המקורי תואמים במדויק לערכים שנאספו כאן.",
+   "caveat_he": "חוק 25-A/2025 פיצל בחזרה חלק מאיחודי הרובעים של 2013. הנתונים כאן משקפים את חלוקת CAOP 2020 / מפקד 2021."
+  },
+  "freguesia.area_km2": {
+   "label_he": "שטח רובע (קמ״ר)",
+   "value_type": "number",
+   "reference_year": 2020,
+   "source": "מחושב מפוליגוני CAOP 2020 (DGT), שטח גיאודזי WGS84",
+   "coverage": "243/243"
+  },
+  "freguesia.density": {
+   "label_he": "צפיפות רובע",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "נגזר: pop2021 / area_km2",
+   "coverage": "243/243"
+  },
+  "freguesia.note": {
+   "label_he": "תיאור הרובע",
+   "value_type": "text",
+   "source": "140 מתוך 243 מהמסמך המקורי porto_district_map_a3.pdf. 103 הנותרות נכתבו עבור האפליקציה ונשמרות ב-data/raw/freguesia_notes_app.json",
+   "coverage": "243/243",
+   "caveat_he": "אין מקור רשמי שמפרסם טקסט תיאורי לרובע — מוסדות הסטטיסטיקה מפרסמים מספרים, לא תיאורים. לכן 103 התיאורים שנוספו נכתבו מידע כללי ולא הועתקו ממקור. הם מתארים מיקום, נוף ואופי, ואינם מכילים נתונים מספריים: כל מספר באפליקציה בא ממקור מתועד. השדה note_origin מסמן כל תיאור כזה, והאפליקציה מציגה עליו תווית. יש לאמת כל פרט שמשפיע על החלטה."
+  },
+  "freguesia.number": {
+   "label_he": "מספר הרובע במפה (קוד DICOFRE)",
+   "value_type": "string",
+   "reference_year": 2025,
+   "source": "הקוד הרשמי של היחידה, מתוך יחסי גבול admin_level=8 ב-OpenStreetMap שנושאים ref:ine ומסומנים source=DGT - CAOP. השיוך נעשה ב-scripts/ingest_freguesia_codes.py לפי שם ואחר כך לפי גאומטריה",
+   "url": "https://www.dgterritorio.gov.pt/dados-abertos",
+   "retrieved": "2026-09-07",
+   "coverage": "218/243",
+   "caveat_he": "25 מ-243 היחידות שהאפליקציה מציירת (גבולות CAOP 2020, כלומר חלוקת 2013) פורקו ברפורמת 2025 ל-57 רובעים נפרדים, והקוד של היחידה המאוחדת בוטל. ליחידות האלה לא מוצג קוד אלא רשימת הרובעים שהחליפו אותן, עם הקודים שלהם. אין כאן שום מספור שהאפליקציה המציאה.",
+   "validation_he": "כל 275 נקודות המרכז נופלות בתוך העירייה שהקוד שלהן מציין (בדיקת הכלה מול פוליגוני CAOP), אין קוד כפול, וכל 275 היחידות שויכו. שבעת הקודים של פורטו (02, 03, 10, 11, 16, 17, 18) תואמים את הפרסום הרשמי."
+  },
+  "freguesia.locality": {
+   "label_he": "יישובים ושכונות בתוך הרובע (האותיות במפה)",
+   "value_type": "point",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/04_district_places.overpassql. האות (A, B, C…) היא של האפליקציה; הסדר לפי סוג היישוב ואז לפי אוכלוסייה",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "1,773 יישובים ב-243 רובעים",
+   "caveat_he": "מתחת לרובע אין בפורטוגל שכבה מנהלית רשמית: ליישובים האלה אין גבול, ויש להם נקודה אחת בלבד, במרכז בקירוב. שבע הרובעים של פורטו הן היוצאות מן הכלל — שם 53 השכונות מגיעות מהמסמך המקורי ויש להן שם עברי ותיאור. ל-1,720 היישובים האחרים אין שם עברי ואין תיאור, כי לא נכתב כזה לאף אחד מהם ולא הומצא. המיפוי ב-OSM התנדבותי ואינו אחיד — היעדר יישוב אינו ראיה שאין שם דבר."
+  },
+  "freguesia.poi": {
+   "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, מוסדות, אתרים)",
+   "value_type": "point",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/05_district_services.overpassql ו-06_district_landmarks.overpassql",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "1,530 נקודות ב-243 רובעים",
+   "caveat_he": "שאילתת המורשת דורשת מכל אובייקט גם name וגם wikidata או heritage. בלי התנאי הזה יש במחוז אלפי רשומות historic שרובן פרט אדריכלי בודד, ומפה שמסמנת את כולן אינה אומרת דבר. אף נקודה לא נבחרה ידנית. המיפוי התנדבותי ואינו אחיד."
+  },
+  "map.water": {
+   "label_he": "נהרות ומים (שכבת מפה)",
+   "value_type": "geometry",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/07_district_water.overpassql",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "270 אובייקטים בתוך המחוז",
+   "caveat_he": "הגיאומטריה נחתכה לגבול המחוז, פושטה לסובלנות של כ-20 מ׳, והוסרו ממנה גופי מים קטנים מ-3,000 מ״ר. זו שכבת תצוגה: היא נועדה להראות איפה עובר הנהר, לא למדוד ממנה מרחקים או שטחים. 180 אובייקטים נפלו מחוץ למחוז ו-62 היו קטנים מכדי להיראות."
+  },
+  "porto_city.quarter": {
+   "label_he": "שבעת רבעי עיריית פורטו",
+   "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",
+   "reference_year": 2021,
+   "coverage": "7/7 רבעים, 53 שכונות"
+  },
+  "porto_city.places": {
+   "label_he": "נקודות שכונה בתוך העיר",
+   "source": "OpenStreetMap, place=neighbourhood|quarter|suburb (ODbL)",
+   "retrieved": "2026-09-05",
+   "coverage": "339 נקודות",
+   "caveat_he": "נקודות בלבד, לא גבולות. מתחת לרמת הרובע אין שכבה מנהלית רשמית בפורטוגל, ולכן אין גבולות שכונה באפליקציה."
+  },
+  "porto_city.bairro_letter": {
+   "label_he": "אות השכונה במפה",
+   "value_type": "text",
+   "source": "אות של האפליקציה (A, B, C…) לפי סדר השכונות במסמך המקורי; הנקודה שעליה היא מסומנת מגיעה מ-OpenStreetMap (place=neighbourhood/suburb/quarter בתוך הרובע)",
+   "url": "https://www.openstreetmap.org/",
+   "coverage": "52/53",
+   "caveat_he": "לשכונות פורטו אין גבול רשמי, ולכן אין פוליגון — יש נקודה בלבד, והיא במרכז השכונה בקירוב. השכונה מטדורו (Matadouro) אינה קיימת ב-OSM ולכן אין לה נקודה, והאפליקציה אומרת זאת במפורש. שדה confidence על כל שכונה מבחין בין נקודה שהגיעה מ-OSM (reported) לנקודה שנגזרה בקירוב (approx)."
+  },
+  "porto_city.poi": {
+   "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, אוניברסיטה, מוזיאונים, אתרים)",
+   "value_type": "point",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/01_porto_pois.overpassql",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "709 נקודות בשבעת הרבעים",
+   "caveat_he": "OSM הוא מיפוי התנדבותי: הכיסוי אינו אחיד, והרשימה אינה ממצה. בקטגוריית ״אתרים ומונומנטים״ יש בפורטו יותר מאלף רשומות, רובן פרט אדריכלי בודד; האפליקציה מציגה מהן את אלה שיש להן ערך ויקידאטה או ויקיפדיה, בלי בחירה ידנית. חובה לשמור על הייחוס ל-OpenStreetMap."
+  },
+  "district.belts": {
+   "label_he": "שלוש החגורות",
+   "value_type": "text",
+   "source": "המסמך המקורי porto_district_map_a3.pdf (porto_freg2.py, BELTS). קווי המתאר מחושבים באיחוד פוליגוני CAOP 2020 של העיריות שבכל חגורה",
+   "coverage": "3/3",
+   "caveat_he": "החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי ולא חלוקה מנהלית רשמית. ברמה הרשמית מחוז פורטו מחולק לשתי יחידות NUTS III — Área Metropolitana do Porto ו-Tâmega e Sousa — והן אינן חופפות לחגורות."
+  },
+  "municipio.number": {
+   "label_he": "מספר העירייה במפה (קוד DICOFRE)",
+   "value_type": "string",
+   "reference_year": 2025,
+   "source": "שתי הספרות האחרונות של קוד DICOFRE בן ארבע הספרות, מתג ref:ine על יחס הגבול של העירייה ב-OpenStreetMap (source=DGT CAOP 2022)",
+   "url": "https://www.dgterritorio.gov.pt/dados-abertos",
+   "retrieved": "2026-09-05",
+   "coverage": "18/18",
+   "validation_he": "אומת מול פוליגוני CAOP: כל 275 יחידות הרובע במחוז נופלות בתוך העירייה שהספרות שלהן מציינות. הסדר כמעט אלף-ביתי ולא לגמרי — Paços de Ferreira הוא 09 ו-Paredes 10, וטרופה היא 18 כי נוצרה ב-1998."
   }
+ },
+ "missing": {
+  "note_he": "השדות הבאים אינם באפליקציה כי לא הצלחתי לאמת ולו ערך אחד מהם מהסביבה שבה נבנתה: מדיניות הרשת חוסמת את ine.pt, pordata.pt, geoapi.pt, idealista.pt, AIMA, wikipedia ו-Overpass. לכל שדה יש סקריפט שמביא אותו במכונה עם רשת פתוחה, ואז build.py משלב אותו והאפליקציה מציגה אותו אוטומטית. עד אז מוצג 'אין נתון' — ולא אפס ולא הערכה.",
+  "items": [
+   {
+    "field": "map.caop_2025",
+    "label_he": "גבולות הרובעים במהדורה 2025",
+    "why_he": "שכבת הגבולות כאן היא CAOP 2020, כלומר חלוקת הרובעים של רפורמת 2013. ברפורמת 2025 בוטלו חלק מהאיחודים: במחוז פורטו 25 מ-243 היחידות פורקו ל-57 רובעים נפרדים. הקודים החדשים כבר באפליקציה, אבל הגבולות עצמם לא — לכך צריך את CAOP 2024 או 2025 מ-DGT.",
+    "important_he": "פיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים: מפקד 2021 נספר לפי חלוקת 2013. כדי לפצל גם את הנתונים צריך את BGRI 2021 — קובץ הרשתות הסטטיסטיות של INE, שממנו אפשר לסכום אוכלוסייה לכל גבול חדש.",
+    "candidate_sources": [
+     "https://www.dgterritorio.gov.pt/dados-abertos",
+     "https://mapas.ine.pt/download/index2021.phtml"
+    ]
+   },
+   {
+    "field": "municipio.foreign_pct",
+    "label_he": "אחוז תושבים זרים",
+    "why_he": "AIMA (לשעבר SEF) ו-PORDATA חסומים.",
+    "fetch": "scripts/fetch_pordata.py --indicator foreign",
+    "candidate_sources": [
+     "https://www.pordata.pt/municipios/populacao+estrangeira+com+estatuto+legal+de+residente+total+e+por+algumas+nacionalidades-45",
+     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
+    ]
+   },
+   {
+    "field": "municipio.median_age",
+    "label_he": "גיל חציוני",
+    "why_he": "PORDATA טוענת את הטבלאות ב-JavaScript; INE חסום.",
+    "fetch": "scripts/fetch_ine.py --indicator median_age",
+    "candidate_sources": [
+     "https://www.pordata.pt/municipios/idade+mediana+da+populacao-6",
+     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
+    ]
+   },
+   {
+    "field": "municipio.median_income",
+    "label_he": "הכנסה חציונית",
+    "why_he": "INE ו-PORDATA חסומים.",
+    "fetch": "scripts/fetch_ine.py --indicator income",
+    "candidate_sources": [
+     "https://www.pordata.pt/municipios/rendimento+bruto+declarado+por+sujeito+passivo+de+irs-124",
+     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
+    ]
+   },
+   {
+    "field": "municipio.crimes_per_1000",
+    "label_he": "עבירות רשומות לאלף תושבים",
+    "why_he": "PORDATA חסומה.",
+    "important_he": "זה סך העבירות הרשומות (crimes registados pelas polícias por 1000 habitantes) — לא 'פשיעה חמורה'. criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה. אסור להציג את האחד כאילו הוא האחר.",
+    "fetch": "scripts/fetch_pordata.py --indicator crime",
+    "candidate_sources": [
+     "https://www.pordata.pt/municipios/crimes+registados+pelas+policias+por+mil+habitantes-995"
+    ]
+   },
+   {
+    "field": "municipio.price_eur_m2 / freguesia.price_eur_m2",
+    "label_he": "מחיר למ״ר",
+    "why_he": "idealista.pt/media, Confidencial Imobiliário ומדד הדיור של INE — כולם חסומים.",
+    "fetch": "scripts/fetch_idealista.py",
+    "candidate_sources": [
+     "https://www.idealista.pt/media/relatorios-preco-habitacao/",
+     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
+    ]
+   },
+   {
+    "field": "bairro.boundary",
+    "label_he": "גבולות שכונה (מתחת לרובע)",
+    "why_he": "אין שכבה מנהלית רשמית מתחת לרובע בפורטוגל. ב-OSM יש בעיקר נקודות, לא פוליגונים. אפשרות מדויקת: subsecções estatísticas (BGRI) של INE — פוליגונים ממוספרים ללא שם.",
+    "decision_he": "לא הומצאו גבולות. האפליקציה מציגה את 53 השכונות של פורטו כטקסט ואת נקודות ה-OSM על המפה."
+   }
+  ]
+ }
 }

@@ -1,0 +1,1770 @@
+{
+ "source": "OpenStreetMap ref:ine (relations tagged source=DGT - CAOP)",
+ "licence": "ODbL — © OpenStreetMap contributors",
+ "district": "13",
+ "municipality_names": {
+  "01": "Amarante",
+  "02": "Baião",
+  "03": "Felgueiras",
+  "04": "Gondomar",
+  "05": "Lousada",
+  "06": "Maia",
+  "07": "Marco de Canaveses",
+  "08": "Matosinhos",
+  "09": "Paços de Ferreira",
+  "10": "Paredes",
+  "11": "Penafiel",
+  "12": "Porto",
+  "13": "Póvoa de Varzim",
+  "14": "Santo Tirso",
+  "15": "Valongo",
+  "16": "Vila do Conde",
+  "17": "Vila Nova de Gaia",
+  "18": "Trofa"
+ },
+ "freguesias": {
+  "Porto|Bonfim": {
+   "mun": "Porto",
+   "pt": "Bonfim",
+   "code": "02",
+   "dicofre": "131202"
+  },
+  "Porto|Campanhã": {
+   "mun": "Porto",
+   "pt": "Campanhã",
+   "code": "03",
+   "dicofre": "131203"
+  },
+  "Porto|Paranhos": {
+   "mun": "Porto",
+   "pt": "Paranhos",
+   "code": "10",
+   "dicofre": "131210"
+  },
+  "Porto|Ramalde": {
+   "mun": "Porto",
+   "pt": "Ramalde",
+   "code": "11",
+   "dicofre": "131211"
+  },
+  "Porto|União das freguesias de Aldoar, Foz do Douro e Nevogilde": {
+   "mun": "Porto",
+   "pt": "União das freguesias de Aldoar, Foz do Douro e Nevogilde",
+   "code": "16",
+   "dicofre": "131216"
+  },
+  "Porto|União das freguesias de Cedofeita, Santo Ildefonso, Sé, Miragaia, São Nicolau e Vitória": {
+   "mun": "Porto",
+   "pt": "União das freguesias de Cedofeita, Santo Ildefonso, Sé, Miragaia, São Nicolau e Vitória",
+   "code": "17",
+   "dicofre": "131217"
+  },
+  "Porto|União das freguesias de Lordelo do Ouro e Massarelos": {
+   "mun": "Porto",
+   "pt": "União das freguesias de Lordelo do Ouro e Massarelos",
+   "code": "18",
+   "dicofre": "131218"
+  },
+  "Vila Nova de Gaia|Arcozelo": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Arcozelo",
+   "code": "01",
+   "dicofre": "131701"
+  },
+  "Vila Nova de Gaia|Avintes": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Avintes",
+   "code": "02",
+   "dicofre": "131702"
+  },
+  "Vila Nova de Gaia|Canelas": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Canelas",
+   "code": "03",
+   "dicofre": "131703"
+  },
+  "Vila Nova de Gaia|Canidelo": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Canidelo",
+   "code": "04",
+   "dicofre": "131704"
+  },
+  "Vila Nova de Gaia|Madalena": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Madalena",
+   "code": "09",
+   "dicofre": "131709"
+  },
+  "Vila Nova de Gaia|Oliveira do Douro": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Oliveira do Douro",
+   "code": "12",
+   "dicofre": "131712"
+  },
+  "Vila Nova de Gaia|São Félix da Marinha": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "São Félix da Marinha",
+   "code": "17",
+   "dicofre": "131717"
+  },
+  "Vila Nova de Gaia|União das freguesias de Grijó e Sermonde": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Grijó e Sermonde",
+   "split2025": [
+    {
+     "code": "33",
+     "dicofre": "131733",
+     "pt": "Grijó"
+    },
+    {
+     "code": "44",
+     "dicofre": "131744",
+     "pt": "Sermonde"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|União das freguesias de Gulpilhares e Valadares": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Gulpilhares e Valadares",
+   "split2025": [
+    {
+     "code": "34",
+     "dicofre": "131734",
+     "pt": "Gulpilhares"
+    },
+    {
+     "code": "46",
+     "dicofre": "131746",
+     "pt": "Valadares"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|União das freguesias de Mafamude e Vilar do Paraíso": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Mafamude e Vilar do Paraíso",
+   "split2025": [
+    {
+     "code": "36",
+     "dicofre": "131736",
+     "pt": "Mafamude"
+    },
+    {
+     "code": "47",
+     "dicofre": "131747",
+     "pt": "Vilar do Paraíso"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|União das freguesias de Pedroso e Seixezelo": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Pedroso e Seixezelo",
+   "split2025": [
+    {
+     "code": "37",
+     "dicofre": "131737",
+     "pt": "Olival"
+    },
+    {
+     "code": "38",
+     "dicofre": "131738",
+     "pt": "Pedroso"
+    },
+    {
+     "code": "43",
+     "dicofre": "131743",
+     "pt": "Seixezelo"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|União das freguesias de Sandim, Olival, Lever e Crestuma": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Sandim, Olival, Lever e Crestuma",
+   "split2025": [
+    {
+     "code": "32",
+     "dicofre": "131732",
+     "pt": "Crestuma"
+    },
+    {
+     "code": "35",
+     "dicofre": "131735",
+     "pt": "Lever"
+    },
+    {
+     "code": "40",
+     "dicofre": "131740",
+     "pt": "Sandim"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|União das freguesias de Santa Marinha e São Pedro da Afurada": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Santa Marinha e São Pedro da Afurada",
+   "split2025": [
+    {
+     "code": "41",
+     "dicofre": "131741",
+     "pt": "Santa Marinha"
+    },
+    {
+     "code": "42",
+     "dicofre": "131742",
+     "pt": "São Pedro da Afurada"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|União das freguesias de Serzedo e Perosinho": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "União das freguesias de Serzedo e Perosinho",
+   "split2025": [
+    {
+     "code": "39",
+     "dicofre": "131739",
+     "pt": "Perosinho"
+    },
+    {
+     "code": "45",
+     "dicofre": "131745",
+     "pt": "Serzedo"
+    }
+   ]
+  },
+  "Vila Nova de Gaia|Vilar de Andorinho": {
+   "mun": "Vila Nova de Gaia",
+   "pt": "Vilar de Andorinho",
+   "code": "23",
+   "dicofre": "131723"
+  },
+  "Matosinhos|União das freguesias de Custóias, Leça do Balio e Guifões": {
+   "mun": "Matosinhos",
+   "pt": "União das freguesias de Custóias, Leça do Balio e Guifões",
+   "split2025": [
+    {
+     "code": "15",
+     "dicofre": "130815",
+     "pt": "Custóias"
+    },
+    {
+     "code": "16",
+     "dicofre": "130816",
+     "pt": "Guifões"
+    },
+    {
+     "code": "19",
+     "dicofre": "130819",
+     "pt": "Leça do Balio"
+    }
+   ]
+  },
+  "Matosinhos|União das freguesias de Matosinhos e Leça da Palmeira": {
+   "mun": "Matosinhos",
+   "pt": "União das freguesias de Matosinhos e Leça da Palmeira",
+   "split2025": [
+    {
+     "code": "18",
+     "dicofre": "130818",
+     "pt": "Leça da Palmeira"
+    },
+    {
+     "code": "20",
+     "dicofre": "130820",
+     "pt": "Matosinhos"
+    }
+   ]
+  },
+  "Matosinhos|União das freguesias de Perafita, Lavra e Santa Cruz do Bispo": {
+   "mun": "Matosinhos",
+   "pt": "União das freguesias de Perafita, Lavra e Santa Cruz do Bispo",
+   "split2025": [
+    {
+     "code": "17",
+     "dicofre": "130817",
+     "pt": "Lavra"
+    },
+    {
+     "code": "21",
+     "dicofre": "130821",
+     "pt": "Perafita"
+    },
+    {
+     "code": "22",
+     "dicofre": "130822",
+     "pt": "Santa Cruz do Bispo"
+    }
+   ]
+  },
+  "Matosinhos|União das freguesias de São Mamede de Infesta e Senhora da Hora": {
+   "mun": "Matosinhos",
+   "pt": "União das freguesias de São Mamede de Infesta e Senhora da Hora",
+   "split2025": [
+    {
+     "code": "23",
+     "dicofre": "130823",
+     "pt": "São Mamede de Infesta"
+    },
+    {
+     "code": "24",
+     "dicofre": "130824",
+     "pt": "Senhora da Hora"
+    }
+   ]
+  },
+  "Maia|Castêlo da Maia": {
+   "mun": "Maia",
+   "pt": "Castêlo da Maia",
+   "code": "18",
+   "dicofre": "130618"
+  },
+  "Maia|Cidade da Maia": {
+   "mun": "Maia",
+   "pt": "Cidade da Maia",
+   "code": "19",
+   "dicofre": "130619"
+  },
+  "Maia|Folgosa": {
+   "mun": "Maia",
+   "pt": "Folgosa",
+   "code": "03",
+   "dicofre": "130603"
+  },
+  "Maia|Milheirós": {
+   "mun": "Maia",
+   "pt": "Milheirós",
+   "code": "08",
+   "dicofre": "130608"
+  },
+  "Maia|Moreira": {
+   "mun": "Maia",
+   "pt": "Moreira",
+   "code": "09",
+   "dicofre": "130609"
+  },
+  "Maia|Nogueira e Silva Escura": {
+   "mun": "Maia",
+   "pt": "Nogueira e Silva Escura",
+   "code": "20",
+   "dicofre": "130620"
+  },
+  "Maia|Pedrouços": {
+   "mun": "Maia",
+   "pt": "Pedrouços",
+   "code": "17",
+   "dicofre": "130617"
+  },
+  "Maia|São Pedro Fins": {
+   "mun": "Maia",
+   "pt": "São Pedro Fins",
+   "code": "13",
+   "dicofre": "130613"
+  },
+  "Maia|Vila Nova da Telha": {
+   "mun": "Maia",
+   "pt": "Vila Nova da Telha",
+   "code": "16",
+   "dicofre": "130616"
+  },
+  "Maia|Águas Santas": {
+   "mun": "Maia",
+   "pt": "Águas Santas",
+   "code": "01",
+   "dicofre": "130601"
+  },
+  "Gondomar|Baguim do Monte (Rio Tinto)": {
+   "mun": "Gondomar",
+   "pt": "Baguim do Monte (Rio Tinto)",
+   "code": "12",
+   "dicofre": "130412"
+  },
+  "Gondomar|Lomba": {
+   "mun": "Gondomar",
+   "pt": "Lomba",
+   "code": "05",
+   "dicofre": "130405"
+  },
+  "Gondomar|Rio Tinto": {
+   "mun": "Gondomar",
+   "pt": "Rio Tinto",
+   "code": "08",
+   "dicofre": "130408"
+  },
+  "Gondomar|União das freguesias de Foz do Sousa e Covelo": {
+   "mun": "Gondomar",
+   "pt": "União das freguesias de Foz do Sousa e Covelo",
+   "code": "14",
+   "dicofre": "130414"
+  },
+  "Gondomar|União das freguesias de Fânzeres e São Pedro da Cova": {
+   "mun": "Gondomar",
+   "pt": "União das freguesias de Fânzeres e São Pedro da Cova",
+   "code": "13",
+   "dicofre": "130413"
+  },
+  "Gondomar|União das freguesias de Gondomar (São Cosme), Valbom e Jovim": {
+   "mun": "Gondomar",
+   "pt": "União das freguesias de Gondomar (São Cosme), Valbom e Jovim",
+   "code": "15",
+   "dicofre": "130415"
+  },
+  "Gondomar|União das freguesias de Melres e Medas": {
+   "mun": "Gondomar",
+   "pt": "União das freguesias de Melres e Medas",
+   "code": "16",
+   "dicofre": "130416"
+  },
+  "Valongo|Alfena": {
+   "mun": "Valongo",
+   "pt": "Alfena",
+   "code": "01",
+   "dicofre": "131501"
+  },
+  "Valongo|Ermesinde": {
+   "mun": "Valongo",
+   "pt": "Ermesinde",
+   "code": "03",
+   "dicofre": "131503"
+  },
+  "Valongo|União das freguesias de Campo e Sobrado": {
+   "mun": "Valongo",
+   "pt": "União das freguesias de Campo e Sobrado",
+   "split2025": [
+    {
+     "code": "07",
+     "dicofre": "131507",
+     "pt": "Campo"
+    },
+    {
+     "code": "08",
+     "dicofre": "131508",
+     "pt": "Sobrado"
+    }
+   ]
+  },
+  "Valongo|Valongo": {
+   "mun": "Valongo",
+   "pt": "Valongo",
+   "code": "05",
+   "dicofre": "131505"
+  },
+  "Vila do Conde|Aveleda": {
+   "mun": "Vila do Conde",
+   "pt": "Aveleda",
+   "code": "03",
+   "dicofre": "131603"
+  },
+  "Vila do Conde|Azurara": {
+   "mun": "Vila do Conde",
+   "pt": "Azurara",
+   "code": "04",
+   "dicofre": "131604"
+  },
+  "Vila do Conde|Fajozes": {
+   "mun": "Vila do Conde",
+   "pt": "Fajozes",
+   "code": "07",
+   "dicofre": "131607"
+  },
+  "Vila do Conde|Gião": {
+   "mun": "Vila do Conde",
+   "pt": "Gião",
+   "code": "10",
+   "dicofre": "131610"
+  },
+  "Vila do Conde|Guilhabreu": {
+   "mun": "Vila do Conde",
+   "pt": "Guilhabreu",
+   "code": "11",
+   "dicofre": "131611"
+  },
+  "Vila do Conde|Junqueira": {
+   "mun": "Vila do Conde",
+   "pt": "Junqueira",
+   "code": "12",
+   "dicofre": "131612"
+  },
+  "Vila do Conde|Labruge": {
+   "mun": "Vila do Conde",
+   "pt": "Labruge",
+   "code": "13",
+   "dicofre": "131613"
+  },
+  "Vila do Conde|Macieira da Maia": {
+   "mun": "Vila do Conde",
+   "pt": "Macieira da Maia",
+   "code": "14",
+   "dicofre": "131614"
+  },
+  "Vila do Conde|Mindelo": {
+   "mun": "Vila do Conde",
+   "pt": "Mindelo",
+   "code": "16",
+   "dicofre": "131616"
+  },
+  "Vila do Conde|Modivas": {
+   "mun": "Vila do Conde",
+   "pt": "Modivas",
+   "code": "17",
+   "dicofre": "131617"
+  },
+  "Vila do Conde|União das freguesias de Bagunte, Ferreiró, Outeiro Maior e Parada": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Bagunte, Ferreiró, Outeiro Maior e Parada",
+   "code": "31",
+   "dicofre": "131631"
+  },
+  "Vila do Conde|União das freguesias de Fornelo e Vairão": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Fornelo e Vairão",
+   "split2025": [
+    {
+     "code": "40",
+     "dicofre": "131640",
+     "pt": "Fornelo"
+    },
+    {
+     "code": "45",
+     "dicofre": "131645",
+     "pt": "Vairão"
+    }
+   ]
+  },
+  "Vila do Conde|União das freguesias de Malta e Canidelo": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Malta e Canidelo",
+   "split2025": [
+    {
+     "code": "39",
+     "dicofre": "131639",
+     "pt": "Canidelo"
+    },
+    {
+     "code": "41",
+     "dicofre": "131641",
+     "pt": "Malta"
+    }
+   ]
+  },
+  "Vila do Conde|União das freguesias de Retorta e Tougues": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Retorta e Tougues",
+   "split2025": [
+    {
+     "code": "42",
+     "dicofre": "131642",
+     "pt": "Retorta"
+    },
+    {
+     "code": "44",
+     "dicofre": "131644",
+     "pt": "Tougues"
+    }
+   ]
+  },
+  "Vila do Conde|União das freguesias de Rio Mau e Arcos": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Rio Mau e Arcos",
+   "split2025": [
+    {
+     "code": "38",
+     "dicofre": "131638",
+     "pt": "Arcos"
+    },
+    {
+     "code": "43",
+     "dicofre": "131643",
+     "pt": "Rio Mau"
+    }
+   ]
+  },
+  "Vila do Conde|União das freguesias de Touguinha e Touguinhó": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Touguinha e Touguinhó",
+   "code": "36",
+   "dicofre": "131636"
+  },
+  "Vila do Conde|União das freguesias de Vilar e Mosteiró": {
+   "mun": "Vila do Conde",
+   "pt": "União das freguesias de Vilar e Mosteiró",
+   "code": "37",
+   "dicofre": "131637"
+  },
+  "Vila do Conde|Vila Chã": {
+   "mun": "Vila do Conde",
+   "pt": "Vila Chã",
+   "code": "27",
+   "dicofre": "131627"
+  },
+  "Vila do Conde|Vila do Conde": {
+   "mun": "Vila do Conde",
+   "pt": "Vila do Conde",
+   "code": "28",
+   "dicofre": "131628"
+  },
+  "Vila do Conde|Vilar de Pinheiro": {
+   "mun": "Vila do Conde",
+   "pt": "Vilar de Pinheiro",
+   "code": "30",
+   "dicofre": "131630"
+  },
+  "Vila do Conde|Árvore": {
+   "mun": "Vila do Conde",
+   "pt": "Árvore",
+   "code": "02",
+   "dicofre": "131602"
+  },
+  "Póvoa de Varzim|Balazar": {
+   "mun": "Póvoa de Varzim",
+   "pt": "Balazar",
+   "code": "05",
+   "dicofre": "131305"
+  },
+  "Póvoa de Varzim|Estela": {
+   "mun": "Póvoa de Varzim",
+   "pt": "Estela",
+   "code": "07",
+   "dicofre": "131307"
+  },
+  "Póvoa de Varzim|Laundos": {
+   "mun": "Póvoa de Varzim",
+   "pt": "Laundos",
+   "code": "08",
+   "dicofre": "131308"
+  },
+  "Póvoa de Varzim|Rates": {
+   "mun": "Póvoa de Varzim",
+   "pt": "Rates",
+   "code": "11",
+   "dicofre": "131311"
+  },
+  "Póvoa de Varzim|União das freguesias da Póvoa de Varzim, Beiriz e Argivai": {
+   "mun": "Póvoa de Varzim",
+   "pt": "União das freguesias da Póvoa de Varzim, Beiriz e Argivai",
+   "split2025": [
+    {
+     "code": "18",
+     "dicofre": "131318",
+     "pt": "Argivai"
+    },
+    {
+     "code": "20",
+     "dicofre": "131320",
+     "pt": "Beiriz"
+    },
+    {
+     "code": "22",
+     "dicofre": "131322",
+     "pt": "Póvoa de Varzim"
+    }
+   ]
+  },
+  "Póvoa de Varzim|União das freguesias de Aguçadoura e Navais": {
+   "mun": "Póvoa de Varzim",
+   "pt": "União das freguesias de Aguçadoura e Navais",
+   "split2025": [
+    {
+     "code": "16",
+     "dicofre": "131316",
+     "pt": "Aguçadoura"
+    },
+    {
+     "code": "21",
+     "dicofre": "131321",
+     "pt": "Navais"
+    }
+   ]
+  },
+  "Póvoa de Varzim|União das freguesias de Aver-o-Mar, Amorim e Terroso": {
+   "mun": "Póvoa de Varzim",
+   "pt": "União das freguesias de Aver-o-Mar, Amorim e Terroso",
+   "split2025": [
+    {
+     "code": "17",
+     "dicofre": "131317",
+     "pt": "Amorim"
+    },
+    {
+     "code": "19",
+     "dicofre": "131319",
+     "pt": "Aver-o-Mar"
+    },
+    {
+     "code": "23",
+     "dicofre": "131323",
+     "pt": "Terroso"
+    }
+   ]
+  },
+  "Santo Tirso|Agrela": {
+   "mun": "Santo Tirso",
+   "pt": "Agrela",
+   "code": "01",
+   "dicofre": "131401"
+  },
+  "Santo Tirso|Aves": {
+   "mun": "Santo Tirso",
+   "pt": "Aves",
+   "code": "05",
+   "dicofre": "131405"
+  },
+  "Santo Tirso|Monte Córdova": {
+   "mun": "Santo Tirso",
+   "pt": "Monte Córdova",
+   "code": "13",
+   "dicofre": "131413"
+  },
+  "Santo Tirso|Negrelos (São Tomé)": {
+   "mun": "Santo Tirso",
+   "pt": "Negrelos (São Tomé)",
+   "code": "30",
+   "dicofre": "131430"
+  },
+  "Santo Tirso|Rebordões": {
+   "mun": "Santo Tirso",
+   "pt": "Rebordões",
+   "code": "16",
+   "dicofre": "131416"
+  },
+  "Santo Tirso|Reguenga": {
+   "mun": "Santo Tirso",
+   "pt": "Reguenga",
+   "code": "18",
+   "dicofre": "131418"
+  },
+  "Santo Tirso|Roriz": {
+   "mun": "Santo Tirso",
+   "pt": "Roriz",
+   "code": "19",
+   "dicofre": "131419"
+  },
+  "Santo Tirso|União das freguesias de Areias, Sequeiró, Lama e Palmeira": {
+   "mun": "Santo Tirso",
+   "pt": "União das freguesias de Areias, Sequeiró, Lama e Palmeira",
+   "code": "33",
+   "dicofre": "131433"
+  },
+  "Santo Tirso|União das freguesias de Carreira e Refojos de Riba de Ave": {
+   "mun": "Santo Tirso",
+   "pt": "União das freguesias de Carreira e Refojos de Riba de Ave",
+   "code": "35",
+   "dicofre": "131435"
+  },
+  "Santo Tirso|União das freguesias de Lamelas e Guimarei": {
+   "mun": "Santo Tirso",
+   "pt": "União das freguesias de Lamelas e Guimarei",
+   "code": "36",
+   "dicofre": "131436"
+  },
+  "Santo Tirso|União das freguesias de Santo Tirso, Couto (Santa Cristina e São Miguel) e Burgães": {
+   "mun": "Santo Tirso",
+   "pt": "União das freguesias de Santo Tirso, Couto (Santa Cristina e São Miguel) e Burgães",
+   "code": "37",
+   "dicofre": "131437"
+  },
+  "Santo Tirso|Vila Nova do Campo": {
+   "mun": "Santo Tirso",
+   "pt": "Vila Nova do Campo",
+   "code": "34",
+   "dicofre": "131434"
+  },
+  "Santo Tirso|Vilarinho": {
+   "mun": "Santo Tirso",
+   "pt": "Vilarinho",
+   "code": "32",
+   "dicofre": "131432"
+  },
+  "Santo Tirso|Água Longa": {
+   "mun": "Santo Tirso",
+   "pt": "Água Longa",
+   "code": "02",
+   "dicofre": "131402"
+  },
+  "Trofa|Covelas": {
+   "mun": "Trofa",
+   "pt": "Covelas",
+   "code": "06",
+   "dicofre": "131806"
+  },
+  "Trofa|Muro": {
+   "mun": "Trofa",
+   "pt": "Muro",
+   "code": "08",
+   "dicofre": "131808"
+  },
+  "Trofa|União das freguesias de Alvarelhos e Guidões": {
+   "mun": "Trofa",
+   "pt": "União das freguesias de Alvarelhos e Guidões",
+   "split2025": [
+    {
+     "code": "12",
+     "dicofre": "131812",
+     "pt": "Alvarelhos"
+    },
+    {
+     "code": "13",
+     "dicofre": "131813",
+     "pt": "Guidões"
+    }
+   ]
+  },
+  "Trofa|União das freguesias de Bougado (São Martinho e Santiago)": {
+   "mun": "Trofa",
+   "pt": "União das freguesias de Bougado (São Martinho e Santiago)",
+   "code": "10",
+   "dicofre": "131810"
+  },
+  "Trofa|União das freguesias de Coronado (São Romão e São Mamede)": {
+   "mun": "Trofa",
+   "pt": "União das freguesias de Coronado (São Romão e São Mamede)",
+   "code": "11",
+   "dicofre": "131811"
+  },
+  "Paredes|Aguiar de Sousa": {
+   "mun": "Paredes",
+   "pt": "Aguiar de Sousa",
+   "code": "01",
+   "dicofre": "131001"
+  },
+  "Paredes|Astromil": {
+   "mun": "Paredes",
+   "pt": "Astromil",
+   "code": "02",
+   "dicofre": "131002"
+  },
+  "Paredes|Baltar": {
+   "mun": "Paredes",
+   "pt": "Baltar",
+   "code": "03",
+   "dicofre": "131003"
+  },
+  "Paredes|Beire": {
+   "mun": "Paredes",
+   "pt": "Beire",
+   "code": "04",
+   "dicofre": "131004"
+  },
+  "Paredes|Cete": {
+   "mun": "Paredes",
+   "pt": "Cete",
+   "code": "08",
+   "dicofre": "131008"
+  },
+  "Paredes|Cristelo": {
+   "mun": "Paredes",
+   "pt": "Cristelo",
+   "code": "09",
+   "dicofre": "131009"
+  },
+  "Paredes|Duas Igrejas": {
+   "mun": "Paredes",
+   "pt": "Duas Igrejas",
+   "code": "10",
+   "dicofre": "131010"
+  },
+  "Paredes|Gandra": {
+   "mun": "Paredes",
+   "pt": "Gandra",
+   "code": "11",
+   "dicofre": "131011"
+  },
+  "Paredes|Lordelo": {
+   "mun": "Paredes",
+   "pt": "Lordelo",
+   "code": "13",
+   "dicofre": "131013"
+  },
+  "Paredes|Louredo": {
+   "mun": "Paredes",
+   "pt": "Louredo",
+   "code": "14",
+   "dicofre": "131014"
+  },
+  "Paredes|Parada de Todeia": {
+   "mun": "Paredes",
+   "pt": "Parada de Todeia",
+   "code": "17",
+   "dicofre": "131017"
+  },
+  "Paredes|Paredes": {
+   "mun": "Paredes",
+   "pt": "Paredes",
+   "code": "25",
+   "dicofre": "131025"
+  },
+  "Paredes|Rebordosa": {
+   "mun": "Paredes",
+   "pt": "Rebordosa",
+   "code": "18",
+   "dicofre": "131018"
+  },
+  "Paredes|Recarei": {
+   "mun": "Paredes",
+   "pt": "Recarei",
+   "code": "19",
+   "dicofre": "131019"
+  },
+  "Paredes|Sobreira": {
+   "mun": "Paredes",
+   "pt": "Sobreira",
+   "code": "20",
+   "dicofre": "131020"
+  },
+  "Paredes|Sobrosa": {
+   "mun": "Paredes",
+   "pt": "Sobrosa",
+   "code": "21",
+   "dicofre": "131021"
+  },
+  "Paredes|Vandoma": {
+   "mun": "Paredes",
+   "pt": "Vandoma",
+   "code": "22",
+   "dicofre": "131022"
+  },
+  "Paredes|Vilela": {
+   "mun": "Paredes",
+   "pt": "Vilela",
+   "code": "24",
+   "dicofre": "131024"
+  },
+  "Penafiel|Abragão": {
+   "mun": "Penafiel",
+   "pt": "Abragão",
+   "code": "01",
+   "dicofre": "131101"
+  },
+  "Penafiel|Boelhe": {
+   "mun": "Penafiel",
+   "pt": "Boelhe",
+   "code": "02",
+   "dicofre": "131102"
+  },
+  "Penafiel|Bustelo": {
+   "mun": "Penafiel",
+   "pt": "Bustelo",
+   "code": "03",
+   "dicofre": "131103"
+  },
+  "Penafiel|Cabeça Santa": {
+   "mun": "Penafiel",
+   "pt": "Cabeça Santa",
+   "code": "04",
+   "dicofre": "131104"
+  },
+  "Penafiel|Canelas": {
+   "mun": "Penafiel",
+   "pt": "Canelas",
+   "code": "05",
+   "dicofre": "131105"
+  },
+  "Penafiel|Capela": {
+   "mun": "Penafiel",
+   "pt": "Capela",
+   "code": "06",
+   "dicofre": "131106"
+  },
+  "Penafiel|Castelões": {
+   "mun": "Penafiel",
+   "pt": "Castelões",
+   "code": "07",
+   "dicofre": "131107"
+  },
+  "Penafiel|Croca": {
+   "mun": "Penafiel",
+   "pt": "Croca",
+   "code": "08",
+   "dicofre": "131108"
+  },
+  "Penafiel|Duas Igrejas": {
+   "mun": "Penafiel",
+   "pt": "Duas Igrejas",
+   "code": "09",
+   "dicofre": "131109"
+  },
+  "Penafiel|Eja": {
+   "mun": "Penafiel",
+   "pt": "Eja",
+   "code": "10",
+   "dicofre": "131110"
+  },
+  "Penafiel|Fonte Arcada": {
+   "mun": "Penafiel",
+   "pt": "Fonte Arcada",
+   "code": "12",
+   "dicofre": "131112"
+  },
+  "Penafiel|Galegos": {
+   "mun": "Penafiel",
+   "pt": "Galegos",
+   "code": "13",
+   "dicofre": "131113"
+  },
+  "Penafiel|Guilhufe e Urrô": {
+   "mun": "Penafiel",
+   "pt": "Guilhufe e Urrô",
+   "code": "41",
+   "dicofre": "131141"
+  },
+  "Penafiel|Irivo": {
+   "mun": "Penafiel",
+   "pt": "Irivo",
+   "code": "15",
+   "dicofre": "131115"
+  },
+  "Penafiel|Lagares e Figueira": {
+   "mun": "Penafiel",
+   "pt": "Lagares e Figueira",
+   "code": "42",
+   "dicofre": "131142"
+  },
+  "Penafiel|Luzim e Vila Cova": {
+   "mun": "Penafiel",
+   "pt": "Luzim e Vila Cova",
+   "code": "40",
+   "dicofre": "131140"
+  },
+  "Penafiel|Oldrões": {
+   "mun": "Penafiel",
+   "pt": "Oldrões",
+   "code": "21",
+   "dicofre": "131121"
+  },
+  "Penafiel|Paço de Sousa": {
+   "mun": "Penafiel",
+   "pt": "Paço de Sousa",
+   "code": "22",
+   "dicofre": "131122"
+  },
+  "Penafiel|Penafiel": {
+   "mun": "Penafiel",
+   "pt": "Penafiel",
+   "code": "39",
+   "dicofre": "131139"
+  },
+  "Penafiel|Perozelo": {
+   "mun": "Penafiel",
+   "pt": "Perozelo",
+   "code": "25",
+   "dicofre": "131125"
+  },
+  "Penafiel|Rans": {
+   "mun": "Penafiel",
+   "pt": "Rans",
+   "code": "28",
+   "dicofre": "131128"
+  },
+  "Penafiel|Recezinhos (São Mamede)": {
+   "mun": "Penafiel",
+   "pt": "Recezinhos (São Mamede)",
+   "code": "32",
+   "dicofre": "131132"
+  },
+  "Penafiel|Recezinhos (São Martinho)": {
+   "mun": "Penafiel",
+   "pt": "Recezinhos (São Martinho)",
+   "code": "33",
+   "dicofre": "131133"
+  },
+  "Penafiel|Rio Mau": {
+   "mun": "Penafiel",
+   "pt": "Rio Mau",
+   "code": "38",
+   "dicofre": "131138"
+  },
+  "Penafiel|Rio de Moinhos": {
+   "mun": "Penafiel",
+   "pt": "Rio de Moinhos",
+   "code": "29",
+   "dicofre": "131129"
+  },
+  "Penafiel|Sebolido": {
+   "mun": "Penafiel",
+   "pt": "Sebolido",
+   "code": "34",
+   "dicofre": "131134"
+  },
+  "Penafiel|Termas de São Vicente": {
+   "mun": "Penafiel",
+   "pt": "Termas de São Vicente",
+   "code": "43",
+   "dicofre": "131143"
+  },
+  "Penafiel|Valpedre": {
+   "mun": "Penafiel",
+   "pt": "Valpedre",
+   "code": "36",
+   "dicofre": "131136"
+  },
+  "Paços de Ferreira|Carvalhosa": {
+   "mun": "Paços de Ferreira",
+   "pt": "Carvalhosa",
+   "code": "02",
+   "dicofre": "130902"
+  },
+  "Paços de Ferreira|Eiriz": {
+   "mun": "Paços de Ferreira",
+   "pt": "Eiriz",
+   "code": "04",
+   "dicofre": "130904"
+  },
+  "Paços de Ferreira|Ferreira": {
+   "mun": "Paços de Ferreira",
+   "pt": "Ferreira",
+   "code": "05",
+   "dicofre": "130905"
+  },
+  "Paços de Ferreira|Figueiró": {
+   "mun": "Paços de Ferreira",
+   "pt": "Figueiró",
+   "code": "06",
+   "dicofre": "130906"
+  },
+  "Paços de Ferreira|Frazão Arreigada": {
+   "mun": "Paços de Ferreira",
+   "pt": "Frazão Arreigada",
+   "split2025": [
+    {
+     "code": "20",
+     "dicofre": "130920",
+     "pt": "Arreigada"
+    },
+    {
+     "code": "22",
+     "dicofre": "130922",
+     "pt": "Frazão"
+    }
+   ]
+  },
+  "Paços de Ferreira|Freamunde": {
+   "mun": "Paços de Ferreira",
+   "pt": "Freamunde",
+   "code": "08",
+   "dicofre": "130908"
+  },
+  "Paços de Ferreira|Meixomil": {
+   "mun": "Paços de Ferreira",
+   "pt": "Meixomil",
+   "code": "10",
+   "dicofre": "130910"
+  },
+  "Paços de Ferreira|Paços de Ferreira": {
+   "mun": "Paços de Ferreira",
+   "pt": "Paços de Ferreira",
+   "split2025": [
+    {
+     "code": "24",
+     "dicofre": "130924",
+     "pt": "Modelos"
+    },
+    {
+     "code": "25",
+     "dicofre": "130925",
+     "pt": "Paços de Ferreira"
+    }
+   ]
+  },
+  "Paços de Ferreira|Penamaior": {
+   "mun": "Paços de Ferreira",
+   "pt": "Penamaior",
+   "code": "13",
+   "dicofre": "130913"
+  },
+  "Paços de Ferreira|Raimonda": {
+   "mun": "Paços de Ferreira",
+   "pt": "Raimonda",
+   "code": "14",
+   "dicofre": "130914"
+  },
+  "Paços de Ferreira|Sanfins Lamoso Codessos": {
+   "mun": "Paços de Ferreira",
+   "pt": "Sanfins Lamoso Codessos",
+   "split2025": [
+    {
+     "code": "21",
+     "dicofre": "130921",
+     "pt": "Codessos"
+    },
+    {
+     "code": "23",
+     "dicofre": "130923",
+     "pt": "Lamoso"
+    },
+    {
+     "code": "26",
+     "dicofre": "130926",
+     "pt": "Sanfins de Ferreira"
+    }
+   ]
+  },
+  "Paços de Ferreira|Seroa": {
+   "mun": "Paços de Ferreira",
+   "pt": "Seroa",
+   "code": "16",
+   "dicofre": "130916"
+  },
+  "Lousada|Aveleda": {
+   "mun": "Lousada",
+   "pt": "Aveleda",
+   "code": "02",
+   "dicofre": "130502"
+  },
+  "Lousada|Caíde de Rei": {
+   "mun": "Lousada",
+   "pt": "Caíde de Rei",
+   "code": "04",
+   "dicofre": "130504"
+  },
+  "Lousada|Lodares": {
+   "mun": "Lousada",
+   "pt": "Lodares",
+   "code": "10",
+   "dicofre": "130510"
+  },
+  "Lousada|Macieira": {
+   "mun": "Lousada",
+   "pt": "Macieira",
+   "code": "12",
+   "dicofre": "130512"
+  },
+  "Lousada|Meinedo": {
+   "mun": "Lousada",
+   "pt": "Meinedo",
+   "code": "13",
+   "dicofre": "130513"
+  },
+  "Lousada|Nevogilde": {
+   "mun": "Lousada",
+   "pt": "Nevogilde",
+   "code": "15",
+   "dicofre": "130515"
+  },
+  "Lousada|Sousela": {
+   "mun": "Lousada",
+   "pt": "Sousela",
+   "code": "24",
+   "dicofre": "130524"
+  },
+  "Lousada|Torno": {
+   "mun": "Lousada",
+   "pt": "Torno",
+   "code": "25",
+   "dicofre": "130525"
+  },
+  "Lousada|União das freguesias de Cernadelo e Lousada (São Miguel e Santa Margarida)": {
+   "mun": "Lousada",
+   "pt": "União das freguesias de Cernadelo e Lousada (São Miguel e Santa Margarida)",
+   "code": "27",
+   "dicofre": "130527"
+  },
+  "Lousada|União das freguesias de Cristelos, Boim e Ordem": {
+   "mun": "Lousada",
+   "pt": "União das freguesias de Cristelos, Boim e Ordem",
+   "code": "28",
+   "dicofre": "130528"
+  },
+  "Lousada|União das freguesias de Figueiras e Covas": {
+   "mun": "Lousada",
+   "pt": "União das freguesias de Figueiras e Covas",
+   "code": "29",
+   "dicofre": "130529"
+  },
+  "Lousada|União das freguesias de Lustosa e Barrosas (Santo Estêvão)": {
+   "mun": "Lousada",
+   "pt": "União das freguesias de Lustosa e Barrosas (Santo Estêvão)",
+   "split2025": [
+    {
+     "code": "33",
+     "dicofre": "130533",
+     "pt": "Barrosas (Santo Estêvão)"
+    },
+    {
+     "code": "34",
+     "dicofre": "130534",
+     "pt": "Lustosa"
+    }
+   ]
+  },
+  "Lousada|União das freguesias de Nespereira e Casais": {
+   "mun": "Lousada",
+   "pt": "União das freguesias de Nespereira e Casais",
+   "code": "31",
+   "dicofre": "130531"
+  },
+  "Lousada|União das freguesias de Silvares, Pias, Nogueira e Alvarenga": {
+   "mun": "Lousada",
+   "pt": "União das freguesias de Silvares, Pias, Nogueira e Alvarenga",
+   "code": "32",
+   "dicofre": "130532"
+  },
+  "Lousada|Vilar do Torno e Alentém": {
+   "mun": "Lousada",
+   "pt": "Vilar do Torno e Alentém",
+   "code": "26",
+   "dicofre": "130526"
+  },
+  "Felgueiras|Airães": {
+   "mun": "Felgueiras",
+   "pt": "Airães",
+   "code": "02",
+   "dicofre": "130302"
+  },
+  "Felgueiras|Aião": {
+   "mun": "Felgueiras",
+   "pt": "Aião",
+   "code": "01",
+   "dicofre": "130301"
+  },
+  "Felgueiras|Friande": {
+   "mun": "Felgueiras",
+   "pt": "Friande",
+   "code": "05",
+   "dicofre": "130305"
+  },
+  "Felgueiras|Idães": {
+   "mun": "Felgueiras",
+   "pt": "Idães",
+   "code": "06",
+   "dicofre": "130306"
+  },
+  "Felgueiras|Jugueiros": {
+   "mun": "Felgueiras",
+   "pt": "Jugueiros",
+   "code": "07",
+   "dicofre": "130307"
+  },
+  "Felgueiras|Penacova": {
+   "mun": "Felgueiras",
+   "pt": "Penacova",
+   "code": "13",
+   "dicofre": "130313"
+  },
+  "Felgueiras|Pinheiro": {
+   "mun": "Felgueiras",
+   "pt": "Pinheiro",
+   "code": "14",
+   "dicofre": "130314"
+  },
+  "Felgueiras|Pombeiro de Ribavizela": {
+   "mun": "Felgueiras",
+   "pt": "Pombeiro de Ribavizela",
+   "code": "15",
+   "dicofre": "130315"
+  },
+  "Felgueiras|Refontoura": {
+   "mun": "Felgueiras",
+   "pt": "Refontoura",
+   "code": "17",
+   "dicofre": "130317"
+  },
+  "Felgueiras|Regilde": {
+   "mun": "Felgueiras",
+   "pt": "Regilde",
+   "code": "18",
+   "dicofre": "130318"
+  },
+  "Felgueiras|Revinhade": {
+   "mun": "Felgueiras",
+   "pt": "Revinhade",
+   "code": "19",
+   "dicofre": "130319"
+  },
+  "Felgueiras|Sendim": {
+   "mun": "Felgueiras",
+   "pt": "Sendim",
+   "code": "24",
+   "dicofre": "130324"
+  },
+  "Felgueiras|União das freguesias de Macieira da Lixa e Caramos": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Macieira da Lixa e Caramos",
+   "code": "34",
+   "dicofre": "130334"
+  },
+  "Felgueiras|União das freguesias de Margaride (Santa Eulália), Várzea, Lagares, Varziela e Moure": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Margaride (Santa Eulália), Várzea, Lagares, Varziela e Moure",
+   "code": "35",
+   "dicofre": "130335"
+  },
+  "Felgueiras|União das freguesias de Pedreira, Rande e Sernande": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Pedreira, Rande e Sernande",
+   "code": "36",
+   "dicofre": "130336"
+  },
+  "Felgueiras|União das freguesias de Torrados e Sousa": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Torrados e Sousa",
+   "code": "37",
+   "dicofre": "130337"
+  },
+  "Felgueiras|União das freguesias de Unhão e Lordelo": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Unhão e Lordelo",
+   "code": "38",
+   "dicofre": "130338"
+  },
+  "Felgueiras|União das freguesias de Vila Cova da Lixa e Borba de Godim": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Vila Cova da Lixa e Borba de Godim",
+   "code": "39",
+   "dicofre": "130339"
+  },
+  "Felgueiras|União das freguesias de Vila Fria e Vizela (São Jorge)": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Vila Fria e Vizela (São Jorge)",
+   "code": "40",
+   "dicofre": "130340"
+  },
+  "Felgueiras|União das freguesias de Vila Verde e Santão": {
+   "mun": "Felgueiras",
+   "pt": "União das freguesias de Vila Verde e Santão",
+   "code": "41",
+   "dicofre": "130341"
+  },
+  "Amarante|Ansiães": {
+   "mun": "Amarante",
+   "pt": "Ansiães",
+   "code": "03",
+   "dicofre": "130103"
+  },
+  "Amarante|Candemil": {
+   "mun": "Amarante",
+   "pt": "Candemil",
+   "code": "07",
+   "dicofre": "130107"
+  },
+  "Amarante|Fregim": {
+   "mun": "Amarante",
+   "pt": "Fregim",
+   "code": "12",
+   "dicofre": "130112"
+  },
+  "Amarante|Fridão": {
+   "mun": "Amarante",
+   "pt": "Fridão",
+   "code": "15",
+   "dicofre": "130115"
+  },
+  "Amarante|Gondar": {
+   "mun": "Amarante",
+   "pt": "Gondar",
+   "code": "17",
+   "dicofre": "130117"
+  },
+  "Amarante|Gouveia (São Simão)": {
+   "mun": "Amarante",
+   "pt": "Gouveia (São Simão)",
+   "code": "34",
+   "dicofre": "130134"
+  },
+  "Amarante|Jazente": {
+   "mun": "Amarante",
+   "pt": "Jazente",
+   "code": "18",
+   "dicofre": "130118"
+  },
+  "Amarante|Lomba": {
+   "mun": "Amarante",
+   "pt": "Lomba",
+   "code": "19",
+   "dicofre": "130119"
+  },
+  "Amarante|Louredo": {
+   "mun": "Amarante",
+   "pt": "Louredo",
+   "code": "20",
+   "dicofre": "130120"
+  },
+  "Amarante|Lufrei": {
+   "mun": "Amarante",
+   "pt": "Lufrei",
+   "code": "21",
+   "dicofre": "130121"
+  },
+  "Amarante|Mancelos": {
+   "mun": "Amarante",
+   "pt": "Mancelos",
+   "code": "23",
+   "dicofre": "130123"
+  },
+  "Amarante|Padronelo": {
+   "mun": "Amarante",
+   "pt": "Padronelo",
+   "code": "26",
+   "dicofre": "130126"
+  },
+  "Amarante|Rebordelo": {
+   "mun": "Amarante",
+   "pt": "Rebordelo",
+   "code": "28",
+   "dicofre": "130128"
+  },
+  "Amarante|Salvador do Monte": {
+   "mun": "Amarante",
+   "pt": "Salvador do Monte",
+   "code": "29",
+   "dicofre": "130129"
+  },
+  "Amarante|Telões": {
+   "mun": "Amarante",
+   "pt": "Telões",
+   "code": "35",
+   "dicofre": "130135"
+  },
+  "Amarante|Travanca": {
+   "mun": "Amarante",
+   "pt": "Travanca",
+   "code": "36",
+   "dicofre": "130136"
+  },
+  "Amarante|União das freguesias de Aboadela, Sanche e Várzea": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Aboadela, Sanche e Várzea",
+   "code": "41",
+   "dicofre": "130141"
+  },
+  "Amarante|União das freguesias de Amarante (São Gonçalo), Madalena, Cepelos e Gatão": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Amarante (São Gonçalo), Madalena, Cepelos e Gatão",
+   "code": "42",
+   "dicofre": "130142"
+  },
+  "Amarante|União das freguesias de Bustelo, Carneiro e Carvalho de Rei": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Bustelo, Carneiro e Carvalho de Rei",
+   "code": "43",
+   "dicofre": "130143"
+  },
+  "Amarante|União das freguesias de Figueiró (Santiago e Santa Cristina)": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Figueiró (Santiago e Santa Cristina)",
+   "code": "44",
+   "dicofre": "130144"
+  },
+  "Amarante|União das freguesias de Freixo de Cima e de Baixo": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Freixo de Cima e de Baixo",
+   "code": "45",
+   "dicofre": "130145"
+  },
+  "Amarante|União das freguesias de Olo e Canadelo": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Olo e Canadelo",
+   "code": "46",
+   "dicofre": "130146"
+  },
+  "Amarante|União das freguesias de Vila Garcia, Aboim e Chapa": {
+   "mun": "Amarante",
+   "pt": "União das freguesias de Vila Garcia, Aboim e Chapa",
+   "code": "48",
+   "dicofre": "130148"
+  },
+  "Amarante|Vila Caiz": {
+   "mun": "Amarante",
+   "pt": "Vila Caiz",
+   "code": "38",
+   "dicofre": "130138"
+  },
+  "Amarante|Vila Chã do Marão": {
+   "mun": "Amarante",
+   "pt": "Vila Chã do Marão",
+   "code": "39",
+   "dicofre": "130139"
+  },
+  "Amarante|Vila Meã": {
+   "mun": "Amarante",
+   "pt": "Vila Meã",
+   "code": "47",
+   "dicofre": "130147"
+  },
+  "Marco de Canaveses|Alpendorada, Várzea e Torrão": {
+   "mun": "Marco de Canaveses",
+   "pt": "Alpendorada, Várzea e Torrão",
+   "code": "32",
+   "dicofre": "130732"
+  },
+  "Marco de Canaveses|Avessadas e Rosém": {
+   "mun": "Marco de Canaveses",
+   "pt": "Avessadas e Rosém",
+   "code": "33",
+   "dicofre": "130733"
+  },
+  "Marco de Canaveses|Banho e Carvalhosa": {
+   "mun": "Marco de Canaveses",
+   "pt": "Banho e Carvalhosa",
+   "code": "04",
+   "dicofre": "130704"
+  },
+  "Marco de Canaveses|Bem Viver": {
+   "mun": "Marco de Canaveses",
+   "pt": "Bem Viver",
+   "code": "34",
+   "dicofre": "130734"
+  },
+  "Marco de Canaveses|Constance": {
+   "mun": "Marco de Canaveses",
+   "pt": "Constance",
+   "code": "05",
+   "dicofre": "130705"
+  },
+  "Marco de Canaveses|Marco": {
+   "mun": "Marco de Canaveses",
+   "pt": "Marco",
+   "code": "36",
+   "dicofre": "130736"
+  },
+  "Marco de Canaveses|Paredes de Viadores e Manhuncelos": {
+   "mun": "Marco de Canaveses",
+   "pt": "Paredes de Viadores e Manhuncelos",
+   "code": "37",
+   "dicofre": "130737"
+  },
+  "Marco de Canaveses|Penha Longa e Paços de Gaiolo": {
+   "mun": "Marco de Canaveses",
+   "pt": "Penha Longa e Paços de Gaiolo",
+   "split2025": [
+    {
+     "code": "42",
+     "dicofre": "130742",
+     "pt": "Paços de Gaiolo"
+    },
+    {
+     "code": "43",
+     "dicofre": "130743",
+     "pt": "Penhalonga"
+    }
+   ]
+  },
+  "Marco de Canaveses|Sande e São Lourenço do Douro": {
+   "mun": "Marco de Canaveses",
+   "pt": "Sande e São Lourenço do Douro",
+   "code": "39",
+   "dicofre": "130739"
+  },
+  "Marco de Canaveses|Santo Isidoro e Livração": {
+   "mun": "Marco de Canaveses",
+   "pt": "Santo Isidoro e Livração",
+   "code": "35",
+   "dicofre": "130735"
+  },
+  "Marco de Canaveses|Soalhães": {
+   "mun": "Marco de Canaveses",
+   "pt": "Soalhães",
+   "code": "22",
+   "dicofre": "130722"
+  },
+  "Marco de Canaveses|Sobretâmega": {
+   "mun": "Marco de Canaveses",
+   "pt": "Sobretâmega",
+   "code": "23",
+   "dicofre": "130723"
+  },
+  "Marco de Canaveses|Tabuado": {
+   "mun": "Marco de Canaveses",
+   "pt": "Tabuado",
+   "code": "24",
+   "dicofre": "130724"
+  },
+  "Marco de Canaveses|Vila Boa de Quires e Maureles": {
+   "mun": "Marco de Canaveses",
+   "pt": "Vila Boa de Quires e Maureles",
+   "code": "41",
+   "dicofre": "130741"
+  },
+  "Marco de Canaveses|Vila Boa do Bispo": {
+   "mun": "Marco de Canaveses",
+   "pt": "Vila Boa do Bispo",
+   "code": "30",
+   "dicofre": "130730"
+  },
+  "Marco de Canaveses|Várzea, Aliviada e Folhada": {
+   "mun": "Marco de Canaveses",
+   "pt": "Várzea, Aliviada e Folhada",
+   "code": "40",
+   "dicofre": "130740"
+  },
+  "Baião|Frende": {
+   "mun": "Baião",
+   "pt": "Frende",
+   "code": "04",
+   "dicofre": "130204"
+  },
+  "Baião|Gestaçô": {
+   "mun": "Baião",
+   "pt": "Gestaçô",
+   "code": "05",
+   "dicofre": "130205"
+  },
+  "Baião|Gove": {
+   "mun": "Baião",
+   "pt": "Gove",
+   "code": "06",
+   "dicofre": "130206"
+  },
+  "Baião|Grilo": {
+   "mun": "Baião",
+   "pt": "Grilo",
+   "code": "07",
+   "dicofre": "130207"
+  },
+  "Baião|Loivos do Monte": {
+   "mun": "Baião",
+   "pt": "Loivos do Monte",
+   "code": "08",
+   "dicofre": "130208"
+  },
+  "Baião|Santa Marinha do Zêzere": {
+   "mun": "Baião",
+   "pt": "Santa Marinha do Zêzere",
+   "code": "15",
+   "dicofre": "130215"
+  },
+  "Baião|União das freguesias de Ancede e Ribadouro": {
+   "mun": "Baião",
+   "pt": "União das freguesias de Ancede e Ribadouro",
+   "code": "21",
+   "dicofre": "130221"
+  },
+  "Baião|União das freguesias de Baião (Santa Leocádia) e Mesquinhata": {
+   "mun": "Baião",
+   "pt": "União das freguesias de Baião (Santa Leocádia) e Mesquinhata",
+   "code": "22",
+   "dicofre": "130222"
+  },
+  "Baião|União das freguesias de Campelo e Ovil": {
+   "mun": "Baião",
+   "pt": "União das freguesias de Campelo e Ovil",
+   "code": "23",
+   "dicofre": "130223"
+  },
+  "Baião|União das freguesias de Loivos da Ribeira e Tresouras": {
+   "mun": "Baião",
+   "pt": "União das freguesias de Loivos da Ribeira e Tresouras",
+   "code": "24",
+   "dicofre": "130224"
+  },
+  "Baião|União das freguesias de Santa Cruz do Douro e São Tomé de Covelas": {
+   "mun": "Baião",
+   "pt": "União das freguesias de Santa Cruz do Douro e São Tomé de Covelas",
+   "code": "25",
+   "dicofre": "130225"
+  },
+  "Baião|União das freguesias de Teixeira e Teixeiró": {
+   "mun": "Baião",
+   "pt": "União das freguesias de Teixeira e Teixeiró",
+   "code": "26",
+   "dicofre": "130226"
+  },
+  "Baião|Valadares": {
+   "mun": "Baião",
+   "pt": "Valadares",
+   "code": "19",
+   "dicofre": "130219"
+  },
+  "Baião|Viariz": {
+   "mun": "Baião",
+   "pt": "Viariz",
+   "code": "20",
+   "dicofre": "130220"
+  }
+ }
+}

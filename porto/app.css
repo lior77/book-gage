@@ -320,7 +320,9 @@ body[data-view="text"] .map-only{display:none}
 /* The one window that is still full screen: it is a reference document, read
    rather than operated, and the panel in the text half is the wrong shape for
    twenty source records. */
-.drawer{position:fixed; inset:0; z-index:70; display:flex; flex-direction:column;
+/* above .tools (600): the tool column lives on .split, outside the map
+   half's stacking context, so a drawer at 70 opened underneath it */
+.drawer{position:fixed; inset:0; z-index:800; display:flex; flex-direction:column;
         background:var(--bg)}
 .drawer-in{display:flex; flex-direction:column; min-height:0; height:100%}
 .drawer-head{flex:0 0 auto; display:flex; align-items:center; gap:var(--s3);

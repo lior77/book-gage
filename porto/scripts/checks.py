@@ -12,10 +12,14 @@ Rules enforced (from BRIEF.md):
   5. density == population / area
   6. every geometry is valid and lies inside the district bounding box
   7. level 3 covers all 243 parishes, and what the app draws matches what it
-     lists: the parish numbers run 1..N with
+     lists: the internal parish order runs 1..N with
      no gaps and no repeats, every parish has a description whose origin is
      recorded, every bairro has a letter, and every belt outline names the
      municipalities it encloses
+  7b. every number the app prints is an official DICOFRE code: the municipality
+     code is four digits under district 13, a parish code sits under its own
+     municipality and appears once, and a parish without a code is one the 2025
+     reform split, carrying its successors instead
 
 Exit code 0 = all green, 1 = at least one hard failure.
 """
@@ -211,6 +215,40 @@ def main():
     for m in mun:
         if not m.get("fill"):
             fail("%s: no map fill colour" % m["pt"])
+
+    # ---- 7b. the official codes the app prints -----------------------------
+    # Every unit has either its own DICOFRE code or, if the 2025 reform undid
+    # it, the successors that replaced it. Never neither, and never a code the
+    # app made up.
+    for m in mun:
+        if not m.get("dicofre") or len(m["dicofre"]) != 4:
+            fail("%s: no four-digit DICOFRE code" % m["pt"])
+        if m["dicofre"][:2] != "13":
+            fail("%s: DICOFRE %s is not in district 13" % (m["pt"], m["dicofre"]))
+        if m.get("code") != m["dicofre"][2:]:
+            fail("%s: printed number %r does not match DICOFRE %s"
+                 % (m["pt"], m.get("code"), m["dicofre"]))
+    mun_code = {m["num"]: m["dicofre"] for m in mun}
+    seen = {}
+    for f in fre:
+        if f.get("dicofre"):
+            want = mun_code.get(f["mun_num"], "") + f.get("code", "")
+            if f["dicofre"] != want:
+                fail("%s: DICOFRE %s does not sit under its municipality (%s)"
+                     % (f["pt"], f["dicofre"], want))
+            if f["dicofre"] in seen:
+                fail("DICOFRE %s is on two parishes: %s and %s"
+                     % (f["dicofre"], seen[f["dicofre"]], f["pt"]))
+            seen[f["dicofre"]] = f["pt"]
+        elif f.get("split2025"):
+            if not all(k.get("code") and k.get("pt") for k in f["split2025"]):
+                fail("%s: a 2025 successor has no code or no name" % f["pt"])
+        else:
+            fail("%s: neither an official code nor 2025 successors" % f["pt"])
+    if "freguesia.number" not in sources["fields"]:
+        fail("the parish numbering is not documented in sources.json")
+    if "municipio.number" not in sources["fields"]:
+        fail("the municipality numbering is not documented in sources.json")
 
     # A description is allowed to be missing, but it is never allowed to be
     # present without saying where it came from.
