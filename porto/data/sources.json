@@ -7,7 +7,8 @@
   "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה.",
   "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL.",
   "CAOP 2025, ושכבות SRUP ו-CRUS: Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0.",
-  "מחירי מכירה ושכירות למ״ר: INE — Estatísticas de preços da habitação ao nível local, ו-Estatísticas de Rendas da Habitação ao nível local."
+  "מחירי מכירה ושכירות למ״ר: INE — Estatísticas de preços da habitação ao nível local, ו-Estatísticas de Rendas da Habitação ao nível local.",
+  "אזורי הצפה: Agência Portuguesa do Ambiente — Carta de zonas inundáveis, Portugal continental, דירקטיבה 2007/60/CE מחזור שני. אותר דרך dados.gov.pt."
  ],
  "fields": {
   "municipio.pop2021": {

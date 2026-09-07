@@ -1,0 +1,35 @@
+[
+  {
+    "file": "apa_zonas_inundaveis_T020_limite.zip",
+    "description": "flood extent, 20-year return period",
+    "url": "https://sniambgeoviewer.apambiente.pt/Geodocs/shpzips/D312_APA_AI_T020_Limite_PC.zip",
+    "source_org": "Agência Portuguesa do Ambiente",
+    "found_via": "https://dados.gov.pt",
+    "crs": "EPSG:3763 (ETRS_1989_Portugal_TM06)",
+    "downloaded": "2026-09-07",
+    "bytes": 1651555,
+    "sha256": "6aea801182d016723181b0297217da5e0acca443ae148ac5fab8de1314af0a17"
+  },
+  {
+    "file": "apa_zonas_inundaveis_T1000_limite.zip",
+    "description": "flood extent, 1000-year return period",
+    "url": "https://sniambgeoviewer.apambiente.pt/Geodocs/shpzips/D312_APA_AI_T1000_Limite_PC.zip",
+    "source_org": "Agência Portuguesa do Ambiente",
+    "found_via": "https://dados.gov.pt",
+    "crs": "EPSG:3763 (ETRS_1989_Portugal_TM06)",
+    "downloaded": "2026-09-07",
+    "bytes": 1610541,
+    "sha256": "6f30cc043bd39f8ae1fe871c52ec09ad3580ffe035aae3e66eac970300195bcd"
+  },
+  {
+    "file": "apa_zonas_inundaveis_T100_limite.zip",
+    "description": "flood extent, 100-year return period",
+    "url": "https://sniambgeoviewer.apambiente.pt/Geodocs/shpzips/D312_APA_AI_T100_Limite_PC.zip",
+    "source_org": "Agência Portuguesa do Ambiente",
+    "found_via": "https://dados.gov.pt",
+    "crs": "EPSG:3763 (ETRS_1989_Portugal_TM06)",
+    "downloaded": "2026-09-07",
+    "bytes": 1626183,
+    "sha256": "40dfaa471524a9aabd92c5be4927d9ccdea71651d4081561b28bcc5e7c207071"
+  }
+]

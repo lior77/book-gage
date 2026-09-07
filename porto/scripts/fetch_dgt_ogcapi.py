@@ -120,9 +120,9 @@ def get(url, tries=8):
 
 def fetch_layer(name, outdir, crs=CRS84):
     collection, extra, what = LAYERS[name]
-    page = PAGE_OVERRIDE.get(name, PAGE)
+    per_page = PAGE_OVERRIDE.get(name, PAGE)
     query = dict(extra)
-    query.update({"f": "json", "limit": str(page), "crs": crs})
+    query.update({"f": "json", "limit": str(per_page), "crs": crs})
 
     features, offset, matched = [], 0, None
     while True:
@@ -138,9 +138,9 @@ def fetch_layer(name, outdir, crs=CRS84):
         features.extend(got)
         sys.stdout.write("\r   %d/%s" % (len(features), matched))
         sys.stdout.flush()
-        if len(got) < page:
+        if len(got) < per_page:
             break
-        offset += page
+        offset += per_page
     print()
 
     if matched is not None and len(features) != matched:
