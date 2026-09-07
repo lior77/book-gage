@@ -143,9 +143,10 @@ python3 scripts/fetch_dgt_ogcapi.py ren_areas ren_linhas ran perigosidade_incend
 (‏למשל `240 IS-B`), `serv_lei` (‏`RCM 172/96`) ו-`lei_tipo`. אותם שדות יש גם
 ב-RAN. ההסתייגות של DGT נשארת בתוקף: בפער בין הווקטור לפרסום — הפרסום קובע.
 
-**RAN הגיע מ-DGT ולא מ-DGADR.** `www.dgadr.gov.pt` עונה לסירוגין בלבד. השכבה
-ב-SRUP היא של אותה עתודה, אבל היא הגרסה שDGT מפרסמת; אם נדרשת דווקא החלוקה
-לפי NUTS III מ-DGADR, זה עדיין לא הושג.
+**RAN הגיע מ-DGT ולא מ-DGADR.** `www.dgadr.gov.pt` כן נגיש — בבדיקה המתוקנת
+הוא עונה 200; הוא נראה חסום כשהבדיקה רצה שמונה בקשות במקביל. השכבה ב-SRUP היא
+של אותה עתודה, אבל היא הגרסה שDGT מפרסמת. אם נדרשת דווקא החלוקה ל-Shapefiles
+לפי NUTS III מ-DGADR עצמה, זה לא נמשך כאן, ואין סיבה שלא יילך.
 
 **⚠️ סכנת שריפות — שתי בעיות, ושתיהן חוסמות שימוש כרגע.**
 
@@ -232,8 +233,8 @@ python3 scripts/fetch_dgt_ogcapi.py ren_areas ren_linhas ran perigosidade_incend
 | --- | --- |
 | `overpass-api.de` | שאילתות OSM מכאן במקום ידנית ב-overpass-turbo |
 | `snit.dgterritorio.gov.pt` | לא נדרש עוד — ה-OGC API מגישה את אותו SRUP |
-| `www.dgadr.gov.pt` | החלוקה של RAN לפי NUTS III מהמקור המקורי |
-| `websig.cm-amarante.pt` | PDM אמרנטה — ככל הנראה מיותר, CRUS מכסה אותו |
+| `geo2.apambiente.pt` | נדחה במדיניות. עוקף דרך dados.gov.pt |
+| `websig.cm-amarante.pt` | PDM אמרנטה — מיותר, CRUS מכסה אותו |
 | `www.pordata.pt` | נגיש, אך טוען טבלאות ב-JavaScript. לא נבדק בסבב הזה |
 | `sniambgeoext.apambiente.pt` | 403 על כל שירות. עקף דרך dados.gov.pt |
 
