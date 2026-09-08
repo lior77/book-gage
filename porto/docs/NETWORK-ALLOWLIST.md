@@ -82,6 +82,8 @@ ine.pt
 dgterritorio.gov.pt
 *.dgterritorio.gov.pt
 ogcapi.dgterritorio.gov.pt
+dgterritorio.pt
+*.dgterritorio.pt
 dgadr.gov.pt
 *.dgadr.gov.pt
 apambiente.pt
@@ -140,6 +142,7 @@ cm-felgueiras.pt
 | --- | --- | --- |
 | `*.ine.pt` | הלשכה לסטטיסטיקה — מחירי מכירה ושכירות למ״ר לפי רבעון ולפי רובע, וכל סדרות המפקד. גם `mapas.ine.pt` להורדות הגאוגרפיות | מאומת |
 | `*.dgterritorio.gov.pt` | **`ogcapi.` — CAOP2025, כל מרשם ה-SRUP (REN, RAN, סכנת שריפות, נטורה 2000) ו-CRUS, הכול כ-GeoJSON עם סינון בצד השרת.** `pcgt.` הוא פורטל עיון בלבד | נמשך בפועל |
+| `*.dgterritorio.pt` | **סיומת אחרת — `.pt` בלי `.gov`, ולכן השורות שמעל לא כיסו אותה.** `servicos.dgterritorio.pt` מגיש WFS 2.0 נפרד לכל שכבת SRUP לפי אזור (`SDISNITWFSSRUP_REN_NORTE`). מקור שני ל-REN, עם שדות שאין ב-OGC API | טרם נבדק |
 | `*.dgadr.gov.pt` | RAN — עתודת הקרקע החקלאית, Shapefile לפי NUTS III | מאומת |
 | `*.apambiente.pt` | מפת אזורי ההצפה, לפי תקופות חזרה. הנתונים יושבים על `sniambgeoext.` (‏`sniamb.` הוא הפורטל בלבד), ושירותיו מחזירים 403 גם כשהוא נגיש; `geo2.` נדחה במדיניות | **לא הושג** |
 | `*.icnf.pt` | מפת סכנת שריפות (perigosidade), חמש דרגות | מאומת |
