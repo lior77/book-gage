@@ -147,9 +147,13 @@ body.is-dragging #map{pointer-events:none}
 /* ---------- map furniture ---------- */
 .tools{position:absolute; z-index:600; inset-block-start:var(--s3);
        inset-inline-end:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
-/* fit, locate and add act on the map; with the map hidden they have nothing
-   to act on, so they go rather than sit there dead */
+/* fit and locate act on the map; with the map hidden they have nothing to act
+   on, so they go rather than sit there dead.  נ.צ. and its add button stay:
+   what they open is the text half, and the add button takes the map over
+   itself, so neither of them needs the map to already be there. */
 body[data-view="text"] .map-only{display:none}
+/* the נ.צ. button is a pin, drawn like the rest of the column: one stroke in
+   currentColor, so it inverts with the button when the mode is on */
 .mt{display:grid; place-items:center; width:38px; height:38px;
     border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
     border:1px solid var(--line); box-shadow:var(--shadow)}
@@ -270,6 +274,20 @@ body[data-view="text"] .map-only{display:none}
        margin-block-start:var(--s1)}
 .row-m{display:block; font-size:.76rem; color:var(--miss); margin-block-start:var(--s2)}
 .row-full .row-d{color:var(--ink); font-size:.9rem}
+
+/* ---------- נ.צ. cards ---------- */
+/* A card is the whole record, not a row that opens one: what was typed is on
+   it, and editing happens in place.  The buttons sit at the top because that
+   is where a card is aimed at — the head is what a finger lands on first. */
+.wp{gap:var(--s2)}
+.wp.is-hi{border-color:var(--hi-line); background:var(--hi);
+     box-shadow:inset 0 0 0 1px var(--hi-line)}
+.wp-h{display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap}
+.wp-h h2{margin:0; flex:1 1 auto; min-width:0; font-size:1rem}
+.wp-acts{display:flex; gap:var(--s2); flex:0 0 auto}
+.wp-acts .chip{padding:var(--s1) var(--s3)}
+.wp .fld-l{margin-block-start:var(--s2)}
+.wp-arm{background:var(--bad); color:#fff; border-color:var(--bad)}
 
 .belt{display:flex; align-items:flex-start; gap:var(--s3); padding:var(--s3) 0;
       border-block-end:1px solid var(--line)}

@@ -34,11 +34,13 @@ const S = {
   photos: true,        // draw the ones that carry a photo (their own layer)
   // The four boundary layers.  Each is drawn at every level and switched on
   // its own; the level decides which of them are black and which recede.
-  lnRegion: true,      // the two NUTS III regions
+  lnRegion: false,     // the two NUTS III regions — off until asked for
   lnDistrict: true,    // Porto district
   lnMun: true,         // the 18 municipalities
   lnFre: true,         // the 243 parishes
   adding: false,       // waiting for a tap on the map to place a new point
+  wp: false,           // נ.צ. management: the cards in the text half
+  wpSel: null,         // the id of the card and pin being looked at
 };
 const MINE_KEY = 'porto-mine-v1';
 const D = {};
@@ -81,11 +83,27 @@ const MINE_COLOUR = '#00897b';
    a highlight colour, which is a different question from what kind of border
    this is. */
 const LINE_W = { region: 3.2, district: 3.2, mun: 2.1, fre: 1 };
+/* Which lines are black at each level.  The regions are never in this list:
+   they are context at every level, and drawn grey whenever they are on at all.
+
+   At level 2 it is not the whole layer that goes black but one municipality
+   and its own parishes — everything belonging to the place being looked at,
+   and nothing else.  So the colour is decided per feature there, not per
+   layer, which is what `own` in the table below is for. */
 const LINE_BLACK = {
   district: ['district', 'mun'],   // level 1: the district and its municipalities
-  mun: ['mun', 'fre'],             // level 2: the municipality and its parishes
-  zone: ['fre'],                   // level 3: the parish
+  mun: ['mun', 'fre'],             // level 2: but only the chosen one — see own()
+  zone: ['fre'],                   // level 3: the parishes
 };
+
+/* Does this particular feature belong to what is on screen?  Only level 2
+   narrows a layer down; everywhere else the whole layer is one or the other. */
+function ownFeature(kind, props) {
+  if (S.level !== 'mun') return true;
+  if (kind === 'mun') return props.num === S.mun;
+  if (kind === 'fre') return props.mun_num === S.mun;
+  return true;
+}
 const LINE_ON = { region: 'lnRegion', district: 'lnDistrict',
                   mun: 'lnMun', fre: 'lnFre' };
 const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מחוז פורטו',
@@ -98,8 +116,10 @@ const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מ�
    which is not a quiet line but an absent one; what was asked for is the
    strongest contrast the background allows, and that flips with the
    background.  The same 50% then does the same job. */
-const lineColour = kind => {
-  const own = (LINE_BLACK[S.level] || []).indexOf(kind) >= 0;
+const lineColour = (kind, props) => {
+  const own = kind !== 'region'
+    && (LINE_BLACK[S.level] || []).indexOf(kind) >= 0
+    && (!props || ownFeature(kind, props));
   return isDark()
     ? (own ? '#ffffff' : 'rgba(255,255,255,.5)')
     : (own ? '#000000' : 'rgba(0,0,0,.5)');
@@ -112,16 +132,24 @@ function drawLines() {
   ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
     if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; }
   });
-  const style = kind => ({ color: lineColour(kind), weight: LINE_W[kind],
-    opacity: .95, fill: false, lineJoin: 'round', lineCap: 'round' });
+  const style = (kind, props) => ({ color: lineColour(kind, props),
+    weight: LINE_W[kind], opacity: .95, fill: false,
+    lineJoin: 'round', lineCap: 'round' });
 
   if (S.lnFre) {
-    LG.lnFre = L.geoJSON(D.bF, { interactive: false, style: () => style('fre') })
-      .addTo(map);
+    LG.lnFre = L.geoJSON(D.bF, { interactive: false,
+      style: ft => style('fre', ft.properties) }).addTo(map);
   }
   if (S.lnMun) {
-    LG.lnMun = L.geoJSON(D.bM, { interactive: false, style: () => style('mun') })
-      .addTo(map);
+    LG.lnMun = L.geoJSON(D.bM, { interactive: false,
+      style: ft => style('mun', ft.properties) }).addTo(map);
+    // the chosen municipality's own outline goes on top of its neighbours',
+    // or a grey line drawn later would sit over the black one
+    if (S.level === 'mun') {
+      LG.lnMun.eachLayer(l => {
+        if (l.feature && l.feature.properties.num === S.mun) l.bringToFront();
+      });
+    }
   }
   // The regions and the district share one file; each feature says which it is.
   // The district goes in the pane above, so where the three follow the same
@@ -1032,11 +1060,29 @@ const photoPinIcon = () => L.divIcon({ className: 'me-pin', iconSize: [18, 18], 
         'background:' + PHOTO_COLOUR + ';border:2px solid #fff;' +
         'box-shadow:0 0 0 1px rgba(0,0,0,.45)"></span>' });
 
+/* The pin of a point being managed.  The selected one grows and takes the
+   highlight colour the rest of the app already uses for "this is the one you
+   asked about", so a card and its pin are recognisably the same object. */
+function wpIcon(p, on) {
+  const c = p.photo ? PHOTO_COLOUR : MINE_COLOUR;
+  const s = on ? 16 : 12, pad = on ? 4 : 2, box = s + pad * 2 + 4;
+  return L.divIcon({ className: 'me-pin', iconSize: [box, box],
+    iconAnchor: [box / 2, box / 2],
+    html: `<span style="display:block;width:${s}px;height:${s}px;margin:${pad}px;` +
+      (p.photo ? 'border-radius:3px;' : 'transform:rotate(45deg);') +
+      `background:${c};border:2px solid ${on ? 'var(--hi-line)' : '#fff'};` +
+      `box-shadow:0 0 0 ${on ? 2 : 1}px rgba(0,0,0,.45)"></span>` });
+}
+
 /* Two groups over one list.  A point that carries a photo is drawn in the photo
    layer and nowhere else, so turning that layer off takes the pictures and
-   their pins together — which is what a layer switch is for. */
+   their pins together — which is what a layer switch is for.
+
+   Management is a third case and overrides both: it shows every נ.צ. there is,
+   whatever the two switches say, and takes the other points off the map so
+   what is left on it is only what the cards are about. */
 function drawMine() {
-  ['mine', 'photos'].forEach(k => {
+  ['mine', 'photos', 'wp'].forEach(k => {
     if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; }
   });
   const pin = p => {
@@ -1047,14 +1093,43 @@ function drawMine() {
     mk.on('click', () => {
       if (S.adding) return;
       if (isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
-      openMine(p.id);
+      openWp(p.id);
     });
     return mk;
   };
+  if (S.wp) {
+    LG.wp = L.layerGroup(D.mine.map(p => {
+      const mk = L.marker(p.ll, { icon: wpIcon(p, p.id === S.wpSel),
+        zIndexOffset: p.id === S.wpSel ? 2200 : 1300, title: p.name });
+      mk.__wp = p.id;
+      mk.__on = p.id === S.wpSel;
+      mk.on('click', () => {
+        if (S.adding) return;
+        if (isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
+        selectWp(p.id, 'map');
+      });
+      return mk;
+    })).addTo(map);
+    otherPoints(false);
+    return;
+  }
+  otherPoints(true);
   const plain = D.mine.filter(p => !p.photo);
   const shots = D.mine.filter(p => p.photo);
   if (S.mine && plain.length) LG.mine = L.layerGroup(plain.map(pin)).addTo(map);
   if (S.photos && shots.length) LG.photos = L.layerGroup(shots.map(pin)).addTo(map);
+}
+
+/* The landmark dots and the locality letters — the other things on the map that
+   are points.  They are put aside rather than rebuilt, so coming out of
+   management costs nothing and the categories chosen before it are still
+   chosen after. */
+function otherPoints(on) {
+  ['pois', 'letters'].forEach(k => {
+    if (!LG[k]) return;
+    if (on && !map.hasLayer(LG[k])) LG[k].addTo(map);
+    else if (!on && map.hasLayer(LG[k])) map.removeLayer(LG[k]);
+  });
 }
 
 let mineEditing = null;
@@ -1064,9 +1139,9 @@ function mineWhereHtml() {
   const at = freguesiaAt(mineEditing.ll[0], mineEditing.ll[1]);
   const meta = minePending || mineEditing.photo;
   return `${at ? html((at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he)
-               : 'מחוץ למחוז פורטו'} ·
-    <span class="num">${mineEditing.ll[0].toFixed(5)}, ${mineEditing.ll[1].toFixed(5)}</span>` +
-    (meta && meta.from === 'exif' ? ' · <span class="flag">מהתמונה</span>' : '');
+               : 'מחוץ למחוז פורטו'}` +
+    (meta && meta.from === 'exif' ? ' · <span class="flag">מהתמונה</span>' : '') +
+    `<br><bdi class="num">${mineEditing.ll[0].toFixed(5)}, ${mineEditing.ll[1].toFixed(5)}</bdi>`;
 }
 
 /* The sentence and the numbers go on separate lines, and the numbers inside a
@@ -1148,30 +1223,236 @@ function takePhoto(file) {
     });
 }
 
-function openMine(id, ll) {
-  const p = id ? D.mine.find(x => x.id === id) : null;
+/* ------------------------------------------------------ נ.צ. management --- */
+/* One mode, not a form on top of a screen.  The map shows every נ.צ. and
+   nothing else that is a point; the text half is the list of them, one card
+   each, holding what was typed.  A card is the record — it is edited in place,
+   so there is never a copy of it open somewhere else to disagree with.
+
+   The two halves point at each other: the card that is open highlights its pin,
+   and a pin that is tapped scrolls its card into view.  Which of them the user
+   started from is the only difference, and that is what `from` carries. */
+
+let wpArmed = null;      // the id whose delete is waiting for a second tap
+let wpUrls = [];         // blob URLs of the thumbnails now on screen
+let wpObs = null;
+
+function wpUrl(blob) { const u = URL.createObjectURL(blob); wpUrls.push(u); return u; }
+function dropWpUrls() { wpUrls.forEach(u => URL.revokeObjectURL(u)); wpUrls = []; }
+
+function toggleWp() {
+  if (S.adding) stopPlacing();
+  S.wp = !S.wp;
+  $('#wpBtn').setAttribute('aria-pressed', String(S.wp));
+  if (!S.wp) {
+    mineEditing = null; minePending = null; dropPhotoUrl();
+    S.wpSel = null; wpArmed = null;
+  } else if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
+  closePanel();
+  drawMine();
+  redrawText();
+  if (S.wp) $('#paneText').scrollTop = 0;
+}
+
+/* Reached from a pin outside management, and from the lists inside the level
+   documents: both mean "show me this one", and there is one place that does. */
+function openWp(id) {
+  if (!S.wp) {
+    S.wp = true;
+    $('#wpBtn').setAttribute('aria-pressed', 'true');
+    if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
+    closePanel();
+  }
+  S.wpSel = id;
+  mineEditing = null; minePending = null;
+  drawMine();
+  renderWaypoints();
+  applyWpHi('map');
+}
+
+function selectWp(id, from) {
+  S.wpSel = S.wpSel === id ? null : id;
+  applyWpHi(from);
+}
+
+/* Selection only ever changes two classes and two icons, so it is done in place
+   rather than by rendering the list again — a re-render would drop the
+   thumbnails that have been fetched and, mid-edit, whatever is half typed. */
+function applyWpHi(from) {
+  $$('#doc .wp.is-hi').forEach(el => el.classList.remove('is-hi'));
+  if (S.wpSel) {
+    const el = $('#doc [data-wp="' + CSS.escape(S.wpSel) + '"]');
+    if (el) {
+      el.classList.add('is-hi');
+      if (from === 'map') el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+  if (LG.wp) LG.wp.eachLayer(l => {
+    const on = l.__wp === S.wpSel;
+    if (on === l.__on) return;
+    l.__on = on;
+    const p = D.mine.find(x => x.id === l.__wp);
+    if (p) l.setIcon(wpIcon(p, on));
+    l.setZIndexOffset(on ? 2200 : 1300);
+  });
+  if (from === 'list' && S.wpSel) {
+    const p = D.mine.find(x => x.id === S.wpSel);
+    if (p && !map.getBounds().pad(-0.12).contains(p.ll)) map.panTo(p.ll, { animate: true });
+  }
+}
+
+/* Whatever is in the two fields belongs to the record the moment anything else
+   happens to the list — picking coordinates on the map, or the list being drawn
+   again for any other reason.  Without this a re-render would quietly throw
+   away what had been typed but not saved. */
+function harvestWp() {
+  if (!mineEditing) return;
+  const nm = $('#mineName'), ds = $('#mineDesc');
+  if (nm) mineEditing.name = nm.value;
+  if (ds) mineEditing.desc = ds.value;
+}
+
+function renderWaypoints() {
+  dropWpUrls();
+  const rows = D.mine;
+  const cards = rows.map(p => mineEditing && mineEditing.id === p.id
+    ? wpEditCard() : wpCard(p));
+  // a brand new one is not in the list yet, so it goes at the top where it can
+  // be seen without scrolling to the end
+  if (mineEditing && !rows.some(p => p.id === mineEditing.id)) cards.unshift(wpEditCard());
+  $('#doc').innerHTML = `
+    <div class="card">
+      <div class="hdr"><div>
+        <h1>נקודות הציון שלי <span class="note num">${rows.length}</span></h1>
+        <p class="sub">נשמרות במכשיר הזה בלבד. לא נשלחות לשום מקום ולא מגובות.
+          לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה
+          פותחת את הכרטיסייה שלה. לחיצה כפולה פותחת במפות גוגל.</p>
+      </div></div>
+      <div class="chips">
+        <button class="chip" data-wpact="add">הוספת נ.צ.</button>
+        <button class="chip" data-mine-act="export">העתקת הנקודות</button>
+        <button class="chip" data-mine-act="import">ייבוא נקודות</button>
+      </div>
+      <p class="note">ההעתקה מוציאה את הנקודות כטקסט; התמונות עצמן נשארות
+        במכשיר ולא נכללות בה.</p>
+    </div>
+    ${cards.length ? cards.join('')
+      : '<p class="note">עדיין אין נ.צ. — הכפתור עם ה+ מוסיף אחת.</p>'}`;
+  if (mineEditing) renderPhotoBox();
+  wpThumbs();
+  applyWpHi();
+}
+
+function wpCard(p) {
+  const at = freguesiaAt(p.ll[0], p.ll[1]);
+  const where = at ? (at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he
+                   : 'מחוץ למחוז פורטו';
+  const armed = wpArmed === p.id;
+  return `<article class="card wp" data-wp="${html(p.id)}">
+      <div class="wp-h">
+        <span class="dot mine" style="--c:${p.photo ? PHOTO_COLOUR : MINE_COLOUR}"></span>
+        <h2>${html(p.name)}</h2>
+        <span class="wp-acts">
+          <button class="chip" data-wpact="edit" data-id="${html(p.id)}">עריכה</button>
+          <button class="chip${armed ? ' wp-arm' : ''}" data-wpact="del" data-id="${html(p.id)}"
+            >${armed ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>
+        </span>
+      </div>
+      ${p.desc ? `<p class="lead">${html(p.desc)}</p>` : ''}
+      <p class="note"><bdi class="num">${p.ll[0].toFixed(5)}, ${p.ll[1].toFixed(5)}</bdi><br>
+        ${html(where)}${p.at ? ' · ' + html(p.at) : ''}</p>
+      ${p.photo ? `<figure class="ph-fig" data-wpimg="${html(p.id)}"
+        ><img class="ph-img" alt="${html(p.name)}"></figure>` : ''}
+    </article>`;
+}
+
+function wpEditCard() {
+  const p = mineEditing;
+  const fresh = !D.mine.some(x => x.id === p.id);
+  return `<article class="card wp is-edit" data-wp="${html(p.id)}">
+      <div class="wp-h">
+        <h2>${fresh ? 'נ.צ. חדשה' : 'עריכת נ.צ.'}</h2>
+        <span class="wp-acts">
+          <button class="chip is-on" data-wpact="save">שמירה</button>
+          <button class="chip" data-wpact="cancel">ביטול</button>
+          ${fresh ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
+            data-wpact="del" data-id="${html(p.id)}"
+            >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
+        </span>
+      </div>
+      <p class="note" id="mineWhere">${mineWhereHtml()}</p>
+      <label class="fld-l" for="mineName">שם</label>
+      <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
+             value="${html(p.name || '')}">
+      <label class="fld-l" for="mineDesc">תיאור</label>
+      <textarea id="mineDesc" rows="4"
+        placeholder="מה שחשוב לזכור על המקום הזה">${html(p.desc || '')}</textarea>
+      <label class="fld-l" for="minePhotoIn">תמונה</label>
+      <div id="minePhotoBox"></div>
+      <div class="chips"><button class="chip" data-wpact="pick">בחירת נ.צ. על המפה</button></div>
+    </article>`;
+}
+
+/* The thumbnails are fetched as they come into view.  A shrunk photo is still
+   a third of a megabyte, and a list of them all decoded at once is a list that
+   stutters — the observer means only what is being looked at is in memory. */
+function wpThumbs() {
+  if (wpObs) { wpObs.disconnect(); wpObs = null; }
+  const figs = $$('#doc [data-wpimg]');
+  if (!figs.length) return;
+  const load = fig => {
+    if (fig.dataset.done) return;
+    fig.dataset.done = '1';
+    const gone = () => { fig.innerHTML = '<p class="note">התמונה אינה במכשיר הזה. ' +
+      'נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>'; };
+    getPhoto(fig.dataset.wpimg).then(b => {
+      const img = fig.querySelector('img');
+      if (b && img) img.src = wpUrl(b); else gone();
+    }, gone);
+  };
+  if (!window.IntersectionObserver) { figs.forEach(load); return; }
+  wpObs = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    load(e.target);
+    wpObs.unobserve(e.target);
+  }), { root: $('#paneText'), rootMargin: '250px' });
+  figs.forEach(f => wpObs.observe(f));
+}
+
+function startWpEdit(id) {
+  const p = D.mine.find(x => x.id === id);
+  if (!p) return;
+  if (mineEditing && mineEditing.id !== id) harvestWp();
   minePending = null;
   dropPhotoUrl();
-  mineEditing = p ? { ...p } : { id: 'p' + Date.now().toString(36), ll, name: '', desc: '' };
-  openPanel('point', p ? 'עריכת נקודה' : 'נקודה חדשה', `
-    <p class="note" id="mineWhere">${mineWhereHtml()}</p>
-    <label class="fld-l" for="mineName">שם</label>
-    <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
-           value="${html(mineEditing.name || '')}">
-    <label class="fld-l" for="mineDesc">תיאור</label>
-    <textarea id="mineDesc" rows="4" placeholder="מה שחשוב לזכור על המקום הזה">${html(mineEditing.desc || '')}</textarea>
-    <label class="fld-l" for="minePhotoIn">תמונה</label>
-    <div id="minePhotoBox"></div>
-    <div class="btns">
-      <button class="cta" data-pt="save">שמירה</button>
-      <button class="cta cta-2" data-pt="google">פתיחה במפות גוגל</button>
-      ${p ? '<button class="cta cta-danger" data-pt="delete">מחיקת הנקודה</button>' : ''}
-    </div>`);
-  renderPhotoBox();
+  mineEditing = { ...p };
+  S.wpSel = id;
+  wpArmed = null;
+  drawMine();
+  renderWaypoints();
   const el = $('#mineName');
   if (el) el.focus();
 }
-function closeMine() { closePanel(); mineEditing = null; minePending = null; dropPhotoUrl(); }
+
+function cancelWpEdit() {
+  mineEditing = null; minePending = null; dropPhotoUrl();
+  wpArmed = null;
+  renderWaypoints();
+}
+
+/* A new one starts as a placement, not as an empty card: the coordinates are
+   the point of the record, and a card with nowhere on it is not one. */
+function startWpAdd() {
+  if (mineEditing) {
+    harvestWp();
+    mapNote('יש כרטיסייה בעריכה — לשמור או לבטל אותה קודם.', true);
+    const el = $('#doc .wp.is-edit');
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
+  if (!S.wp) toggleWp();
+  toggleAdd();
+}
 
 /* After a point is dealt with the screen goes back to halves — the map to see
    where it landed, the text to read it. */
@@ -1181,16 +1462,16 @@ function backToHalves() {
   applySplit(); applyView(); save();
 }
 
-function panelPointClick(e) {
+/* Everything a card offers, in the order a tap has to be read: the picture
+   first, then a button, then the card itself — a tap that hit no button at all
+   is the card saying "this one". */
+function wpClick(e) {
   if (e.target.classList.contains('ph-img') && e.target.src) {
     openLightbox(e.target.src, e.target.alt);
-    return;
+    return true;
   }
-  const b = e.target.closest('[data-pt]');
-  if (!b || !mineEditing) return;
-  if (b.dataset.pt === 'google') { openInGoogle(mineEditing.ll, mineEditing.name); return; }
-  if (b.dataset.pt === 'delete') { deleteMine(); return; }
-  if (b.dataset.pt === 'rmphoto') {
+  const rm = e.target.closest('[data-pt="rmphoto"]');
+  if (rm && mineEditing) {
     // the point keeps the coordinates the photo gave it; only the picture goes,
     // and only once the point is saved
     minePending = null;
@@ -1198,14 +1479,48 @@ function panelPointClick(e) {
     const where = $('#mineWhere');
     if (where) where.innerHTML = mineWhereHtml();
     renderPhotoBox('התמונה תוסר כשהנקודה תישמר.');
-    return;
+    return true;
   }
-  commitMine();
+  const b = e.target.closest('[data-wpact]');
+  if (b) {
+    const act = b.dataset.wpact;
+    if (act !== 'del') wpArmed = null;
+    if (act === 'add') { startWpAdd(); return true; }
+    if (act === 'edit') { startWpEdit(b.dataset.id); return true; }
+    if (act === 'cancel') { cancelWpEdit(); return true; }
+    if (act === 'save') { commitMine(); return true; }
+    if (act === 'pick') { harvestWp(); toggleAdd(); return true; }
+    if (act === 'del') {
+      // two taps, because a card is the only copy of what is on it and the
+      // list puts the button under a thumb that is scrolling past
+      if (wpArmed !== b.dataset.id) { wpArmed = b.dataset.id; renderWaypoints(); return true; }
+      wpArmed = null;
+      deleteMine(b.dataset.id);
+      return true;
+    }
+  }
+  const card = e.target.closest('[data-wp]');
+  if (card) {
+    const id = card.dataset.wp;
+    if (mineEditing && mineEditing.id === id) return true;   // it is being typed in
+    if (isSecondTap('mine:' + id)) {
+      const p = D.mine.find(x => x.id === id);
+      if (p) { openInGoogle(p.ll, p.name); return true; }
+    }
+    selectWp(id, 'list');
+    return true;
+  }
+  return false;
 }
 
 function commitMine() {
+  if (!mineEditing) return;
   const name = $('#mineName').value.trim();
-  if (!name) { $('#mineName').focus(); return; }
+  if (!name) {
+    mapNote('לנ.צ. צריך שם.', true);
+    $('#mineName').focus();
+    return;
+  }
   const rec = { ...mineEditing, name, desc: $('#mineDesc').value.trim(),
     at: mineEditing.at || new Date().toISOString().slice(0, 10) };
   const pend = minePending;
@@ -1214,7 +1529,10 @@ function commitMine() {
   const finish = () => {
     const i = D.mine.findIndex(x => x.id === rec.id);
     if (i < 0) D.mine.push(rec); else D.mine[i] = rec;
-    saveMine(); closeMine(); drawMine(); redrawText();
+    saveMine();
+    mineEditing = null; minePending = null; dropPhotoUrl();
+    S.wpSel = rec.id;
+    drawMine(); redrawText();
     backToHalves();
   };
   if (pend) {
@@ -1231,11 +1549,17 @@ function commitMine() {
   if (!rec.photo) delPhoto(rec.id);        // it was removed in this edit
   finish();
 }
-function deleteMine() {
-  delPhoto(mineEditing.id);
-  D.mine = D.mine.filter(x => x.id !== mineEditing.id);
-  saveMine(); closeMine(); drawMine(); redrawText();
-  backToHalves();
+function deleteMine(id) {
+  const gone = id || (mineEditing && mineEditing.id);
+  if (!gone) return;
+  delPhoto(gone);
+  D.mine = D.mine.filter(x => x.id !== gone);
+  saveMine();
+  if (mineEditing && mineEditing.id === gone) {
+    mineEditing = null; minePending = null; dropPhotoUrl();
+  }
+  if (S.wpSel === gone) S.wpSel = null;
+  drawMine(); redrawText();
 }
 
 /* The points are the one thing here the user made, and the only thing an
@@ -1296,8 +1620,10 @@ function commitImport() {
   saveMine();
   closePanel();
   drawMine(); redrawText();
-  mapNote(added ? ('נוספו ' + nf(added) + ' נקודות' + (skipped ? ', ' + nf(skipped) + ' דולגו' : '') + '.')
-                : 'לא נוספה אף נקודה חדשה.', !added);
+  mapNote(added
+    ? ((added === 1 ? 'נוספה נקודה אחת' : 'נוספו ' + nf(added) + ' נקודות') +
+       (skipped ? ', ' + (skipped === 1 ? 'אחת דולגה' : nf(skipped) + ' דולגו') : '') + '.')
+    : 'לא נוספה אף נקודה חדשה.', !added);
 }
 
 let ghost = null;              // the crosshair being positioned
@@ -1312,7 +1638,10 @@ function startPlacing() {
   // the map gets the whole screen while a point is being placed
   S.viewBefore = S.view;
   S.view = 'map'; applyView();
-  const mk = L.marker(map.getCenter(), {
+  // a card being edited already has somewhere; the crosshair starts there
+  // rather than in the middle of whatever the map happens to be showing
+  const at = mineEditing && mineEditing.ll ? mineEditing.ll : map.getCenter();
+  const mk = L.marker(at, {
     icon: L.divIcon({ className: 'ghost', iconSize: [46, 46], iconAnchor: [23, 23],
       html: '<span class="ghost-ring"></span><span class="ghost-dot"></span>' }),
     draggable: true, autoPan: true, zIndexOffset: 2000,
@@ -1322,7 +1651,8 @@ function startPlacing() {
   // dblclick, so the same 450 ms rule the rest of the app uses stands in
   mk.on('click', () => { if (isSecondTap('ghost')) fixPlacing(); });
   ghost = mk;
-  mapNote('גררו את הסימון למקום המבוקש, ואז לחיצה כפולה עליו כדי לקבוע אותו. ' +
+  mapNote((mineEditing ? 'גררו את הסימון לנ.צ. של הכרטיסייה' : 'גררו את הסימון למקום המבוקש') +
+    ', ואז לחיצה כפולה עליו כדי לקבוע אותו. ' +
     '<button type="button" data-add="off">ביטול</button>', false, true);
   // the note opened the text half; placing wants the whole map
   S.view = 'map'; applyView();
@@ -1337,18 +1667,34 @@ function stopPlacing() {
   if (S.viewBefore) { S.view = S.viewBefore; S.viewBefore = null; applyView(); save(); }
 }
 
+/* Where the crosshair was let go.  It is either the נ.צ. of the card being
+   edited — the "בחירת נ.צ. על המפה" button — or a new card, which is what the
+   + button means.  Both end in management, with the card open. */
 function fixPlacing() {
   if (!ghost) return;
-  const ll = ghost.getLatLng();
+  const at = ghost.getLatLng();
+  const ll = [at.lat, at.lng];
   map.removeLayer(ghost);
   ghost = null;
   S.adding = false;
   S.viewBefore = null;
   $('#addBtn').setAttribute('aria-pressed', 'false');
   hideNote();
-  // the form gets the whole screen to be filled in
-  S.view = 'text'; applyView();
-  openMine(null, [ll.lat, ll.lng]);
+  if (mineEditing) mineEditing.ll = ll;
+  else {
+    minePending = null;
+    dropPhotoUrl();
+    mineEditing = { id: 'p' + Date.now().toString(36), ll, name: '', desc: '' };
+  }
+  if (!S.wp) { S.wp = true; $('#wpBtn').setAttribute('aria-pressed', 'true'); }
+  S.wpSel = mineEditing.id;
+  // both halves: the card to fill in, the map to see that it landed right
+  S.view = 'split'; applyView(); save();
+  closePanel();
+  drawMine();
+  renderWaypoints();
+  const el = $('#mineName');
+  if (el) el.focus();
 }
 
 /* ------------------------------------------------- level 3: תוך הרובע --- */
@@ -1594,15 +1940,18 @@ function renderLayers() {
     row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true,
         D.mine.filter(p => !p.photo).length) +
     row(S.photos, 'photos', 'נקודות עם תמונה', PHOTO_COLOUR, true,
-        D.mine.filter(p => p.photo).length);
+        D.mine.filter(p => p.photo).length) +
+    (S.wp ? '<p class="note">בזמן ניהול נ.צ. מוצגות כל הנקודות שלכם, ' +
+            'ושתי השכבות האלה חוזרות לפעול ביציאה ממנו.</p>' : '');
 
   // Which of these are black and which are grey is the level's decision, not
   // the user's; the switch is only whether the line is there at all.
   h += '<h3>קווי גבול</h3>' +
     ['region', 'district', 'mun', 'fre'].map(k =>
       row(S[LINE_ON[k]], 'ln:' + k, LINE_HE[k], lineColour(k), true)).join('') +
-    '<p class="note" style="margin-block-start:6px">הקווים ששייכים לרמה שעל ' +
-    'המסך מוצגים בשחור, והשאר באפור.</p>';
+    '<p class="note" style="margin-block-start:6px">הקווים ששייכים למה שעל ' +
+    'המסך מוצגים בשחור, והשאר באפור. קו האזורים ' +
+    'אפור תמיד.</p>';
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
@@ -1629,6 +1978,9 @@ function toggleLayers(force) {
 
 // after a change that alters what the text half should say
 function redrawText() {
+  // management replaces the level document: the map is still at its level and
+  // still navigable, but the text half is the list of נ.צ. until it is closed
+  if (S.wp) { renderWaypoints(); return; }
   if (S.level === 'district') renderDistrict();
   else if (S.level === 'mun') renderMun(S.mun);
   else renderZone(S.zone);
@@ -1748,18 +2100,18 @@ function applyHi(from) {
 /* ------------------------------------------------------------ navigation --- */
 function goDistrict() {
   S.level = 'district'; S.mun = null; S.zone = null; S.hi = null;
-  drawDistrict(); renderDistrict(); afterNav();
+  drawDistrict(); redrawText(); afterNav();
 }
 function goMun(num) {
   S.level = 'mun'; S.mun = num; S.zone = null; S.hi = null;
-  drawMun(num); renderMun(num); afterNav();
+  drawMun(num); redrawText(); afterNav();
 }
 function goZone(key) {
   const f = D.freByKey.get(key);
   if (!f) return;
   S.level = 'zone'; S.mun = f.mun_num; S.zone = key; S.hi = null;
   S.cats = new Set(D.poiOrder);
-  drawZone(key); renderZone(key); afterNav();
+  drawZone(key); redrawText(); afterNav();
 }
 function goUp() {
   if (S.level === 'zone') goMun(S.mun);
@@ -2131,15 +2483,15 @@ function wire() {
   $('#locBtn').addEventListener('click', toggleLocate);
   $('#viewBtn').addEventListener('click', cycleView);
   $('#layersBtn').addEventListener('click', () => toggleLayers());
-  $('#addBtn').addEventListener('click', toggleAdd);
-  $('#panelClose').addEventListener('click', () => {
-    const wasPoint = panelIs('point');
-    closePanel();
-    if (wasPoint) { mineEditing = null; backToHalves(); }
-  });
+  $('#wpBtn').addEventListener('click', toggleWp);
+  $('#addBtn').addEventListener('click', startWpAdd);
+  $('#panelClose').addEventListener('click', closePanel);
   $('#panelBody').addEventListener('click', e => {
     if (panelIs('search')) { panelSearchClick(e); return; }
-    if (panelIs('point')) { panelPointClick(e); return; }
+    if (panelIs('import')) {
+      if (e.target.closest('#impSave')) commitImport();
+      return;
+    }
     const b = e.target.closest('[data-lay]');
     if (!b) return;
     const k = b.dataset.lay;
@@ -2163,13 +2515,14 @@ function wire() {
       if (!S.cats.size) S.cats.add(c);              // never leave the map blank
     }
     save();
-    if (S.level === 'zone') { drawZone(S.zone); renderZone(S.zone); }
+    if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
     drawMine(); renderLayers(); applyHi();
   });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
-  $('#panelBody').addEventListener('change', e => {
+  // the photo picker lives on a card in the text half now, not in the panel
+  $('#doc').addEventListener('change', e => {
     if (e.target.id === 'minePhotoIn') takePhoto(e.target.files && e.target.files[0]);
   });
   $('#msgs').addEventListener('click', e => {
@@ -2188,6 +2541,8 @@ function wire() {
 
   // one delegated handler for the whole text half
   $('#doc').addEventListener('click', e => {
+    // the נ.צ. cards come first: while they are on screen they are the screen
+    if (S.wp && wpClick(e)) return;
     const src = e.target.closest('[data-src]');
     if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
     const cat = e.target.closest('[data-cat]');
@@ -2207,7 +2562,7 @@ function wire() {
     if (mine) {
       const p = D.mine.find(x => x.id === mine.dataset.mine);
       if (p && isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
-      openMine(mine.dataset.mine);
+      openWp(mine.dataset.mine);
       return;
     }
     const mun = e.target.closest('[data-mun]');
@@ -2235,6 +2590,9 @@ function wire() {
     if (e.key !== 'Escape') return;
     if (!$('#panel').hidden) closePanel();
     else if (!$('#infoDrawer').hidden) $('#infoDrawer').hidden = true;
+    else if (S.adding) stopPlacing();
+    else if (mineEditing) cancelWpEdit();
+    else if (S.wp) toggleWp();
     else goUp();
   });
 
