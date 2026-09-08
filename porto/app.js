@@ -31,6 +31,7 @@ const S = {
   water: true,         // rivers and lakes
   muncol: true,        // the 18 municipality colours (the outlines stay either way)
   mine: true,          // draw the points the user added
+  photos: true,        // draw the ones that carry a photo (their own layer)
   adding: false,       // waiting for a tap on the map to place a new point
 };
 const MINE_KEY = 'porto-mine-v1';
@@ -664,6 +665,238 @@ function renderMun(num) {
   $('#paneText').scrollTop = 0;
 }
 
+/* ---------------------------------------------------------------- photos --- */
+/* A point can carry one photo, and the photo is what places it: a picture taken
+   on the spot knows where it was taken better than a finger dragging a pin
+   across a map.  The EXIF block is read here in the browser and nothing is
+   uploaded — there is still no server.
+
+   The image does not go in localStorage.  That store is a few megabytes for the
+   whole origin and one phone photo is three, so pictures live in IndexedDB as
+   blobs keyed by the point's id, and the record in localStorage keeps only what
+   the photo *is*: its size, when it was taken, and whether its own coordinates
+   or the map pin placed the point.  Each photo is scaled to PHOTO_MAX on its
+   long edge first — a Galaxy A56 frame goes from about 3 MB to about 300 KB and
+   is still sharper than the panel can show.
+
+   A GPS block can be present and still say nothing.  The photo this was built
+   against — Galaxy A56, 2026-09-07 — carries a full GPSInfo IFD in which both
+   refs are empty strings and every rational is 0/0, which is what Android
+   writes when the camera's location tagging is off.  Read naively that decodes
+   to 0°N 0°E, in the Atlantic south of Ghana, and the point would land there
+   with no complaint at all.  gpsFrom rejects that shape and every other one
+   that cannot be a real fix, and the form says the photo carried no location
+   rather than moving the pin. */
+const PHOTO_DB = 'porto-photos';
+const PHOTO_STORE = 'img';
+const PHOTO_MAX = 1600;         // long edge in px of the stored copy
+const PHOTO_Q = 0.82;           // its JPEG quality
+const PHOTO_COLOUR = '#8e24aa';
+
+/* ---- the blob store ---- */
+let photoDb = null;
+function openPhotoDb() {
+  if (photoDb) return Promise.resolve(photoDb);
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) { rej(new Error('אין IndexedDB בדפדפן הזה')); return; }
+    const rq = indexedDB.open(PHOTO_DB, 1);
+    rq.onupgradeneeded = () => {
+      if (!rq.result.objectStoreNames.contains(PHOTO_STORE))
+        rq.result.createObjectStore(PHOTO_STORE);
+    };
+    rq.onsuccess = () => { photoDb = rq.result; res(photoDb); };
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function photoTx(mode, fn) {
+  return openPhotoDb().then(db => new Promise((res, rej) => {
+    let rq;
+    const tx = db.transaction(PHOTO_STORE, mode);
+    try { rq = fn(tx.objectStore(PHOTO_STORE)); }
+    catch (e) { rej(e); return; }
+    tx.oncomplete = () => res(rq && rq.result);
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error);
+  }));
+}
+const putPhoto = (id, blob) => photoTx('readwrite', s => s.put(blob, id));
+const getPhoto = id => photoTx('readonly', s => s.get(id));
+const delPhoto = id => photoTx('readwrite', s => s.delete(id)).catch(() => {});
+
+/* ---- EXIF ---- */
+/* Only what a point needs: where, when, and which way up.  A hand-rolled reader
+   rather than a library, because the app ships no dependencies and this is
+   sixty lines. */
+function readExif(buf) {
+  const v = new DataView(buf);
+  if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return null;   // not a JPEG
+  let i = 2;
+  while (i + 4 <= v.byteLength) {
+    if (v.getUint8(i) !== 0xFF) return null;
+    const m = v.getUint8(i + 1);
+    if (m === 0xDA || m === 0xD9) return null;      // pixel data starts, no Exif
+    const len = v.getUint16(i + 2);
+    if (len < 2) return null;
+    if (m === 0xE1 && i + 10 <= v.byteLength && v.getUint32(i + 4) === 0x45786966)
+      return parseTiff(v, i + 10);                  // "Exif\0\0" then the TIFF
+    i += 2 + len;
+  }
+  return null;
+}
+
+const EXIF_SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+
+function parseTiff(v, t) {
+  if (t + 8 > v.byteLength) return null;
+  const le = v.getUint16(t) === 0x4949;
+  if (!le && v.getUint16(t) !== 0x4D4D) return null;
+  if (v.getUint16(t + 2, le) !== 42) return null;
+
+  const dir = off => {
+    const out = {};
+    if (off < 0 || off + 2 > v.byteLength) return out;
+    const n = v.getUint16(off, le);
+    for (let k = 0; k < n; k++) {
+      const e = off + 2 + k * 12;
+      if (e + 12 > v.byteLength) break;
+      out[v.getUint16(e, le)] = {
+        type: v.getUint16(e + 2, le), count: v.getUint32(e + 4, le), at: e + 8 };
+    }
+    return out;
+  };
+  // a value of four bytes or fewer sits in the entry; anything longer is an
+  // offset from the start of the TIFF header
+  const start = f => (EXIF_SIZE[f.type] || 1) * f.count <= 4
+    ? f.at : t + v.getUint32(f.at, le);
+  const num = f => {
+    if (!f || !f.count) return null;
+    const o = start(f);
+    if (o < 0 || o + (EXIF_SIZE[f.type] || 1) > v.byteLength) return null;
+    if (f.type === 1 || f.type === 7) return v.getUint8(o);
+    if (f.type === 3) return v.getUint16(o, le);
+    if (f.type === 4) return v.getUint32(o, le);
+    if (f.type === 5) { const d = v.getUint32(o + 4, le); return d ? v.getUint32(o, le) / d : null; }
+    if (f.type === 10) { const d = v.getInt32(o + 4, le); return d ? v.getInt32(o, le) / d : null; }
+    return null;
+  };
+  const str = f => {
+    if (!f) return '';
+    const o = start(f);
+    let s = '';
+    for (let k = 0; k < f.count && o + k < v.byteLength; k++) {
+      const c = v.getUint8(o + k);
+      if (!c) break;
+      s += String.fromCharCode(c);
+    }
+    return s;
+  };
+  // degrees, minutes, seconds as three rationals.  A zero denominator is not a
+  // zero value, it is no value — that is the shape a phone writes when it had
+  // no fix to record.
+  const dms = f => {
+    if (!f || f.type !== 5 || f.count < 3) return null;
+    const o = start(f);
+    if (o + 24 > v.byteLength) return null;
+    const out = [];
+    for (let k = 0; k < 3; k++) {
+      const d = v.getUint32(o + k * 8 + 4, le);
+      if (!d) return null;
+      out.push(v.getUint32(o + k * 8, le) / d);
+    }
+    return out;
+  };
+
+  const ifd0 = dir(t + v.getUint32(t + 4, le));
+  const out = { orientation: num(ifd0[0x0112]) || 1, taken: '', gps: null };
+  if (ifd0[0x8769]) {
+    const ex = dir(t + (num(ifd0[0x8769]) || 0));
+    out.taken = str(ex[0x9003]) || str(ex[0x9004]) || '';
+  }
+  if (!out.taken) out.taken = str(ifd0[0x0132]);
+  if (ifd0[0x8825]) out.gps = gpsFrom(dir(t + (num(ifd0[0x8825]) || 0)), num, str, dms);
+  return out;
+}
+
+function gpsFrom(g, num, str, dms) {
+  const latRef = str(g[1]).trim().toUpperCase();
+  const lonRef = str(g[3]).trim().toUpperCase();
+  const lat = dms(g[2]);
+  const lon = dms(g[4]);
+  // an empty ref is the giveaway: Android writes the whole GPSInfo IFD with
+  // blank refs and 0/0 rationals when location tagging is off
+  if (!lat || !lon) return null;
+  if (latRef !== 'N' && latRef !== 'S') return null;
+  if (lonRef !== 'E' && lonRef !== 'W') return null;
+  let la = lat[0] + lat[1] / 60 + lat[2] / 3600;
+  let lo = lon[0] + lon[1] / 60 + lon[2] / 3600;
+  if (latRef === 'S') la = -la;
+  if (lonRef === 'W') lo = -lo;
+  if (!isFinite(la) || !isFinite(lo)) return null;
+  if (Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
+  // null island: never where a photo was taken, always what an empty block
+  // decodes to
+  if (Math.abs(la) < 1e-7 && Math.abs(lo) < 1e-7) return null;
+  let alt = num(g[6]);
+  if (alt !== null && num(g[5]) === 1) alt = -alt;   // below sea level
+  return { ll: [la, lo], alt };
+}
+
+/* ---- making the stored copy ---- */
+function shrinkPhoto(file) {
+  const load = window.createImageBitmap
+    ? createImageBitmap(file, { imageOrientation: 'from-image' })
+    : new Promise((res, rej) => {
+        const img = new Image();
+        const u = URL.createObjectURL(file);
+        img.onload = () => { URL.revokeObjectURL(u); res(img); };
+        img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode')); };
+        img.src = u;
+      });
+  return load.then(src => {
+    const k = Math.min(1, PHOTO_MAX / Math.max(src.width, src.height));
+    const w = Math.max(1, Math.round(src.width * k));
+    const h = Math.max(1, Math.round(src.height * k));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(src, 0, 0, w, h);
+    if (src.close) src.close();
+    return new Promise((res, rej) => cv.toBlob(
+      b => b ? res({ blob: b, w, h }) : rej(new Error('encode')), 'image/jpeg', PHOTO_Q));
+  });
+}
+
+/* ---- object URLs ---- */
+/* One at a time, revoked before the next: an unrevoked blob URL keeps its
+   whole image alive for as long as the document does. */
+let photoUrl = null;
+function setPhotoUrl(blob) {
+  if (photoUrl) URL.revokeObjectURL(photoUrl);
+  photoUrl = blob ? URL.createObjectURL(blob) : null;
+  return photoUrl;
+}
+function dropPhotoUrl() {
+  if (photoUrl) URL.revokeObjectURL(photoUrl);
+  photoUrl = null;
+}
+
+/* ---- the full-size view ---- */
+function openLightbox(url, alt) {
+  let el = $('#lightbox');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'lightbox';
+    el.className = 'lb';
+    el.innerHTML = '<button class="lb-x" type="button" aria-label="סגירה">✕</button>' +
+                   '<img class="lb-img" alt="">';
+    document.body.appendChild(el);
+    el.addEventListener('click', () => { el.hidden = true; });
+  }
+  const img = el.querySelector('.lb-img');
+  img.src = url;
+  img.alt = alt || '';
+  el.hidden = false;
+}
+
 /* -------------------------------------------------------- my own points --- */
 /* Points the user marks are theirs, not data: they are kept apart from
    everything sourced, drawn in their own colour and shape, and stored only in
@@ -685,45 +918,151 @@ const mineIcon = () => L.divIcon({ className: 'me-pin', iconSize: [16, 16], icon
         'background:' + MINE_COLOUR + ';border:2px solid #fff;' +
         'box-shadow:0 0 0 1px rgba(0,0,0,.45);transform:rotate(45deg)"></span>' });
 
+const photoPinIcon = () => L.divIcon({ className: 'me-pin', iconSize: [18, 18], iconAnchor: [9, 9],
+  html: '<span style="display:block;width:12px;height:12px;margin:1px;border-radius:3px;' +
+        'background:' + PHOTO_COLOUR + ';border:2px solid #fff;' +
+        'box-shadow:0 0 0 1px rgba(0,0,0,.45)"></span>' });
+
+/* Two groups over one list.  A point that carries a photo is drawn in the photo
+   layer and nowhere else, so turning that layer off takes the pictures and
+   their pins together — which is what a layer switch is for. */
 function drawMine() {
-  if (LG.mine) { map.removeLayer(LG.mine); delete LG.mine; }
-  if (!S.mine || !D.mine.length) return;
-  LG.mine = L.layerGroup(D.mine.map(p => {
-    const mk = L.marker(p.ll, { icon: mineIcon(), zIndexOffset: 1200, title: p.name });
-    mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : ''),
-      { direction: 'top', className: 'tt' });
+  ['mine', 'photos'].forEach(k => {
+    if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; }
+  });
+  const pin = p => {
+    const mk = L.marker(p.ll, { icon: p.photo ? photoPinIcon() : mineIcon(),
+      zIndexOffset: p.photo ? 1250 : 1200, title: p.name });
+    mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : '') +
+      (p.photo ? '<br>עם תמונה' : ''), { direction: 'top', className: 'tt' });
     mk.on('click', () => {
       if (S.adding) return;
       if (isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
       openMine(p.id);
     });
     return mk;
-  })).addTo(map);
+  };
+  const plain = D.mine.filter(p => !p.photo);
+  const shots = D.mine.filter(p => p.photo);
+  if (S.mine && plain.length) LG.mine = L.layerGroup(plain.map(pin)).addTo(map);
+  if (S.photos && shots.length) LG.photos = L.layerGroup(shots.map(pin)).addTo(map);
 }
 
 let mineEditing = null;
+let minePending = null;      // a photo chosen in this form and not yet saved
+
+function mineWhereHtml() {
+  const at = freguesiaAt(mineEditing.ll[0], mineEditing.ll[1]);
+  const meta = minePending || mineEditing.photo;
+  return `${at ? html((at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he)
+               : 'מחוץ למחוז פורטו'} ·
+    <span class="num">${mineEditing.ll[0].toFixed(5)}, ${mineEditing.ll[1].toFixed(5)}</span>` +
+    (meta && meta.from === 'exif' ? ' · <span class="flag">מהתמונה</span>' : '');
+}
+
+/* The sentence and the numbers go on separate lines, and the numbers inside a
+   <bdi>.  Joined into one run they reorder: a Hebrew line with latin figures in
+   the middle of it ends up showing its first word after them. */
+function photoMetaHtml(m) {
+  const bits = [];
+  if (m.w && m.h) bits.push(m.w + '×' + m.h);
+  if (m.bytes) bits.push(Math.round(m.bytes / 1024) + ' KB');
+  // Exif writes the moment as 2026:09:07 15:50:41
+  if (m.taken) bits.push(String(m.taken).replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
+  return (m.from === 'exif'
+      ? 'הנקודה מוקמה לפי הקואורדינטות של התמונה.'
+      : 'בתמונה אין מיקום — הנקודה נשארה איפה שסומנה.') +
+    (bits.length ? `<br><bdi class="num">${html(bits.join(' · '))}</bdi>` : '');
+}
+
+function renderPhotoBox(msg) {
+  const box = $('#minePhotoBox');
+  if (!box || !mineEditing) return;
+  const meta = minePending || mineEditing.photo;
+  // the native control labels itself in the browser's language, not the app's,
+  // so it is kept off screen and driven by a label — which comes after it in
+  // the markup so a plain sibling selector can show the focus ring
+  const input = '<input id="minePhotoIn" class="ph-in" type="file" accept="image/*">' +
+    `<label class="chip ph-pick" for="minePhotoIn">${
+      meta ? 'החלפת התמונה' : 'בחירת תמונה'}</label>`;
+  if (!meta) {
+    box.innerHTML = `<div class="chips">${input}</div>` +
+      `<p class="note ph-note">${msg ? html(msg)
+      : 'תמונה שצולמה במקום תמקם את הנקודה לפי הקואורדינטות שלה, במקום לפי הסימון על המפה.'}</p>`;
+    return;
+  }
+  box.innerHTML =
+    `<figure class="ph-fig"><img class="ph-img" alt="${html(mineEditing.name || 'תמונת הנקודה')}"></figure>
+     <p class="note ph-note">${photoMetaHtml(meta)}${msg ? '<br>' + html(msg) : ''}</p>
+     <div class="chips">${input}<button class="chip" type="button" data-pt="rmphoto">הסרת התמונה</button></div>`;
+  const fig = box.querySelector('.ph-fig');
+  const gone = () => { fig.innerHTML = '<p class="note">התמונה אינה במכשיר הזה. ' +
+    'נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>'; };
+  if (minePending) box.querySelector('.ph-img').src = setPhotoUrl(minePending.blob);
+  else getPhoto(mineEditing.id).then(
+    b => { if (b) box.querySelector('.ph-img').src = setPhotoUrl(b); else gone(); }, gone);
+}
+
+/* The photo decides where the point goes.  Only the head of the file is read
+   for that — Exif sits at the front of a JPEG, and a three-megabyte frame does
+   not need to be in memory twice to answer one question. */
+function takePhoto(file) {
+  if (!file || !mineEditing) return;
+  renderPhotoBox('קורא את התמונה…');
+  const head = file.slice(0, Math.min(file.size, 512 * 1024));
+  const read = head.arrayBuffer ? head.arrayBuffer() : new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(new Error('read'));
+    fr.readAsArrayBuffer(head);
+  });
+  Promise.all([read.then(buf => { try { return readExif(buf); } catch (e) { return null; } }),
+               shrinkPhoto(file)])
+    .then(([ex, small]) => {
+      const gps = ex && ex.gps;
+      if (gps) mineEditing.ll = gps.ll;
+      minePending = { blob: small.blob, w: small.w, h: small.h, bytes: small.blob.size,
+                      taken: (ex && ex.taken) || '', from: gps ? 'exif' : 'pin',
+                      alt: gps ? gps.alt : null };
+      const where = $('#mineWhere');
+      if (where) where.innerHTML = mineWhereHtml();
+      renderPhotoBox(gps
+        ? 'הנקודה הועברה לקואורדינטות של התמונה.'
+        : 'בתמונה אין מיקום שמיש. ייתכן שתיוג המיקום במצלמה כבוי — ' +
+          'הנקודה נשארה במקום שסימנת.');
+      if (gps) map.setView(gps.ll, Math.max(map.getZoom(), 15));
+    })
+    .catch(() => {
+      minePending = null;
+      renderPhotoBox('לא הצלחתי לקרוא את התמונה. ייתכן שהיא בפורמט שהדפדפן ' +
+        'לא פותח, כמו HEIC — צילום ב-JPEG יעבוד.');
+    });
+}
+
 function openMine(id, ll) {
   const p = id ? D.mine.find(x => x.id === id) : null;
+  minePending = null;
+  dropPhotoUrl();
   mineEditing = p ? { ...p } : { id: 'p' + Date.now().toString(36), ll, name: '', desc: '' };
-  const at = freguesiaAt(mineEditing.ll[0], mineEditing.ll[1]);
   openPanel('point', p ? 'עריכת נקודה' : 'נקודה חדשה', `
-    <p class="note">${at ? html((at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he)
-                        : 'מחוץ למחוז פורטו'} ·
-      <span class="num">${mineEditing.ll[0].toFixed(5)}, ${mineEditing.ll[1].toFixed(5)}</span></p>
+    <p class="note" id="mineWhere">${mineWhereHtml()}</p>
     <label class="fld-l" for="mineName">שם</label>
     <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
            value="${html(mineEditing.name || '')}">
     <label class="fld-l" for="mineDesc">תיאור</label>
     <textarea id="mineDesc" rows="4" placeholder="מה שחשוב לזכור על המקום הזה">${html(mineEditing.desc || '')}</textarea>
+    <label class="fld-l" for="minePhotoIn">תמונה</label>
+    <div id="minePhotoBox"></div>
     <div class="btns">
       <button class="cta" data-pt="save">שמירה</button>
       <button class="cta cta-2" data-pt="google">פתיחה במפות גוגל</button>
       ${p ? '<button class="cta cta-danger" data-pt="delete">מחיקת הנקודה</button>' : ''}
     </div>`);
+  renderPhotoBox();
   const el = $('#mineName');
   if (el) el.focus();
 }
-function closeMine() { closePanel(); mineEditing = null; }
+function closeMine() { closePanel(); mineEditing = null; minePending = null; dropPhotoUrl(); }
 
 /* After a point is dealt with the screen goes back to halves — the map to see
    where it landed, the text to read it. */
@@ -734,10 +1073,24 @@ function backToHalves() {
 }
 
 function panelPointClick(e) {
+  if (e.target.classList.contains('ph-img') && e.target.src) {
+    openLightbox(e.target.src, e.target.alt);
+    return;
+  }
   const b = e.target.closest('[data-pt]');
   if (!b || !mineEditing) return;
   if (b.dataset.pt === 'google') { openInGoogle(mineEditing.ll, mineEditing.name); return; }
   if (b.dataset.pt === 'delete') { deleteMine(); return; }
+  if (b.dataset.pt === 'rmphoto') {
+    // the point keeps the coordinates the photo gave it; only the picture goes,
+    // and only once the point is saved
+    minePending = null;
+    delete mineEditing.photo;
+    const where = $('#mineWhere');
+    if (where) where.innerHTML = mineWhereHtml();
+    renderPhotoBox('התמונה תוסר כשהנקודה תישמר.');
+    return;
+  }
   commitMine();
 }
 
@@ -746,12 +1099,31 @@ function commitMine() {
   if (!name) { $('#mineName').focus(); return; }
   const rec = { ...mineEditing, name, desc: $('#mineDesc').value.trim(),
     at: mineEditing.at || new Date().toISOString().slice(0, 10) };
-  const i = D.mine.findIndex(x => x.id === rec.id);
-  if (i < 0) D.mine.push(rec); else D.mine[i] = rec;
-  saveMine(); closeMine(); drawMine(); redrawText();
-  backToHalves();
+  const pend = minePending;
+  if (pend) rec.photo = { w: pend.w, h: pend.h, bytes: pend.bytes,
+                          taken: pend.taken, from: pend.from, alt: pend.alt };
+  const finish = () => {
+    const i = D.mine.findIndex(x => x.id === rec.id);
+    if (i < 0) D.mine.push(rec); else D.mine[i] = rec;
+    saveMine(); closeMine(); drawMine(); redrawText();
+    backToHalves();
+  };
+  if (pend) {
+    putPhoto(rec.id, pend.blob).then(finish, err => {
+      // a point without its picture is still worth keeping — say what was lost
+      // rather than dropping the whole thing
+      delete rec.photo;
+      mapNote('הנקודה נשמרה, אבל התמונה לא: ' +
+        html(String((err && err.message) || err)), true);
+      finish();
+    });
+    return;
+  }
+  if (!rec.photo) delPhoto(rec.id);        // it was removed in this edit
+  finish();
 }
 function deleteMine() {
+  delPhoto(mineEditing.id);
   D.mine = D.mine.filter(x => x.id !== mineEditing.id);
   saveMine(); closeMine(); drawMine(); redrawText();
   backToHalves();
@@ -1023,19 +1395,20 @@ function mineList(within) {
   if (!rows.length && within) return '';
   return `<div class="card">
       <h2>הנקודות שלי <span class="note num">${rows.length}</span></h2>
-      <p class="sub">נשמרות במכשיר הזה בלבד. לא נשלחות לשום מקום ולא מגובות.</p>
+      <p class="sub">נשמרות במכשיר הזה בלבד. לא נשלחות לשום מקום ולא מגובות.
+      ההעתקה מוציאה את הנקודות כטקסט; התמונות עצמן נשארות במכשיר ולא נכללות בה.</p>
       <div class="chips">
         <button class="chip" data-mine-act="export">העתקת הנקודות</button>
         <button class="chip" data-mine-act="import">ייבוא נקודות</button>
       </div>
     </div>
     <div class="rows">${rows.map(p => `<button class="row" data-mine="${html(p.id)}">
-        <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
+        <span class="dot mine" style="--c:${p.photo ? PHOTO_COLOUR : MINE_COLOUR}"></span>
         <span class="row-body">
           <span class="row-t">${html(p.name)}</span>
           ${p.desc ? `<span class="row-d">${html(p.desc)}</span>` : ''}
           <span class="row-m num">${html(p.ll[0].toFixed(5))}, ${html(p.ll[1].toFixed(5))}
-            ${p.at ? ' · ' + html(p.at) : ''}</span>
+            ${p.at ? ' · ' + html(p.at) : ''}${p.photo ? ' · תמונה' : ''}</span>
         </span></button>`).join('')}</div>`;
 }
 
@@ -1108,7 +1481,10 @@ function renderLayers() {
     row(S.tiles, 'tiles', 'רקע המפה (רחובות)', 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
     row(S.muncol, 'muncol', 'צבעי 18 העיריות', 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
     row(S.water, 'water', 'נהרות ומים', '#4a9ad4', true) +
-    row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true, D.mine.length);
+    row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true,
+        D.mine.filter(p => !p.photo).length) +
+    row(S.photos, 'photos', 'נקודות עם תמונה', PHOTO_COLOUR, true,
+        D.mine.filter(p => p.photo).length);
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
@@ -1350,7 +1726,8 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view,
-      letters: S.letters, mine: S.mine, water: S.water, muncol: S.muncol,
+      letters: S.letters, mine: S.mine, photos: S.photos, water: S.water,
+      muncol: S.muncol,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
   } catch (e) { /* private mode */ }
@@ -1361,6 +1738,7 @@ function restore() {
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
+    if (typeof o.photos === 'boolean') S.photos = o.photos;
     if (typeof o.water === 'boolean') S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
@@ -1647,6 +2025,7 @@ function wire() {
     else if (k === 'water') { S.water = !S.water; applyNature(); }
     else if (k === 'muncol') { S.muncol = !S.muncol; if (S.level === 'district') drawDistrict(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
+    else if (k === 'photos') { S.photos = !S.photos; drawMine(); }
     else if (k.startsWith('cat:')) {
       const c = k.slice(4);
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
@@ -1658,6 +2037,9 @@ function wire() {
   });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
+  });
+  $('#panelBody').addEventListener('change', e => {
+    if (e.target.id === 'minePhotoIn') takePhoto(e.target.files && e.target.files[0]);
   });
   $('#msgs').addEventListener('click', e => {
     const b = e.target.closest('button');

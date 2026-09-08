@@ -340,3 +340,26 @@ body[data-view="text"] .map-only{display:none}
      border-radius:var(--r-ctl); background:var(--accent); color:var(--accent-ink);
      font-weight:700; text-align:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+
+/* ------------------------------------------------------------- photos --- */
+/* A picture in the form is the point's evidence, so it gets real width rather
+   than a thumbnail, capped so it cannot push the buttons off a phone screen. */
+.ph-in{position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+       overflow:hidden; clip-path:inset(50%); white-space:nowrap}
+.ph-pick{cursor:pointer}
+.ph-in:focus-visible + .ph-pick{outline:2px solid var(--accent); outline-offset:2px}
+.ph-fig{margin:var(--s3) 0 0; border-radius:var(--r-ctl); overflow:hidden;
+        background:var(--bg); border:1px solid var(--line)}
+.ph-img{display:block; width:100%; max-height:46vh; object-fit:contain;
+        background:var(--bg); cursor:zoom-in}
+.ph-note{margin-block-start:var(--s2)}
+
+/* Full size, over everything, dismissed by a tap anywhere — the panel is too
+   narrow to judge a photo by. */
+.lb{position:fixed; inset:0; z-index:3000; background:rgba(8,12,20,.94);
+    display:flex; align-items:center; justify-content:center; padding:var(--s4)}
+.lb[hidden]{display:none}
+.lb-img{max-width:100%; max-height:100%; object-fit:contain}
+.lb-x{position:absolute; inset-block-start:calc(var(--safe-t) + var(--s4));
+      inset-inline-end:var(--s4); width:40px; height:40px; border-radius:50%;
+      background:rgba(255,255,255,.16); color:#fff; font-size:1.1rem}
