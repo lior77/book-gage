@@ -5,7 +5,7 @@
    number carries the source and the reference year it came with.
 
    Three levels, one screen split in two:
-     district   18 numbered municipalities + the three belt outlines
+     district   18 numbered municipalities + the two NUTS III outlines
      mun        that municipality's numbered parishes
      zone       inside one parish: lettered localities + black landmark dots
 */
@@ -78,13 +78,13 @@ function peopleStats(o, lvl) {
   return `<div class="card">
     <h2>אנשים — מפקד 2021</h2>
     <div class="stats">
-      ${stat('גיל חציוני', o.median_age, 'שנים', 1, lvl + '.median_age')}
-      ${stat('בני 0–14', o.pct_0_14, '%', 1, lvl + '.pct_0_14')}
-      ${stat('בני 65+', o.pct_65plus, '%', 1, lvl + '.pct_65plus')}
-      ${stat('מדד הזדקנות', o.ageing_index, '', 1, lvl + '.ageing_index')}
-      ${stat('אזרחות זרה', o.foreign_pct, '%', 1, lvl + '.foreign_pct')}
-      ${stat('השכלה גבוהה', o.education_pct, '%', 1, lvl + '.education_pct')}
-      ${stat('אבטלה', o.unemployment_pct, '%', 1, lvl + '.unemployment_pct')}
+      ${stat('גיל חציוני', o.median_age, 'שנים', 0, lvl + '.median_age')}
+      ${stat('בני 0–14', o.pct_0_14, '%', 0, lvl + '.pct_0_14')}
+      ${stat('בני 65+', o.pct_65plus, '%', 0, lvl + '.pct_65plus')}
+      ${stat('מדד הזדקנות', o.ageing_index, '', 0, lvl + '.ageing_index')}
+      ${stat('אזרחות זרה', o.foreign_pct, '%', 0, lvl + '.foreign_pct')}
+      ${stat('השכלה גבוהה', o.education_pct, '%', 0, lvl + '.education_pct')}
+      ${stat('אבטלה', o.unemployment_pct, '%', 0, lvl + '.unemployment_pct')}
     </div>
     <p class="note">הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון
       בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14.</p>
@@ -114,14 +114,34 @@ function housingStats(o, lvl) {
   </div>`;
 }
 
-function stat(label, val, unit, dec, srcKey) {
+/* `step` rounds the figure that is shown — to the nearest 100 for a headcount,
+   to a whole number for a percentage.  A census total carried to the person
+   invites a precision it does not have at this scale, and a density of 4 993
+   reads as measured when it is a division of one estimate by another.
+
+   The exact value is not lost: it rides on the button as data-exact and the
+   source panel prints it, so the number on screen is readable and the number
+   the source published is one tap away.  Rounding what is displayed is fine;
+   rounding what is recorded would not be. */
+function shown(val, dec, step) {
+  if (!step) return nf(val, dec);
+  return nf(Math.round(val / step) * step, 0);
+}
+
+function stat(label, val, unit, dec, srcKey, step) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
+  const text = has ? shown(val, dec, step) : MISSING;
+  // Only when rounding actually changed something.  Porto's census population
+  // is 231 800 to begin with, and offering "the exact value" beside an
+  // identical figure would make the panel look like it was hiding one.
+  const exact = has ? nf(val, val === Math.round(val) ? 0 : 2) : '';
   // One figure per line: label, value, year. Four tiles side by side made the
   // numbers compete with each other and wrapped their units onto a second line.
-  return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}">
+  return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}"${
+      exact && exact !== text ? ` data-exact="${html(exact)}"` : ''}>
     <span class="stat-l">${html(label)}</span>
-    <span class="stat-v ${has ? 'num' : ''}">${has ? nf(val, dec) : MISSING}${
+    <span class="stat-v ${has ? 'num' : ''}">${text}${
       has && unit ? ' <span class="stat-u">' + html(unit) + '</span>' : ''}</span>
     <span class="stat-y">${f.reference_year ? html(f.reference_year) : 'מקור'}</span>
   </button>`;
@@ -296,6 +316,8 @@ function refit() { if (fitBounds) map.fitBounds(fitBounds, { padding: [16, 16] }
    only after the user says yes; opened as a file:// page it is refused, and
    that refusal is reported rather than swallowed. */
 let meMark = null, meRing = null, meWatch = null;
+// whether the map has already been moved to this run's first fix
+let meCentred = false;
 
 function ringInside(pt, ring) {
   // ray casting; ring is [[lon,lat],...]
@@ -359,10 +381,17 @@ function showMe(pos) {
     meRing.setLatLng(ll).setRadius(acc);
   }
 
+  // Move the map to the first fix and then leave it alone, at whatever zoom
+  // the user had: showing where you are is not a reason to change how much of
+  // the district you can see, and a watch that re-centres on every update
+  // takes the map away from anyone trying to read it.
+  const first = !meCentred;
+  meCentred = true;
+
   const f = freguesiaAt(lat, lon);
   const m = f ? D.munByNum.get(f.mun_num) : null;
   if (f) {
-    map.setView(ll, Math.max(map.getZoom(), 14));
+    if (first) map.panTo(ll);
     mapNote(`אתה ב<b>${html(f.he || f.pt)}</b>, ${html(m.he)} ·
       דיוק ${nf(Math.round(acc))} מ׳
       <button type="button" data-jump="fre:${html(D.freKey(f))}">פתיחת הרובע</button>`);
@@ -370,7 +399,7 @@ function showMe(pos) {
     // Anywhere else on earth: say so, and say how far, instead of dropping the
     // map on an empty spot in the ocean.
     const km = Math.round(map.distance(ll, [41.14961, -8.61099]) / 1000);
-    map.setView(ll, 9);
+    if (first) map.panTo(ll);
     mapNote(`המיקום שלך אינו בתוך מחוז פורטו — כ-${nf(km)} ק״מ ממרכז פורטו.
       דיוק ${nf(Math.round(acc))} מ׳.
       <button type="button" data-loc="back">חזרה למפת המחוז</button>`, true);
@@ -388,6 +417,7 @@ function locError(err) {
 }
 
 function stopLocate() {
+  meCentred = false;
   if (meWatch !== null) { navigator.geolocation.clearWatch(meWatch); meWatch = null; }
   if (meMark) { map.removeLayer(meMark); meMark = null; }
   if (meRing) { map.removeLayer(meRing); meRing = null; }
@@ -437,8 +467,9 @@ function drawDistrict() {
     },
   }).addTo(map);
 
-  // The grouping line the source document draws: one outline per belt, in the
-  // belt's own colour, over the municipality fills.
+  // One outline per NUTS III region, in its own colour, over the municipality
+  // fills.  The line is the official boundary between the metropolitan area
+  // and Tâmega e Sousa, not a grouping the app invented.
   LG.belts = L.geoJSON(D.bB, {
     interactive: false,
     style: ft => ({ color: ft.properties.colour, weight: 3.5, opacity: .95, fill: false, lineJoin: 'round' }),
@@ -474,7 +505,7 @@ function renderDistrict() {
       <span class="row-body">
         <span class="row-t">${html(m.he)} <span class="lat">(${html(m.en)})</span></span>
         <span class="row-d">${html(chr)}</span>
-        <span class="row-m">${html(m.belt)} · <span class="num">${nf(m.pop2021)}</span> תושבים ·
+        <span class="row-m">${html(m.belt)} · <span class="num">${shown(m.pop2021, 0, 100)}</span> תושבים ·
           <span class="num">${nf(m.area_km2, 1)}</span> קמ״ר ·
           <span class="num">${nf(m.n_freguesias)}</span> רובעים</span>
       </span>
@@ -487,22 +518,25 @@ function renderDistrict() {
       <h1>מחוז פורטו <span class="en lat">(Distrito do Porto)</span></h1>
       <p class="lead">18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי
         במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה: כאן חיים
-        <span class="num">${nf(D.totPop)}</span> תושבים על
+        <span class="num">${shown(D.totPop, 0, 100)}</span> תושבים על
         <span class="num">${nf(D.totArea, 1)}</span> קמ״ר.</p>
       <div class="stats">
-        ${stat('תושבים', D.totPop, '', 0, 'municipio.pop2021')}
+        ${stat('תושבים', D.totPop, '', 0, 'municipio.pop2021', 100)}
         ${stat('שטח', D.totArea, 'קמ״ר', 1, 'municipio.area_km2')}
-        ${stat('צפיפות', D.totPop / D.totArea, 'לקמ״ר', 0, 'municipio.density')}
+        ${stat('צפיפות', D.totPop / D.totArea, 'לקמ״ר', 0, 'municipio.density', 100)}
       </div>
       <p class="note">כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו.
         המספרים על המפה הם קודי DICOFRE הרשמיים.</p>
     </div>
 
     <div class="card">
-      <h2>שלוש החגורות</h2>
-      <p class="sub">קו בצבע החגורה מקיף במפה את העיריות שבה.</p>
+      <h2>שני האזורים <span class="en lat">(NUTS III)</span></h2>
+      <p class="sub">החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. קו בצבע האזור
+        מקיף במפה את העיריות שבו.</p>
       ${beltRows}
-
+      <p class="note">שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני
+        17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו.
+        האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.</p>
     </div>
 
     <div class="grp">18 העיריות — לפי המספור במפה</div>
@@ -620,7 +654,7 @@ function renderMun(num) {
       <span class="row-body">
         <span class="row-t">${html(f.he || f.pt)} <span class="lat">(${html(bare(f.pt))})</span>${flag}</span>
         <span class="row-d">${desc ? html(desc) : '<span class="muted">' + MISSING + ' — אין תיאור לרובע הזו</span>'}</span>
-        <span class="row-m"><span class="num">${nf(f.pop2021)}</span> תושבים (2021) ·
+        <span class="row-m"><span class="num">${shown(f.pop2021, 0, 100)}</span> תושבים (2021) ·
           <span class="num">${nf(f.area_km2, 2)}</span> קמ״ר ·
           <span class="num">${nf(f.density)}</span> לקמ״ר${q ? ' · <span class="num">' + q.bairros.length + '</span> שכונות' : ''}
           · ${code}</span>
@@ -639,9 +673,9 @@ function renderMun(num) {
             ? ' · קוד רשמי <span class="lat num">' + html(m.dicofre) + '</span>' : ''}</p></div>
       </div>
       <div class="stats">
-        ${stat('תושבים', m.pop2021, '', 0, 'municipio.pop2021')}
-        ${stat('שטח', m.area_km2, 'קמ״ר', 2, 'municipio.area_km2')}
-        ${stat('צפיפות', m.density, 'לקמ״ר', 0, 'municipio.density')}
+        ${stat('תושבים', m.pop2021, '', 0, 'municipio.pop2021', 100)}
+        ${stat('שטח', m.area_km2, 'קמ״ר', 1, 'municipio.area_km2')}
+        ${stat('צפיפות', m.density, 'לקמ״ר', 0, 'municipio.density', 100)}
         ${stat('מפורטו', m.dist_porto_km, 'ק״מ', 1, 'municipio.dist_porto_km')}
       </div>
       <dl class="kv">${profile}
@@ -1342,9 +1376,9 @@ function renderZone(key) {
         עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של
         היחידה הזו.</p>` : ''}
       <div class="stats">
-        ${stat('תושבים', f.pop2021, '', 0, 'freguesia.pop2021')}
-        ${stat('שטח', f.area_km2, 'קמ״ר', 2, 'freguesia.area_km2')}
-        ${stat('צפיפות', f.density, 'לקמ״ר', 0, 'freguesia.density')}
+        ${stat('תושבים', f.pop2021, '', 0, 'freguesia.pop2021', 100)}
+        ${stat('שטח', f.area_km2, 'קמ״ר', 1, 'freguesia.area_km2')}
+        ${stat('צפיפות', f.density, 'לקמ״ר', 0, 'freguesia.density', 100)}
       </div>
       ${z.desc ? `<p class="lead">${html(z.desc)}</p>` : ''}
       ${f.note ? `<p class="${z.desc ? 'sub' : 'lead'}">${html(f.note)}</p>` : ''}
@@ -1839,10 +1873,12 @@ function jump(spec) {
 }
 
 /* ------------------------------------------------------ sources and info --- */
-function showSource(key) {
+function showSource(key, exact) {
   const f = D.sources.fields[key];
   if (!f) return;
   openPanel('source', f.label_he || key, `
+    ${exact ? `<p>הערך המדויק: <b class="num">${html(exact)}</b>
+      <span class="note">— המספר במסך מעוגל כדי להיקרא, וזה מה שהמקור מפרסם.</span></p>` : ''}
     <p class="note"><code>${html(key)}</code></p>
     ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
     <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
@@ -1956,8 +1992,9 @@ function renderInfo() {
     </div>
     <p class="note">להבדל הזה יש משמעות מעשית: הוא קובע אם עירייה נמצאת בתוך
       מערכת הכרטוס והמטרו של פורטו, לאן מגיעים כספי הפיתוח האירופיים, ובאיזו
-      יחידה INE מפרסם נתונים. שלוש החגורות שבמסך המחוז מארגנות את אותן 18
-      העיריות לפי מרחק ואופי, ולכן אינן חופפות לחלוקה הזאת.</p>
+      יחידה INE מפרסם נתונים. זו גם החלוקה שמסך המחוז מצייר — עד גרסה 1.8 הוא
+      צייר שלוש חגורות לפי מרחק ואופי, שהיו קריאה של המסמך המקורי ולא חלוקה
+      רשמית.</p>
 
     <h2>מה יש כאן</h2>
     <p>המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני.
@@ -2058,7 +2095,7 @@ function wire() {
   // one delegated handler for the whole text half
   $('#doc').addEventListener('click', e => {
     const src = e.target.closest('[data-src]');
-    if (src) { showSource(src.dataset.src); return; }
+    if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
     const cat = e.target.closest('[data-cat]');
     if (cat) {
       const c = cat.dataset.cat;

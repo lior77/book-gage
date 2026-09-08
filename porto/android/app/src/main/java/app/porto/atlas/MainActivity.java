@@ -1,11 +1,13 @@
 package app.porto.atlas;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.GeolocationPermissions;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -32,7 +34,11 @@ import java.util.Map;
  *     behave as they do on any website.
  *  2. Ask Android for the location permission and pass the answer through to
  *     the page.
- *  3. Make the system back button walk up the app's own levels instead of
+ *  3. Open a file picker.  A WebView ignores <input type="file"> entirely
+ *     unless onShowFileChooser is implemented — the control renders and does
+ *     nothing when tapped, with no error anywhere.  That is why attaching a
+ *     photo worked in a browser and not in the app.
+ *  4. Make the system back button walk up the app's own levels instead of
  *     closing it.
  */
 public class MainActivity extends Activity {
@@ -41,11 +47,17 @@ public class MainActivity extends Activity {
     private static final String ORIGIN = "https://" + HOST + "/";
     private static final String START = ORIGIN + "index.html";
     private static final int REQ_LOCATION = 1;
+    private static final int REQ_FIRST_RUN = 2;
+    private static final int REQ_FILE = 3;
+    private static final String PREFS = "porto";
+    private static final String ASKED = "asked-permissions";
 
     private WebView web;
     /** Set while the page is waiting to hear whether it may have a position. */
     private String pendingOrigin;
     private GeolocationPermissions.Callback pendingCallback;
+    /** Set while the system file picker is open on the page's behalf. */
+    private ValueCallback<Uri[]> pendingFiles;
 
     private static final Map<String, String> MIME = new HashMap<>();
     static {
@@ -101,6 +113,35 @@ public class MainActivity extends Activity {
         });
 
         web.setWebChromeClient(new WebChromeClient() {
+            /**
+             * Without this a file input is inert: the WebView shows the control
+             * and swallows the tap.  createIntent() builds the picker Android
+             * already knows how to show for the input's own `accept`, which for
+             * a photo is the gallery, and on most phones the camera alongside
+             * it.  Going through the system picker is also why the app needs no
+             * storage permission: the user chooses one file and hands over that
+             * file, rather than the app being given the whole library.
+             */
+            @Override
+            public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb,
+                                             FileChooserParams params) {
+                if (pendingFiles != null) pendingFiles.onReceiveValue(null);
+                pendingFiles = cb;
+                try {
+                    Intent pick = params.createIntent();
+                    pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    startActivityForResult(
+                        Intent.createChooser(pick, getString(R.string.pick_photo)), REQ_FILE);
+                    return true;
+                } catch (Exception e) {
+                    // no app on the phone can answer the intent; tell the page
+                    // nothing was chosen rather than leaving it waiting forever
+                    pendingFiles = null;
+                    cb.onReceiveValue(null);
+                    return false;
+                }
+            }
+
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin,
                                                            GeolocationPermissions.Callback cb) {
@@ -122,6 +163,42 @@ public class MainActivity extends Activity {
 
         if (state != null) web.restoreState(state);
         else web.loadUrl(START);
+
+        askOnce();
+    }
+
+    /**
+     * Ask for the permission the app needs, once, on the first run.
+     *
+     * Only location is a permission here.  Reading a photo is not: the file
+     * picker above returns a single file the user chose, which Android grants
+     * without any storage permission at all — and asking for one the app does
+     * not need would be worse than not asking, because it would be a request
+     * for the whole photo library to do the job of one picture.
+     *
+     * Refusing is not fatal to anything: the map, the data and the points all
+     * work without a position, and the button says so when it is denied.
+     */
+    private void askOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
+        android.content.SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (p.getBoolean(ASKED, false) || hasLocation()) return;
+        p.edit().putBoolean(ASKED, true).apply();
+        requestPermissions(new String[]{
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_FIRST_RUN);
+    }
+
+    @Override
+    protected void onActivityResult(int code, int result, Intent data) {
+        super.onActivityResult(code, result, data);
+        if (code != REQ_FILE) return;
+        if (pendingFiles == null) return;
+        // A cancelled picker still has to answer, or the input stays stuck and
+        // the next tap on it does nothing.
+        pendingFiles.onReceiveValue(result == RESULT_OK
+            ? WebChromeClient.FileChooserParams.parseResult(result, data) : null);
+        pendingFiles = null;
     }
 
     private boolean hasLocation() {
@@ -131,6 +208,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int code, String[] perms, int[] granted) {
+        if (code == REQ_FIRST_RUN) return;      // nothing is waiting on the answer
         if (code != REQ_LOCATION || pendingCallback == null) return;
         boolean ok = false;
         for (int g : granted) if (g == PackageManager.PERMISSION_GRANTED) ok = true;

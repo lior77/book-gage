@@ -169,21 +169,40 @@ FREG2 = {
 PENDING2 = {13: 12, 14: 15, 15: 20, 16: 26, 17: 16, 18: 14}
 
 BELTS = [
- ("#1B4F8C", "Urban core", "החגורה העירונית", [1, 2, 3, 4, 5, 6],
-  "Porto and the five municipalities that ring it \u00b7 47 parishes \u00b7 1.10 m residents (2021) \u00b7 2.9\u201310.4 km from the centre",
-  "שש עיריות בליבת המטרופולין, כולן בטווח של פחות מ-11 ק\"מ ממרכז פורטו ומחוברות במטרו או ברכבת. כאן מרוכזת רוב "
-  "התעסוקה של הצפון, וכאן גם המחירים הגבוהים במחוז. ככל שמתרחקים מזרחה — לגונדומאר ולוולונגו — המחירים יורדים "
-  "ומופיעים בתי קרקע עם חלקה, בעוד שברצועת החוף במטוזיניוש ובפוז השוק כמעט השווה לזה של מרכז העיר."),
- ("#2E7D32", "Northern belt", "החגורה הצפונית", [7, 8, 9, 10, 13, 14, 15],
-  "Coastal towns and the Ave / Sousa industrial valleys \u00b7 21\u201342 km \u00b7 textiles, footwear and furniture",
-  "שבע עיריות המשתרעות מחוף האוקיינוס בצפון-מערב ועד עמקי התעשייה של האבה והסוזה במזרח. בחוף — וילה דו קונדה "
-  "ופובואה דה וארזים — נמצאים הנכסים מול הים הזולים במחוז, בחיבור מטרו לפורטו. בפנים הארץ הכלכלה נשענת על "
-  "טקסטיל, נעליים ורהיטים, האוכלוסייה צעירה יחסית, והנדל\"ן זול — אך אין תחבורה מסילתית ישירה."),
- ("#6A1B9A", "Eastern belt", "החגורה המזרחית", [11, 12, 16, 17, 18],
-  "The Tâmega and Douro valleys \u00b7 24\u201348 km \u00b7 wine country, granite and stone houses",
-  "חמש עיריות בעמקי הטמגה והדואורו, במרחק 24 עד 48 ק\"מ מפורטו. זהו האזור הירוק, ההררי והזול ביותר במחוז: "
-  "כרמי יין ורדה, בתי אבן וגרניט, וחלקות קרקע גדולות במחירים שאין להם מקבילה בחגורה העירונית. פארדש ופנאפיאל "
-  "עדיין תעשייתיות ומחוברות היטב בכביש ובמסילה; אמרנטה, מרקו ובאיאו כבר כפריות ממש, עם אוכלוסייה מתכווצת."),
+ # NUTS III, the official statistical subdivision, and the one the district is
+ # published and administered by.  It replaces the three belts the source
+ # document drew by distance and character: those were that document's own
+ # reading — useful, but invented — and these two are neither.
+ #
+ # Both regions are bigger than what is drawn here.  \u00c1rea Metropolitana
+ # do Porto has 17 municipalities and T\u00e2mega e Sousa 11; the rest sit in the
+ # Aveiro and Viseu districts and are outside this atlas.  The Hebrew text says
+ # so, because showing 11 of 17 and calling it the region is a lie of omission.
+ #
+ # The figures are this project's own, summed from data/processed at build
+ # time and checked before they were written down: 1 437 778 residents on
+ # 1 158.8 km2 against 347 627 on 1 172.8 km2 — near-identical area, four times
+ # the population.
+ ('#1B4F8C', '\u00c1rea Metropolitana do Porto', 'האזור המטרופוליטני של פורטו',
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  'NUTS III 11A \u00b7 11 of the district\u2019s 18 municipalities \u00b7 112 parishes '
+  '\u00b7 1.44 m residents on 1 159 km\u00b2 \u00b7 0\u201329 km from the centre',
+  'אחת-עשרה מתוך שמונה-עשרה עיריות המחוז — החלק של האזור המטרופוליטני של פורטו '
+  'שנמצא בתוך מחוז 13. כאן חיים 1,437,778 תושבים על 1,159 קמ״ר, צפיפות של כ-1,241 '
+  'לקמ״ר: פי ארבעה מהאזור השני, על שטח כמעט זהה. זהו אזור התחבורה המסילתית — מטרו '
+  'ורכבת פרוורית — ובו מרוכזת רוב התעסוקה של הצפון ורוב המחירים הגבוהים במחוז. '
+  'שש עיריות נוספות של האזור, ובהן אשפינייו וסנטה מריה דה פיירה, יושבות במחוז '
+  'אוויירו ואינן באפליקציה הזאת.'),
+ ('#2E7D32', 'T\u00e2mega e Sousa', 'טאמגה אה סוזה',
+  [12, 13, 14, 15, 16, 17, 18],
+  'NUTS III 11C \u00b7 7 of the district\u2019s 18 municipalities \u00b7 131 parishes '
+  '\u00b7 348 000 residents on 1 173 km\u00b2 \u00b7 24\u201348 km from the centre',
+  'שבע מתוך שמונה-עשרה עיריות המחוז — החלק של אזור טאמגה אה סוזה שנמצא בתוך מחוז 13. '
+  '347,627 תושבים על 1,173 קמ״ר, כלומר שטח כמעט זהה לאזור המטרופוליטני ורבע '
+  'מהאוכלוסייה: צפיפות של כ-296 לקמ״ר. יש בו יותר רובעים על פחות אנשים — 131 מול '
+  '112 — כלומר יחידות קטנות וכפריות. אין כאן מטרו, והחיבור לפורטו הוא בכביש ובקווי '
+  'הרכבת של הדואורו ושל גימאראיש. ארבע עיריות נוספות של האזור יושבות במחוזות '
+  'אוויירו וויזאו ואינן באפליקציה הזאת.'),
 ]
 
 TRANSPORT = {

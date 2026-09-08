@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">פורטולנד</string>
+    <!-- the title over the system picker when a point is given a photo -->
+    <string name="pick_photo">בחירת תמונה לנקודה</string>
 </resources>
