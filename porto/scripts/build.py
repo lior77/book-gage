@@ -308,22 +308,113 @@ def number_parishes(freguesias):
             f.pop("_order", None)
 
 
-def belt_outlines(belts, mun_geom, name_of):
-    """One outline per belt, as the union of its municipalities.
+# --- the level-1 outlines: two NUTS III regions and the district ------------
+#
+# The regions are drawn whole, not clipped to the district: Área Metropolitana
+# do Porto runs south into Aveiro and Tâmega e Sousa east into Viseu, and a
+# line that stopped at the district edge would be describing something that
+# does not exist.  So the geometry comes from CAOP's own NUTS III layer rather
+# than from a union of the eighteen municipalities this atlas holds.
+#
+# Where the two regions meet they share one border, and a single line there
+# would have to belong to one of them.  It is split instead: each region's own
+# stretch stays on the true boundary, and the shared stretch is drawn twice,
+# each copy stepped into its own region so the two run side by side.  The
+# district outline gets the same treatment against both — where it follows a
+# region border it steps inside, so all three lines stay legible at once.
+#
+# THE OFFSET IS IN METRES, WHICH IS A COMPROMISE.  A line drawn a fixed number
+# of metres inside another separates by a number of pixels that depends on the
+# zoom: OFFSET_M is chosen to read as about one line-width at the zoom level 1
+# opens at, and the gap widens if you zoom in.  Doing it properly means
+# recomputing the offset in screen space on every zoom, which is a lot of
+# machinery for a line; this is the honest version of the cheap answer.
+NUTS3_SRC = "caop_nuts3.geojson"
+OFFSET_M = 150.0        # each region steps this far in along the shared border
+DISTRICT_M = 420.0      # the district steps this far in along a region border
+CORRIDOR_M = 600.0      # how close counts as "the same border"
+TOUCH_M = 60.0          # tolerance for two boundaries being the same line
+SIMPLIFY_M = 20.0       # coordinate thinning, in metres
 
-    The PDF draws these as a thick coloured line around each group; computing
-    the union keeps the line on the real boundary instead of tracing it.
-    """
+
+def _to_metres():
+    """CRS84 -> EPSG:3763 (PT-TM06), the projection CAOP itself is published in."""
+    from pyproj import Transformer
+    fwd = Transformer.from_crs("EPSG:4326", "EPSG:3763", always_xy=True)
+    inv = Transformer.from_crs("EPSG:3763", "EPSG:4326", always_xy=True)
+    return fwd, inv
+
+
+def _project(geom, tr):
+    from shapely.ops import transform
+    return transform(lambda x, y, z=None: tr.transform(x, y), geom)
+
+
+def belt_outlines(belts, mun_geom, name_of):
+    from shapely.geometry import mapping
     from shapely.ops import unary_union
+    fwd, inv = _to_metres()
+
+    path = os.path.join(RAW, "dgt", NUTS3_SRC)
+    with open(path, encoding="utf-8") as fh:
+        src = json.load(fh)
+    by_code = {f["properties"]["codigo"]: shape(f["geometry"]).buffer(0)
+               for f in src["features"]}
+
+    # belts are listed metropolitan-first; CAOP codes them 11A and 11C
+    codes = ["11A", "11C"]
+    if set(codes) - set(by_code):
+        raise SystemExit("caop_nuts3.geojson is missing %s — run "
+                         "scripts/fetch_dgt_ogcapi.py caop_nuts3"
+                         % ", ".join(sorted(set(codes) - set(by_code))))
+
+    regions = [_project(by_code[c], fwd) for c in codes]
+    district = _project(
+        unary_union([mun_geom[name_of[n]] for n in range(1, 19)]).buffer(0), fwd)
+
     fc = {"type": "FeatureCollection", "features": []}
-    for b in belts:
-        merged = unary_union([mun_geom[name_of[n]] for n in b["nums"]]).buffer(0)
+
+    def add(geom, props):
+        # Simplified in metres, before projecting back: the full CAOP outline
+        # of two whole regions is 1.4 MB of coordinates, and this file has to
+        # be carried offline.  20 m is a third of a pixel at the zoom level 1
+        # opens at, and well under one at any zoom that shows a whole region.
+        # Not simplify() — that one buffers, which erases a line.
+        if geom.is_empty:
+            return
+        thin = geom.simplify(SIMPLIFY_M, preserve_topology=True)
+        if thin.is_empty:
+            thin = geom
         fc["features"].append({
-            "type": "Feature",
-            "properties": {"he": b["he"], "en": b["en"], "colour": b["colour"],
-                           "nums": b["nums"]},
-            "geometry": simplify(merged, 0.0004),
-        })
+            "type": "Feature", "properties": props,
+            "geometry": json.loads(json.dumps(mapping(_project(thin, inv))),
+                                   parse_float=lambda v: round(float(v), 5))})
+
+    # the border the two regions share, and a corridor around it
+    shared = regions[0].boundary.intersection(regions[1].buffer(TOUCH_M))
+    corridor = shared.buffer(CORRIDOR_M) if not shared.is_empty else None
+
+    for i, (belt, poly) in enumerate(zip(belts, regions)):
+        base = {"kind": "nuts3", "code": codes[i], "he": belt["he"],
+                "en": belt["en"], "colour": belt["colour"], "nums": belt["nums"]}
+        if corridor is None:
+            add(poly.boundary, dict(base, part="solo"))
+            continue
+        # its own stretch, full width, on the true boundary
+        add(poly.boundary.difference(corridor), dict(base, part="solo"))
+        # the shared stretch, stepped inside this region, half width
+        add(poly.buffer(-OFFSET_M).boundary.intersection(corridor),
+            dict(base, part="shared"))
+
+    # The district follows a region border for most of its length.  Where it
+    # does, it steps inside; where it does not — the coast, and the borders
+    # with Aveiro, Viseu, Vila Real and Braga — it stays where it is.
+    near = unary_union([r.boundary for r in regions]).buffer(TOUCH_M)
+    d_line = district.boundary
+    add(d_line.difference(near), {"kind": "district", "part": "solo"})
+    add(district.buffer(-DISTRICT_M).boundary.intersection(near),
+        {"kind": "district", "part": "inset"})
+
     return fc
 
 

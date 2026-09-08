@@ -54,6 +54,9 @@ LAYERS = {
     "caop_freguesias": (
         "freguesias", {"distrito_ilha": "Porto"},
         "CAOP2025 — the 275 freguesias of Porto district, with DICOFRE"),
+    "caop_nuts3": (
+        "nuts3", {"codigo": "11A"},
+        "CAOP2025 NUTS III — one region whole, district borders ignored"),
     "caop_municipios": (
         "municipios", {"distrito_ilha": "Porto"},
         "CAOP2025 — the 18 municipalities of Porto district"),

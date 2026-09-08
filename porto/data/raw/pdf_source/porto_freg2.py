@@ -183,7 +183,7 @@ BELTS = [
  # time and checked before they were written down: 1 437 778 residents on
  # 1 158.8 km2 against 347 627 on 1 172.8 km2 — near-identical area, four times
  # the population.
- ('#1B4F8C', '\u00c1rea Metropolitana do Porto', 'האזור המטרופוליטני של פורטו',
+ ('#20B2AA', '\u00c1rea Metropolitana do Porto', 'האזור המטרופוליטני של פורטו',
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
   'NUTS III 11A \u00b7 11 of the district\u2019s 18 municipalities \u00b7 112 parishes '
   '\u00b7 1.44 m residents on 1 159 km\u00b2 \u00b7 0\u201329 km from the centre',
@@ -193,7 +193,7 @@ BELTS = [
   'ורכבת פרוורית — ובו מרוכזת רוב התעסוקה של הצפון ורוב המחירים הגבוהים במחוז. '
   'שש עיריות נוספות של האזור, ובהן אשפינייו וסנטה מריה דה פיירה, יושבות במחוז '
   'אוויירו ואינן באפליקציה הזאת.'),
- ('#2E7D32', 'T\u00e2mega e Sousa', 'טאמגה אה סוזה',
+ ('#87CEFA', 'T\u00e2mega e Sousa', 'טאמגה אה סוזה',
   [12, 13, 14, 15, 16, 17, 18],
   'NUTS III 11C \u00b7 7 of the district\u2019s 18 municipalities \u00b7 131 parishes '
   '\u00b7 348 000 residents on 1 173 km\u00b2 \u00b7 24\u201348 km from the centre',

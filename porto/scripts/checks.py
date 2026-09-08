@@ -377,10 +377,36 @@ def main():
             # no coordinate is fine; a coordinate with no confidence is not
             if b.get("ll") and not b.get("confidence"):
                 fail("bairro %s has a point but no confidence" % b["en"])
+    # ---- the level-1 outlines ---------------------------------------------
+    # Two NUTS III regions and the district, each split into the stretch that
+    # is its own and the stretch it shares with a neighbour.  The split is
+    # what makes three lines readable where they run together, so it is worth
+    # checking that both halves of it survived the build.
     belts = load("boundaries_belts.geojson")["features"]
-    covered = sorted(n for ft in belts for n in ft["properties"]["nums"])
+    nuts = [f for f in belts if f["properties"].get("kind") == "nuts3"]
+    dist = [f for f in belts if f["properties"].get("kind") == "district"]
+    codes = sorted({f["properties"]["code"] for f in nuts})
+    if codes != ["11A", "11C"]:
+        fail("expected NUTS III 11A and 11C, got %s" % codes)
+    covered = sorted({n for f in nuts for n in f["properties"]["nums"]})
     if covered != list(range(1, 19)):
-        fail("the belt outlines cover %s, not all 18 municipalities" % covered)
+        fail("the NUTS III regions cover %s, not all 18 municipalities" % covered)
+    for code in codes:
+        parts = {f["properties"]["part"] for f in nuts
+                 if f["properties"]["code"] == code}
+        if "solo" not in parts:
+            fail("NUTS III %s has no line of its own" % code)
+        if "shared" not in parts:
+            fail("NUTS III %s has no stepped-in line along the shared border, "
+                 "so the two regions would draw one line on top of the other"
+                 % code)
+    if {f["properties"]["part"] for f in dist} != {"solo", "inset"}:
+        fail("the district outline is not split into solo and inset")
+    for f in belts:
+        if f["geometry"]["type"] not in ("LineString", "MultiLineString"):
+            fail("outline %s/%s is a %s; these are lines, not areas"
+                 % (f["properties"].get("kind"), f["properties"].get("part"),
+                    f["geometry"]["type"]))
 
     # ---- city --------------------------------------------------------------
     if len(city["quarters"]) != 7:

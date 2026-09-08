@@ -270,6 +270,13 @@ function initNature() {
   map.getPane('nature').style.zIndex = 450;
   map.getPane('nature').style.pointerEvents = 'none';
 
+  // The district line sits above the region lines: where the two follow the
+  // same border the district is the one that stays whole, and the regions
+  // step aside for it rather than the other way round.
+  map.createPane('district');
+  map.getPane('district').style.zIndex = 460;
+  map.getPane('district').style.pointerEvents = 'none';
+
   NAT.water = L.geoJSON(D.bW, {
     pane: 'nature', interactive: false,
     style: ft => /LineString/.test(ft.geometry.type)
@@ -450,7 +457,7 @@ function drawDistrict() {
   clearMap();
   LG.mun = L.geoJSON(D.bM, {
     style: ft => ({
-      color: stroke(), weight: 1, opacity: .9,
+      color: stroke(), weight: 1.5, opacity: .9,
       fillColor: (D.munByNum.get(ft.properties.num) || {}).fill || '#ddd',
       // solid, and a switch that empties the fill without losing the outline
       fillOpacity: S.muncol ? 1 : 0,
@@ -467,12 +474,29 @@ function drawDistrict() {
     },
   }).addTo(map);
 
-  // One outline per NUTS III region, in its own colour, over the municipality
-  // fills.  The line is the official boundary between the metropolitan area
-  // and Tâmega e Sousa, not a grouping the app invented.
+  /* Three lines that mostly run together, drawn so all three can be read.
+     Each NUTS III region is whole — they reach past the district into Aveiro
+     and Viseu, and the line says so — at weight 3 along its own border. Where
+     the two regions share a border they would otherwise be one line belonging
+     to nobody, so build.py splits it and steps each copy into its own region;
+     those halves draw at 1.5 and sit side by side. The district does the same
+     against both, and takes the pane above them. */
   LG.belts = L.geoJSON(D.bB, {
     interactive: false,
-    style: ft => ({ color: ft.properties.colour, weight: 3.5, opacity: .95, fill: false, lineJoin: 'round' }),
+    style: ft => {
+      const p = ft.properties;
+      if (p.kind === 'district') {
+        return { pane: 'district', color: stroke(), weight: 3, opacity: .95,
+                 fill: false, lineJoin: 'round', lineCap: 'round' };
+      }
+      return { color: p.colour, weight: p.part === 'shared' ? 1.5 : 3,
+               opacity: .95, fill: false, lineJoin: 'round', lineCap: 'round' };
+    },
+    // Leaflet reads `pane` from the layer options, not from the style, so the
+    // district features have to be given theirs as they are created
+    onEachFeature: (ft, l) => {
+      if (ft.properties.kind === 'district' && l.options) l.options.pane = 'district';
+    },
   }).addTo(map);
 
   LG.labels = L.layerGroup(D.mun.map(m => {
@@ -604,12 +628,12 @@ function drawMun(num) {
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
       features: D.bM.features.filter(ft => ft.properties.num === num) },
     { interactive: false, style: { color: isDark() ? '#e8ecf3' : '#101010',
-      weight: 3, opacity: .8, fill: false } }).addTo(map);
+      weight: 2.5, opacity: .8, fill: false } }).addTo(map);
 
   LG.fre = L.geoJSON(freFeatures(num), {
     style: ft => {
       const f = freOfFeature(num, ft.properties);
-      return { color: edge(), weight: 1.6, opacity: .95,
+      return { color: edge(), weight: 1.5, opacity: .95,
         fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd', fillOpacity: .78 };
     },
     onEachFeature: (ft, l) => {
@@ -1292,7 +1316,7 @@ function drawZone(key) {
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
       features: D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === key) },
     { interactive: false,
-      style: { color: edge(), weight: 2.4, opacity: .95,
+      style: { color: edge(), weight: 2, opacity: .95,
                fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
 
   // Locality letters — A, B, C… at the point OSM gives for the place.
@@ -1627,7 +1651,7 @@ function applyHi(from) {
   // the map half
   if (LG.fre) LG.fre.eachLayer(l => {
     const on = hi && hi.kind === 'fre' && l.feature.__key === hi.id;
-    l.setStyle({ weight: on ? 3.5 : 1.6, color: on ? '#b7791f' : edge(), fillOpacity: on ? .92 : .78 });
+    l.setStyle({ weight: on ? 3 : 1.5, color: on ? '#b7791f' : edge(), fillOpacity: on ? .92 : .78 });
     if (on) l.bringToFront();
   });
   if (LG.labels) LG.labels.eachLayer(l => {
