@@ -32,6 +32,12 @@ const S = {
   muncol: true,        // the 18 municipality colours (the outlines stay either way)
   mine: true,          // draw the points the user added
   photos: true,        // draw the ones that carry a photo (their own layer)
+  // The four boundary layers.  Each is drawn at every level and switched on
+  // its own; the level decides which of them are black and which recede.
+  lnRegion: true,      // the two NUTS III regions
+  lnDistrict: true,    // Porto district
+  lnMun: true,         // the 18 municipalities
+  lnFre: true,         // the 243 parishes
   adding: false,       // waiting for a tap on the map to place a new point
 };
 const MINE_KEY = 'porto-mine-v1';
@@ -61,6 +67,78 @@ const CAT_COLOUR = {
   civic: '#455a64', landmark: '#101010', green: '#2e7d32',
 };
 const MINE_COLOUR = '#00897b';
+
+/* ------------------------------------------------------------ boundaries --- */
+/* Four layers, one per kind of border, each drawn at every level and switched
+   on its own.  What changes with the level is not which lines exist but which
+   of them are being read: the ones that belong to the level are black, and the
+   rest drop to half black so they stay available as context without competing
+   with what is being looked at.
+
+   Three widths, and only three, so the hierarchy is the same everywhere: a
+   region or the district is 3.2, a municipality 2.1, a parish 1.  A boundary
+   does not change weight because of what is selected — selection is a fill and
+   a highlight colour, which is a different question from what kind of border
+   this is. */
+const LINE_W = { region: 3.2, district: 3.2, mun: 2.1, fre: 1 };
+const LINE_BLACK = {
+  district: ['district', 'mun'],   // level 1: the district and its municipalities
+  mun: ['mun', 'fre'],             // level 2: the municipality and its parishes
+  zone: ['fre'],                   // level 3: the parish
+};
+const LINE_ON = { region: 'lnRegion', district: 'lnDistrict',
+                  mun: 'lnMun', fre: 'lnFre' };
+const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מחוז פורטו',
+                  mun: 'גבולות העיריות', fre: 'גבולות הרובעים' };
+
+/* Black, and black at 50% for the rest — a grey of its own would be a third
+   colour to keep in step, and half of the line is exactly what "recedes" means.
+
+   In the dark theme it inverts.  "Black" there is a line on a near-black map,
+   which is not a quiet line but an absent one; what was asked for is the
+   strongest contrast the background allows, and that flips with the
+   background.  The same 50% then does the same job. */
+const lineColour = kind => {
+  const own = (LINE_BLACK[S.level] || []).indexOf(kind) >= 0;
+  return isDark()
+    ? (own ? '#ffffff' : 'rgba(255,255,255,.5)')
+    : (own ? '#000000' : 'rgba(0,0,0,.5)');
+};
+
+/* Drawn after the filled shapes of whichever level is on screen, so a boundary
+   is never buried under a fill.  The fills carry no stroke of their own any
+   more — every line on the map comes from here. */
+function drawLines() {
+  ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
+    if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; }
+  });
+  const style = kind => ({ color: lineColour(kind), weight: LINE_W[kind],
+    opacity: .95, fill: false, lineJoin: 'round', lineCap: 'round' });
+
+  if (S.lnFre) {
+    LG.lnFre = L.geoJSON(D.bF, { interactive: false, style: () => style('fre') })
+      .addTo(map);
+  }
+  if (S.lnMun) {
+    LG.lnMun = L.geoJSON(D.bM, { interactive: false, style: () => style('mun') })
+      .addTo(map);
+  }
+  // The regions and the district share one file; each feature says which it is.
+  // The district goes in the pane above, so where the three follow the same
+  // border the district is the one that stays whole.
+  const pick = kind => ({ type: 'FeatureCollection',
+    features: D.bB.features.filter(ft => (ft.properties.kind === 'nuts3'
+      ? 'region' : 'district') === kind) });
+  if (S.lnRegion) {
+    LG.lnRegion = L.geoJSON(pick('region'), {
+      interactive: false, style: () => style('region') }).addTo(map);
+  }
+  if (S.lnDistrict) {
+    LG.lnDistrict = L.geoJSON(pick('district'), {
+      pane: 'district', interactive: false,
+      style: () => style('district') }).addTo(map);
+  }
+}
 
 function isDark() {
   const t = document.documentElement.dataset.theme;
@@ -218,10 +296,8 @@ let map, tileLayer;
 const LG = {};                      // the layers currently on the map
 let fitBounds = null;               // what the "fit" button goes back to
 
-function stroke() { return isDark() ? 'rgba(232,236,243,.55)' : 'rgba(20,25,34,.45)'; }
 // the contour that says "this is the municipality you picked": solid, not the
 // translucent line every other boundary uses, or it disappears among them
-function edge() { return isDark() ? '#f2f5fa' : '#10151f'; }
 
 function initMap() {
   map = L.map('map', {
@@ -457,7 +533,8 @@ function drawDistrict() {
   clearMap();
   LG.mun = L.geoJSON(D.bM, {
     style: ft => ({
-      color: stroke(), weight: 1.5, opacity: .9,
+      // no stroke: every boundary on the map is drawn by drawLines()
+      weight: 0, opacity: .9,
       fillColor: (D.munByNum.get(ft.properties.num) || {}).fill || '#ddd',
       // solid, and a switch that empties the fill without losing the outline
       fillOpacity: S.muncol ? 1 : 0,
@@ -474,30 +551,7 @@ function drawDistrict() {
     },
   }).addTo(map);
 
-  /* Three lines that mostly run together, drawn so all three can be read.
-     Each NUTS III region is whole — they reach past the district into Aveiro
-     and Viseu, and the line says so — at weight 3 along its own border. Where
-     the two regions share a border they would otherwise be one line belonging
-     to nobody, so build.py splits it and steps each copy into its own region;
-     those halves draw at 1.5 and sit side by side. The district does the same
-     against both, and takes the pane above them. */
-  LG.belts = L.geoJSON(D.bB, {
-    interactive: false,
-    style: ft => {
-      const p = ft.properties;
-      if (p.kind === 'district') {
-        return { pane: 'district', color: stroke(), weight: 3, opacity: .95,
-                 fill: false, lineJoin: 'round', lineCap: 'round' };
-      }
-      return { color: p.colour, weight: p.part === 'shared' ? 1.5 : 3,
-               opacity: .95, fill: false, lineJoin: 'round', lineCap: 'round' };
-    },
-    // Leaflet reads `pane` from the layer options, not from the style, so the
-    // district features have to be given theirs as they are created
-    onEachFeature: (ft, l) => {
-      if (ft.properties.kind === 'district' && l.options) l.options.pane = 'district';
-    },
-  }).addTo(map);
+  drawLines();
 
   LG.labels = L.layerGroup(D.mun.map(m => {
     const mk = L.marker(latlng(m.center), { icon: numIcon(munCode(m)), keyboard: false,
@@ -625,15 +679,10 @@ function drawMun(num) {
   const rows = D.freByMun.get(num) || [];
   const colourOf = new Map(rows.map(f => [freNum(f), f.colour]));
 
-  LG.edge = L.geoJSON({ type: 'FeatureCollection',
-      features: D.bM.features.filter(ft => ft.properties.num === num) },
-    { interactive: false, style: { color: isDark() ? '#e8ecf3' : '#101010',
-      weight: 2.5, opacity: .8, fill: false } }).addTo(map);
-
   LG.fre = L.geoJSON(freFeatures(num), {
     style: ft => {
       const f = freOfFeature(num, ft.properties);
-      return { color: edge(), weight: 1.5, opacity: .95,
+      return { weight: 0, opacity: .95,
         fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd', fillOpacity: .78 };
     },
     onEachFeature: (ft, l) => {
@@ -645,6 +694,8 @@ function drawMun(num) {
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
+
+  drawLines();
 
   LG.labels = L.layerGroup(rows.map(f => {
     const mk = L.marker(latlng(f.center), { icon: numIcon(freNum(f)), keyboard: false,
@@ -1316,8 +1367,9 @@ function drawZone(key) {
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
       features: D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === key) },
     { interactive: false,
-      style: { color: edge(), weight: 2, opacity: .95,
-               fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
+      style: { weight: 0, fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
+
+  drawLines();
 
   // Locality letters — A, B, C… at the point OSM gives for the place.
   LG.letters = L.layerGroup(!S.letters ? [] : z.bairros.filter(b => b.ll).map(b => {
@@ -1543,6 +1595,14 @@ function renderLayers() {
         D.mine.filter(p => !p.photo).length) +
     row(S.photos, 'photos', 'נקודות עם תמונה', PHOTO_COLOUR, true,
         D.mine.filter(p => p.photo).length);
+
+  // Which of these are black and which are grey is the level's decision, not
+  // the user's; the switch is only whether the line is there at all.
+  h += '<h3>קווי גבול</h3>' +
+    ['region', 'district', 'mun', 'fre'].map(k =>
+      row(S[LINE_ON[k]], 'ln:' + k, LINE_HE[k], lineColour(k), true)).join('') +
+    '<p class="note" style="margin-block-start:6px">הקווים ששייכים לרמה שעל ' +
+    'המסך מוצגים בשחור, והשאר באפור.</p>';
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
@@ -1651,7 +1711,8 @@ function applyHi(from) {
   // the map half
   if (LG.fre) LG.fre.eachLayer(l => {
     const on = hi && hi.kind === 'fre' && l.feature.__key === hi.id;
-    l.setStyle({ weight: on ? 3 : 1.5, color: on ? '#b7791f' : edge(), fillOpacity: on ? .92 : .78 });
+    l.setStyle({ weight: on ? 3 : 0, color: '#b7791f', opacity: on ? 1 : 0,
+                 fillOpacity: on ? .92 : .78 });
     if (on) l.bringToFront();
   });
   if (LG.labels) LG.labels.eachLayer(l => {
@@ -1785,7 +1846,8 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view,
       letters: S.letters, mine: S.mine, photos: S.photos, water: S.water,
-      muncol: S.muncol,
+      muncol: S.muncol, lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
+      lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
   } catch (e) { /* private mode */ }
@@ -1797,6 +1859,9 @@ function restore() {
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
     if (typeof o.photos === 'boolean') S.photos = o.photos;
+    ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
+      if (typeof o[k] === 'boolean') S[k] = o[k];
+    });
     if (typeof o.water === 'boolean') S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
@@ -2087,6 +2152,11 @@ function wire() {
     else if (k === 'muncol') { S.muncol = !S.muncol; if (S.level === 'district') drawDistrict(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
     else if (k === 'photos') { S.photos = !S.photos; drawMine(); }
+    else if (k.startsWith('ln:')) {
+      const key = LINE_ON[k.slice(3)];
+      S[key] = !S[key];
+      drawLines();
+    }
     else if (k.startsWith('cat:')) {
       const c = k.slice(4);
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
