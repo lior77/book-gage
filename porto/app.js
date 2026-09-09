@@ -336,7 +336,8 @@ let fitBounds = null;               // what the "fit" button goes back to
 function initMap() {
   map = L.map('map', {
     // Every gesture stays on: the map can be panned, pinched and zoomed
-    // freely inside its half, and the divider changes how big that half is.
+    // freely inside its half.  How big that half is, is not a gesture — the
+    // layout button decides it and nothing else does.
     // no +/- buttons: pinch, double tap and the fit control cover it, and the
     // corner they took is worth more to the map than to a duplicate gesture
     zoomControl: false, attributionControl: false,
@@ -365,7 +366,8 @@ function initMap() {
   });
   if (S.tiles) tileLayer.addTo(map);
 
-  // The map half changes size when the divider moves and when the phone turns.
+  // The map half changes size when the layout button switches views and when
+  // the phone turns.
   new ResizeObserver(() => {
     if (map._rafSize) cancelAnimationFrame(map._rafSize);
     map._rafSize = requestAnimationFrame(() => map.invalidateSize({ animate: false }));
