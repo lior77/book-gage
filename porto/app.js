@@ -26,7 +26,7 @@ const S = {
   cats: null,          // level 3: which landmark categories are shown
   hi: null,            // { kind, id } — the record highlighted on both halves
   view: 'split',       // split | map | text — which half fills the screen
-  tools: true,         // is the map's tool column showing
+  tools: false,        // is the map's tool strip showing — closed until asked for
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: true,         // rivers and lakes
@@ -1884,36 +1884,19 @@ function applyView() {
   // but only after a frame, and the flash is visible
   if (map) requestAnimationFrame(() => map.invalidateSize({ animate: false }));
 }
-/* The menu button in the map's top corner.  One tap puts the column away or
-   brings it back; two cycle the layout, which is the same thing the layout
-   button in the column does — and has to be reachable from the button that can
-   hide it, or a put-away column would take the layout with it.
-
-   Double-tap is detected from the clicks themselves rather than from a
-   `dblclick` listener, which phones fire unreliably and which competes with
-   double-tap-to-zoom.  The first tap acts immediately, so a single tap has no
-   lag; a second tap within the window toggles the column back on its way past,
-   leaving it as it started, and then cycles the layout.  The undo is the
-   double toggle, not a special case. */
-const DOUBLE_MS = 350;
-let menuLast = 0;
-
+/* The menu button in the map's top corner: one tap opens the strip, another
+   puts it away.  It starts away — the map is the thing being looked at, and a
+   column of controls over it is a cost the user should choose to pay. */
 function applyTools() {
   document.body.dataset.tools = S.tools ? 'on' : 'off';
+  const t = $('#tools');
+  if (t) t.hidden = !S.tools;
   const b = $('#menuBtn');
   if (!b) return;
   b.setAttribute('aria-expanded', String(S.tools));
-  b.setAttribute('title', (S.tools ? 'הסתרת הכלים' : 'הצגת הכלים')
-    + ' — לחיצה כפולה מחליפה את פריסת המסך');
+  b.setAttribute('title', S.tools ? 'הסתרת הכלים' : 'הצגת הכלים');
 }
-function menuTap() {
-  const now = Date.now();
-  const isSecond = now - menuLast < DOUBLE_MS;
-  menuLast = isSecond ? 0 : now;      // a third tap starts a new pair
-  S.tools = !S.tools;                 // the second tap undoes the first
-  applyTools();
-  if (isSecond) cycleView(); else save();
-}
+function menuTap() { S.tools = !S.tools; applyTools(); save(); }
 
 function cycleView() {
   // No toast confirming it: a message forces the split view back open, so the

@@ -13,6 +13,9 @@
   --accent:#15568f; --accent-ink:#ffffff;
   --warn:#8a5000; --warn-bg:#fdf3e3; --good:#1c7a4a; --bad:#b3261e;
   --miss:#8b95a4;
+  /* the tint the map's controls sit on: the neutrals' cool bias, taken far
+     enough from --card that the strip reads as its own surface */
+  --tool-bg:#c9d3e0; --tool-bg-2:#b7c4d6; --tool-line:#aab8cb;
   --hi:#fff3d6; --hi-line:#b7791f;
   --dot:#101010; --dot-ring:#ffffff;
   /* one shadow, spent only on things that genuinely float */
@@ -32,6 +35,7 @@
     --accent:#6ea8dd; --accent-ink:#0e1420;
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#7b8698;
+    --tool-bg:#243044; --tool-bg-2:#2e3c53; --tool-line:#3a4a63;
     --hi:#3a3312; --hi-line:#e0b040;
     --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
   }
@@ -41,6 +45,7 @@
     --accent:#6ea8dd; --accent-ink:#0e1420;
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#7b8698;
+    --tool-bg:#243044; --tool-bg-2:#2e3c53; --tool-line:#3a4a63;
     --hi:#3a3312; --hi-line:#e0b040;
     --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
 }
@@ -91,9 +96,14 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 /* It sits under the map rather than over it, so the map reaches the top edge
    of the screen and the phone's own status bar is the only thing above it.
    The safe-area inset moves with it, from the notch to the home indicator. */
+/* As tall as the line it holds and no taller: 4px over the text and 4px under
+   it.  The home-indicator inset is added below that rather than instead of it,
+   or on a phone with a gesture bar the trail would sit under the bar. */
 .top{flex:0 0 auto; display:flex; align-items:center; gap:var(--s1); z-index:30;
-     padding:var(--s2) var(--s2) calc(var(--safe-b) + var(--s2));
+     padding:4px var(--s2) calc(var(--safe-b) + 4px);
      background:var(--card); border-block-start:1px solid var(--line)}
+/* the crumb's own padding is what made the bar tall; the bar sets the height now */
+.top .crumb button,.top .crumb span{padding-block:0}
 .ico{display:grid; place-items:center; width:40px; height:40px;
      border-radius:var(--r-ctl); color:var(--ink-2); position:relative}
 .ico:active{background:var(--bg); color:var(--ink)}
@@ -152,11 +162,24 @@ body.is-dragging #map{pointer-events:none}
    this RTL document is the right — where a thumb on a phone already is.  The
    column starts one button plus a gap below the menu, so the two read as one
    stack rather than as two things that happen to be near each other. */
-.menu-btn{position:absolute; z-index:601; inset-block-start:var(--s3);
-          inset-inline-start:var(--s3); touch-action:manipulation}
+/* The menu button and the strip it opens both sit on a bluish grey — cool like
+   the rest of the neutrals, and dark enough to hold its own over both a pale
+   map and an aerial one.  The strip is one surface the buttons belong to
+   rather than eight cards scattered over the terrain. */
+/* two classes on purpose: .mt is declared after this block and sets the card
+   background, and at equal specificity the later rule would win */
+.mt.menu-btn{position:absolute; z-index:601; inset-block-start:var(--s3);
+          inset-inline-start:var(--s3); touch-action:manipulation;
+          background:var(--tool-bg); border-color:var(--tool-line)}
+.mt.menu-btn:active{background:var(--tool-bg-2)}
 .tools{position:absolute; z-index:600;
        inset-block-start:calc(var(--s3) + 38px + var(--s2));
-       inset-inline-start:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
+       inset-inline-start:var(--s3); display:flex; flex-direction:column; gap:var(--s2);
+       padding:var(--s2); border-radius:var(--r-card);
+       background:var(--tool-bg); box-shadow:var(--shadow)}
+/* the two נ.צ. buttons side by side — first child is the right one in RTL, so
+   the add button is the second column of the strip */
+.mt-row{display:flex; flex-direction:row; gap:var(--s2)}
 /* Put away, the column is gone rather than faded: half-visible controls over a
    map read as broken ones.  The menu button never hides — it is the way back. */
 body[data-tools="off"] .tools{display:none}
