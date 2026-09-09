@@ -40,34 +40,33 @@
   </button>
 
   <div class="tools" id="tools" hidden>
-    <!-- Everything the map's own chrome can do, in two rows of the same width.
-         A single column of these was taller than the map's whole top half and,
-         beside the six-wide switch row below, left a large empty panel. -->
-    <div class="mt-row">
-      <button class="mt" id="viewBtn" aria-label="פריסת המסך">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
-      </button>
-      <button class="mt" id="findBtn" aria-label="חיפוש">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
-      </button>
-      <button class="mt map-only" id="fitBtn" aria-label="התאמת המפה למסך">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-      </button>
-      <button class="mt map-only" id="locBtn" aria-label="הצגת המיקום שלי" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-      </button>
-      <button class="mt" id="infoBtn" aria-label="מקורות ומידע חסר">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
-      </button>
-      <!-- The full list: water, letters, each border kind on its own, and the
-           point categories of the current parish.  The switch row below is the
-           handful used most; this is everything, and sliders rather than a
-           stack of tiles, because the stack now means the street background. -->
-      <button class="mt" id="layerListBtn" aria-label="בחירת שכבות ונקודות"
-              aria-expanded="false" aria-controls="panel">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-      </button>
-    </div>
+    <!-- A column, on the map's start edge — asked for as a column and kept as
+         one after seeing it beside the six-wide switch row: it is taller than
+         the map's top half and leaves the panel wide and mostly empty, and that
+         is the accepted cost of one button per line. -->
+    <button class="mt" id="viewBtn" aria-label="פריסת המסך">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
+    </button>
+    <button class="mt" id="findBtn" aria-label="חיפוש">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+    </button>
+    <button class="mt map-only" id="fitBtn" aria-label="התאמת המפה למסך">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button class="mt map-only" id="locBtn" aria-label="הצגת המיקום שלי" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    </button>
+    <button class="mt" id="infoBtn" aria-label="מקורות ומידע חסר">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+    </button>
+    <!-- The full list: water, letters, each border kind on its own, and the
+         point categories of the current parish.  The switch row below is the
+         handful used most; this is everything, and sliders rather than a
+         stack of tiles, because the stack now means the street background. -->
+    <button class="mt" id="layerListBtn" aria-label="בחירת שכבות ונקודות"
+            aria-expanded="false" aria-controls="panel">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+    </button>
 
     <!-- What the map shows, one switch each, right to left:
          the street background · your own points · the level's colour ·

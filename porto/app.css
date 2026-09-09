@@ -202,7 +202,10 @@ body.is-dragging #map{pointer-events:none}
 /* One row of switches for what the map draws, plus the add-a-point action at
    its far end.  First child is the rightmost in RTL, so source order is reading
    order.  Six 38px buttons and five gaps come to 258px — inside the strip's
-   padding that still fits a 360px phone, which is the narrowest we target. */
+   padding that still fits a 360px phone, which is the narrowest we target.
+   Everything else in the strip stays a column, one button per line, and the
+   panel is therefore as wide as this row and mostly empty beside it.  That was
+   looked at and chosen. */
 .mt-row{display:flex; flex-direction:row; gap:var(--s2)}
 /* Put away, the column is gone rather than faded: half-visible controls over a
    map read as broken ones.  The menu button never hides — it is the way back. */
