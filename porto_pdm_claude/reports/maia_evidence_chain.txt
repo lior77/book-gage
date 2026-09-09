@@ -1,0 +1,227 @@
+MAIA — PDM "1.1 Classificação e Qualificação" — evidence chain
+Verified 2026-09-09.  Confidence: VERIFIED_VECTOR.
+
+    websig.cm-maia.pt  →  WEBLAYOUT=Library://DCTSIG/Maps/webepl/webepl.WebLayout
+    ajaxviewer.aspx    →  mapguide30/mapagent/mapagent.fcgi  +  Maps/webepl/mapa.MapDefinition
+    MapDefinition      →  group 1_1  (Library://DCTSIG/Layers/PDM2025/1_1/)
+    menu_webepl.xml    →  id='1_1'  ↔  "1.1 Classificação e Qualificação"
+    LayerDefinition    →  <VectorLayerDefinition> on Data/pdm2025_db.FeatureSource
+    SELECTFEATURES     →  41 × POLYGON
+
+Every link above was read out of a response the portal itself returned.
+No URL, ResourceId, class name, field name or CRS below was guessed.
+
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 1   The portal names its own viewer, and with it the WebLayout
+───────────────────────────────────────────────────────────────────────────────
+  GET https://websig.cm-maia.pt/
+  raw/maia/00_websig_root.html
+
+  Two places in the page source carry the same URL verbatim — the hidden
+  #erro input, and `var aa` just above the dhtmlx layout call:
+
+      https://websig.cm-maia.pt/mapguide/mapviewerajax/ajaxviewer.aspx
+        ?SESSION=<minted per page load>
+        &WEBLAYOUT=Library://DCTSIG/Maps/webepl/webepl.WebLayout
+        &LOCALE=pt
+
+  → WebLayout confirmed from the site itself, independently of the brief.
+
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 2   The viewer names the mapagent host and the MapDefinition
+───────────────────────────────────────────────────────────────────────────────
+  GET https://websig.cm-maia.pt/mapguide/mapviewerajax/ajaxviewer.aspx?SESSION=…&WEBLAYOUT=Library://DCTSIG/Maps/webepl/webepl.WebLayout&LOCALE=pt
+  raw/maia/01_ajaxviewer.html
+
+  line 13    https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi
+  line 1045  MAPDEFINITION=Library%3a%2f%2fDCTSIG%2fMaps%2fwebepl%2fmapa.MapDefinition
+
+  Note the host path is mapguide30, not the mapguide the viewer is served from.
+
+  Authentication: the documented public account works for every operation
+  below — USERNAME=Anonymous&PASSWORD= — so no page-minted SESSION is needed.
+
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 3   The MapDefinition holds group 1_1
+───────────────────────────────────────────────────────────────────────────────
+  GET …/mapguide30/mapagent/mapagent.fcgi
+        ?OPERATION=GETRESOURCECONTENT&VERSION=1.0.0
+        &USERNAME=Anonymous&PASSWORD=
+        &RESOURCEID=Library://DCTSIG/Maps/webepl/mapa.MapDefinition
+        &FORMAT=text/xml
+  raw/maia/02_mapdefinition.xml   (24,269 bytes)
+
+  <MapLayerGroup>  Name 1_1,  parent "Plantas de Ordenamento"
+  52 layers under  Library://DCTSIG/Layers/PDM2025/1_1/
+  Map <CoordinateSystem>  PROJCS["ETRS89.PT-TM06", …]
+
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 4   The PDM menu ties group 1_1 to the label
+───────────────────────────────────────────────────────────────────────────────
+  GET https://websig.cm-maia.pt/webforms/menu_territorio.aspx?xml=menu_webepl.xml&separador=webepl
+  raw/maia/08_menu_webepl.html
+
+      <label> 1 - Planta de Ordenamento</label>
+      <input type="checkbox" name='pdm' id='1_1' />
+      <label> 1.1 Classificação e Qualificação</label>
+
+  The same menu links the legal publications that put this plan in force:
+
+      Aviso nº 4731-2025-2 (PDM 2025).pdf          ← Regulamento
+      Aviso_15161_2026_2_1ªCorreção PDM Maia.pdf   ← 1.ª Correção
+
+  → satisfies the rule that a revision may not be treated as current
+    unless it is legally effective.
+
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 5   Each core layer is vector, on a PostGIS FeatureSource
+───────────────────────────────────────────────────────────────────────────────
+  GET …?OPERATION=GETRESOURCECONTENT&VERSION=1.0.0&USERNAME=Anonymous&PASSWORD=
+       &RESOURCEID=Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoHabitacional-trp.LayerDefinition
+       &FORMAT=text/xml
+  raw/maia/03_ld_SoloUrbanoHabitacional.xml
+
+      <VectorLayerDefinition>                       ← not <GridLayerDefinition>
+        <ResourceId>Library://DCTSIG/Data/pdm2025_db.FeatureSource</ResourceId>
+        <FeatureName>ord_1_1:ord_1_1_SoloUrbanoHabitacional-trp</FeatureName>
+        <FeatureNameType>FeatureClass</FeatureNameType>
+        <Geometry>geom</Geometry>
+        <ToolTip>'Solo Urbano - Espaços Habitacionais'</ToolTip>
+
+  The FeatureSource itself — raw/maia/04_featuresource_pdm2025_db.xml:
+
+      <Provider>OSGeo.PostgreSQL</Provider>
+      Service dbsig:5433      DataStore pdm2025
+
+  All 16 core layers resolve the same way — raw/maia/layerdefs_resolved.json.
+
+
+───────────────────────────────────────────────────────────────────────────────
+STEP 6   The feature query returns real geometry
+───────────────────────────────────────────────────────────────────────────────
+  GET …?OPERATION=SELECTFEATURES&VERSION=1.0.0&USERNAME=Anonymous&PASSWORD=
+       &RESOURCEID=Library://DCTSIG/Data/pdm2025_db.FeatureSource
+       &CLASSNAME=ord_1_1%3Aord_1_1_SoloUrbanoHabitacional-trp
+       &FORMAT=text/xml
+  raw/maia/05_selectfeatures_SoloUrbanoHabitacional.xml   (325,133 bytes)
+
+  41 features.  First one:
+
+      id     1
+      cat    300
+      AREA   2234526
+      LAYER  PG-SoloUrbanoHabitacional-trp
+      geom   POLYGON ((-41636.580000000002 173347.61000000002,
+                       -41635.650000000001 173331.58000000002,
+                       -41634.450000000004 …
+
+  MAXFEATURES is accepted but ignored — the query returns the whole class.
+
+
+───────────────────────────────────────────────────────────────────────────────
+CRS — as the server states it, not as an EPSG code
+───────────────────────────────────────────────────────────────────────────────
+  GET …?OPERATION=GETSPATIALCONTEXTS&VERSION=1.0.0&USERNAME=Anonymous&PASSWORD=
+       &RESOURCEID=Library://DCTSIG/Data/pdm2025_db.FeatureSource&ACTIVEONLY=0
+  raw/maia/06_spatialcontexts.xml
+
+      ProviderName  OSGeo.PostgreSQL.4.2
+      PROJCS["ETRS89.PT-TM06",
+        GEOGCS["LL-ETRS89",
+          DATUM["ETRS89",SPHEROID["WGS84",6378137.000,298.25722293],
+            TOWGS84[0,0,0,0,0,0,0]],
+          PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],
+        PROJECTION["Transverse_Mercator"],
+        PARAMETER["false_easting",0.000],
+        PARAMETER["false_northing",0.000],
+        PARAMETER["scale_factor",1.000000000000],
+        PARAMETER["central_meridian",-8.13310833333333],
+        PARAMETER["latitude_of_origin",39.66825833333333],
+        UNIT["Meter",1.00000000000000]]
+
+  These parameters are those of EPSG:3763.  The server asserts no EPSG code,
+  so write the WKT through as given rather than substituting one.
+
+
+───────────────────────────────────────────────────────────────────────────────
+CAVEAT — classification and qualification are NOT fields here
+───────────────────────────────────────────────────────────────────────────────
+  Published attributes:  id, geom, cat, AREA, LAYER
+
+  There is no classificacao column and no qualificacao column.  Both are
+  carried by which feature class a polygon belongs to; the human wording
+  ("Solo Urbano - Espaços Habitacionais") lives in the LayerDefinition's
+  ToolTip, which is a portal artefact, not data.  LAYER merely repeats the
+  class name.  cat is an integer whose code list was not published anywhere
+  reachable.
+
+  So a classificacao / qualificacao column in a derived GeoPackage is a
+  derivation from layer membership and must be recorded as one.
+
+  (Gondomar differs: there the Layer field carries the published wording
+  "Solo Urbano - Solo Urbanizado, Espaços Centrais" as actual data.)
+
+
+───────────────────────────────────────────────────────────────────────────────
+THE 16 CORE CLASSES        schema ord_1_1   ·   FeatureSource pdm2025_db
+───────────────────────────────────────────────────────────────────────────────
+  Solo Rústico
+    ord_1_1_SoloRusticoAglomeradoRural-trp            Aglomerado Rural
+    ord_1_1_SoloRusticoAgricola-tr                    Agrícola
+    ord_1_1_SoloRusticoEquipamentosInfraestruturas-trp  Equipamentos e Infraestruturas
+    ord_1_1_SoloRusticoFlorestaisRecreioLazer-trp     Florestais — Recreio e Valorização da Paisagem
+    ord_1_1_SoloRusticoFlorestaProducao-trp           Florestais — Produção
+    ord_1_1_SoloRusticoFlorestaProtecao-trp           Florestais — Proteção
+    ord_1_1_SoloRusticoNatural-trp                    Naturais e Paisagísticos
+
+  Solo Urbano
+    ord_1_1_SoloUrbanoAtiviEconomicas-Indust-trp      Atividades Económicas — Industrial e logística
+    ord_1_1_SoloUrbanoAtiviEconomicas-Terciario-trp   Atividades Económicas — Terciário
+    ord_1_1_SoloUrbanoBaixaDensidade-trp              Urbanos de Baixa Densidade
+    ord_1_1_SoloUrbanoEquipamentosEstruturantes-trp   Uso Especial — Equipamentos
+    ord_1_1_SoloUrbanoEspacosCentrais-trp             Espaços Centrais
+    ord_1_1_SoloUrbanoHabitacional-trp                Espaços Habitacionais      ← 41 features pulled
+    ord_1_1_SoloUrbanoVerdeLogradouro-trp             Espaços Verdes — Logradouro
+    ord_1_1_SoloUrbanoVerdeUtilizacaoColetiva-trp     Espaços Verdes — Utilização Coletiva
+
+  Uso Especial
+    ord_1_1_UsoEspecial-AeroportoAerodromo-trp        Infraestruturas Aeronáuticas
+
+  The other 36 layers in group 1_1 are roads (RV-*), rail and metro (RF-*,
+  Estacoes*), UOPG limits (Programar-*) and *_text annotation — overlays,
+  out of scope.
+
+
+───────────────────────────────────────────────────────────────────────────────
+REPRODUCE
+───────────────────────────────────────────────────────────────────────────────
+  BASE=https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi
+  AUTH="VERSION=1.0.0&USERNAME=Anonymous&PASSWORD="
+  FS=Library://DCTSIG/Data/pdm2025_db.FeatureSource
+
+  curl "$BASE?OPERATION=GETSPATIALCONTEXTS&$AUTH&RESOURCEID=$FS&ACTIVEONLY=0"
+
+  curl "$BASE?OPERATION=SELECTFEATURES&$AUTH&RESOURCEID=$FS\
+&CLASSNAME=ord_1_1%3Aord_1_1_SoloUrbanoHabitacional-trp&FORMAT=text/xml"
+
+
+───────────────────────────────────────────────────────────────────────────────
+NOT DONE
+───────────────────────────────────────────────────────────────────────────────
+  · Per-class feature counts for the other 15 core classes — each needs a full
+    SELECTFEATURES, which is the download step rather than discovery.
+    Only SoloUrbanoHabitacional was pulled: 41 features.
+  · The cat integer code list was not found in any reachable resource.
+  · Coverage — whether the 16 classes tile the municipality without gaps or
+    overlaps — is unverified.
+  · The CQS group in the same MapDefinition points at
+    Library://DCTSIG/Maps/revpdm/Layers/QUALIFICAÇÃO_polygon.LayerDefinition
+    and a PDM2024_Ord raster.  revpdm is the revision workspace that produced
+    PDM 2025; it was not used.
+
+Full report: reports/maia.md   ·   Raw responses: raw/maia/   ·   Requests: commands.log
