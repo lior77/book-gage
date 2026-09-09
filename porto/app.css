@@ -1,8 +1,8 @@
 /* פורטולנד — split-screen shell.
    One screen, two halves: the map and the text that goes with it.  The split
    follows the way the phone is held — map above the text in portrait, map at
-   the start of the line in landscape — and the divider between them is
-   draggable, so either half can be given the room it needs.
+   the start of the line in landscape — and it is half and half, fixed: the
+   layout button decides which halves are up, and nothing drags.
    Tuned for a 6.7" Android phone (Galaxy A56, 1080x2340) and scales up. */
 
 :root{
