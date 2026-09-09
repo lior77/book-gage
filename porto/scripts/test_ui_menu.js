@@ -373,6 +373,45 @@ const css = (page, sel, prop) =>
   await page.click('#infoClose');
   await page.waitForTimeout(400);
 
+  /* 11b. the reading half is one white page, 10px in, and it scrolls */
+  const paneBg = await css(page, '#paneText', 'background-color');
+  const cardBg = await page.$eval('#paneText',
+    el => getComputedStyle(el).getPropertyValue('--card').trim());
+  ok('the text half is the page colour, not the grey ground',
+     paneBg.replace(/\s/g, '') === (m => m ? `rgb(${parseInt(cardBg.slice(1,3),16)},${parseInt(cardBg.slice(3,5),16)},${parseInt(cardBg.slice(5,7),16)})`.replace(/\s/g,'') : paneBg)(cardBg.startsWith('#')),
+     `${paneBg} vs --card ${cardBg}`);
+  for (const side of ['top', 'right', 'bottom', 'left']) {
+    ok(`the document is 10px in from the text area's ${side}`,
+       await css(page, '#doc', 'padding-' + side) === '10px',
+       await css(page, '#doc', 'padding-' + side));
+  }
+  ok('the sections carry no card of their own',
+     await page.$eval('#doc .card', el => {
+       const c = getComputedStyle(el);
+       return c.borderTopWidth === '0px' && c.borderRadius === '0px'
+              && (c.backgroundColor === 'rgba(0, 0, 0, 0)' || c.backgroundColor === 'transparent');
+     }));
+  ok('the reading half scrolls', await page.evaluate(() => {
+       const el = document.querySelector('#paneText');
+       if (el.scrollHeight <= el.clientHeight + 1) return false;
+       el.scrollTop = 120; const moved = el.scrollTop > 0; el.scrollTop = 0; return moved;
+     }));
+
+  /* 11c. the lead does not say again what the table underneath it says.  Back to
+          the district first — earlier sections leave the נ.צ. screen up. */
+  if (await page.$eval('#wpBtn', e => e.getAttribute('aria-pressed')) === 'true') {
+    await page.click('#wpBtn'); await page.waitForTimeout(400);
+  }
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(800);
+  const lead = await page.$eval('#doc .lead', el => el.textContent);
+  const shownStats = await page.$$eval('#doc .stats .stat-v', els => els.map(e => e.textContent.trim()));
+  ok('the lead repeats no figure from the table below it',
+     shownStats.every(v => !lead.includes(v.replace(/[^\d,.]/g, ''))),
+     `lead "${lead.trim().slice(0, 60)}…" vs ${shownStats.join(' / ')}`);
+  ok('and the figures are still on the page, in the table',
+     shownStats.length >= 3, shownStats.join(' / '));
+
   /* 12. the float: the strip and its buttons both cast a shadow */
   const shStrip = await css(page, '#tools', 'box-shadow');
   const shBtn = await css(page, '#layersBtn', 'box-shadow');

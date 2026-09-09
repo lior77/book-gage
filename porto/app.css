@@ -150,11 +150,12 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 .pane-map{flex:0 0 var(--f); position:relative; isolation:isolate;
           background:var(--bg); overflow:hidden}
 #map{position:absolute; inset:0; background:var(--bg)}
+/* The reading half is one white page, not a tray of cards on grey.  10px in on
+   every side and it scrolls; the home-indicator inset is the trail bar's job,
+   below this half, so the foot needs no allowance of its own. */
 .pane-text{flex:1 1 0; overflow-y:auto; overscroll-behavior:contain;
-           -webkit-overflow-scrolling:touch; background:var(--bg)}
-.doc{padding:var(--s4) var(--s4) calc(var(--safe-b) + 28px);
-     display:flex; flex-direction:column; gap:var(--s4); max-width:72ch;
-     margin-inline:auto}
+           -webkit-overflow-scrolling:touch; background:var(--card)}
+.doc{padding:10px; display:flex; flex-direction:column; gap:var(--s5)}
 
 /* The seam between the halves is a line, not a handle.  Dragging it is gone:
    the split is half and half, and the layout button is the only thing that
@@ -264,7 +265,7 @@ body[data-view="text"] .map-only{display:none}
 /* Messages live at the top of the text half. Over the map they covered the
    thing they were about, and in map-only view there was nowhere to put them. */
 .msgs:empty{display:none}
-.msgs{padding:var(--s4) var(--s4) 0}
+.msgs{padding:10px 10px 0}
 .msg{display:flex; gap:var(--s3); align-items:flex-start; padding:var(--s4);
      border-radius:var(--r-card); background:var(--card);
      border:1px solid var(--line); border-inline-start:3px solid var(--accent);
@@ -341,9 +342,11 @@ body[data-view="text"] .map-only{display:none}
 .lbl-ltr.is-hi{background:#15568f; color:#fff}
 
 /* ---------- text half ---------- */
-.card{background:var(--card); border:1px solid var(--line);
-      border-radius:var(--r-card); padding:var(--s5);
-      display:flex; flex-direction:column; gap:var(--s3)}
+/* A section of the page, not a card on it: no surface of its own, no border, no
+   corner.  What separates one section from the next is its heading and the gap
+   above it.  Things that really are cards — a נ.צ. record, a message — keep
+   their own rules further down; this one is only the document's sections. */
+.card{display:flex; flex-direction:column; gap:var(--s3)}
 .lead{font-size:.95rem; line-height:1.6}
 .sub{font-size:.82rem; color:var(--ink-2)}
 .hdr{display:flex; align-items:flex-start; gap:var(--s3)}
@@ -361,13 +364,15 @@ body[data-view="text"] .map-only{display:none}
      box-shadow:0 0 0 1.5px var(--dot-ring),0 0 0 2.5px rgba(0,0,0,.25); margin:7px 2px}
 .dot.mine{border-radius:3px; transform:rotate(45deg)}
 
-.rows{display:flex; flex-direction:column; gap:var(--s2)}
+/* A list on a white page, not a stack of cards: one hairline between entries,
+   the chevron saying it opens.  Boxed rows on a boxed page were two frames
+   around the same thing. */
+.rows{display:flex; flex-direction:column}
 .row{display:flex; align-items:flex-start; gap:var(--s3); width:100%;
-     background:var(--card); border:1px solid var(--line);
-     border-radius:var(--r-card); padding:var(--s4)}
+     padding:var(--s4) 0; border-block-end:1px solid var(--line)}
+.rows .row:last-child{border-block-end:0}
 .row:active{background:var(--bg)}
-.row.is-hi{border-color:var(--hi-line); background:var(--hi);
-     box-shadow:inset 0 0 0 1px var(--hi-line)}
+.row.is-hi{background:var(--hi); box-shadow:inset 2px 0 0 var(--hi-line)}
 .row-body{flex:1 1 auto; min-width:0}
 .row-t{display:block; font-weight:700; font-size:.97rem; line-height:1.35}
 .row-t .lat{font-weight:600; font-size:.84rem; color:var(--ink-2)}

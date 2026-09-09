@@ -639,10 +639,10 @@ function renderDistrict() {
   $('#doc').innerHTML = `
     <div class="card">
       <h1>מחוז פורטו <span class="en lat">(Distrito do Porto)</span></h1>
+      <!-- The population and the area are the two rows of the table right
+           below, and a lead that says them again is the same fact twice. -->
       <p class="lead">18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי
-        במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה: כאן חיים
-        <span class="num">${shown(D.totPop, 0, 100)}</span> תושבים על
-        <span class="num">${nf(D.totArea, 1)}</span> קמ״ר.</p>
+        במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.</p>
       <div class="stats">
         ${stat('תושבים', D.totPop, '', 0, 'municipio.pop2021', 100)}
         ${stat('שטח', D.totArea, 'קמ״ר', 1, 'municipio.area_km2')}
