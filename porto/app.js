@@ -30,7 +30,9 @@ const S = {
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: true,         // rivers and lakes
-  muncol: true,        // the 18 municipality colours (the outlines stay either way)
+  muncol: true,        // ★ the level's own colour fill: 18 municipalities at
+                       //   level 1, the parishes at 2, the parish itself at 3
+  bounds: true,        // the district / municipality / parish boundary lines
   mine: true,          // draw the points the user added
   photos: true,        // draw the ones that carry a photo (their own layer)
   // The four boundary layers.  Each is drawn at every level and switched on
@@ -83,7 +85,11 @@ const MINE_COLOUR = '#00897b';
    does not change weight because of what is selected — selection is a fill and
    a highlight colour, which is a different question from what kind of border
    this is. */
-const LINE_W = { region: 3.2, district: 3.2, mun: 2.1, fre: 1 };
+const LINE_W = { region: 4, district: 3.2, mun: 2.1, fre: 1 };
+/* The two NUTS III regions are the one line that is not a shade of the ink.
+   They are neither the subject of any level nor part of the district's own
+   hierarchy, and a fourth grey among three greys said nothing about that. */
+const REGION_COLOUR = '#e2761b';
 /* Which lines are black at each level.  The regions are never in this list:
    they are context at every level, and drawn grey whenever they are on at all.
 
@@ -118,6 +124,7 @@ const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מ�
    strongest contrast the background allows, and that flips with the
    background.  The same 50% then does the same job. */
 const lineColour = (kind, props) => {
+  if (kind === 'region') return REGION_COLOUR;
   const own = kind !== 'region'
     && (LINE_BLACK[S.level] || []).indexOf(kind) >= 0
     && (!props || ownFeature(kind, props));
@@ -137,11 +144,11 @@ function drawLines() {
     weight: LINE_W[kind], opacity: .95, fill: false,
     lineJoin: 'round', lineCap: 'round' });
 
-  if (S.lnFre) {
+  if (S.bounds && S.lnFre) {
     LG.lnFre = L.geoJSON(D.bF, { interactive: false,
       style: ft => style('fre', ft.properties) }).addTo(map);
   }
-  if (S.lnMun) {
+  if (S.bounds && S.lnMun) {
     LG.lnMun = L.geoJSON(D.bM, { interactive: false,
       style: ft => style('mun', ft.properties) }).addTo(map);
     // the chosen municipality's own outline goes on top of its neighbours',
@@ -162,7 +169,7 @@ function drawLines() {
     LG.lnRegion = L.geoJSON(pick('region'), {
       interactive: false, style: () => style('region') }).addTo(map);
   }
-  if (S.lnDistrict) {
+  if (S.bounds && S.lnDistrict) {
     LG.lnDistrict = L.geoJSON(pick('district'), {
       pane: 'district', interactive: false,
       style: () => style('district') }).addTo(map);
@@ -354,6 +361,7 @@ function initMap() {
     if (++errs < 6 || !map.hasLayer(tileLayer)) return;
     map.removeLayer(tileLayer);
     S.tiles = false;
+    applySwitches();
     mapNote('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.',
             false, true);
   });
@@ -712,7 +720,8 @@ function drawMun(num) {
     style: ft => {
       const f = freOfFeature(num, ft.properties);
       return { weight: 0, opacity: .95,
-        fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd', fillOpacity: .78 };
+        fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd',
+        fillOpacity: S.muncol ? .78 : 0 };
     },
     onEachFeature: (ft, l) => {
       const f = freOfFeature(num, ft.properties);
@@ -1167,9 +1176,9 @@ function renderPhotoBox(msg) {
   // the native control labels itself in the browser's language, not the app's,
   // so it is kept off screen and driven by a label — which comes after it in
   // the markup so a plain sibling selector can show the focus ring
-  const input = '<input id="minePhotoIn" class="ph-in" type="file" accept="image/*">' +
+  const input = '<input id="minePhotoIn" class="ph-in" type="file" accept="image/*" multiple>' +
     `<label class="chip ph-pick" for="minePhotoIn">${
-      meta ? 'החלפת התמונה' : 'בחירת תמונה'}</label>`;
+      meta ? 'החלפת התמונה' : 'בחירת תמונות'}</label>`;
   if (!meta) {
     box.innerHTML = `<div class="chips">${input}</div>` +
       `<p class="note ph-note">${msg ? html(msg)
@@ -1191,6 +1200,58 @@ function renderPhotoBox(msg) {
 /* The photo decides where the point goes.  Only the head of the file is read
    for that — Exif sits at the front of a JPEG, and a three-megabyte frame does
    not need to be in memory twice to answer one question. */
+/* One photo fills the card that is open.  More than one is a different act:
+   each of the others becomes a point of its own, because a photo already
+   carries the two things a point needs — where it was taken and when — and
+   making the user add five points by hand to attach five photos to them was
+   asking them to do the file's work.
+
+   A photo with no usable coordinates lands at the top-left of the view, where
+   defaultLL() puts anything that has nowhere else to be: visible, reachable,
+   and obviously not a claim about where the picture was taken. */
+function takePhotos(list) {
+  const files = Array.from(list || []);
+  if (!files.length) return;
+  takePhoto(files[0]);
+  if (files.length === 1) return;
+
+  const rest = files.slice(1);
+  let placed = 0, unplaced = 0, done = 0;
+  rest.forEach((file, i) => {
+    const head = file.slice(0, Math.min(file.size, 512 * 1024));
+    const read = head.arrayBuffer ? head.arrayBuffer() : Promise.reject(new Error('read'));
+    Promise.all([read.then(buf => { try { return readExif(buf); } catch (e) { return null; } },
+                           () => null),
+                 shrinkPhoto(file)])
+      .then(([ex, small]) => {
+        const gps = ex && ex.gps;
+        if (gps) placed++; else unplaced++;
+        const p = {
+          // the index keeps two photos picked in the same millisecond apart
+          id: 'p' + Date.now().toString(36) + i.toString(36),
+          ll: gps ? gps.ll : defaultLL(),
+          name: '', desc: '', at: new Date().toISOString(),
+          photo: { w: small.w, h: small.h, bytes: small.blob.size,
+                   taken: (ex && ex.taken) || '', from: gps ? 'exif' : 'pin',
+                   alt: gps ? gps.alt : null },
+        };
+        D.mine.push(p);
+        return putPhoto(p.id, small.blob).catch(() => {
+          // the point is still worth keeping; the card says the photo is missing
+        });
+      })
+      .catch(() => { unplaced++; })
+      .then(() => {
+        if (++done < rest.length) return;
+        saveMine();
+        drawMine();
+        renderWaypoints();
+        mapNote(`נוספו ${rest.length} נקודות מהתמונות — `
+          + `${placed} לפי הקואורדינטות שבתמונה, ${unplaced} בפינת המפה.`, false);
+      });
+  });
+}
+
 function takePhoto(file) {
   if (!file || !mineEditing) return;
   renderPhotoBox('קורא את התמונה…');
@@ -1325,20 +1386,15 @@ function renderWaypoints() {
     <div class="card">
       <div class="hdr"><div>
         <h1>נקודות הציון שלי <span class="note num">${rows.length}</span></h1>
-        <p class="sub">נשמרות במכשיר הזה בלבד. לא נשלחות לשום מקום ולא מגובות.
-          לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה
-          פותחת את הכרטיסייה שלה. לחיצה כפולה פותחת במפות גוגל.</p>
       </div></div>
       <div class="chips">
         <button class="chip" data-wpact="add">הוספת נ.צ.</button>
         <button class="chip" data-mine-act="export">העתקת הנקודות</button>
         <button class="chip" data-mine-act="import">ייבוא נקודות</button>
       </div>
-      <p class="note">ההעתקה מוציאה את הנקודות כטקסט; התמונות עצמן נשארות
-        במכשיר ולא נכללות בה.</p>
     </div>
     ${cards.length ? cards.join('')
-      : '<p class="note">עדיין אין נ.צ. — הכפתור עם ה+ מוסיף אחת.</p>'}`;
+      : ''}`;
   if (mineEditing) renderPhotoBox();
   wpThumbs();
   applyWpHi();
@@ -1452,7 +1508,34 @@ function startWpAdd() {
     return;
   }
   if (!S.wp) toggleWp();
-  toggleAdd();
+  // A new point starts as a card to fill in, not as a crosshair.  It is given
+  // the middle of the map to stand on so that it has a place from the first
+  // moment; "בחירת נ.צ. על המפה" inside the card moves it, and a photo with
+  // coordinates overrides it outright.
+  minePending = null;
+  dropPhotoUrl();
+  mineEditing = { id: 'p' + Date.now().toString(36), ll: defaultLL(), name: '', desc: '' };
+  S.wpSel = mineEditing.id;
+  if (S.view === 'map') { S.view = 'split'; applyView(); }
+  closePanel();
+  drawMine();
+  renderWaypoints();
+  save();
+  const el = $('#mineName');
+  if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); }
+}
+
+/* Where a point goes when nothing has said where it goes.
+   The top-left corner of what is on screen, inset a little so the marker is
+   whole and not half off the edge — a spot the user can see and drag from,
+   rather than the middle of the view where it would sit under whatever they
+   were looking at. */
+function defaultLL() {
+  if (!map) return [41.15, -8.61];
+  const b = map.getBounds();
+  const dLat = (b.getNorth() - b.getSouth()) * 0.12;
+  const dLon = (b.getEast() - b.getWest()) * 0.12;
+  return [b.getNorth() - dLat, b.getWest() + dLon];
 }
 
 /* After a point is dealt with the screen goes back to halves — the map to see
@@ -1652,9 +1735,7 @@ function startPlacing() {
   // dblclick, so the same 450 ms rule the rest of the app uses stands in
   mk.on('click', () => { if (isSecondTap('ghost')) fixPlacing(); });
   ghost = mk;
-  mapNote((mineEditing ? 'גררו את הסימון לנ.צ. של הכרטיסייה' : 'גררו את הסימון למקום המבוקש') +
-    ', ואז לחיצה כפולה עליו כדי לקבוע אותו. ' +
-    '<button type="button" data-add="off">ביטול</button>', false, true);
+  mapNote('<button type="button" data-add="off">ביטול</button>', false, true);
   // the note opened the text half; placing wants the whole map
   S.view = 'map'; applyView();
 }
@@ -1714,7 +1795,8 @@ function drawZone(key) {
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
       features: D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === key) },
     { interactive: false,
-      style: { weight: 0, fillColor: f.colour || '#dddddd', fillOpacity: .35 } }).addTo(map);
+      style: { weight: 0, fillColor: f.colour || '#dddddd',
+               fillOpacity: S.muncol ? .35 : 0 } }).addTo(map);
 
   drawLines();
 
@@ -1898,6 +1980,37 @@ function applyTools() {
 }
 function menuTap() { S.tools = !S.tools; applyTools(); save(); }
 
+/* The four map switches.  Each is one thing the map either shows or does not,
+   pressed state on the button and nothing else to read. */
+function toggleTiles() {
+  S.tiles = !S.tiles;
+  if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
+  applySwitches(); save();
+}
+function toggleFills() {
+  S.muncol = !S.muncol;
+  redrawLevel();
+  applySwitches(); save();
+}
+function toggleBounds() { S.bounds = !S.bounds; drawLines(); applySwitches(); save(); }
+function toggleRegions() { S.lnRegion = !S.lnRegion; drawLines(); applySwitches(); save(); }
+
+/* Redraw whichever level is on screen, because the fill belongs to the level
+   and each level draws its own. */
+function redrawLevel() {
+  if (S.level === 'district') drawDistrict();
+  else if (S.level === 'mun') drawMun(S.mun);
+  else drawZone(S.zone);
+}
+
+function applySwitches() {
+  const set = (id, on) => { const b = $(id); if (b) b.setAttribute('aria-pressed', String(!!on)); };
+  set('#layersBtn', S.tiles);
+  set('#fillsBtn', S.muncol);
+  set('#bordersBtn', S.bounds);
+  set('#regionsBtn', S.lnRegion);
+}
+
 function cycleView() {
   // No toast confirming it: a message forces the split view back open, so the
   // announcement undid the very thing it was announcing. The screen changing
@@ -1921,7 +2034,7 @@ function openPanel(kind, title, body) {
   $('#panelTitle').textContent = title;
   $('#panelBody').innerHTML = body;
   $('#panel').hidden = false;
-  $('#layersBtn').setAttribute('aria-expanded', String(kind === 'layers'));
+  $('#layerListBtn').setAttribute('aria-expanded', String(kind === 'layers'));
   // the panel lives in the text half, so that half has to be on screen
   if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
   $('#paneText').scrollTop = 0;
@@ -1930,7 +2043,7 @@ function closePanel() {
   panelKind = null;
   $('#panel').hidden = true;
   $('#panelBody').innerHTML = '';
-  $('#layersBtn').setAttribute('aria-expanded', 'false');
+  $('#layerListBtn').setAttribute('aria-expanded', 'false');
 }
 const panelIs = k => panelKind === k;
 
@@ -2079,7 +2192,7 @@ function applyHi(from) {
   if (LG.fre) LG.fre.eachLayer(l => {
     const on = hi && hi.kind === 'fre' && l.feature.__key === hi.id;
     l.setStyle({ weight: on ? 3 : 0, color: '#b7791f', opacity: on ? 1 : 0,
-                 fillOpacity: on ? .92 : .78 });
+                 fillOpacity: S.muncol ? (on ? .92 : .78) : 0 });
     if (on) l.bringToFront();
   });
   if (LG.labels) LG.labels.eachLayer(l => {
@@ -2213,7 +2326,8 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, tools: S.tools,
       letters: S.letters, mine: S.mine, photos: S.photos, water: S.water,
-      muncol: S.muncol, lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
+      muncol: S.muncol, bounds: S.bounds,
+      lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
     }));
@@ -2231,6 +2345,7 @@ function restore() {
     });
     if (typeof o.water === 'boolean') S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
+    if (typeof o.bounds === 'boolean') S.bounds = o.bounds;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (typeof o.tools === 'boolean') S.tools = o.tools;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
@@ -2490,7 +2605,20 @@ function renderInfo() {
       קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש
       של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.</p>
     <p class="note">האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו,
-      המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.</p>`;
+      המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.</p>
+
+    <h2>נקודות הציון שלכם</h2>
+    <p>הן נשמרות <b>במכשיר הזה בלבד</b>. לא נשלחות לשום מקום ולא מגובות.</p>
+    <p>לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה פותחת
+      את הכרטיסייה שלה. לחיצה כפולה על נקודה פותחת אותה במפות גוגל.</p>
+    <p>בבחירת תמונה אפשר לסמן כמה תמונות בבת אחת. הראשונה נכנסת לכרטיסייה
+      הפתוחה, וכל אחת מהשאר הופכת לנקודה משלה. תמונה שיש בה קואורדינטות נוחתת
+      עליהן; תמונה שאין בה נוחתת בפינה השמאלית העליונה של המפה — מקום שאפשר
+      לראות ולגרור ממנו, ולא טענה על היכן היא צולמה.</p>
+    <p>בסימון נ.צ. על המפה: גוררים את הסימון למקום, ולחיצה כפולה עליו קובעת
+      אותו.</p>
+    <p class="note">ההעתקה מוציאה את הנקודות כטקסט. התמונות עצמן נשארות במכשיר
+      ולא נכללות בה, ולכן נקודה שתיובא במכשיר אחר תגיע בלי התמונה שלה.</p>`;
 }
 
 /* ------------------------------------------------------------------ wire --- */
@@ -2499,7 +2627,11 @@ function wire() {
   $('#locBtn').addEventListener('click', toggleLocate);
   $('#viewBtn').addEventListener('click', cycleView);
   $('#menuBtn').addEventListener('click', menuTap);
-  $('#layersBtn').addEventListener('click', () => toggleLayers());
+  $('#layersBtn').addEventListener('click', toggleTiles);
+  $('#layerListBtn').addEventListener('click', () => toggleLayers());
+  $('#fillsBtn').addEventListener('click', toggleFills);
+  $('#bordersBtn').addEventListener('click', toggleBounds);
+  $('#regionsBtn').addEventListener('click', toggleRegions);
   $('#wpBtn').addEventListener('click', toggleWp);
   $('#addBtn').addEventListener('click', startWpAdd);
   $('#panelClose').addEventListener('click', closePanel);
@@ -2518,7 +2650,7 @@ function wire() {
     }
     else if (k === 'letters') { S.letters = !S.letters; }
     else if (k === 'water') { S.water = !S.water; applyNature(); }
-    else if (k === 'muncol') { S.muncol = !S.muncol; if (S.level === 'district') drawDistrict(); }
+    else if (k === 'muncol') { S.muncol = !S.muncol; redrawLevel(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
     else if (k === 'photos') { S.photos = !S.photos; drawMine(); }
     else if (k.startsWith('ln:')) {
@@ -2533,14 +2665,14 @@ function wire() {
     }
     save();
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
-    drawMine(); renderLayers(); applyHi();
+    drawMine(); renderLayers(); applyHi(); applySwitches();
   });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
   // the photo picker lives on a card in the text half now, not in the panel
   $('#doc').addEventListener('change', e => {
-    if (e.target.id === 'minePhotoIn') takePhoto(e.target.files && e.target.files[0]);
+    if (e.target.id === 'minePhotoIn') takePhotos(e.target.files);
   });
   $('#msgs').addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -2647,6 +2779,7 @@ function wire() {
   loadMine();
   applyView();
   applyTools();
+  applySwitches();
   applySplit();
   initMap();
   initNature();

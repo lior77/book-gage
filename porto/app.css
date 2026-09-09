@@ -16,6 +16,10 @@
   /* the tint the map's controls sit on: the neutrals' cool bias, taken far
      enough from --card that the strip reads as its own surface */
   --tool-bg:#c9d3e0; --tool-bg-2:#b7c4d6; --tool-line:#aab8cb;
+  /* the strip floats over the map, and each button floats over the strip */
+  --float:0 2px 6px rgba(16,24,40,.10),0 10px 28px rgba(16,24,40,.16);
+  --float-sm:0 1px 2px rgba(16,24,40,.10),0 3px 8px rgba(16,24,40,.14);
+  --float-in:0 1px 1px rgba(16,24,40,.14) inset,0 1px 2px rgba(16,24,40,.10);
   --hi:#fff3d6; --hi-line:#b7791f;
   --dot:#101010; --dot-ring:#ffffff;
   /* one shadow, spent only on things that genuinely float */
@@ -36,6 +40,9 @@
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#7b8698;
     --tool-bg:#243044; --tool-bg-2:#2e3c53; --tool-line:#3a4a63;
+    --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
+    --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
+    --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
     --hi:#3a3312; --hi-line:#e0b040;
     --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
   }
@@ -46,6 +53,9 @@
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#7b8698;
     --tool-bg:#243044; --tool-bg-2:#2e3c53; --tool-line:#3a4a63;
+    --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
+    --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
+    --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
     --hi:#3a3312; --hi-line:#e0b040;
     --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
 }
@@ -176,9 +186,23 @@ body.is-dragging #map{pointer-events:none}
        inset-block-start:calc(var(--s3) + 38px + var(--s2));
        inset-inline-start:var(--s3); display:flex; flex-direction:column; gap:var(--s2);
        padding:var(--s2); border-radius:var(--r-card);
-       background:var(--tool-bg); box-shadow:var(--shadow)}
-/* the two נ.צ. buttons side by side — first child is the right one in RTL, so
-   the add button is the second column of the strip */
+       background:var(--tool-bg); box-shadow:var(--float)}
+
+/* Floating, lightly.  The panel lifts off the map and each button lifts off the
+   panel — two steps of the same shadow rather than one big one, so the strip
+   reads as a surface with things resting on it.  Pressing puts a button back
+   down; that is the whole animation, and it is short enough to feel like the
+   button rather than like a transition. */
+.mt{box-shadow:var(--float-sm); transition:box-shadow .12s ease, transform .12s ease}
+.mt:active{box-shadow:var(--float-in); transform:translateY(1px)}
+@media (prefers-reduced-motion:reduce){
+  .mt{transition:none}
+  .mt:active{transform:none}
+}
+/* One row of switches for what the map draws, plus the add-a-point action at
+   its far end.  First child is the rightmost in RTL, so source order is reading
+   order.  Six 38px buttons and five gaps come to 258px — inside the strip's
+   padding that still fits a 360px phone, which is the narrowest we target. */
 .mt-row{display:flex; flex-direction:row; gap:var(--s2)}
 /* Put away, the column is gone rather than faded: half-visible controls over a
    map read as broken ones.  The menu button never hides — it is the way back. */

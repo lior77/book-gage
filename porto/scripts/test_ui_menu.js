@@ -33,6 +33,11 @@ const css = (page, sel, prop) =>
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 412, height: 900 } });  // a phone, portrait
+  /* Refuse the street background outright rather than letting the requests hang.
+     Left to time out on their own they did not fail inside the run, and the
+     check below then passed on a page where the background had never failed —
+     a check that cannot fail is not a check. */
+  await page.route('**://tile.openstreetmap.org/**', r => r.abort());
   await page.goto(URL, { waitUntil: 'load' });
   await page.waitForFunction(() => document.body.dataset.view, null, { timeout: 20000 });
   await page.waitForTimeout(1200);   // Leaflet settles
@@ -71,12 +76,28 @@ const css = (page, sel, prop) =>
   ok('one tap shows the strip', await shown() === true);
   ok('aria-expanded follows', await expanded() === 'true');
 
+  /* Offline the street background cannot load, and the switch has to say so on
+     its own — nothing else has touched it yet at this point in the run, which
+     is the whole point: it used to stay lit until the next redraw. */
+  await page.waitForFunction(
+    () => /רקע המפה לא נטען/.test(document.querySelector('#msgs').textContent),
+    null, { timeout: 8000 }).catch(() => {});
+  ok('a background that failed to load turns its own switch off',
+     await page.evaluate(() => {
+       const on = document.querySelector('#layersBtn').getAttribute('aria-pressed');
+       const failed = /רקע המפה לא נטען/.test(document.querySelector('#msgs').textContent);
+       return !failed || on === 'false';
+     }), 'the note is up but the switch still reads pressed');
+
   /* 5. geometry, now that there is something to measure */
   const menu = await box(page, '#menuBtn');
   const tools = await box(page, '#tools');
   ok('menu button is in the map\'s top corner', menu.y < map.y + 60, `menu y ${menu.y}`);
   ok('menu button is on the RIGHT half', menu.x > vw / 2, `menu x ${menu.x} of ${vw}`);
-  ok('strip is on the RIGHT half', tools.x > vw / 2, `tools x ${tools.x} of ${vw}`);
+  /* The strip is a wide row now, so its LEFT edge is well past the middle; what
+     has to hold is that it hangs off the right edge and still fits on screen. */
+  ok('strip hangs off the RIGHT edge', tools.right > vw / 2, `tools right ${tools.right} of ${vw}`);
+  ok('strip fits on screen', tools.x > 0, `tools x ${tools.x} of ${vw}`);
   ok('strip sits below the menu button', tools.y >= menu.bottom - 1,
      `menu bottom ${menu.bottom}, tools y ${tools.y}`);
   ok('menu and strip share the same edge', Math.abs(tools.right - menu.right) < 2,
@@ -91,11 +112,14 @@ const css = (page, sel, prop) =>
   ok('menu button has the same tint', menuTint === tint, `${menuTint} vs ${tint}`);
   ok('the tint is bluish rather than neutral grey', bluish(tint), tint);
 
-  /* 7. the two נ.צ. buttons share a row, add to the LEFT of the list button */
+  /* 7. add sits on the switch row, at its far (left) end — past every switch,
+        so it is still to the LEFT of the list button it was paired with. */
   const wp = await box(page, '#wpBtn');
   const add = await box(page, '#addBtn');
-  ok('add button is on the same row as the list button',
+  ok('add button is on the switch row',
      Math.abs(wp.y - add.y) < 2, `wp y ${wp.y}, add y ${add.y}`);
+  ok('add button is at the far end of the row',
+     add.x < (await box(page, '#regionsBtn')).x, 'add is not past אזורים');
   ok('add button is to the LEFT of the list button',
      add.right <= wp.x + 1, `add right ${add.right}, wp x ${wp.x}`);
   ok('add button carries a pin, not a bare plus',
@@ -103,7 +127,105 @@ const css = (page, sel, prop) =>
   ok('add button also carries the plus',
      (await page.$eval('#addBtn svg', el => el.innerHTML)).includes('M12 7.7v5.6'));
 
-  /* 8. two quick taps no longer change the layout */
+  /* 8. the five map switches, in the order they were asked for */
+  const order = ['#layersBtn', '#wpBtn', '#fillsBtn', '#bordersBtn', '#regionsBtn'];
+  const xs = [];
+  for (const id of order) xs.push((await box(page, id)).x);
+  ok('the row reads שכבות · נ.צ. · צבעים · גבולות · אזורים, right to left',
+     xs.every((x, i) => i === 0 || x < xs[i - 1]), xs.map(Math.round).join(' > '));
+  ok('all five are on one row',
+     (await Promise.all(order.map(id => box(page, id).then(b => b.y))))
+       .every((y, _, a) => Math.abs(y - a[0]) < 2));
+
+  /* each is a switch: pressed flips, and the map answers */
+  for (const [id, name] of [['#layersBtn', 'רקע המפה'], ['#fillsBtn', 'צבע השטח'],
+                            ['#bordersBtn', 'גבולות'], ['#regionsBtn', 'אזורים']]) {
+    const was = await page.$eval(id, e => e.getAttribute('aria-pressed'));
+    await page.click(id);
+    await page.waitForTimeout(350);
+    const now = await page.$eval(id, e => e.getAttribute('aria-pressed'));
+    ok(`${name}: one tap flips it`, now !== was, `${was} -> ${now}`);
+    await page.click(id);                       // put it back
+    await page.waitForTimeout(350);
+  }
+
+  /* the regions line is orange and 4 wide when it is on */
+  const regionsOn = await page.$eval('#regionsBtn', e => e.getAttribute('aria-pressed'));
+  if (regionsOn === 'false') { await page.click('#regionsBtn'); await page.waitForTimeout(600); }
+  const region = await page.evaluate(() => {
+    const p = [...document.querySelectorAll('#map path')]
+      .find(el => (el.getAttribute('stroke') || '').toLowerCase() === '#e2761b');
+    return p ? { stroke: p.getAttribute('stroke'), w: p.getAttribute('stroke-width') } : null;
+  });
+  ok('the regions line is drawn in orange', region !== null, 'no #e2761b path on the map');
+  ok('the regions line is 4 wide', region && Number(region.w) === 4, region && region.w);
+
+  /* the layers button no longer opens a panel — the sliders button does, and it
+     still carries everything the switch row leaves out */
+  ok('the layers button switches instead of opening a panel',
+     await page.$eval('#panel', el => el.hidden) === true);
+  await page.click('#layerListBtn');
+  await page.waitForTimeout(300);
+  const panelHtml = await page.$eval('#panelBody', el => el.innerHTML);
+  ok('the full layer list is still reachable',
+     await page.$eval('#panel', el => el.hidden) === false);
+  ok('it still carries נהרות ומים', panelHtml.includes('data-lay="water"'));
+  ok('it still carries the four border kinds',
+     ['region', 'district', 'mun', 'fre'].every(k => panelHtml.includes(`data-lay="ln:${k}"`)));
+  /* the panel and the switch row are one state, so a change on one shows on the
+     other — this went wrong the other way round when a failed background left
+     the switch lit. */
+  const fillsBefore = await page.$eval('#fillsBtn', e => e.getAttribute('aria-pressed'));
+  await page.click('#panelBody [data-lay="muncol"]');
+  await page.waitForTimeout(400);
+  ok('the panel and the switch row agree about the fill',
+     await page.$eval('#fillsBtn', e => e.getAttribute('aria-pressed')) !== fillsBefore);
+  await page.click('#panelBody [data-lay="muncol"]');
+  await page.waitForTimeout(400);
+  await page.click('#panelClose');
+  await page.waitForTimeout(200);
+
+  /* 9. the photo picker takes more than one */
+  ok('the photo input accepts multiple files',
+     await page.evaluate(() => {
+       const b = document.querySelector('#addBtn'); if (b) b.click();
+       return new Promise(r => setTimeout(() => {
+         const i = document.querySelector('#minePhotoIn');
+         r(i ? i.multiple : null);
+       }, 400));
+     }) === true);
+
+  /* 10. add opens a card in the text half straight away */
+  ok('the add button opens a card to fill in',
+     await page.$('#mineName') !== null);
+  ok('the card starts with a position of its own',
+     await page.evaluate(() => !!(window.__wpLL || document.querySelector('#mineWhere'))));
+
+  /* 11. the explanations are gone from the screen */
+  const docText = await page.$eval('#doc', el => el.textContent);
+  ok('the storage explanation is no longer on the נ.צ. card',
+     !docText.includes('נשמרות במכשיר הזה בלבד'), 'still there');
+  ok('the export note is no longer on the נ.צ. card',
+     !docText.includes('ההעתקה מוציאה את הנקודות כטקסט'), 'still there');
+
+  /* and are in the info drawer instead */
+  await page.click('#infoBtn');
+  await page.waitForTimeout(700);
+  const infoText = await page.$eval('#infoBody', el => el.textContent);
+  ok('the storage explanation moved into the info drawer',
+     infoText.includes('במכשיר הזה בלבד'));
+  ok('the multiple-photo behaviour is explained there too',
+     infoText.includes('כמה תמונות בבת אחת'));
+  await page.click('#infoClose');
+  await page.waitForTimeout(400);
+
+  /* 12. the float: the strip and its buttons both cast a shadow */
+  const shStrip = await css(page, '#tools', 'box-shadow');
+  const shBtn = await css(page, '#layersBtn', 'box-shadow');
+  ok('the strip floats over the map', shStrip !== 'none' && shStrip.length > 0, shStrip);
+  ok('each button floats over the strip', shBtn !== 'none' && shBtn.length > 0, shBtn);
+
+  /* 13. two quick taps no longer change the layout */
   const view = () => page.$eval('body', el => el.dataset.view);
   const before = await view();
   await page.click('#menuBtn');
