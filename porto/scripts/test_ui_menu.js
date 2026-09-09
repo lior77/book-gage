@@ -111,6 +111,14 @@ const css = (page, sel, prop) =>
   ok('strip has a tinted background', tint !== 'rgba(0, 0, 0, 0)' && tint !== 'rgb(255, 255, 255)', tint);
   ok('menu button has the same tint', menuTint === tint, `${menuTint} vs ${tint}`);
   ok('the tint is bluish rather than neutral grey', bluish(tint), tint);
+  /* half transparent: the map has to stay readable under the strip.  An opaque
+     colour reports as rgb(...) with no fourth number, so the alpha is the
+     check — not the eye, which cannot tell 50% grey from a lighter grey. */
+  const alpha = s => { const m = s.match(/rgba?\(([^)]+)\)/); if (!m) return 1;
+                       const p = m[1].split(',').map(v => parseFloat(v));
+                       return p.length > 3 ? p[3] : 1; };
+  ok('the strip is half transparent', Math.abs(alpha(tint) - 0.5) < 0.02, tint);
+  ok('so is the menu button under it', Math.abs(alpha(menuTint) - 0.5) < 0.02, menuTint);
 
   /* 7. add sits on the switch row, at its far (left) end — past every switch,
         so it is still to the LEFT of the list button it was paired with. */
@@ -127,19 +135,23 @@ const css = (page, sel, prop) =>
   ok('add button also carries the plus',
      (await page.$eval('#addBtn svg', el => el.innerHTML)).includes('M12 7.7v5.6'));
 
-  /* 8. the five map switches, in the order they were asked for */
-  const order = ['#layersBtn', '#wpBtn', '#fillsBtn', '#bordersBtn', '#regionsBtn'];
+  /* 8. the switch line, in the order it was asked for — the layer list at the
+        right end, then the five switches, then the add action */
+  const order = ['#layerListBtn', '#layersBtn', '#wpBtn', '#fillsBtn',
+                 '#bordersBtn', '#regionsBtn', '#addBtn'];
   const xs = [];
   for (const id of order) xs.push((await box(page, id)).x);
-  ok('the row reads שכבות · נ.צ. · צבעים · גבולות · אזורים, right to left',
+  ok('the line reads שכבות מפה · רקע · נ.צ. · צבעים · גבולות · אזורים · הוספה, right to left',
      xs.every((x, i) => i === 0 || x < xs[i - 1]), xs.map(Math.round).join(' > '));
-  ok('all five are on one row',
+  ok('all seven are on one row',
      (await Promise.all(order.map(id => box(page, id).then(b => b.y))))
        .every((y, _, a) => Math.abs(y - a[0]) < 2));
+  ok('the layer list left the column for the line',
+     await page.$eval('#layerListBtn', el => el.parentElement.className) === 'mt-row');
 
-  /* each is a switch: pressed flips, and the map answers */
+  /* the plain switches: pressed flips, and the map answers */
   for (const [id, name] of [['#layersBtn', 'רקע המפה'], ['#fillsBtn', 'צבע השטח'],
-                            ['#bordersBtn', 'גבולות'], ['#regionsBtn', 'אזורים']]) {
+                            ['#regionsBtn', 'אזורים']]) {
     const was = await page.$eval(id, e => e.getAttribute('aria-pressed'));
     await page.click(id);
     await page.waitForTimeout(350);
@@ -148,6 +160,74 @@ const css = (page, sel, prop) =>
     await page.click(id);                       // put it back
     await page.waitForTimeout(350);
   }
+
+  /* 8b. the boundaries button is a four-state cycle, not a switch.  Read the
+         rings the way an eye does — the resolved stroke of each circle — and
+         count the lines actually on the map, so a ring that lies about what is
+         drawn fails here rather than looking right. */
+  const ringOff = await page.$eval('#bordersBtn',
+    el => getComputedStyle(el).getPropertyValue('--ring-off').trim());
+  const accent = await page.$eval('#bordersBtn',
+    el => getComputedStyle(el).getPropertyValue('--accent').trim());
+  ok('the rings have their own widths, 3 · 2 · 1 outside in',
+     (await page.$$eval('#bordersBtn circle',
+        els => els.map(e => getComputedStyle(e).strokeWidth)))
+       .join(' ') === '3px 2px 1px');
+  ok('גבולות has no aria-pressed — four states cannot be a pressed flag',
+     await page.$eval('#bordersBtn', el => el.getAttribute('aria-pressed')) === null);
+
+  const ringState = () => page.evaluate(off => {
+    const hex = c => {                     // getComputedStyle gives rgb()
+      const m = c.match(/\d+/g);
+      return m ? '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('') : c;
+    };
+    const want = off.toLowerCase();
+    return [...document.querySelectorAll('#bordersBtn circle')]
+      .map(e => hex(getComputedStyle(e).stroke).toLowerCase() === want ? 'off' : 'on')
+      .join(' ');
+  }, ringOff);
+  const drawn = () => page.evaluate(() => {
+    const w = [...document.querySelectorAll('#map path')]
+      .filter(p => (p.getAttribute('stroke') || '').toLowerCase() !== '#e2761b')
+      .map(p => Number(p.getAttribute('stroke-width')));
+    return { district: w.includes(3.2), mun: w.includes(2.1), fre: w.includes(1) };
+  });
+
+  ok('by default all three rings are blue', await ringState() === 'on on on',
+     await ringState());
+  ok('and all three levels are on the map',
+     JSON.stringify(await drawn()) === '{"district":true,"mun":true,"fre":true}',
+     JSON.stringify(await drawn()));
+
+  const steps = [
+    ['first tap drops גבול המחוז, outer ring goes dark',  'off on on',
+     '{"district":false,"mun":true,"fre":true}'],
+    ['second tap brings it back and drops the עיריות',    'on off on',
+     '{"district":true,"mun":false,"fre":true}'],
+    ['third tap does the same for the רובעים',            'on on off',
+     '{"district":true,"mun":true,"fre":false}'],
+    ['a fourth tap comes back to all three',              'on on on',
+     '{"district":true,"mun":true,"fre":true}'],
+  ];
+  for (const [name, rings, lines] of steps) {
+    await page.click('#bordersBtn');
+    await page.waitForTimeout(450);
+    const r = await ringState(), d = JSON.stringify(await drawn());
+    ok(name, r === rings && d === lines, `rings ${r}, map ${d}`);
+  }
+  ok('a dark ring is not the blue one', ringOff !== accent, `${ringOff} / ${accent}`);
+
+  /* the panel sets one level at a time; the rings have to follow that too */
+  await page.click('#layerListBtn');
+  await page.waitForTimeout(300);
+  await page.click('#panelBody [data-lay="ln:mun"]');
+  await page.waitForTimeout(400);
+  ok('a level switched off in the panel darkens its ring too',
+     await ringState() === 'on off on', await ringState());
+  await page.click('#panelBody [data-lay="ln:mun"]');
+  await page.waitForTimeout(400);
+  await page.click('#panelClose');
+  await page.waitForTimeout(200);
 
   /* the regions line is orange and 4 wide when it is on */
   const regionsOn = await page.$eval('#regionsBtn', e => e.getAttribute('aria-pressed'));

@@ -59,14 +59,6 @@
     <button class="mt" id="infoBtn" aria-label="מקורות ומידע חסר">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
     </button>
-    <!-- The full list: water, letters, each border kind on its own, and the
-         point categories of the current parish.  The switch row below is the
-         handful used most; this is everything, and sliders rather than a
-         stack of tiles, because the stack now means the street background. -->
-    <button class="mt" id="layerListBtn" aria-label="בחירת שכבות ונקודות"
-            aria-expanded="false" aria-controls="panel">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-    </button>
 
     <!-- What the map shows, one switch each, right to left:
          the street background · your own points · the level's colour ·
@@ -75,6 +67,14 @@
          The first child of an RTL row is the rightmost, so the source order
          below is the order they read on screen. -->
     <div class="mt-row">
+      <!-- The full list — water, letters, each border kind on its own, and the
+           point categories of the current parish — at the right end of the line
+           the switches read from.  Sliders rather than a stack of tiles,
+           because the stack now means the street background. -->
+      <button class="mt" id="layerListBtn" aria-label="בחירת שכבות ונקודות"
+              aria-expanded="false" aria-controls="panel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+      </button>
       <button class="mt" id="layersBtn" aria-label="רקע המפה" aria-pressed="true">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
       </button>
@@ -85,9 +85,12 @@
       <button class="mt" id="fillsBtn" aria-label="צבע השטח" aria-pressed="true">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z" fill="currentColor" fill-opacity=".28"/><path d="M4 5h16v15H4z"/></svg>
       </button>
-      <!-- a shape drawn as outline only -->
-      <button class="mt" id="bordersBtn" aria-label="גבולות" aria-pressed="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5 10 4l4.5 2.5L20 4.5v13L14.5 20 10 17.5 4 19.5z"/><path d="M10 4v13.5M14.5 6.5V20"/></svg>
+      <!-- Three rings, one per boundary level, thickest outside: מחוז, עיריות,
+           רובעים.  Blue is drawn; the off one goes to --ring-off.  No
+           aria-pressed — the button has four states, not two, so the label
+           says which one it is in. -->
+      <button class="mt" id="bordersBtn" aria-label="גבולות: הכל מוצג" data-b="">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><circle class="r1" cx="12" cy="12" r="9.5"/><circle class="r2" cx="12" cy="12" r="6"/><circle class="r3" cx="12" cy="12" r="2.75"/></svg>
       </button>
       <!-- two areas meeting along one border: the NUTS III pair -->
       <button class="mt" id="regionsBtn" aria-label="גבולות שני האזורים" aria-pressed="false">

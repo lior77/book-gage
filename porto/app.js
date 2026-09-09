@@ -32,7 +32,6 @@ const S = {
   water: true,         // rivers and lakes
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
-  bounds: true,        // the district / municipality / parish boundary lines
   mine: true,          // draw the points the user added
   photos: true,        // draw the ones that carry a photo (their own layer)
   // The four boundary layers.  Each is drawn at every level and switched on
@@ -144,11 +143,11 @@ function drawLines() {
     weight: LINE_W[kind], opacity: .95, fill: false,
     lineJoin: 'round', lineCap: 'round' });
 
-  if (S.bounds && S.lnFre) {
+  if (S.lnFre) {
     LG.lnFre = L.geoJSON(D.bF, { interactive: false,
       style: ft => style('fre', ft.properties) }).addTo(map);
   }
-  if (S.bounds && S.lnMun) {
+  if (S.lnMun) {
     LG.lnMun = L.geoJSON(D.bM, { interactive: false,
       style: ft => style('mun', ft.properties) }).addTo(map);
     // the chosen municipality's own outline goes on top of its neighbours',
@@ -169,7 +168,7 @@ function drawLines() {
     LG.lnRegion = L.geoJSON(pick('region'), {
       interactive: false, style: () => style('region') }).addTo(map);
   }
-  if (S.bounds && S.lnDistrict) {
+  if (S.lnDistrict) {
     LG.lnDistrict = L.geoJSON(pick('district'), {
       pane: 'district', interactive: false,
       style: () => style('district') }).addTo(map);
@@ -1992,7 +1991,27 @@ function toggleFills() {
   redrawLevel();
   applySwitches(); save();
 }
-function toggleBounds() { S.bounds = !S.bounds; drawLines(); applySwitches(); save(); }
+/* Four states, not two.  All three levels drawn, then each one dropped in turn,
+   outside in: מחוז, then עיריות, then רובעים, then everything back.  The state
+   is the three flags themselves — the same ones the layer panel sets one by one
+   — so there is no cycle counter to drift out of step with what is on the map.
+   A combination the panel made that is not one of the four lands on "all on"
+   next, which is the one step from anywhere that is easy to predict. */
+const BOUNDS_CYCLE = [
+  [true,  true,  true ],   // הכל
+  [false, true,  true ],   // בלי גבול המחוז
+  [true,  false, true ],   // בלי גבולות העיריות
+  [true,  true,  false],   // בלי גבולות הרובעים
+];
+function boundsStep() {
+  const now = [S.lnDistrict, S.lnMun, S.lnFre];
+  const i = BOUNDS_CYCLE.findIndex(c => c.every((v, n) => v === now[n]));
+  return i < 0 ? 0 : (i + 1) % BOUNDS_CYCLE.length;
+}
+function cycleBounds() {
+  [S.lnDistrict, S.lnMun, S.lnFre] = BOUNDS_CYCLE[boundsStep()];
+  drawLines(); applySwitches(); renderLayers(); save();
+}
 function toggleRegions() { S.lnRegion = !S.lnRegion; drawLines(); applySwitches(); save(); }
 
 /* Redraw whichever level is on screen, because the fill belongs to the level
@@ -2007,8 +2026,21 @@ function applySwitches() {
   const set = (id, on) => { const b = $(id); if (b) b.setAttribute('aria-pressed', String(!!on)); };
   set('#layersBtn', S.tiles);
   set('#fillsBtn', S.muncol);
-  set('#bordersBtn', S.bounds);
   set('#regionsBtn', S.lnRegion);
+  paintBounds();
+}
+
+/* The rings read straight off the flags, so the button tells the truth whether
+   the change came from itself or from a row in the layer panel. */
+const BOUNDS_HE = { d: 'המחוז', m: 'העיריות', f: 'הרובעים' };
+function paintBounds() {
+  const b = $('#bordersBtn'); if (!b) return;
+  const off = [['d', S.lnDistrict], ['m', S.lnMun], ['f', S.lnFre]]
+    .filter(([, on]) => !on).map(([k]) => k);
+  b.setAttribute('data-b', off.join(' '));
+  b.setAttribute('aria-label', off.length
+    ? 'גבולות: בלי ' + off.map(k => BOUNDS_HE[k]).join(', ')
+    : 'גבולות: הכל מוצג');
 }
 
 function cycleView() {
@@ -2326,7 +2358,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, tools: S.tools,
       letters: S.letters, mine: S.mine, photos: S.photos, water: S.water,
-      muncol: S.muncol, bounds: S.bounds,
+      muncol: S.muncol,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
@@ -2345,7 +2377,6 @@ function restore() {
     });
     if (typeof o.water === 'boolean') S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
-    if (typeof o.bounds === 'boolean') S.bounds = o.bounds;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (typeof o.tools === 'boolean') S.tools = o.tools;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
@@ -2630,7 +2661,7 @@ function wire() {
   $('#layersBtn').addEventListener('click', toggleTiles);
   $('#layerListBtn').addEventListener('click', () => toggleLayers());
   $('#fillsBtn').addEventListener('click', toggleFills);
-  $('#bordersBtn').addEventListener('click', toggleBounds);
+  $('#bordersBtn').addEventListener('click', cycleBounds);
   $('#regionsBtn').addEventListener('click', toggleRegions);
   $('#wpBtn').addEventListener('click', toggleWp);
   $('#addBtn').addEventListener('click', startWpAdd);
