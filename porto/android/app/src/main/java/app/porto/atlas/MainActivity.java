@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -16,8 +17,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.app.Activity;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -161,32 +165,45 @@ public class MainActivity extends Activity {
             }
         });
 
-        if (state != null) web.restoreState(state);
-        else web.loadUrl(START);
+        if (state != null) {
+            web.restoreState(state);
+        } else {
+            clearPickedCache();   // copies from the previous run; the page has its own by now
+            web.loadUrl(START);
+        }
 
         askOnce();
     }
 
     /**
-     * Ask for the permission the app needs, once, on the first run.
+     * Ask for the permissions the app needs, once, on the first run.
      *
-     * Only location is a permission here.  Reading a photo is not: the file
-     * picker above returns a single file the user chose, which Android grants
-     * without any storage permission at all — and asking for one the app does
-     * not need would be worse than not asking, because it would be a request
-     * for the whole photo library to do the job of one picture.
+     * Two, and neither is storage.  Reading a photo is not a permission: the
+     * file picker above returns a single file the user chose, which Android
+     * grants without one — and asking for the whole photo library to do the job
+     * of one picture would be worse than not asking.
      *
-     * Refusing is not fatal to anything: the map, the data and the points all
-     * work without a position, and the button says so when it is denied.
+     * ACCESS_MEDIA_LOCATION is not access to the library either.  It is the
+     * difference between being handed the picked photo and being handed the
+     * picked photo with its GPS tags still in it; without it Android zeroes
+     * them on the way out, and a photo taken in Porto arrives looking like one
+     * taken by a camera that never found a satellite.
+     *
+     * Refusing either is not fatal: the map, the data and the points all work
+     * without a position, and a photo with no readable location leaves its
+     * point where it was dropped and says so.
      */
     private void askOnce() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
         android.content.SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
-        if (p.getBoolean(ASKED, false) || hasLocation()) return;
+        if (p.getBoolean(ASKED, false) || (hasLocation() && hasMediaLocation())) return;
         p.edit().putBoolean(ASKED, true).apply();
-        requestPermissions(new String[]{
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_FIRST_RUN);
+        requestPermissions(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                ? new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                               Manifest.permission.ACCESS_COARSE_LOCATION,
+                               Manifest.permission.ACCESS_MEDIA_LOCATION}
+                : new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                               Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_FIRST_RUN);
     }
 
     @Override
@@ -196,9 +213,68 @@ public class MainActivity extends Activity {
         if (pendingFiles == null) return;
         // A cancelled picker still has to answer, or the input stays stuck and
         // the next tap on it does nothing.
-        pendingFiles.onReceiveValue(result == RESULT_OK
-            ? WebChromeClient.FileChooserParams.parseResult(result, data) : null);
+        Uri[] picked = result == RESULT_OK
+            ? WebChromeClient.FileChooserParams.parseResult(result, data) : null;
+        pendingFiles.onReceiveValue(picked == null ? null : unredacted(picked));
         pendingFiles = null;
+    }
+
+    /**
+     * Hand the page the photo with its own GPS tags, not the copy Android
+     * blanks on the way out.
+     *
+     * Holding ACCESS_MEDIA_LOCATION is necessary but, depending on which
+     * provider answered the picker, not always sufficient: the documented way
+     * to ask for the bytes as they are on disk is setRequireOriginal(), and it
+     * only applies to MediaStore uris.  So this tries it, copies the result
+     * into the app's own cache, and hands that file over instead.
+     *
+     * Every failure here falls back to the uri exactly as the picker returned
+     * it.  A photo that loses its coordinates is the bug being fixed; a photo
+     * that does not arrive at all would be a worse one.
+     */
+    private Uri[] unredacted(Uri[] picked) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !hasMediaLocation()) return picked;
+        Uri[] out = new Uri[picked.length];
+        for (int i = 0; i < picked.length; i++) {
+            out[i] = picked[i];
+            if (picked[i] == null) continue;
+            File copy = null;
+            try {
+                Uri original = MediaStore.setRequireOriginal(picked[i]);
+                File dir = new File(getCacheDir(), "picked");
+                if (!dir.isDirectory() && !dir.mkdirs()) continue;
+                copy = new File(dir, "photo-" + System.nanoTime() + ".jpg");
+                try (InputStream in = getContentResolver().openInputStream(original);
+                     OutputStream to = new FileOutputStream(copy)) {
+                    if (in == null) throw new IOException("no stream");
+                    byte[] buf = new byte[64 * 1024];
+                    for (int n; (n = in.read(buf)) > 0; ) to.write(buf, 0, n);
+                }
+                if (copy.length() > 0) out[i] = Uri.fromFile(copy);
+                else if (copy.exists() && !copy.delete()) copy = null;
+            } catch (Exception e) {
+                // setRequireOriginal rejects a non-MediaStore uri, and the read
+                // can fail for reasons of its own.  Either way the original uri
+                // still works; it just may not carry the coordinates.
+                if (copy != null && copy.exists() && !copy.delete()) { /* cache, not fatal */ }
+            }
+        }
+        return out;
+    }
+
+    /** Cached copies of picked photos, cleared so they do not accumulate. */
+    private void clearPickedCache() {
+        File dir = new File(getCacheDir(), "picked");
+        File[] old = dir.listFiles();
+        if (old == null) return;
+        for (File f : old) if (!f.delete()) { /* next run will try again */ }
+    }
+
+    private boolean hasMediaLocation() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true;
+        return checkCallingOrSelfPermission(Manifest.permission.ACCESS_MEDIA_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
     }
 
     private boolean hasLocation() {
