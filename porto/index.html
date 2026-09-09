@@ -22,15 +22,14 @@
 
 <!-- The two halves.  Portrait: map above, text below.  Landscape: map at the
      start of the line (left, in this RTL layout) and the text beside it.
-     --f is the share of the split the map gets; the divider drags it. -->
-<main class="split" id="split" style="--f:52%">
+     Half and half, fixed: --f is a constant now and the seam between them is a
+     line rather than a handle. -->
+<main class="split" id="split">
   <section class="pane pane-map" id="paneMap" aria-label="מפה">
     <div id="map" role="application" aria-label="מפת מחוז פורטו"></div>
   </section>
 
-  <div class="divider" id="divider" role="separator" tabindex="0"
-       aria-orientation="horizontal" aria-label="הזזת הקו משנה את גודל המפה"
-       aria-valuemin="15" aria-valuemax="85" aria-valuenow="52"><span class="grip"></span></div>
+  <div class="seam" aria-hidden="true"></div>
 
   <!-- Top corner of the map — the start edge, which in this RTL document is the
        right.  One tap shows the column below it, another puts it away. -->

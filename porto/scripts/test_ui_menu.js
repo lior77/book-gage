@@ -89,19 +89,38 @@ const css = (page, sel, prop) =>
        return !failed || on === 'false';
      }), 'the note is up but the switch still reads pressed');
 
-  /* 5. geometry, now that there is something to measure */
+  /* 5. geometry — every distance below is measured against the MAP's own box,
+        not the screen's, because that is what the two are placed inside. */
   const menu = await box(page, '#menuBtn');
   const tools = await box(page, '#tools');
-  ok('menu button is in the map\'s top corner', menu.y < map.y + 60, `menu y ${menu.y}`);
-  ok('menu button is on the RIGHT half', menu.x > vw / 2, `menu x ${menu.x} of ${vw}`);
-  /* The strip is a wide row now, so its LEFT edge is well past the middle; what
-     has to hold is that it hangs off the right edge and still fits on screen. */
-  ok('strip hangs off the RIGHT edge', tools.right > vw / 2, `tools right ${tools.right} of ${vw}`);
-  ok('strip fits on screen', tools.x > 0, `tools x ${tools.x} of ${vw}`);
-  ok('strip sits below the menu button', tools.y >= menu.bottom - 1,
-     `menu bottom ${menu.bottom}, tools y ${tools.y}`);
-  ok('menu and strip share the same edge', Math.abs(tools.right - menu.right) < 2,
-     `tools right ${tools.right}, menu right ${menu.right}`);
+  const near = (a, b, t = 1.5) => Math.abs(a - b) <= t;
+  ok('menu button is 20px below the map\'s top', near(menu.y - map.y, 20),
+     `${(menu.y - map.y).toFixed(1)}px`);
+  ok('menu button is 20px in from the map\'s right', near(map.right - menu.right, 20),
+     `${(map.right - menu.right).toFixed(1)}px`);
+
+  for (const [side, got] of [['top', tools.y - map.y], ['right', map.right - tools.right],
+                             ['left', tools.x - map.x], ['bottom', map.bottom - tools.bottom]]) {
+    ok(`the card is 10px in from the map's ${side}`, near(got, 10), `${got.toFixed(1)}px`);
+  }
+  ok('the card is under the menu button, not over it',
+     Number(await css(page, '#tools', 'z-index')) < Number(await css(page, '#menuBtn', 'z-index')),
+     `${await css(page, '#tools', 'z-index')} vs ${await css(page, '#menuBtn', 'z-index')}`);
+
+  /* the buttons run down the card's start edge and stop 10px above its foot */
+  const first = await box(page, '#viewBtn');
+  const lastRow = await box(page, '.mt-row');
+  ok('the top button is 10px in from the card\'s right',
+     near(tools.right - first.right, 10), `${(tools.right - first.right).toFixed(1)}px`);
+  ok('the top button clears the menu button above it', first.y >= menu.bottom - 1,
+     `menu bottom ${menu.bottom.toFixed(1)}, first ${first.y.toFixed(1)}`);
+  ok('the last row ends 10px above the card\'s foot',
+     near(tools.bottom - lastRow.bottom, 10), `${(tools.bottom - lastRow.bottom).toFixed(1)}px`);
+  ok('the row keeps the column\'s grid — same right edge',
+     near(lastRow.right, first.right), `${lastRow.right.toFixed(1)} vs ${first.right.toFixed(1)}`);
+  ok('the column is spread down the card, not bunched at the top',
+     first.y < map.y + 100 && lastRow.y > tools.y + tools.h / 2,
+     `first ${first.y.toFixed(1)}, row ${lastRow.y.toFixed(1)}, card ${tools.y.toFixed(1)}..${tools.bottom.toFixed(1)}`);
 
   /* 6. both sit on the tinted panel, and it is neither white nor transparent */
   const tint = await css(page, '#tools', 'background-color');
@@ -109,7 +128,8 @@ const css = (page, sel, prop) =>
   const rgb = s => (s.match(/\d+/g) || []).slice(0, 3).map(Number);
   const bluish = s => { const [r, g, b] = rgb(s); return b > r && b > 200 - 1 ? true : b > r; };
   ok('strip has a tinted background', tint !== 'rgba(0, 0, 0, 0)' && tint !== 'rgb(255, 255, 255)', tint);
-  ok('menu button has the same tint', menuTint === tint, `${menuTint} vs ${tint}`);
+  ok('menu button carries the same hue', rgb(menuTint).join() === rgb(tint).join(),
+     `${menuTint} vs ${tint}`);
   ok('the tint is bluish rather than neutral grey', bluish(tint), tint);
   /* half transparent: the map has to stay readable under the strip.  An opaque
      colour reports as rgb(...) with no fourth number, so the alpha is the
@@ -117,8 +137,9 @@ const css = (page, sel, prop) =>
   const alpha = s => { const m = s.match(/rgba?\(([^)]+)\)/); if (!m) return 1;
                        const p = m[1].split(',').map(v => parseFloat(v));
                        return p.length > 3 ? p[3] : 1; };
-  ok('the strip is half transparent', Math.abs(alpha(tint) - 0.5) < 0.02, tint);
-  ok('so is the menu button under it', Math.abs(alpha(menuTint) - 0.5) < 0.02, menuTint);
+  ok('the card is 40% opaque', Math.abs(alpha(tint) - 0.4) < 0.02, tint);
+  ok('the menu button is not — it is the way back and never dims',
+     alpha(menuTint) === 1, menuTint);
 
   /* 7. add sits on the switch row, at its far (left) end — past every switch,
         so it is still to the LEFT of the list button it was paired with. */
@@ -216,6 +237,59 @@ const css = (page, sel, prop) =>
     ok(name, r === rings && d === lines, `rings ${r}, map ${d}`);
   }
   ok('a dark ring is not the blue one', ringOff !== accent, `${ringOff} / ${accent}`);
+
+  /* 8c. the stack.  Bottom to top: map, regions, district, municipalities,
+         parishes — and it has to hold at every level, which is why it is panes
+         and not draw order.  Read the resolved z-index of the pane each line
+         actually landed in, at all three levels in turn. */
+  if (await page.$eval('#regionsBtn', e => e.getAttribute('aria-pressed')) === 'false') {
+    await page.click('#regionsBtn'); await page.waitForTimeout(500);
+  }
+  const stack = () => page.evaluate(() => {
+    const w = { 4: 'region', 3.2: 'district', 2.1: 'mun', 1: 'fre' };
+    const seen = {};
+    for (const el of document.querySelectorAll('#map path')) {
+      const kind = w[Number(el.getAttribute('stroke-width'))];
+      if (!kind || seen[kind]) continue;
+      const pane = el.closest('.leaflet-pane');
+      seen[kind] = { pane: pane && pane.className.replace(/leaflet-\S+\s*/g, '').trim(),
+                     z: Number(getComputedStyle(pane).zIndex) };
+    }
+    return seen;
+  });
+  const inOrder = st => ['region', 'district', 'mun', 'fre'].every((k, i, a) =>
+    st[k] && (i === 0 || st[k].z > st[a[i - 1]].z));
+
+  for (const [name, go] of [
+        ['level 1 (המחוז)', null],
+        ['level 2 (עירייה)', () => page.evaluate(() => goMun(13))],
+        ['level 3 (רובע)', () => page.evaluate(() => goZone(
+            D.freKey(D.fre.find(f => f.mun_num === 13))))],
+      ]) {
+    if (go) { await go(); await page.waitForTimeout(900); }
+    const st = await stack();
+    ok(`stack holds at ${name}: אזורים < מחוז < עיריות < רובעים`, inOrder(st),
+       ['region', 'district', 'mun', 'fre']
+         .map(k => `${k} ${st[k] ? st[k].z : '—'}`).join('  '));
+  }
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+  await page.click('#regionsBtn'); await page.waitForTimeout(400);
+
+  /* 8d. the halves cannot be dragged any more */
+  ok('there is no divider to drag', await page.$('#divider') === null);
+  ok('the seam between the halves is a hairline, not a handle',
+     await page.$eval('.seam', el => el.getBoundingClientRect().height <= 2
+       && getComputedStyle(el).cursor !== 'row-resize'));
+  const wasMap = await box(page, '#paneMap');
+  await page.mouse.move(wasMap.x + wasMap.w / 2, wasMap.bottom + 1);
+  await page.mouse.down();
+  await page.mouse.move(wasMap.x + wasMap.w / 2, wasMap.bottom - 120, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const nowMap = await box(page, '#paneMap');
+  ok('dragging the seam does not resize the halves', near(nowMap.h, wasMap.h, 2),
+     `${wasMap.h.toFixed(1)} -> ${nowMap.h.toFixed(1)}`);
 
   /* the panel sets one level at a time; the rings have to follow that too */
   await page.click('#layerListBtn');

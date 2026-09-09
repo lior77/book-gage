@@ -21,8 +21,6 @@ const S = {
   mun: null,           // municipality number, 1..18
   zone: null,          // level 3: the parish key, "mun_num|name"
   tiles: true,
-  fPort: 52,           // the map's share of the split, per orientation
-  fLand: 46,
   cats: null,          // level 3: which landmark categories are shown
   hi: null,            // { kind, id } — the record highlighted on both halves
   view: 'split',       // split | map | text — which half fills the screen
@@ -112,6 +110,10 @@ function ownFeature(kind, props) {
 }
 const LINE_ON = { region: 'lnRegion', district: 'lnDistrict',
                   mun: 'lnMun', fre: 'lnFre' };
+// bottom to top — the array order IS the stacking order
+const LINE_PANE = ['ln-region', 'ln-district', 'ln-mun', 'ln-fre'];
+const PANE_OF = { region: 'ln-region', district: 'ln-district',
+                  mun: 'ln-mun', fre: 'ln-fre' };
 const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מחוז פורטו',
                   mun: 'גבולות העיריות', fre: 'גבולות הרובעים' };
 
@@ -144,11 +146,11 @@ function drawLines() {
     lineJoin: 'round', lineCap: 'round' });
 
   if (S.lnFre) {
-    LG.lnFre = L.geoJSON(D.bF, { interactive: false,
+    LG.lnFre = L.geoJSON(D.bF, { pane: PANE_OF.fre, interactive: false,
       style: ft => style('fre', ft.properties) }).addTo(map);
   }
   if (S.lnMun) {
-    LG.lnMun = L.geoJSON(D.bM, { interactive: false,
+    LG.lnMun = L.geoJSON(D.bM, { pane: PANE_OF.mun, interactive: false,
       style: ft => style('mun', ft.properties) }).addTo(map);
     // the chosen municipality's own outline goes on top of its neighbours',
     // or a grey line drawn later would sit over the black one
@@ -159,19 +161,16 @@ function drawLines() {
     }
   }
   // The regions and the district share one file; each feature says which it is.
-  // The district goes in the pane above, so where the three follow the same
-  // border the district is the one that stays whole.
   const pick = kind => ({ type: 'FeatureCollection',
     features: D.bB.features.filter(ft => (ft.properties.kind === 'nuts3'
       ? 'region' : 'district') === kind) });
   if (S.lnRegion) {
-    LG.lnRegion = L.geoJSON(pick('region'), {
+    LG.lnRegion = L.geoJSON(pick('region'), { pane: PANE_OF.region,
       interactive: false, style: () => style('region') }).addTo(map);
   }
   if (S.lnDistrict) {
-    LG.lnDistrict = L.geoJSON(pick('district'), {
-      pane: 'district', interactive: false,
-      style: () => style('district') }).addTo(map);
+    LG.lnDistrict = L.geoJSON(pick('district'), { pane: PANE_OF.district,
+      interactive: false, style: () => style('district') }).addTo(map);
   }
 }
 
@@ -382,12 +381,20 @@ function initNature() {
   map.getPane('nature').style.zIndex = 450;
   map.getPane('nature').style.pointerEvents = 'none';
 
-  // The district line sits above the region lines: where the two follow the
-  // same border the district is the one that stays whole, and the regions
-  // step aside for it rather than the other way round.
-  map.createPane('district');
-  map.getPane('district').style.zIndex = 460;
-  map.getPane('district').style.pointerEvents = 'none';
+  // One pane per boundary level, in the order they contain each other: the
+  // regions at the bottom, then the district, then the municipalities, then the
+  // parishes on top.  Where two levels follow the same border the smaller one
+  // stays whole and the larger steps aside for it.
+  //
+  // Panes rather than draw order on purpose.  Draw order is whatever drawLines()
+  // happened to append last, and every level redraws a different subset — so the
+  // stack held at level 1 and quietly inverted at level 3.  A pane's z-index is
+  // the same at all three.
+  LINE_PANE.forEach((pane, i) => {
+    map.createPane(pane);
+    map.getPane(pane).style.zIndex = 460 + i;
+    map.getPane(pane).style.pointerEvents = 'none';
+  });
 
   NAT.water = L.geoJSON(D.bW, {
     pane: 'nature', interactive: false,
@@ -1541,8 +1548,8 @@ function defaultLL() {
    where it landed, the text to read it. */
 function backToHalves() {
   if (S.view === 'split') return;
-  S.view = 'split'; S.fPort = 50; S.fLand = 50;
-  applySplit(); applyView(); save();
+  S.view = 'split';
+  applyView(); save();
 }
 
 /* Everything a card offers, in the order a tap has to be read: the picture
@@ -2048,9 +2055,6 @@ function cycleView() {
   // announcement undid the very thing it was announcing. The screen changing
   // is the feedback.
   S.view = VIEW_NEXT[S.view] || 'split';
-  // "half" means half: the button is a reset, not a return to whatever the
-  // divider happened to be left at.
-  if (S.view === 'split') { S.fPort = 50; S.fLand = 50; applySplit(); }
   applyView(); save();
 }
 
@@ -2297,57 +2301,15 @@ function afterNav() {
   save();
 }
 
-/* --------------------------------------------------------------- divider --- */
+/* ------------------------------------------------------------------ split --- */
+/* Half and half, and no way to drag it: --f is a constant in the stylesheet,
+   the seam between the halves is a 1px line, and the layout button is the only
+   thing that changes which halves are on screen.  The two shares that used to
+   be remembered per orientation are gone from the saved state with it. */
 const landscape = () => window.matchMedia('(orientation:landscape)').matches;
 
-function applySplit() {
-  const f = landscape() ? S.fLand : S.fPort;
-  $('#split').style.setProperty('--f', f + '%');
-  const d = $('#divider');
-  d.setAttribute('aria-orientation', landscape() ? 'vertical' : 'horizontal');
-  d.setAttribute('aria-valuenow', String(Math.round(f)));
-}
-function setSplit(f) {
-  f = Math.max(15, Math.min(85, f));
-  if (landscape()) S.fLand = f; else S.fPort = f;
-  applySplit(); save();
-}
-
-function wireDivider() {
-  const d = $('#divider');
-  let id = null;
-  const frac = e => {
-    const r = $('#split').getBoundingClientRect();
-    // portrait: the map is the top half.  landscape: row-reverse in RTL puts
-    // the map against the left edge, so the map's width grows to the right.
-    return landscape() ? (e.clientX - r.left) / r.width * 100
-                       : (e.clientY - r.top) / r.height * 100;
-  };
-  d.addEventListener('pointerdown', e => {
-    id = e.pointerId; d.setPointerCapture(id);
-    document.body.classList.add('is-dragging');
-    e.preventDefault();
-  });
-  d.addEventListener('pointermove', e => { if (id !== null) setSplit(frac(e)); });
-  const end = () => {
-    if (id === null) return;
-    try { d.releasePointerCapture(id); } catch (err) { /* already gone */ }
-    id = null; document.body.classList.remove('is-dragging');
-  };
-  d.addEventListener('pointerup', end);
-  d.addEventListener('pointercancel', end);
-  d.addEventListener('dblclick', () => setSplit(50));
-  d.addEventListener('keydown', e => {
-    const cur = landscape() ? S.fLand : S.fPort;
-    const k = e.key;
-    const step = (landscape() ? (k === 'ArrowLeft' ? -3 : k === 'ArrowRight' ? 3 : 0)
-                              : (k === 'ArrowUp' ? -3 : k === 'ArrowDown' ? 3 : 0));
-    if (!step && k !== 'Home') return;
-    e.preventDefault();
-    setSplit(k === 'Home' ? 50 : cur + step);
-  });
+function watchOrientation() {
   window.matchMedia('(orientation:landscape)').addEventListener('change', () => {
-    applySplit();
     setTimeout(() => map.invalidateSize({ animate: false }), 60);
   });
 }
@@ -2361,7 +2323,7 @@ function save() {
       muncol: S.muncol,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
-      tiles: S.tiles, fPort: S.fPort, fLand: S.fLand,
+      tiles: S.tiles,
     }));
   } catch (e) { /* private mode */ }
 }
@@ -2379,8 +2341,6 @@ function restore() {
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (typeof o.tools === 'boolean') S.tools = o.tools;
-    if (typeof o.fPort === 'number') S.fPort = o.fPort;
-    if (typeof o.fLand === 'number') S.fLand = o.fLand;
     // an older build stored a Porto quarter number under `quarter`; it has no
     // meaning here, and dropping it just opens the district
     if (o.level === 'district' || o.level === 'mun' || o.level === 'zone') {
@@ -2811,11 +2771,10 @@ function wire() {
   applyView();
   applyTools();
   applySwitches();
-  applySplit();
   initMap();
   initNature();
   wire();
-  wireDivider();
+  watchOrientation();
 
   if (S.level === 'zone' && D.freByKey.has(S.zone)) goZone(S.zone);
   else if (S.level === 'mun' && D.munByNum.has(S.mun)) goMun(S.mun);
