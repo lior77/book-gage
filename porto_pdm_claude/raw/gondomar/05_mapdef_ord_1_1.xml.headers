@@ -1,0 +1,13 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Content-Type: text/xml; charset=utf-8
+Content-Encoding: gzip
+Vary: Accept-Encoding
+Server: Microsoft-IIS/10.0
+Status: 200 OK
+X-Powered-By: ASP.NET
+Date: Wed, 09 Sep 2026 00:42:15 GMT
+Set-Cookie: cookiesession1=678A3E16A149014004B608A0EA6AF871;Expires=Thu, 09 Sep 2027 00:42:14 GMT;Path=/;HttpOnly
+Content-Length: 844
+

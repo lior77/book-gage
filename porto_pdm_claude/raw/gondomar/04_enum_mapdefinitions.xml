@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ResourceList xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceList-1.0.0.xsd">
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/cond_2_0/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:33Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:33Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/cond_2_1/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:33Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:33Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/cond_2_2/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:33Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:34Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/ord_1_1/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:33Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:33Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/ord_1_2/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:34Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:34Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/ord_1_3/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:34Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:34Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Gismat/Layers/pdm/ren/total.MapDefinition</ResourceId>
+		<Depth>5</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T08:44:34Z</CreatedDate>
+		<ModifiedDate>2016-05-25T08:44:34Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/mapa.MapDefinition</ResourceId>
+		<Depth>3</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-04T20:58:08Z</CreatedDate>
+		<ModifiedDate>2026-06-30T09:46:42Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+  <Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/mobile.MapDefinition</ResourceId>
+		<Depth>3</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2018-06-11T10:46:15Z</CreatedDate>
+		<ModifiedDate>2018-06-11T10:46:15Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/apps.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2026-06-30T10:56:05Z</CreatedDate>
+		<ModifiedDate>2026-08-07T15:34:24Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/aru.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2019-12-18T09:49:17Z</CreatedDate>
+		<ModifiedDate>2023-11-14T14:19:42Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/boialvo_cond.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:47:19Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:54Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/boialvo_imp.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:47:37Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:54Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/cart10k.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-12-28T11:26:30Z</CreatedDate>
+		<ModifiedDate>2023-11-08T16:12:29Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/cart5k.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-06-29T09:25:29Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:54Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/cond_2_0.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:42:00Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:54Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/cond_2_1.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:42:14Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:54Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/cond_2_2.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:42:26Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:54Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/lden.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:49:33Z</CreatedDate>
+		<ModifiedDate>2021-09-10T13:11:37Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/ln.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:49:04Z</CreatedDate>
+		<ModifiedDate>2021-09-10T13:12:03Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/ord_1_1.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:40:24Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:55Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/ord_1_2.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:41:47Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:55Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/ord_1_3.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T16:12:27Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:55Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/ortos.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T15:00:11Z</CreatedDate>
+		<ModifiedDate>2018-06-11T09:25:02Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/poacl_cond.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:42:54Z</CreatedDate>
+		<ModifiedDate>2023-11-08T16:42:21Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/poacl_sint.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:43:29Z</CreatedDate>
+		<ModifiedDate>2023-11-08T16:42:24Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/pp_azenha_varziela_cond.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2019-06-25T14:35:31Z</CreatedDate>
+		<ModifiedDate>2019-06-25T14:35:31Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/pp_azenha_varziela_imp.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2019-06-25T14:35:41Z</CreatedDate>
+		<ModifiedDate>2019-06-25T14:35:41Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/ren.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:48:16Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:55Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/triana_cond.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:46:54Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:55Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+	<ResourceDocument>
+		<ResourceId>Library://Visualizador/Maps/webepl/triana_imp.MapDefinition</ResourceId>
+		<Depth>4</Depth>
+		<Owner>Administrator</Owner>
+		<CreatedDate>2016-05-25T14:47:05Z</CreatedDate>
+		<ModifiedDate>2017-06-27T09:56:55Z</ModifiedDate>
+<ResourceDocumentHeader xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ResourceDocumentHeader-1.0.0.xsd">
+	<Security xsi:noNamespaceSchemaLocation="ResourceSecurity-1.0.0.xsd">
+		<Inherited>true</Inherited>
+		<Groups>
+			<Group>
+				<Name>Everyone</Name>
+				<Permissions>r,w</Permissions>
+			</Group>
+		</Groups>
+	</Security>
+</ResourceDocumentHeader>	</ResourceDocument>
+</ResourceList>

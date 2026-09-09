@@ -1,0 +1,804 @@
+<!DOCTYPE HTML>
+<html lang="pt-PT">
+
+<head>
+  <title>GeoPortal | Gaiurb</title>
+  <link rel="stylesheet" type="text/css" href="/assets/wm-citizen/stylesheets/frontoffice/smile-citizen-2-a25b70feb3.min.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/mandatory-b73ced5ea4.min.css" media="all"><link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/subscribe-better/subscribe-better-22b60b8092.min.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/mega_search-5afe7b92fd.min.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/vendor/superfish-f6f8538a6a.vendor.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/smile_forms-335ff3b964.min.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/widgets/wire_forms_submission_renderer-fd1deff44e.min.css" media="all">
+<link rel="stylesheet" href="/assets/wm-smile/apps/admin/form-viewer/index.public.css" media="all">
+
+  <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="6pPDgUKqTAl1aFnY6jmJWsYFf9u7XBQ0j7IJlOmisjJGHBUmRgeoSWkWzeG3VUZKh8/PBGIOaObPplVYGM69cg==" />
+  <script src="/assets/wm-smile/javascripts/vendor/smile-frontoffice-0fc0bba368.vendor.js"></script>  <script src="/assets/wm-smile/javascripts/frontoffice/smile-82477b69b7.min.js"></script>
+<script src="/assets/wm-smile/javascripts/frontoffice/subscribe-better/jquery-cfa646be6a.subscribe-better.min.js"></script>
+<script src="/assets/wm-smile/javascripts/frontoffice/widgets-common-34ae43cebc.min.js"></script>
+<script src="/assets/wm-smile/javascripts/frontoffice/mega-search-6a0138b76a.min.js"></script>
+<script src="/assets/wm-smile/javascripts/vendor/superfish-96514b9456.vendor.js"></script>
+<script src="/assets/wm-smile/javascripts/i18n-16c1564f97.js"></script>
+<script src="/assets/wm-smile/javascripts/translations-30deeba3a7.js"></script>
+
+  
+
+  <!-- delete the fonts that won't be used -->
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-regular.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-semibold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-semibold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-bold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-extrabold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-extrabold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-light.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-light.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/icons/fontawesome.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/icons/fontawesome.woff" as="font" type="font/woff" crossorigin>
+
+  <link rel="stylesheet" type="text/css" href="/assets/gaiurb/gaiurb/stylesheets/municipes_caller-8879a65925.min.css" media="all">
+  <script src="/assets/gaiurb/gaiurb/javascripts/theme_utils_interior-6316754cb2.min.js"></script>
+  <script src="/assets/gaiurb/gaiurb/javascripts/theme_utils_geral-1e120642b1.min.js"></script>
+  <script src="/assets/gaiurb/gaiurb/javascripts/vendor/jquery-d21aab6b53.mmenu.all.min.js"></script><!-- Mobile Menu -->
+  <script src="/assets/gaiurb/gaiurb/javascripts/vendor/simpleScrollbar-03808bca29.min.js"></script><!-- Scrollbars Custom -->
+  <script src="/assets/gaiurb/gaiurb/javascripts/vendor/swiper-d6fe13552b.min.js"></script><!-- Swiper -->
+  <!-- other included scripts are on the bottom of this page -->
+
+  <link rel="shortcut icon" href="/assets/gaiurb/gaiurb/images/favicon.ico" />
+  <link rel="apple-touch-icon" href="/assets/gaiurb/gaiurb/images/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="57x57" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-57x57.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-72x72.png" />
+  <link rel="apple-touch-icon" sizes="76x76" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-76x76.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-114x114.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-120x120.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-144x144.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-152x152.png" />
+
+  <meta name="viewport" content="initial-scale=1, width=device-width, maximum-scale=1, minimum-scale=1, user-scalable=yes">
+
+  <!-- NAO APAGAR ISTO -->
+  <meta name="keywords" content="">
+  
+  <meta name="canonical" content="https://www.gaiurb.pt/p/geoportal" />
+<meta name="description" content="Urbanismo" />
+<link rel="image_src" href="https://www.gaiurb.pt/gaiurb/uploads/site/logo/1/logo_fb.png" />
+<meta name="wm:pagetype" content="page" />
+<meta name="wm:page_id" content="819" />
+<meta property="og:title" content="GeoPortal" />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="https://www.gaiurb.pt/gaiurb/uploads/site/logo/1/logo_fb.png" />
+<meta property="og:url" content="https://www.gaiurb.pt/p/geoportal" />
+<meta property="og:description" content="Urbanismo" />
+<meta property="og:locale" content="pt_PT" />
+<meta property="og:site_name" content="Urbanismo" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content="https://www.gaiurb.pt/p/geoportal" />
+<meta name="twitter:title" content="GeoPortal" />
+<meta name="twitter:description" content="Urbanismo" />
+<meta name="twitter:image" content="https://www.gaiurb.pt/gaiurb/uploads/site/logo/1/logo_fb.png" />
+
+<script src="/assets/wm-smile/javascripts/frontoffice/cookie_consent-8185edf152.min.js"></script><!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8FZCFSER0E"></script>
+<script>(function(){
+  var googleApiLoaded = false;
+  var hasConsent = function(){
+    var api = window.WMCookieConsent || {};
+    if (typeof api.isCategoryAllowed === 'function') {
+      return api.isCategoryAllowed('analytics');
+    }
+    if (typeof api.hasConsent === 'function') {
+      return api.hasConsent();
+    }
+    return false;
+  };
+  var checkCookieBarGoogleApi = function(){
+    if(googleApiLoaded){ return; }
+    if(hasConsent()){
+      googleApiLoaded = true;
+      
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8FZCFSER0E');
+
+    }
+  };
+  window.addEventListener('wm:cookie:accepted', checkCookieBarGoogleApi);
+  window.addEventListener('wm:cookie:custom', checkCookieBarGoogleApi);
+  window.addEventListener('wm:cookie:updated', checkCookieBarGoogleApi);
+  checkCookieBarGoogleApi();
+})()
+</script></head>
+
+<!-- Body class identifies some key attributes in CSS -->
+<body class="interior geral municipes urbanismo single-col ">
+<div id="cookie_bar_3" class="cookie-bar cookie-position--top cookie-bar--horizontal" role="region" aria-live="assertive" data-site-zone="3" tab-index="0" aria-hidden="true" style="display: none;" data-config-digest="0d2861d07895075c2c90eb32d2298852"><div class="cookie-bar__container" style="--cb-bg: #2B2B2B; background: #2B2B2B; border-color: #2B2B2B; --cb-text: #ffffff; --cb-muted: #ffffff; color: #ffffff; --cb-accent: #EDEDED; --cb-accent-strong: #EDEDED"><div class="cookie-bar__text"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="cookie-bar__icon" alt="" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9 3 3 0 0 0 3 3 3 3 0 0 0 3 3 3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="15.5" cy="12.4" r="0.9" fill="currentColor"></circle><circle cx="12" cy="15.4" r="0.9" fill="currentColor"></circle><circle cx="9.3" cy="11.6" r="0.9" fill="currentColor"></circle></svg><div class="cookie-bar__copy"><div class="cookie-bar__title"><strong>Utilizamos cookies</strong></div><div class="cookie-bar__desc">ESTE SITE UTILIZA COOKIES PARA MELHORAR A SUA EXPERIÊNCIA NESTE WEBSITE. <a class="cookie-bar__policy-inline" href="/pages/1132">Política de cookies</a>.</div></div></div><div class="cookie-bar__actions"><a class="cookie-btn cookie-btn--settings" role="button" aria-label="Personalizar cookies" style="background: transparent; border-color: #ffffff; color: #ffffff" href="https://www.gaiurb.pt/pages/1248">Personalizar cookies</a><button name="button" type="button" class="cookie-btn cookie-btn--accept" data-cookie-choice="accepted" style="background: #EDEDED; border-color: #EDEDED; color: #2B2B2B">ACEITAR TODOS OS COOKIES</button><button name="button" type="button" class="cookie-btn cookie-btn--reject" data-cookie-choice="declined" style="background: #EDEDED; border-color: #EDEDED; color: #2B2B2B">DESATIVAR COOKIES NÃO ESSENCIAIS</button></div></div></div>
+
+  <div class="loading-overlay"></div>
+  
+  <a href="#accessibilityMainContent" class="hideElement">Passar para o Conteúdo Principal</a>
+
+  <a href="#stickyFooter" title="voltar ao topo da página" class="cd-top">Top</a>
+
+  <div class="mobileMenu"><a href="#menu"><span class="hideElement">menu</span></a><nav id="menu"></nav></div>
+
+  <div class="stickyMenuContainer">
+  <div class="full">
+    <div class="grid-container">
+      <div class="grid-x grid-margin-x">
+        <div class="xsmall-12 show-for-xlarge cell hidden-post">
+          <div class="stickyMenu"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+   <div id="stickyFooter">
+    <section class="headerImage_AREA">  
+    <div id="links_list_39" class="widget links_list" data-id="39" data-content_type="LinksList">
+
+
+      <ul>
+
+
+          <li class="linl_block" >
+              <a class="linl_overlay">
+                <h4 class="linl_hidden">img fundo 2</h4>
+              </a>
+              <div class="linl_inner">
+
+                  <div class="image1 widget_field image"><div class="widget_value"><img data-description="" alt="" src="/imgcrop/gaiurb/uploads/links_list_item/image1/166/dji_0061_1_1920_870.JPG" /></div></div>
+
+              </div>
+          </li>
+      </ul>
+      
+</div>
+
+</section>
+
+    <header class="grid-container full">
+        <div class="grid-container">
+          <div class="grid-x grid-margin-x">
+            <div class="logo_AREA xxsmall-12 medium-3 xlarge-3 cell hidden-post">  
+  
+<div id="html_block_111" class="widget html_block" data-id="111" data-content_type="HtmlBlock">
+
+  <a href="/"><img src="/gaiurb/layout/logotipo-gaiurb-branco.svg" title="Voltar ao início" alt="Logótipo" /></a>
+
+</div>
+  
+
+</div>
+            <div class="mainNav_AREA xxsmall-12 medium-9 xlarge-6 cell hidden-post">  
+  
+<div id="html_block_91" class="widget html_block" data-id="91" data-content_type="HtmlBlock">
+
+  <!--<div class="mainNavItem mainNavTecnicos">
+  <a href="/p/balcaovirtual">Balcão Virtual</a>
+</div>
+<div class="mainNavItem mainNavMunicipes">
+  <h2>Para os Munícipes</h2>
+  <a class="urbanismo" href="/p/urbanismo">Urbanismo</a>
+  <a class="habitacao" href="/p/habitacao">Habitação</a>
+</div>
+<div class="mainNavItem mainNavServicos">
+  <h2>INVESTIMENTO E INOVAÇÃO</h2>
+  <a href="/p/gaiaminovacao">Gaia+Inovação </a>
+</div>-->
+<div class="mainNavItem mainNavTecnicos">
+  <h2>Para os Técnicos</h2>
+  <a href="/p/balcaovirtual">Balcão Virtual</a>
+</div>
+<div class="mainNavItem mainNavMunicipes">
+  <h2>Para os Munícipes</h2>
+  <a class="urbanismo" href="/p/urbanismo">Urbanismo</a>
+  <a class="habitacao" href="/p/habitacao">Habitação</a>
+</div>
+<div class="mainNavItem mainNavServicos">
+  <h2>INVESTIMENTO E INOVAÇÃO</h2>
+  <a href="/p/gaiaminovacao">Gaia+Inovação </a>
+</div>
+
+</div>
+
+</div>
+            <div class="search_AREA xxsmall-12 medium-12 xlarge-3 cell hidden-post">  
+  
+<div id="html_block_90" class="widget html_block" data-id="90" data-content_type="HtmlBlock">
+
+  <div class="headerToolsContainer">   
+
+  <!-- Links -->
+  <div class="headerLinksContainer">
+    <a class="btn-empresa" href="/pages/1238">Empresa</a>&nbsp;&nbsp;
+  </div>
+
+  <!-- Google Translate -->
+  <div class="googleTranslate" style="position: relative; display: inline-block;">
+
+      <!-- Botão customizado visível -->
+      <button id="customTranslateBtn" style="
+          font-weight:bold;
+          cursor:pointer;
+          background:none;
+          border:none;
+          font-size:14px;
+      ">PT ▼</button>
+
+      <!-- Google Translate invisível -->
+      <div id="google_translate_element" style="width:0; height:0; overflow:hidden;"></div>
+
+      <script type="text/javascript">
+          function googleTranslateElementInit() {
+              new google.translate.TranslateElement({
+                  pageLanguage: 'pt',
+                  includedLanguages: 'pt-PT,es,en,fr,it,de,nl,ru,ja,zh-CN',
+                  autoDisplay: false,
+                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+              }, 'google_translate_element');
+
+              // Esperar o botão do Google Translate carregar
+              var checkBtn = setInterval(function() {
+                  var googleBtn = document.querySelector(".goog-te-gadget-simple");
+                  if (googleBtn) {
+                      clearInterval(checkBtn);
+                      // Vincular nosso botão customizado
+                      document.getElementById("customTranslateBtn").onclick = function() {
+                          googleBtn.click();
+                      };
+                  }
+              }, 500);
+          }
+      </script>
+
+      <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  </div>
+
+  <!-- Procurar -->
+  <div class="searchTriggerContainer">
+    <div class="searchTrigger">procurar</div>
+  </div>
+
+</div>
+
+
+</div>
+  <div id="mega_search_4" class="widget mega_search" data-id="4" data-content_type="MegaSearch">
+  <div class="SearchWrap xsmall-12">
+    <div class="home-banner-search" id="home-banner-search">
+      <div class="home-search-wrapper" id="home-search-wrapper">
+        <div class="mega_pesquisa_search_form" role="search">
+          <label class="sr-only-label" for="mega_pesquisa_input_4">
+            Pesquisar conteúdos na plataforma inteira
+          </label>
+          <input id="mega_pesquisa_input_4"
+            name="search"
+            type="search"
+            value=""
+            data-core="gaiurb"
+            data-wmso_url=""
+            data-results_per_page="10"
+            data-show_results_from_service_directory="false"
+            data-show_results_from_wmso="false"
+            data-show_results_from_wm="true"
+            data-show_results_from_ai="false"
+            data-show_results_from_sites="[&quot;https://www.gaiurb.pt&quot;, &quot;www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;]"
+            data-show_results_from_pa="false"
+            data-number_of_questions="3"
+            class="mega_pesquisa_input"
+            role="searchbox"
+            placeholder="Pesquisar conteúdos na plataforma inteira">
+
+          <button type="button" id="mega_pesquisa_button" name="mega_pesquisa" class="mega_pesquisa_button search_button"><span class="sr-only">Pesquisar conteúdos na plataforma inteira</span></button>
+        </div>
+      </div>
+        <div id="search-modal" class="modal" role="dialog" style="">
+          <div class="modal-body">
+            <div class="home-modal-close-wrapper"><a href="#" id="home-modal-close-button"><span class="icone fecharModal">Fechar</span></a></div>
+            <div class="search-home-results-header">
+
+                <div class="home-wm-search-results-header columns">
+                  <h2 class="search-label">Pesquisa Geral</h2>
+                  <div class="search-home-results-panel home-wm-search-results"></div>
+                  <div id="cover-spin"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+    <div id="template_container">
+
+        <script id="wm-search-results-template" type="text/x-handlebars-template">
+          {{#if this}}
+            <ul class="search-results-buffer" style="display:block">
+              {{#each this}}
+                <li class="teste">
+                  <a href="{{url}}" title="{{safe_title}}">
+                    <div class="search-result-title">
+                      {{#each title}}
+                        {{{.}}}
+                      {{/each}}
+                    </div>
+                    <div aria-hidden="true" class="search-result-snippet">
+                      {{#each maincontent}}
+                        {{{.}}} ...
+                      {{/each}}
+                    </div>
+                  </a>
+                </li>
+              {{/each}}
+            </ul>
+
+            <ul class="search-results-placeholder">
+              <li class="search-page" data-paginator-page="1">
+                <ul class="search-results-inner">
+                </ul>
+              </li>
+            </ul>
+            <div class="paginator page-paginator"></div>
+          {{else}}
+            <ul class="search-results-placeholder">
+              <li class="search-page" data-paginator-page="1">
+                <ul class="search-results-buffer">
+                  <li class="sem-resultados pages">
+                    Sem Resultados
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          {{/if}}
+        </script>
+
+
+
+    </div>
+</div>
+
+</div>
+          </div>
+        </div>
+    </header>
+
+    <nav class="navContainer xxsmall-12 show-for-xlarge">
+      <div class="grid-container">
+        <div class="menu_AREA xxsmall-9 cell hidden-post">
+          <a id="accessibilityMainContent"></a>  
+  <div id="horizontal_menu_7" class="widget horizontal_menu" data-id="7" data-content_type="HorizontalMenu">
+
+    <ul class="depth1 ddmenu sf-menu" id="widget-menu-horizontal_menu-7"><li class="depth1 pos_1 first has_descendants"><a href="/pages/740" target="_self" class="depth1 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-681c26c4"><span>Gestão e Fiscalização Urbanística</span></a><ul class="depth2 " id="widget-menu-horizontal_menu-7-681c26c4"><li class="depth2 pos_1 first "><a href="/pages/939" target="_self" class="depth2 pos_1 first "><span>Gestão</span></a></li><li class="depth2 pos_2 "><a href="/pages/940" target="_self" class="depth2 pos_2 "><span>Fiscalização</span></a></li><li class="depth2 pos_3 "><a href="/pages/941" target="_self" class="depth2 pos_3 "><span>Operações urbanísticas / Procedimentos (fases) de apreciação</span></a></li><li class="depth2 pos_4 "><a href="/pages/942" target="_self" class="depth2 pos_4 "><span>Conselhos Úteis em Obra</span></a></li><li class="depth2 pos_5 "><a href="/pages/944" target="_self" class="depth2 pos_5 "><span>Licenciamento Zero</span></a></li><li class="depth2 pos_6 "><a href="/pages/737" target="_self" class="depth2 pos_6 "><span>Legislação</span></a></li><li class="depth2 pos_7 "><a href="/pages/756" target="_self" class="depth2 pos_7 "><span>Planos municipais de ordenamento do território (PMOT)</span></a></li><li class="depth2 pos_8 last "><a href="/pages/1128" target="_self" class="depth2 pos_8 last "><span>Direito de Preferência</span></a></li></ul></li><li class="depth1 pos_2 has_descendants"><a href="/pages/741" target="_self" class="depth1 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647"><span>Planeamento Urbanístico</span></a><ul class="depth2 " id="widget-menu-horizontal_menu-7-51cc4647"><li class="depth2 pos_1 first has_descendants"><a href="/p/revisaodopdm" target="_self" class="depth2 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0"><span>Revisão do PDM</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0"><li class="depth3 pos_1 first "><a href="/pages/1037" target="_self" class="depth3 pos_1 first "><span>01 | Revisão do PDM</span></a></li><li class="depth3 pos_2 has_descendants"><a href="/p/participapdm" target="_self" class="depth3 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-2d40b6d2"><span>02 | Vamos planear gaia juntos</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-2d40b6d2"><li class="depth4 pos_1 first "><a href="/pages/1109" target="_self" class="depth4 pos_1 first "><span>Etapas</span></a></li><li class="depth4 pos_2 has_descendants"><a href="/pages/1110" target="_self" class="depth4 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-2d40b6d2-c54f6371"><span>Conteúdos produzidos</span></a><ul class="depth5 " id="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-2d40b6d2-c54f6371"><li class="depth5 pos_1 first "><a href="/pages/1111" target="_self" class="depth5 pos_1 first "><span>Newsletters</span></a></li><li class="depth5 pos_2 "><a href="/pages/1112" target="_self" class="depth5 pos_2 "><span>Relatórios</span></a></li><li class="depth5 pos_3 last "><a href="/pages/1113" target="_self" class="depth5 pos_3 last "><span>Memórias</span></a></li></ul></li><li class="depth4 pos_3 last "><a href="/pages/1064" target="_self" class="depth4 pos_3 last "><span>Galeria de imagens</span></a></li></ul></li><li class="depth3 pos_3 last has_descendants"><a href="/pages/1046" target="_self" class="depth3 pos_3 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-851152c8"><span>04 | Notícias &amp; Destaques</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-851152c8"><li class="depth4 pos_1 first last has_descendants"><a href="/pages/1107" target="_self" class="depth4 pos_1 first last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-851152c8-3ba93da8"><span>Clipping notícias</span></a><ul class="depth5 " id="widget-menu-horizontal_menu-7-51cc4647-1d8b95b0-851152c8-3ba93da8"><li class="depth5 pos_1 first "><a href="/pages/1096" target="_self" class="depth5 pos_1 first "><span>PR|PDM</span></a></li><li class="depth5 pos_2 "><a href="/pages/1101" target="_self" class="depth5 pos_2 "><span>ALTERAÇÕES CLIMÁTICAS | CIDADE + INTELIGENTE</span></a></li><li class="depth5 pos_3 "><a href="/pages/1099" target="_self" class="depth5 pos_3 "><span>AMBIENTE E RECURSOS NATURAIS</span></a></li><li class="depth5 pos_4 "><a href="/pages/1103" target="_self" class="depth5 pos_4 "><span>ATIVIDADES ECONÓMICAS</span></a></li><li class="depth5 pos_5 "><a href="/pages/1098" target="_self" class="depth5 pos_5 "><span>HABITAÇÃO</span></a></li><li class="depth5 pos_6 "><a href="/pages/1115" target="_self" class="depth5 pos_6 "><span>IDENTIDADE</span></a></li><li class="depth5 pos_7 "><a href="/pages/1097" target="_self" class="depth5 pos_7 "><span>MOBILIDADE</span></a></li><li class="depth5 pos_8 last "><a href="/pages/1104" target="_self" class="depth5 pos_8 last "><span>PATRIMÓNIO E PAISAGEM</span></a></li></ul></li></ul></li></ul></li><li class="depth2 pos_2 has_descendants"><a href="/p/pdm" target="_self" class="depth2 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-d55d57a2"><span>Plano Diretor Municipal</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-51cc4647-d55d57a2"><li class="depth3 pos_1 first has_descendants"><a href="/pages/743" target="_self" class="depth3 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-d55d57a2-9849119b"><span>PDM de Vila Nova de Gaia</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-51cc4647-d55d57a2-9849119b"><li class="depth4 pos_1 first "><a href="/pages/744" target="_self" class="depth4 pos_1 first "><span>Elementos que acompanham o plano</span></a></li><li class="depth4 pos_2 last has_descendants"><a href="/pages/745" target="_self" class="depth4 pos_2 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-d55d57a2-9849119b-89102ec4"><span>Outros Elementos</span></a><ul class="depth5 " id="widget-menu-horizontal_menu-7-51cc4647-d55d57a2-9849119b-89102ec4"><li class="depth5 pos_1 first "><a href="/pages/746" target="_self" class="depth5 pos_1 first "><span>Fase de participação preventiva (Auscultação Prévia)</span></a></li><li class="depth5 pos_2 last "><a href="/pages/747" target="_self" class="depth5 pos_2 last "><span>Acompanhamento da Comissão Mista de Coordenação</span></a></li></ul></li></ul></li><li class="depth3 pos_2 "><a href="/pages/751" target="_self" class="depth3 pos_2 "><span>Regulamento</span></a></li><li class="depth3 pos_3 "><a href="/pages/752" target="_self" class="depth3 pos_3 "><span>Planta de Ordenamento</span></a></li><li class="depth3 pos_4 "><a href="/pages/753" target="_self" class="depth3 pos_4 "><span>Planta de Condicionantes</span></a></li><li class="depth3 pos_5 last "><a href="https://sig.gaiurb.pt/geoportal?webpdm" target="_blank" class="depth3 pos_5 last "><span>Mapa Interativo</span></a></li></ul></li><li class="depth2 pos_3 "><a href="/pages/755" target="_self" class="depth2 pos_3 "><span>SMIT</span></a></li><li class="depth2 pos_4 last has_descendants"><a href="/pages/756" target="_self" class="depth2 pos_4 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-51cc4647-a9944044"><span>Planos municipais</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-51cc4647-a9944044"><li class="depth3 pos_1 first "><a href="/pages/742" target="_self" class="depth3 pos_1 first "><span>Plano Diretor Municipal - PDM</span></a></li><li class="depth3 pos_2 "><a href="/pages/760" target="_self" class="depth3 pos_2 "><span>Plano de Urbanização da Avenida da República </span></a></li><li class="depth3 pos_3 "><a href="/pages/758" target="_self" class="depth3 pos_3 "><span>Plano de Urbanização da Barrosa</span></a></li><li class="depth3 pos_4 "><a href="/pages/1157" target="_self" class="depth3 pos_4 "><span>Plano De Pormenor De Santo Ovídio – Estação De Gaia (Em Elaboração)</span></a></li><li class="depth3 pos_5 "><a href="/pages/999" target="_self" class="depth3 pos_5 "><span>Plano de Pormenor do Remate Poente da Avenida do Atlântico - Madalena (EM ELABORAÇÃO)</span></a></li><li class="depth3 pos_6 "><a href="/pages/761" target="_self" class="depth3 pos_6 "><span>Plano de Urbanização da Área Envolvente à VL10 - Nó de Gervide/ Rua Rocha Silvestre (EM ELABORAÇÃO)</span></a></li><li class="depth3 pos_7 last "><a href="/pages/762" target="_self" class="depth3 pos_7 last "><span>Plano de Urbanização da Soenga (EM ELABORAÇÃO)</span></a></li></ul></li></ul></li><li class="depth1 pos_3 has_descendants"><a href="/pages/763" target="_self" class="depth1 pos_3 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-b2e03d05"><span>Espaço público e paisagem urbana </span></a><ul class="depth2 " id="widget-menu-horizontal_menu-7-b2e03d05"><li class="depth2 pos_1 first "><a href="/pages/764" target="_self" class="depth2 pos_1 first "><span>Regulamentos e Taxas</span></a></li><li class="depth2 pos_2 "><a href="/pages/767" target="_self" class="depth2 pos_2 "><span>Procedimentos / formalidades</span></a></li><li class="depth2 pos_3 has_descendants"><a href="/pages/768" target="_self" class="depth2 pos_3 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-b2e03d05-535a9700"><span>Critérios e condições de instalação </span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-b2e03d05-535a9700"><li class="depth3 pos_1 first "><a href="/pages/1135" target="_self" class="depth3 pos_1 first "><span>Mobiliário - Equipamento Urbano</span></a></li><li class="depth3 pos_2 last "><a href="/pages/1136" target="_self" class="depth3 pos_2 last "><span>Suportes publicitários e inscrição, afixação e difusão de publicidade </span></a></li></ul></li><li class="depth2 pos_4 "><a href="/pages/769" target="_self" class="depth2 pos_4 "><span>Propaganda Política</span></a></li><li class="depth2 pos_5 last "><a href="/pages/771" target="_self" class="depth2 pos_5 last "><span>Projetos e Design Urbano (em reformulação)</span></a></li></ul></li><li class="depth1 pos_4 has_descendants"><a href="/pages/773" target="_self" class="depth1 pos_4 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea"><span>Reabilitação Urbana</span></a><ul class="depth2 " id="widget-menu-horizontal_menu-7-6f405bea"><li class="depth2 pos_1 first has_descendants"><a href="/pages/774" target="_self" class="depth2 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-e99e5c87"><span>Incentivos à Reabilitação</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-6f405bea-e99e5c87"><li class="depth3 pos_1 first has_descendants"><a href="/pages/775" target="_self" class="depth3 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-e99e5c87-a8cb7e81"><span>Benefícios Fiscais</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-e99e5c87-a8cb7e81"><li class="depth4 pos_1 first "><a href="/pages/1256" target="_self" class="depth4 pos_1 first "><span>IMI/IMT/IRS</span></a></li><li class="depth4 pos_2 last "><a href="/pages/1257" target="_self" class="depth4 pos_2 last "><span>IVA</span></a></li></ul></li><li class="depth3 pos_2 last "><a href="/pages/776" target="_self" class="depth3 pos_2 last "><span>Incentivos Financeiros</span></a></li></ul></li><li class="depth2 pos_2 has_descendants"><a href="/pages/778" target="_self" class="depth2 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471"><span>Áreas de Reabilitação Urbana</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471"><li class="depth3 pos_1 first has_descendants"><a href="/pages/779" target="_self" class="depth3 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-72945f57"><span>ORU Centro Histórico</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-72945f57"><li class="depth4 pos_1 first last "><a href="/pages/780" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_2 has_descendants"><a href="/pages/781" target="_self" class="depth3 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-46add9e7"><span>ORU Cidade de Gaia</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-46add9e7"><li class="depth4 pos_1 first last "><a href="/pages/782" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_3 has_descendants"><a href="/pages/1069" target="_self" class="depth3 pos_3 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-7d35aa95"><span>ORU Devesas </span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-7d35aa95"><li class="depth4 pos_1 first last "><a href="/pages/1070" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_4 has_descendants"><a href="/pages/785" target="_self" class="depth3 pos_4 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-1ff86704"><span>ORU Areinho Avintes</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-1ff86704"><li class="depth4 pos_1 first last "><a href="/pages/786" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_5 has_descendants"><a href="/pages/783" target="_self" class="depth3 pos_5 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-8d836400"><span>ORU Encostas do Douro </span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-8d836400"><li class="depth4 pos_1 first last "><a href="/pages/784" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_6 has_descendants"><a href="/pages/1071" target="_self" class="depth3 pos_6 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-bf65dc4b"><span>ORU Valadares</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-bf65dc4b"><li class="depth4 pos_1 first last "><a href="/pages/1072" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_7 has_descendants"><a href="/pages/1119" target="_self" class="depth3 pos_7 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-d32775b2"><span>ORU Arnelas</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-d32775b2"><li class="depth4 pos_1 first last "><a href="/pages/1120" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_8 has_descendants"><a href="/pages/787" target="_self" class="depth3 pos_8 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-abf46cce"><span>ORU Aguda Granja</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-abf46cce"><li class="depth4 pos_1 first last "><a href="/pages/788" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_9 has_descendants"><a href="/pages/789" target="_self" class="depth3 pos_9 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-8488ec5b"><span>ORU Setor Noroeste do Anel Industrial e Logístico</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-8488ec5b"><li class="depth4 pos_1 first last "><a href="/pages/790" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li><li class="depth3 pos_10 last has_descendants"><a href="/pages/793" target="_self" class="depth3 pos_10 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-03bf8471-0ee3c0a2"><span>ORU EIXO CARVALHOS-GRIJÓ</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f405bea-03bf8471-0ee3c0a2"><li class="depth4 pos_1 first last "><a href="/pages/794" target="_self" class="depth4 pos_1 first last "><span>Documentos</span></a></li></ul></li></ul></li><li class="depth2 pos_3 last has_descendants"><a href="/pages/801" target="_self" class="depth2 pos_3 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f405bea-c17aaf4d"><span>Projetos</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-6f405bea-c17aaf4d"><li class="depth3 pos_1 first "><a href="/pages/802" target="_self" class="depth3 pos_1 first "><span>Projetos de intervenção no espaço público</span></a></li><li class="depth3 pos_2 last "><a href="/pages/803" target="_self" class="depth3 pos_2 last "><span>Projetos de intervenção no edificado</span></a></li></ul></li></ul></li><li class="depth1 pos_5 last selected selected_descendant has_descendants"><a href="/pages/804" target="_self" class="depth1 pos_5 last selected selected_descendant has_descendants" aria-expanded="true" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6"><span>Sistemas de Informação Geográfica</span></a><ul class="depth2 " id="widget-menu-horizontal_menu-7-6f94b4f6"><li class="depth2 pos_1 first has_descendants"><a href="/pages/806" target="_self" class="depth2 pos_1 first has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-d21d0084"><span>Projetos</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-6f94b4f6-d21d0084"><li class="depth3 pos_1 first "><a href="/pages/908" target="_self" class="depth3 pos_1 first "><span>Implementação do SMIG.GAIA</span></a></li><li class="depth3 pos_2 "><a href="/pages/930" target="_self" class="depth3 pos_2 "><span>Rede de Marcas Topográficas do Concelho de Vila Nova de Gaia</span></a></li><li class="depth3 pos_3 has_descendants"><a href="/pages/809" target="_self" class="depth3 pos_3 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-d21d0084-017cf943"><span>Cartografia para fins científicos/académicos</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f94b4f6-d21d0084-017cf943"><li class="depth4 pos_1 first "><a href="/pages/810" target="_self" class="depth4 pos_1 first "><span>Pedir Informação</span></a></li><li class="depth4 pos_2 "><a href="/pages/811" target="_self" class="depth4 pos_2 "><span>Informação disponível</span></a></li><li class="depth4 pos_3 last "><a href="/pages/812" target="_self" class="depth4 pos_3 last "><span>Lista de Instituições que já beneficiaram da cedência de informação para os seus alunos e docentes</span></a></li></ul></li><li class="depth3 pos_4 "><a href="/pages/819" target="_self" class="depth3 pos_4 "><span>GeoPortal</span></a></li><li class="depth3 pos_5 "><a href="/pages/914" target="_self" class="depth3 pos_5 "><span>Criação e implementação do projeto SIGMUA 3D</span></a></li><li class="depth3 pos_6 last has_descendants"><a href="/pages/815" target="_self" class="depth3 pos_6 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-d21d0084-6a5b859b"><span>Portal das Faixas de Gestão de Combustível Florestal</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f94b4f6-d21d0084-6a5b859b"><li class="depth4 pos_1 first "><a href="/pages/817" target="_self" class="depth4 pos_1 first "><span>SNDFCI - Documentação</span></a></li><li class="depth4 pos_2 last "><a href="/pages/818" target="_self" class="depth4 pos_2 last "><span>Proteja a sua Casa dos Incêndios Rurais</span></a></li></ul></li></ul></li><li class="depth2 pos_2 current-page selected has_descendants"><a href="/p/geoportal" target="_self" class="depth2 pos_2 current-page selected has_descendants" aria-current="page" aria-expanded="true" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-5ad2f0a6"><span>GeoPortal</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-6f94b4f6-5ad2f0a6"><li class="depth3 pos_1 first "><a href="https://sig.gaiurb.pt/geoportal?webpdm" target="_blank" class="depth3 pos_1 first "><span>Consulta de Planos</span></a></li><li class="depth3 pos_2 "><a href="https://sig.gaiurb.pt/geoportal?webepl" target="_blank" class="depth3 pos_2 "><span>Plantas de Localização</span></a></li><li class="depth3 pos_3 "><a href="https://dados.gaiurb.pt/portal/apps/sites/#/gaiacity" target="_blank" class="depth3 pos_3 "><span>gaiacity+</span></a></li><li class="depth3 pos_4 "><a href="https://opendata.gaiurb.pt/geonetwork/srv/por/catalog.search#/home" target="_blank" class="depth3 pos_4 "><span>Dados Abertos</span></a></li><li class="depth3 pos_5 last "><a href="https://gaia-invest-gaiurb.hub.arcgis.com/" target="_blank" class="depth3 pos_5 last "><span>Gaia + Invest</span></a></li></ul></li><li class="depth2 pos_3 has_descendants"><a href="/pages/908" target="_self" class="depth2 pos_3 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-58b79007"><span>SMIG.GAIA</span></a><ul class="depth3 " id="widget-menu-horizontal_menu-7-6f94b4f6-58b79007"><li class="depth3 pos_1 first "><a href="/pages/909" target="_self" class="depth3 pos_1 first "><span>SMIG</span></a></li><li class="depth3 pos_2 has_descendants"><a href="/pages/910" target="_self" class="depth3 pos_2 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-58b79007-5c9db098"><span>Áreas SIG</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f94b4f6-58b79007-5c9db098"><li class="depth4 pos_1 first "><a href="/pages/911" target="_self" class="depth4 pos_1 first "><span>Aplicações GISMAT</span></a></li><li class="depth4 pos_2 "><a href="/pages/819" target="_self" class="depth4 pos_2 "><span>GeoPortal</span></a></li><li class="depth4 pos_3 "><a href="/pages/913" target="_self" class="depth4 pos_3 "><span>Aplicações Móveis</span></a></li><li class="depth4 pos_4 has_descendants"><a href="/pages/970" target="_self" class="depth4 pos_4 has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-58b79007-5c9db098-253a07b2"><span>SIGMUA3D - SIstema Integrado de Monitorização Urbana e Ambiental 3D</span></a><ul class="depth5 " id="widget-menu-horizontal_menu-7-6f94b4f6-58b79007-5c9db098-253a07b2"><li class="depth5 pos_1 first "><a href="/pages/914" target="_self" class="depth5 pos_1 first "><span>Gaia Drone Survey</span></a></li><li class="depth5 pos_2 last "><a href="/pages/971" target="_self" class="depth5 pos_2 last "><span>Gaia Laser Survey</span></a></li></ul></li><li class="depth4 pos_5 "><a href="/pages/921" target="_self" class="depth4 pos_5 "><span>Portal de Dados Abertos</span></a></li><li class="depth4 pos_6 last "><a href="/pages/923" target="_self" class="depth4 pos_6 last "><span>Boletim Geográfico</span></a></li></ul></li><li class="depth3 pos_3 "><a href="https://play.google.com/store/apps/details?id=pt.phinformatica.cidadaogaia&amp;hl=pt_PT" target="_blank" class="depth3 pos_3 "><span>App Cidadão Gaia</span></a></li><li class="depth3 pos_4 last has_descendants"><a href="/pages/925" target="_self" class="depth3 pos_4 last has_descendants" aria-expanded="false" aria-controls="widget-menu-horizontal_menu-7-6f94b4f6-58b79007-08e6c3a5"><span>Entidades Municipais Participantes</span></a><ul class="depth4 " id="widget-menu-horizontal_menu-7-6f94b4f6-58b79007-08e6c3a5"><li class="depth4 pos_1 first "><a href="http://www.cm-gaia.pt/pt/" target="_blank" class="depth4 pos_1 first "><span>CM Vila Nova de Gaia</span></a></li><li class="depth4 pos_2 "><a href="/pages/685" target="_self" class="depth4 pos_2 "><span>Gaiurb Urbanismo e Habitação, EM</span></a></li><li class="depth4 pos_3 last "><a href="http://www.aguasgaia.pt/" target="_blank" class="depth4 pos_3 last "><span>Águas de Gaia, EM, SA.</span></a></li></ul></li></ul></li><li class="depth2 pos_4 "><a href="/pages/930" target="_self" class="depth2 pos_4 "><span>Marcas topográficas / Catálogo de Objetos</span></a></li><li class="depth2 pos_5 last "><a href="/pages/978" target="_self" class="depth2 pos_5 last "><span>Serviços</span></a></li></ul></li></ul>
+
+</div>
+
+
+        </div>
+      </div>
+    </nav>
+
+    <div class="titleBox grid-container">
+      <div class="grid-x grid-margin-x">
+        <div class="breadCrumb_AREA xxsmall-12 cell hidden-post">  
+  <div id="breadcrumb_1" class="widget breadcrumb" data-id="1" data-content_type="Breadcrumb">
+  <ul>
+
+      <li>
+        <a href="/p/urbanismo">Urbanismo<img alt="_" aria-hidden="true" src="/s.gif" /></a>
+      </li>
+
+
+      <li>
+        <a href="/pages/804">Sistemas de Informação Geográfica<img alt="_" aria-hidden="true" src="/s.gif" /></a>
+      </li>
+
+
+      <li>
+        GeoPortal
+      </li>
+  </ul>
+</div>
+
+</div>
+        <div class="xxsmall-12 cell hidden-post"><h1 class="pageTitle">GeoPortal</h1></div>
+      </div>
+    </div>
+
+    <main class="siteContents grid-container">
+      <div class="grid-x grid-margin-x">
+        <section class="mainContents xxsmall-12 cell hidden-post">
+          <div class="central_AREA"><span class="BO-only">área de conteúdos (não partilhada)</span>  
+  <div id="article_334" class="widget article" data-id="334" data-content_type="Article">
+  <div class="writer_text"><p>O GEOPORTAL de GAIA &eacute; o portal digital de informa&ccedil;&atilde;o geogr&aacute;fica e geoestatistica do munic&iacute;pio. A estrat&eacute;gia do GEOPORTAL &eacute; a presta&ccedil;&atilde;o de um servi&ccedil;o p&uacute;blico, a manuten&ccedil;&atilde;o de uma atualiza&ccedil;&atilde;o permanente e uma forte aposta na inova&ccedil;&atilde;o, na qualidade e na quantidade de servi&ccedil;os dispon&iacute;veis on-line e na implementa&ccedil;&atilde;o de novas tecnologias open-source.</p>
+<p><span style="display: block" class="image_center"><img src="/thumbs/gaiurb/uploads/writer_file/image/272/logo_geoportal___copia_1_1280_2500.png" alt="logo_geoportal"  /></span></p><div class="writer_text_clear"></div></div>
+</div>
+
+</div>
+          <div class="postMenu_AREA"><span class="BO-only shared">área partilhada</span>  
+  <div id="vertical_menu_9" class="widget vertical_menu no-wm-idx" data-id="9" data-content_type="VerticalMenu">
+
+
+      <a class='current_menu' href="/pages/1137">
+        Habitação Acessível
+      </a>
+
+
+    <ul class="depth1 " id="widget-menu-vertical_menu-9"><li class="depth1 pos_1 first "><a href="https://sig.gaiurb.pt/geoportal?webpdm" target="_blank" class="depth1 pos_1 first "><img data-description="" alt="" src="/imgcrop/gaiurb/uploads/page/image1/822/webplanos_f_1_600_350.png" /><span>Consulta de Planos</span></a></li><li class="depth1 pos_2 "><a href="https://sig.gaiurb.pt/geoportal?webepl" target="_blank" class="depth1 pos_2 "><img data-description="" alt="" src="/imgcrop/gaiurb/uploads/page/image1/1163/loco_1_600_350.jpg" /><span>Plantas de Localização</span></a></li><li class="depth1 pos_3 "><a href="https://dados.gaiurb.pt/portal/apps/sites/#/gaiacity" target="_blank" class="depth1 pos_3 "><img data-description="" alt="" src="/imgcrop/gaiurb/uploads/page/image1/985/geoatlas__f1_1_600_350.png" /><span>gaiacity+</span></a></li><li class="depth1 pos_4 "><a href="https://opendata.gaiurb.pt/geonetwork/srv/por/catalog.search#/home" target="_blank" class="depth1 pos_4 "><img data-description="" alt="" src="/imgcrop/gaiurb/uploads/page/image1/1162/dados_abertos_1_600_350.png" /><span>Dados Abertos</span></a></li><li class="depth1 pos_5 last "><a href="https://gaia-invest-gaiurb.hub.arcgis.com/" target="_blank" class="depth1 pos_5 last "><img data-description="" alt="" src="/imgcrop/gaiurb/uploads/page/image1/1164/gaia_invest_logo_1_600_350.jpg" /><span>Gaia + Invest</span></a></li></ul>
+
+
+</div>
+
+</div>
+        </section>
+        <div class="clearfix"></div>
+        <div class="backButton xxsmall-12 cell hidden-post">
+          <a href="javascript:history.back()">Voltar</a>
+        </div>
+      </div>
+    </main>
+
+    <section class="preFooterContainer full">
+      <div class="grid-container">
+        <div class="grid-x grid-margin-x">
+          <div class="preFooter_AREA swiper-container xxsmall-12 cell hidden-post">  
+  <div id="links_list_61" class="widget links_list" data-id="61" data-content_type="LinksList">
+
+<ul class="swiper-wrapper">
+
+
+<li class="swiper-slide">
+
+
+<a href="https://www.gaiurb.pt/pages/1036"
+target="_blank">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>Revisão do PDM</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="https://www.gaiurb.pt/pages/742"
+target="_self">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>Plano Diretor Municipal</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="https://www.gaiurb.pt/pages/778"
+target="_self">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>Áreas de Reabilitação Urbana</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="https://sig.gaiurb.pt/geoportal"
+target="_blank">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>GEOPORTAL Plantas de Localização e Planos</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="https://www.gaiurb.pt/pages/932?news_id=717"
+target="_self">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>Parceria ADENE-GAIURB</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="https://www.gaiurb.pt/pages/737"
+target="_self">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>Legislação</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="/gaiurb/uploads/writer_file/document/456/servidoes_e_restricoes_utilidade_publica_dgotdu.pdf"
+target="_blank">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>Servidões e Restrições de Utilidade Pública</h4></div></div>
+
+</a>
+</li>
+
+
+
+<li class="swiper-slide">
+
+
+<a href="https://www.gaiurb.pt/pages/1122"
+target="_self">
+
+
+<div class="title widget_field "><div class="widget_value"><h4>BUPi</h4></div></div>
+
+</a>
+</li>
+
+</ul>
+
+</div>
+
+</div>
+          <div class="swiper-pagination"></div>
+        </div>
+      </div>
+    </section>
+
+  </div><!--end stickyFooter -->
+
+  <footer class="full">
+    <div class="footerWrap grid-container">
+      <div class="grid-x grid-margin-x align-middle">
+        <div class="quickLinks_AREA xxsmall-12 xsmall-6 large-2 cell hidden-post">  
+  
+<div id="html_block_92" class="widget html_block" data-id="92" data-content_type="HtmlBlock">
+
+  <ul>
+  <li><a href="https://gaiurb.integrityline.com/frontpage">Prevenção da Corrupção - Canal de Denúncias</a></li>
+  <li><a href="https://www.livroreclamacoes.pt/Inicio/">Livro de Reclamações</a></li>
+  <li><a href="/p/contactos">Contactos</a></li>
+  <!-- <li><a href="/pages/665">Sugestões, Elogios e Reclamações</a></li> -->
+
+
+
+</ul>
+
+</div>
+
+</div>
+        <div class="socialLinks_AREA xxsmall-12 xsmall-6 large-2 cell hidden-post">  
+  
+<div id="html_block_93" class="widget html_block" data-id="93" data-content_type="HtmlBlock">
+
+  <span>Siga-nos</span>
+<ul>
+  <li><a href="https://www.facebook.com/gaiurburbanismohabitacao" target="_blank"><img src="/gaiurb/layout/logo-facebook.svg" alt="Siga-nos no Facebook" /></a></li>
+  <li><a href="https://www.youtube.com/channel/UCPPCAvafFfHnymfTJCmvGLw" target="_blank"><img src="/gaiurb/layout/logo-youtube.svg" alt="Siga-nos no YouTube" /></a></li>
+  <li><a href="https://issuu.com/gaiurb.info" target="_blank"><img src="/gaiurb/layout/logo-issuu.svg" alt="Siga-nos no Issuu" /></a></li>
+  <li><a href="/pages/963.rss" target="_blank"><img src="/gaiurb/layout/logo-rss.svg" alt="Feed RSS" /></a></li>
+</ul>
+
+</div>
+
+</div>
+        <div class="footerLogos_AREA xxsmall-12 large-8 cell hidden-post">  
+  
+<div id="html_block_94" class="widget html_block" data-id="94" data-content_type="HtmlBlock">
+
+  <ul>
+  <li class="neutral"><a href="https://www.co2neutralwebsite.com/crt/dispcust/c/5654/l/13"  target="_blank"><img src="/gaiurb/layout/neutral-trans.png"  width"400" alt="CO2 Neutral" /></a></li>
+  <li class="colorADD"><a href="http://www.coloradd.net/" target="_blank"><img src="/gaiurb/layout/colorADD-vertical.svg" alt="ColorADD" /></a></li>
+ <!--  <li class="sgs"><img src="/gaiurb/layout/logo-sgs.svg" alt="Certificação ISO 9001" /></li>  -->
+  <li class="ipac"><img src="/gaiurb/layout/ipac-trans.png" alt="IPAC Acreditação I0110 ISO/IEC 17020" /></li>
+  <li class="inclusiva"><a href="https://www.gaiurb.pt/pages/932?news_id=204" ><img src="/gaiurb/layout/inclusiva.svg" alt="Entidade Empregadora Inclusiva" /></a></li>
+  <li class="nopaper"><img src="/gaiurb/layout/logo-nopaper.svg" alt="Nopaper" /></li>
+  <li class="ihru"><img src="/gaiurb/layout/logo-ihru.svg" alt="Prémio IHRU" /></li>
+  <li class="gias"><a href="https://www.gaiurb.pt/pages/708" target="_blank"><img src="/gaiurb/layout/logo_gias.png" alt="Gabinete Integrado de Ação Social" /></a></li>
+  <li class="vngaia"><a href="http://www.cm-gaia.pt/pt/" target="_blank"><img src="/gaiurb/layout/logo-cmgaia.svg" alt="Câmara Municipal de Vila Nova de Gaia" /></a></li>
+</ul>
+
+</div>
+
+</div>
+      </div>
+    </div>
+    <div class="linksGovernoWrap grid-container">
+      <div class="grid-x grid-margin-x">
+        <div class="linksGerais_AREA xxsmall-12 large-7 cell hidden-post">  
+  
+<div id="html_block_53" class="widget html_block" data-id="53" data-content_type="HtmlBlock">
+
+  <ul>
+  <li><a href="/pages/666">Mapa do Site</a></li>
+  <li><a href="/pages/964">Política da Qualidade</a></li>
+  <li><a href="/pages/667">Ficha Técnica</a></li>
+  <li><a href="/pages/668">Política de Privacidade e Segurança</a></li>
+
+</ul>
+
+</div>
+
+</div>
+        <div class="linksGoverno_AREA xxsmall-12 large-5 cell hidden-post">  
+  
+<div id="html_block_85" class="widget html_block" data-id="85" data-content_type="HtmlBlock">
+
+  <a class="logoReclamacoes" href="https://www.livroreclamacoes.pt/inicio" target="_blank"><img src="/gaiurb/layout/logo-reclamacoes-mono.svg" alt="Logótipo Livro de Reclamações" /></a>
+
+</div>
+  
+<div id="html_block_86" class="widget html_block" data-id="86" data-content_type="HtmlBlock">
+
+  <a class="logoAcessibilidade" href="/pages/672"><img src="/gaiurb/layout/logo-acessibilidade-mono.svg" alt="Logótipos de Acessibilidade" /></a>
+
+</div>
+  
+<div id="html_block_89" class="widget html_block" data-id="89" data-content_type="HtmlBlock">
+
+  <div class="logoWiremaze"><a href="http://www.wiremaze.com" target="_blank"><img src="/gaiurb/layout/logo_wiremaze.svg" alt="Powered by Wiremaze" title="Powered by Wiremaze" /></a></div>
+
+</div>
+
+</div>
+      </div>
+    </div>
+  </footer>
+
+  <aside class="stickyForm_AREA">
+    <section class="stickyForm">
+      <div class="form_placementContainer">
+      	  
+  
+    <div class="widget_warning " tabindex="-1" aria-live="assertive">O formulário escolhido não foi encontrado!</div>
+
+
+
+      </div>
+    </section>
+  </aside>
+
+      
+      <!-- START OLD BROWSER WARNING -->
+<script> 
+var $buoop = {vs:{i:9,f:15,o:12.1,s:5.1},c:2}; 
+function $buo_f(){ 
+ var e = document.createElement("script"); 
+ e.src = "//browser-update.org/update.js"; 
+ document.body.appendChild(e);
+};
+try {document.addEventListener("DOMContentLoaded", $buo_f,false)}
+catch(e){window.attachEvent("onload", $buo_f)}
+</script>
+<!-- END OLD BROWSER WARNING -->
+      <script>
+    // please review google_analytics settings
+</script>
+
+
+      <script src="/assets/gaiurb/gaiurb/javascripts/vendor/picturefill-aea404604a.min.js"></script><!-- contain image -->
+      <script src="/assets/gaiurb/gaiurb/javascripts/vendor/ofi-d15e158094.browser.min.js"></script><!-- contain image for IE -->
+      <script src="/assets/gaiurb/gaiurb/javascripts/vendor/responsiveTables-68f8bdb74f.min.js"></script><!-- Tabelas com scroll em mobile -->
+      <script src="/assets/gaiurb/gaiurb/javascripts/smile_forms-ea87f48eb0.min.js"></script><!-- Caixa de Contacto-->
+
+
+<!-------------------------------------------------------------------------------------------------------------->
+<!-- Scroll na Caixa de Contacto -->
+<script>
+  var el = document.querySelector('.stickyForm_AREA .form_placement');
+  SimpleScrollbar.initEl(el);
+</script>
+
+
+<!-------------------------------------------------------------------------------------------------------------->
+<!-- Contain div with image for IE -->
+<script>
+ objectFitImages('img.OF-cover');
+</script>
+
+
+<!-------------------------------------------------------------------------------------------------------------->
+<!-- STICKY MENU -->
+	<script>
+	// Grab links from first level horizontal menu items
+	var menuItems = document.querySelectorAll(".horizontal_menu ul li.depth1 > a");
+	// Start a basic unordered list element
+	var builtList ='<ul class="depth1">';
+	// Loop through all suitable menu items
+	for (var i = 0; i < menuItems.length; i++) {
+		// Build upon starter template with a list item
+		// Get href and names separately to build links accordingly
+		var isActive = "";
+      if(menuItems[i].classList.contains("selected")) {
+        isActive = "selected";
+      }
+      builtList += '<li class="depth1 ' + isActive + '"><a class="depth1" href="' + menuItems[i].href + '"><span>' + menuItems[i].querySelector("span").innerHTML + "</span></a></li>";
+	}
+	// Close built element list
+	builtList += "</ul>";
+	// Add built element list to sticky menu container
+	document.querySelector(".stickyMenu").innerHTML = builtList;
+    </script>
+    <!-- Disable sticky menu in backoffice -->
+    <script>
+      // FIXED HEADER NAV
+      var stickyMenuTop = $('.menu_AREA').offset().top;
+      var stickyMenu = function () {
+        var scrollTop = $(window).scrollTop();
+        if (scrollTop > stickyMenuTop) {
+          $('.stickyMenuContainer').addClass('enabled');
+        } else {
+          $('.stickyMenuContainer').removeClass('enabled');
+        }
+      };
+      stickyMenu();
+      $(window).on("scroll", function () {
+        stickyMenu();
+      });
+      </script>
+
+
+<!-------------------------------------------------------------------------------------------------------------->
+<!-- MOBILE MENU -->
+<script>
+$(function() {
+  resetBoxProperties();
+   if ($(window).width() <= 1024) { // colocar menu "normal" dentro da div do menu na versao mobile
+   $('nav#menu').append($(".widget.horizontal_menu").html());
+   $('nav#menu').mmenu({
+      navbar: {
+         title: ''
+      },
+      navbars: [{
+         position: 'top',
+         content: [
+            'prev',
+            'title'
+         ]
+      }]
+   }, {
+      classNames: {
+         selected: 'selected'
+      }
+   });
+}
+});
+</script>
+
+
+<!-------------------------------------------------------------------------------------------------------------->
+<!-- TITULOS DAS AREAS - so aparecem em backoffice -->
+  
+
+<!-------------------------------------------------------------------------------------------------------------->
+<!-- AREA CENTRAL COM ALTURA E AREAS PARTILHADAS A CINZA - so aparece em backoffice -->
+
+<script src="/assets/wm-smile/apps/admin/form-viewer/index-00c92419299f9aad59b5.public.js"></script>
+
+
+</body>
+</html>

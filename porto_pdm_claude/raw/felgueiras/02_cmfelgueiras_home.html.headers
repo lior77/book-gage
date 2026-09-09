@@ -1,0 +1,32 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/2 301 
+content-type: text/html; charset=UTF-8
+x-redirect-by: WordPress
+location: https://cm-felgueiras.pt/
+content-length: 0
+date: Wed, 09 Sep 2026 00:45:36 GMT
+platform: hostinger
+panel: hpanel
+content-security-policy: object-src 'none'
+strict-transport-security: max-age=15768000;includeSubdomains
+x-xss-protection: 1; mode=block
+alt-svc: h3=":443"; ma=2592000, h3-29=":443"; ma=2592000
+
+HTTP/1.1 200 Connection Established
+
+HTTP/2 200 
+content-type: text/html; charset=UTF-8
+link: <https://cm-felgueiras.pt/wp-json/>; rel="https://api.w.org/"
+link: <https://cm-felgueiras.pt/wp-json/wp/v2/pages/157634>; rel="alternate"; title="JSON"; type="application/json"
+link: <https://cm-felgueiras.pt/>; rel=shortlink
+content-encoding: br
+vary: Accept-Encoding
+date: Wed, 09 Sep 2026 00:45:38 GMT
+platform: hostinger
+panel: hpanel
+content-security-policy: object-src 'none'
+strict-transport-security: max-age=15768000;includeSubdomains
+x-xss-protection: 1; mode=block
+alt-svc: h3=":443"; ma=2592000, h3-29=":443"; ma=2592000
+

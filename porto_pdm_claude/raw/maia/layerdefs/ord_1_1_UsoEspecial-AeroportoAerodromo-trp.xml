@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LayerDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="1.0.0" xsi:noNamespaceSchemaLocation="LayerDefinition-1.0.0.xsd">
+  <VectorLayerDefinition>
+    <ResourceId>Library://DCTSIG/Data/pdm2025_db.FeatureSource</ResourceId>
+    <FeatureName>ord_1_1:ord_1_1_UsoEspecial-AeroportoAerodromo-trp</FeatureName>
+    <FeatureNameType>FeatureClass</FeatureNameType>
+    <Geometry>geom</Geometry>
+    <ToolTip>'Infraestruturas - Aeronáuticas'</ToolTip>
+    <VectorScaleRange>
+      <AreaTypeStyle>
+        <AreaRule>
+          <LegendLabel/>
+          <Label>
+            <Unit>Points</Unit>
+            <SizeContext>DeviceUnits</SizeContext>
+            <SizeX>8</SizeX>
+            <SizeY>8</SizeY>
+            <Rotation>0</Rotation>
+            <Text>string</Text>
+            <FontName>Arial</FontName>
+            <ForegroundColor>ff000000</ForegroundColor>
+            <BackgroundColor>ffffffff</BackgroundColor>
+            <BackgroundStyle>Transparent</BackgroundStyle>
+          </Label>
+          <AreaSymbolization2D>
+            <Fill>
+              <FillPattern>Solid</FillPattern>
+              <ForegroundColor>CAD0C8D5</ForegroundColor>
+              <BackgroundColor>00FFFFFF</BackgroundColor>
+            </Fill>
+          </AreaSymbolization2D>
+        </AreaRule>
+      </AreaTypeStyle>
+    </VectorScaleRange>
+  </VectorLayerDefinition>
+</LayerDefinition>

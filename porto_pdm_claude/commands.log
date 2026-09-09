@@ -1,0 +1,110 @@
+
+# 2026-09-09T00:33:06Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/
+# -> http=200 ct=text/html; charset=utf-8 bytes=51637  saved: raw/maia/00_websig_root.html
+
+# 2026-09-09T00:34:24Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/mapguide/mapviewerajax/ajaxviewer.aspx\?SESSION=05b86908-abe6-11f1-8000-0050569832ba_en_MTI3LjAuMC4x0AFC0AFB0AFA\&WEBLAYOUT=Library://DCTSIG/Maps/webepl/webepl.WebLayout\&LOCALE=pt
+# -> http=200 ct=text/html; charset=utf-8 bytes=9943  saved: raw/maia/01_ajaxviewer.html
+
+# 2026-09-09T00:34:41Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://DCTSIG/Maps/webepl/mapa.MapDefinition\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=24269  saved: raw/maia/02_mapdefinition.xml
+
+# 2026-09-09T00:35:53Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoHabitacional-trp.LayerDefinition\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=602  saved: raw/maia/03_ld_SoloUrbanoHabitacional.xml
+
+# 2026-09-09T00:36:21Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://DCTSIG/Data/pdm2025_db.FeatureSource\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=786  saved: raw/maia/04_featuresource_pdm2025_db.xml
+
+# 2026-09-09T00:36:29Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi\?OPERATION=SELECTFEATURES\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://DCTSIG/Data/pdm2025_db.FeatureSource\&CLASSNAME=ord_1_1%3Aord_1_1_SoloUrbanoHabitacional-trp\&FORMAT=text/xml\&MAXFEATURES=2
+# -> http=200 ct=text/xml; charset=utf-8 bytes=325133  saved: raw/maia/05_selectfeatures_SoloUrbanoHabitacional.xml
+
+# 2026-09-09T00:36:32Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/mapguide30/mapagent/mapagent.fcgi\?OPERATION=GETSPATIALCONTEXTS\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://DCTSIG/Data/pdm2025_db.FeatureSource\&ACTIVEONLY=0
+# -> http=200 ct=text/xml; charset=utf-8 bytes=766  saved: raw/maia/06_spatialcontexts.xml
+
+# 2026-09-09T00:37:02Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/
+# -> http=200 ct=text/html bytes=186  saved: raw/gondomar/00_portal.html
+
+# 2026-09-09T00:37:35Z
+curl -sS -m 90 --compressed https://sig.gaiurb.pt/
+# -> curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to sig.gaiurb.pt:443 
+http=000 ct= bytes=0  saved: raw/gaia/00_portal.html
+
+# 2026-09-09T00:38:01Z
+curl -sS -m 90 --compressed https://sig.cm-felgueiras.pt/
+# -> curl: (35) Recv failure: Connection reset by peer
+http=000 ct= bytes=0  saved: raw/felgueiras/00_portal.html
+
+# 2026-09-09T00:39:56Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/geoportal\?webpdm
+# -> http=200 ct=text/html; charset=utf-8 bytes=62505  saved: raw/gondomar/01_geoportal_webpdm.html
+
+# 2026-09-09T00:40:32Z
+curl -sS -m 90 --compressed http://sig.cm-felgueiras.pt/
+# -> http=503 ct=text/plain bytes=114  saved: raw/felgueiras/01_http_503.txt
+
+# 2026-09-09T00:40:53Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/geoportal/mapguide/mapviewerajax/ajaxviewer.aspx\?SESSION=f9b68670-abe6-11f1-8000-005056b2524b_en_MTI3LjAuMC4x0AFC0AFB0AFA\&WEBLAYOUT=Library://Visualizador/Layouts/mapa.WebLayout\&LOCALE=pt
+# -> http=200 ct=text/html; charset=utf-8 bytes=11069  saved: raw/gondomar/02_ajaxviewer.html
+
+# 2026-09-09T00:41:00Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://Visualizador/Maps/mapa.MapDefinition\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=17335  saved: raw/gondomar/03_mapdefinition.xml
+
+# 2026-09-09T00:41:32Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=ENUMERATERESOURCES\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://\&TYPE=MapDefinition\&DEPTH=-1
+# -> http=200 ct=text/xml; charset=utf-8 bytes=1436  saved: raw/gondomar/04_enum_mapdefinitions.xml
+
+# 2026-09-09T00:42:16Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://Visualizador/Maps/webepl/ord_1_1.MapDefinition\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=844  saved: raw/gondomar/05_mapdef_ord_1_1.xml
+
+# 2026-09-09T00:42:55Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://Gismat/Layers/pdm/ord_1_1/total.MapDefinition\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=2250  saved: raw/gondomar/06_mapdef_gismat_ord_1_1_total.xml
+
+# 2026-09-09T00:42:58Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/geoportal/webforms/menu_territorio.aspx\?xml=menu_webpdm.xml\&separador=webpdm
+# -> http=200 ct=text/html; charset=utf-8 bytes=36143  saved: raw/gondomar/07_menu_webpdm.html
+
+# 2026-09-09T00:43:33Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=GETRESOURCECONTENT\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoESPACOCENTRALtr.LayerDefinition\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=640  saved: raw/gondomar/08_ld_SURBANO_ESPACOCENTRAL.xml
+
+# 2026-09-09T00:43:45Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=SELECTFEATURES\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://Gismat/Data/pdm_db.FeatureSource\&CLASSNAME=ord_1_1%3ASURBANOurbanizadoESPACOCENTRALtr\&FORMAT=text/xml
+# -> http=200 ct=text/xml; charset=utf-8 bytes=200403  saved: raw/gondomar/09_selectfeatures_ESPACOCENTRAL.xml
+
+# 2026-09-09T00:44:19Z
+curl -sS -m 90 --compressed https://pdm.cm-gondomar.pt/mapguide31/mapagent/mapagent.fcgi\?OPERATION=GETSPATIALCONTEXTS\&VERSION=1.0.0\&USERNAME=Anonymous\&PASSWORD=\&RESOURCEID=Library://Gismat/Data/pdm_db.FeatureSource\&ACTIVEONLY=0
+# -> http=200 ct=text/xml; charset=utf-8 bytes=704  saved: raw/gondomar/10_spatialcontexts.xml
+
+# 2026-09-09T00:45:39Z
+curl -sS -m 90 --compressed -L https://www.cm-felgueiras.pt/
+# -> http=200 ct=text/html; charset=UTF-8 bytes=207808  saved: raw/felgueiras/02_cmfelgueiras_home.html
+
+# 2026-09-09T00:47:04Z
+curl -sS -m 90 --compressed -L https://cm-felgueiras.pt/territorio-e-gestao/gestao-urbanistica/cartografia-sig/
+# -> http=200 ct=text/html; charset=UTF-8 bytes=183386  saved: raw/felgueiras/03_cartografia_sig.html
+
+# 2026-09-09T00:47:30Z
+curl -sS -m 90 --compressed -L -A Mozilla/5.0\ \(X11\;\ Linux\ x86_64\)\ AppleWebKit/537.36\ Chrome/128.0.0.0\ Safari/537.36 https://www.gaiurb.pt/
+# -> http=200 ct=text/html; charset=utf-8 bytes=24238  saved: raw/gaia/01_gaiurb_home.html
+
+# 2026-09-09T00:47:38Z
+curl -sS -m 90 --compressed -L -A Mozilla/5.0\ \(X11\;\ Linux\ x86_64\)\ AppleWebKit/537.36\ Chrome/128.0.0.0\ Safari/537.36 https://www.gaiurb.pt/p/geoportal
+# -> http=200 ct=text/html; charset=utf-8 bytes=59284  saved: raw/gaia/02_geoportal_page.html
+
+# 2026-09-09T00:51:09Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/webforms/menu_territorio.aspx\?xml=menu_webpdm.xml\&separador=webpdm
+# -> http=200 ct=text/html; charset=utf-8 bytes=35963  saved: raw/maia/07_menu_webpdm.html
+
+# 2026-09-09T00:51:32Z
+curl -sS -m 90 --compressed https://websig.cm-maia.pt/webforms/menu_territorio.aspx\?xml=menu_webepl.xml\&separador=webepl
+# -> http=200 ct=text/html; charset=utf-8 bytes=63827  saved: raw/maia/08_menu_webepl.html

@@ -1,0 +1,178 @@
+[
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALAGLOMERADOSRURAIStra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALAGLOMERADOSRURAIStra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizavelESPACOSRESIDENCIAISTIPOItr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizavelESPACOSRESIDENCIAISTIPOItr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizavelESPACOSRESIDENCIAISTIPOIITR.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizavelESPACOSRESIDENCIAISTIPOIITR",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizavelESPACOSDEACTIVIDADESECONoMICAStra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizavelESPACOSDEACTIVIDADESECONoMICAStra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizavelESPACOCENTRALtr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizavelESPACOCENTRALtr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoVERDEUTILICOLECTIVAtr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoVERDEUTILICOLECTIVAtr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoVERDEENQUADRAMENTOtr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoVERDEENQUADRAMENTOtr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoURBANOBAIXADENSIDADEtr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoURBANOBAIXADENSIDADEtr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoESPACOSRESIDENCIAISTIPOITR.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoESPACOSRESIDENCIAISTIPOITR",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoESPACOSRESIDENCIAISTIPOIItr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoESPACOSRESIDENCIAISTIPOIItr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoESPACOSDEEQUIPAMENTOSESTRUTURANTEStra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoESPACOSDEEQUIPAMENTOSESTRUTURANTEStra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoESPACOSDEACTIVIDADESECONoMICAStra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoESPACOSDEACTIVIDADESECONoMICAStra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SURBANOurbanizadoESPACOCENTRALtr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SURBANOurbanizadoESPACOCENTRALtr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALTURISMOpropostotr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALTURISMOpropostotr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALTURISMOexistente_TR.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALTURISMOexistente_TR",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALESPACOSRECREIOLAZERtr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALESPACOSRECREIOLAZERtr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALESPACOSFLORESTAISDEPRODUCAOtra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALESPACOSFLORESTAISDEPRODUCAOtra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALESPACOSFLORESTAISDECONSERVACAOtra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALESPACOSFLORESTAISDECONSERVACAOtra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALESPACOSDEUSOMuLTIPLOAGRICOLAEFLORESTAtra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALESPACOSDEUSOMuLTIPLOAGRICOLAEFLORESTAtra",
+  "geom": "geom_etrs",
+  "tip": "Solo Rural - de Uso Múltiplo Agrícola e Florestal"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALESPACOSCULTURAIS_TR.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALESPACOSCULTURAIS_TR",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALESPACOSAGRICOLAStra.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALESPACOSAGRICOLAStra",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ },
+ {
+  "id": "Library://Gismat/Layers/pdm/ord_1_1/SRURALEQUIPAMENTOSOUTRASESTRUTURAStr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://Gismat/Data/pdm_db.FeatureSource",
+  "cls": "ord_1_1:SRURALEQUIPAMENTOSOUTRASESTRUTURAStr",
+  "geom": "geom_etrs",
+  "tip": "Layer"
+ }
+]

@@ -1,0 +1,130 @@
+[
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_UsoEspecial-AeroportoAerodromo-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_UsoEspecial-AeroportoAerodromo-trp",
+  "geom": "geom",
+  "tip": "Infraestruturas - Aeronáuticas"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoVerdeUtilizacaoColetiva-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoVerdeUtilizacaoColetiva-trp",
+  "geom": "geom",
+  "tip": "Espaços Verdes - Espaços Verdes de Utilização Coletiva"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoVerdeLogradouro-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoVerdeLogradouro-trp",
+  "geom": "geom",
+  "tip": "Espaços Verdes - Logradouro"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoHabitacional-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoHabitacional-trp",
+  "geom": "geom",
+  "tip": "Solo Urbano - Espaços Habitacionais"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoEspacosCentrais-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoEspacosCentrais-trp",
+  "geom": "geom",
+  "tip": "Solo Urbano - Espaços Centrais"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoEquipamentosEstruturantes-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoEquipamentosEstruturantes-trp",
+  "geom": "geom",
+  "tip": "Espaços de Uso Especial - Espaços de Equipamentos"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoBaixaDensidade-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoBaixaDensidade-trp",
+  "geom": "geom",
+  "tip": "Solo Urbano - Espaços Urbanos de Baixa Densidade"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoAtiviEconomicas-Terciario-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoAtiviEconomicas-Terciario-trp",
+  "geom": "geom",
+  "tip": "Solo Urbano - Espaços de Atividades Económicas -Terciario"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloUrbanoAtiviEconomicas-Indust-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloUrbanoAtiviEconomicas-Indust-trp",
+  "geom": "geom",
+  "tip": "Solo Urbano - Espaços de Atividades Económicas - Industrial e logística"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoNatural-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoNatural-trp",
+  "geom": "geom",
+  "tip": "Solo Rustico - Espaços Naturais e Paisagísticos"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoFlorestaProtecao-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoFlorestaProtecao-trp",
+  "geom": "geom",
+  "tip": "Solo Rustico - Espaços Florestais - Proteção"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoFlorestaProducao-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoFlorestaProducao-trp",
+  "geom": "geom",
+  "tip": "Solo Rustico - Espaços Florestais - Produção"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoFlorestaisRecreioLazer-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoFlorestaisRecreioLazer-trp",
+  "geom": "geom",
+  "tip": "Solo Rustico - Espaços Florestais - Recreio e Valorização da Paisagem"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoEquipamentosInfraestruturas-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoEquipamentosInfraestruturas-trp",
+  "geom": "geom",
+  "tip": "Solo Rustico - Espaços de Equipamentos e Infraestruturas"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoAgricola-tr.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoAgricola-tr",
+  "geom": "geom",
+  "tip": "Solo Rustico - Agricola"
+ },
+ {
+  "id": "Library://DCTSIG/Layers/PDM2025/1_1/ord_1_1_SoloRusticoAglomeradoRural-trp.LayerDefinition",
+  "kind": "vector",
+  "fs": "Library://DCTSIG/Data/pdm2025_db.FeatureSource",
+  "cls": "ord_1_1:ord_1_1_SoloRusticoAglomeradoRural-trp",
+  "geom": "geom",
+  "tip": "SoloRustico - Aglomerado Rural"
+ }
+]

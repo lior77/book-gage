@@ -1,0 +1,586 @@
+
+
+<!DOCTYPE html >
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt">
+<head><title>
+	Geoportal
+</title><link href="../resources/Style.css" media="all and (min-device-width: 1025px)" rel="stylesheet" type="text/css" /><link href="../Content/themes/base/jquery-ui.css" rel="stylesheet" />
+
+    <script src="../Scripts/jquery-3.1.1.js"></script>
+    
+    <script src="../Scripts/jquery-ui-1.12.1.js"></script>
+    <script src="../Scripts/jquery.contextmenu.js"></script>
+
+    <script src="../Scripts/maptools.js" type="text/javascript"></script>
+
+
+    <link href="../Content/fancytree/skin-lion/ui.fancytree.css" rel="stylesheet" />
+    <script src="../Scripts/jquery.fancytree/jquery.fancytree.js"></script>
+</head>
+    <style >
+
+.treelink span {
+     cursor:pointer!important;
+     text-decoration:underline!important;
+}
+.treelink span:hover {
+     text-decoration:none!important;
+     text-shadow: 1px 1px 1px #555!important;
+}
+</style>
+<script>
+
+    var openseparador = '#h3webpdm';
+    $(function accord() {
+
+        //if (openseparador != '') {
+        //    $('#accordion h3.menuterritorio').find("div[id='" + openseparador + "']").parent().click().delay(800);
+        //}
+
+        $("#accordion").accordion({
+            clearStyle: true,
+            autoHeight: true,
+            heightStyle: "fill",
+            active: 0,
+            event: "click"
+        });
+    });
+
+    var menu1 = [
+    ];
+    $(function () {
+        $('#accordion').contextMenu(menu1, { theme: 'vista' });
+    });
+    var update_layername;
+    var update_layericonurl;
+
+    var isPortableDevice = true;
+    if (!navigator.userAgent.match(/(iPod|iPhone|iPad)/)) { //if (!navigator.userAgent.match(/(iPod|iPhone|iPad|Mac68K|MacPPC|MacIntel|Mac)/)) {
+        isPortableDevice = false;
+    } else {
+        isPortableDevice = true;
+    }
+
+    function SetTreeIcon(layername, layericonurl) {
+        update_layername = layername;
+        update_layericonurl = layericonurl;
+        //$("#treeview").fancytree("getRootNode").visit(function (node) {
+        //    if (node.data.layer == update_layername)
+        //    {
+        //        alert(node.title);
+        //    }
+        //});
+        
+        //var root = $("#treeview").fancytree("getRootNode");
+         
+        //var nodes = root.children;
+        //alert(root);
+
+    }
+   // var arvore;
+$(document).ready(function () {
+
+    var size = $(window).height() - 40;
+    document.getElementById('accordion').style.height = size + 'px';
+         
+    $("#accordion").accordion("refresh");
+
+    var node = document.getElementById("accordion");
+
+    for (var i = 0; i < node.childNodes.length; i++) {
+        if (node.childNodes[i].tagName == 'DIV') {
+            node.childNodes[i].outerHTML = node.childNodes[i].outerHTML.replace('overflow: auto;', 'overflow: none;');
+        } 
+    }
+    $("#webpdm").css('overflow', 'hidden');
+    $("#webser").css('overflow', 'hidden');
+      
+    //$("#accordion").accordion('option', 'active', 3);
+    if (openseparador != '') {
+        $(openseparador).trigger('mouseover');
+        var aa = $('#accordion h3.menuterritorio').length;
+        for (var i = 0; i < aa; i++) {
+            var auxid = '#' + $('#accordion h3.menuterritorio')[i].id;
+            if (auxid == openseparador) {
+                $("#accordion").accordion('option', 'active', i);
+                i = aa;
+            }
+        }
+    }
+         
+    //$("#treeview").btechcotree({
+    //    containerid: "treeview"
+    //    , url: "../xml/igttree.xml"
+    //    , datatype: $treedatatype.Xml
+    //    , dataformat: $treedataformat.Hierarchy
+    //    , class_node_collapse: "ui-icon-circle-plus"
+    //    , class_node_expand: "ui-icon-circle-minus"
+    //    , class_node_item: "ui-icon-clipboard"
+    //    , collapse_tree: false
+    //    , class_node_highlight: "ui-state-highlight"
+    //    , class_node_add: "ui-icon-plusthick"
+    //    , class_node_remove: "ui-icon-minusthick"
+    //    , show_button_check: true
+    //    , show_button_add: true
+    //    , show_button_remove: true
+    //    , node_remove_message: "Are you sure?"
+    //});
+         
+    $('[id^="treeview_"]').fancytree({
+        renderNode: function(event, data) {
+            // Optionally tweak data.node.span
+            var node = data.node;
+            if (!data.node.folder) {
+                var layer = data.node.data.layer;
+                if (layer != undefined) {
+                    if (layer != '') {
+                        for (var i = 0; i < parent.legenda_layers.length; i++) 
+                        {
+                            if (parent.legenda_layers[i].layername == layer) {
+                                var $span = $(node.span);
+                                $span.find("> span.fancytree-icon").css({
+                                    backgroundImage: "url('"+parent.legenda_layers[i].url+"')",
+                                    backgroundPosition: "0 0"
+                                });
+                            }
+                            
+                        }
+
+                    }
+                }
+            }
+            try{
+                var option = data.node.data.option;
+                if (option != undefined) {
+                    if (option == 'removecheck') {
+                        data.node.hideCheckbox = true;
+                    }
+                }
+            } catch (e) {
+
+            }
+            
+        },
+        click: function (event, data) {
+        try{
+            var openpopup = data.node.data.openpopup;
+            if (openpopup != undefined) {
+                PopupCenter(openpopup, 900 , 500);
+            }
+        } catch (e) {
+
+        }
+            //var node =data.node.data.openpopup;
+            //alert("ID: " + node.key);
+    }
+    });
+    
+    //arvore = $("#treeview").fancytree();
+    $('[id^="treeview_"]').fancytree("option", "checkbox", true);
+    $('[id^="treeview_"]').fancytree("option", "selectMode", 3);
+    $('[id^="treeview_"]').on("fancytreebeforeselect", function (event, data) {
+        var checked = data.node.selected; //data.node.partsel;
+        if (data.node.folder) {
+            var filhosnodes = [];
+            data.node.visit(function (node) {
+                filhosnodes.push(node);  // or node.key, ...
+            });
+            var nr_filhos = filhosnodes.length;//data.node.children.length;
+            if (nr_filhos != 0) {
+                var layers = '';
+                var layersoff = '';
+                for (var i = 0; i < nr_filhos; i++) {
+                    var layer = filhosnodes[i].data.layer; //data.node.children[i].data.layer;
+                    var layeroff = filhosnodes[i].data.layeroff; //data.node.children[i].data.layeroff;
+                    if (layer != undefined) {
+                        if (layer != '') {
+                            // map_layers(layer, !checked, '');
+                            if (layers != '') { layers = layers + ';' }
+                            layers = layers + layer + '/' + !checked;
+                        }
+                    }
+                    if (layeroff != undefined) {
+                        if (layeroff != '') {
+                            var nodeoff = filhosnodes[i].data.nodeoff; data.node.children[i].data.nodeoff;
+                            var aux_n = nodeoff.split('/');
+                            for (var j = 0; j < aux_n.length; j++) {
+                                if (aux_n[j] != '') {
+                                    var anode = $('[id^="treeview_"]').fancytree("getTree").getNodeByKey(aux_n[j]);
+                                    anode.setActive(false);
+                                    anode.setSelected(false);
+                                }
+                            }
+
+
+                            if (layersoff != '') { layersoff = layersoff + ';' }
+                            layersoff = layersoff + layeroff;
+                        }
+                    }
+                }
+
+                map_layers(layers, !checked, '');
+            }
+
+        } else {
+            var layer = data.node.data.layer;
+            var layeroff = data.node.data.layeroff;
+            if (layeroff == undefined) {
+                layeroff = '';
+            } else {
+                var nodeoff = data.node.data.nodeoff;
+                var aux_n = nodeoff.split('/');
+                for (var j = 0; j < aux_n.length; j++) {
+
+                    if (aux_n[j] != '') {
+                        var anode = $('[id^="treeview_"]').fancytree("getTree").getNodeByKey(aux_n[j]);
+                        anode.setActive(false);
+                        anode.setSelected(false);
+                    }
+                }
+
+            }
+            if (layer != undefined) {
+                if (layer != '') {
+                    map_layers(layer, !checked, layeroff);
+                }
+            }
+        }
+
+    });
+
+    
+    //$("#treeview").fancytree({
+    //    checkbox: true,
+    //    selectMode: 2,
+    //    source: "../xml/igttree.xml",
+    //    select: function (event, data) {
+    //        // Display list of selected nodes
+    //        var selNodes = data.tree.getSelectedNodes();
+    //        // convert to title/key array
+    //        var selKeys = $.map(selNodes, function (node) {
+    //            return "[" + node.key + "]: '" + node.title + "'";
+    //        });
+    //        $("#echoSelection2").text(selKeys.join(", "));
+    //    },
+    //    click: function (event, data) {
+    //        // We should not toggle, if target was "checkbox", because this
+    //        // would result in double-toggle (i.e. no toggle)
+    //        if ($.ui.fancytree.getEventTargetType(event) === "title") {
+    //            data.node.toggleSelected();
+    //        }
+    //    },
+    //    keydown: function (event, data) {
+    //        if (event.which === 32) {
+    //            data.node.toggleSelected();
+    //            return false;
+    //        }
+    //    },
+    //    // The following options are only required, if we have more than one tree on one page:
+    //    cookieId: "fancytree-Cb2",
+    //    idPrefix: "fancytree-Cb2-"
+    //});
+
+    //$("input:checkbox").on('click', function () {
+    //    // in the handler, 'this' refers to the box clicked on
+    //    var $box = $(this);
+    //    if ($box.is(":checked")) {
+    //        // the name of the box is retrieved using the .attr() method
+    //        // as it is assumed and expected to be immutable
+    //        var group = "input:checkbox[name='" + $box.attr("name") + "']";
+    //        $('input:checkbox[name='  + $box.attr("name") +  ']').each(function () {
+    //            if ($(this).is(':checked')) {
+    //              toggleCheckbox($(this), '');
+    //            }  
+    //        });
+    //        // the checked state of the group/box on the other hand will change
+    //        // and the current value is retrieved using .prop() method
+    //        $(group).prop("checked", false);
+    //        $box.prop("checked", true);
+    //    } else {
+    //        $box.prop("checked", false);
+    //    }
+    //});
+});
+
+$(window).resize(function () {
+    //var size = $(window).height() - 2;
+    //document.getElementById('accordion').style.height = size + 'px';
+    //$("#accordion").accordion("refresh");
+
+});
+    function toggleCheckbox(element, offelements) {
+        var baseoffelements = offelements;
+        // in the handler, 'this' refers to the box clicked on
+        var $box = $(element);
+        if ($box.is(":checked")) {
+            // the name of the box is retrieved using the .attr() method
+            // as it is assumed and expected to be immutable
+            var group = "input:checkbox[name='" + $box.attr("name") + "']";
+
+            $('input:checkbox[name=' + $box.attr("name") + ']').each(function () {
+                if ($(this).prop('id') != $box.prop('id')) {
+                    if ($(this).is(':checked')) {
+                        if (offelements != '') {
+                            offelements = offelements + '/' + $(this).prop('id');
+                        } else {
+                            offelements =  $(this).prop('id');
+                        }
+                    }
+                }
+            });
+
+            // the checked state of the group/box on the other hand will change
+            // and the current value is retrieved using .prop() method
+            $(group).prop("checked", false);
+            $box.prop("checked", true);
+        } else {
+            $box.prop("checked", false);
+        }
+        if (baseoffelements != '') {
+            var aux = baseoffelements.split('/');
+            for (var i = 0; i < aux.length; i++) {
+                $('input:checkbox').filter('#' + aux[i]).prop("checked", false);
+            }
+        }
+           
+
+        map_layers(element.id, element.checked, offelements);
+
+    }
+
+    function map_layers(layergroup, estado, offelements) {
+
+        if (offelements != '') {
+            var valores = '';
+            var aux = offelements.split('/');
+            for (var i = 0; i < aux.length; i++) {
+                if (aux[i]!=''){
+                    if (valores!=''){
+                        valores = valores + ';' + aux[i] + '/false';
+                    }
+                    else {
+                        valores =  aux[i] + '/false';
+                    }
+                }
+                  
+            }
+            document.getElementById('layerandstate').value = layergroup + '/' + estado + ';' + valores;
+        } else {
+        document.getElementById('layerandstate').value = layergroup + '/' + estado;
+        }
+        
+        document.getElementById('layersonoff').click();
+
+
+    }
+    function zoommapa(x, y, escala) {
+
+        var valor_y = parseFloat(y);
+        var valor_x = parseFloat(x);
+        if (!isNaN(valor_x) && !isNaN(valor_y)) {
+            if ((!navigator.userAgent.match(/(iPod|iPhone|iPad)/))) {
+                try {
+                    if (main_layout != undefined) {
+                        Mapaframe = main_layout.cells("c").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                    }
+                }
+                catch (err) { }
+                try {
+                    if (parent.main_layout != undefined) {
+                        Mapaframe = parent.main_layout.cells("c").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                    }
+                }
+                catch (err) { }
+            } else {
+                try {
+                    if (main_layout != undefined) {
+                        Mapaframe = main_layout.cells("c").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                    }
+                }
+                catch (err) { }
+                try {
+                    if (parent.main_layout != undefined) {
+                        Mapaframe = parent.main_layout.cells("c").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                           
+
+                    }
+                }
+                catch (err) { }
+            }
+            try {
+                   
+                  
+                var largura = winObjectMapaframe.innerWidth;
+                var altura = winObjectMapaframe.innerHeight;
+
+                var largura_mapa = winObjectMapaframe.GetMapWidth();
+                var altura_mapa = winObjectMapaframe.GetMapHeight();
+                var centrox_mapa = winObjectMapaframe.GetCenter().X;
+                var centroy_mapa = winObjectMapaframe.GetCenter().Y;
+
+                var escala_mapa = winObjectMapaframe.GetScale();
+
+                var cantoinf_esq_x = parseFloat(centrox_mapa - largura_mapa / 2); //  windocument.getElementById('CantoX0');
+                var cantoinf_esq_y = parseFloat(centroy_mapa - altura_mapa / 2); // windocument.getElementById('CantoY0');
+                var cantosup_dir_x = parseFloat(centrox_mapa + largura_mapa / 2); //  windocument.getElementById('CantoX1');
+                var cantosup_dir_y = parseFloat(centroy_mapa + altura_mapa / 2); // windocument.getElementById('CantoY1');
+
+                var cantosup_esq_x1original = winObjectMapaframe.orgExtX1;
+                var cantosup_esq_y1original = winObjectMapaframe.orgExtY1;
+                var cantoinf_dir_x2original = winObjectMapaframe.orgExtX2;
+                var cantoinf_dir_y2original = winObjectMapaframe.orgExtY2;
+
+
+                if (valor_x < cantoinf_dir_x2original || valor_x > cantosup_esq_x1original || valor_y < cantoinf_dir_y2original || valor_y > cantosup_esq_y1original) {
+                    // valores inseridos estao dentro do mapa
+                    winObjectMapaframe.ZoomToView(valor_x, valor_y, escala, true);
+                } else {
+                      
+                    $('#mensagemcoordenadas').show();
+                    $("#mensagemcoordenadas").fadeOut(5000);
+                }
+
+            }
+            catch (err) {
+            }
+        }
+    }
+   
+    function map_refresh() {
+        if (!isPortableDevice){
+        //if ((!navigator.userAgent.match(/(iPod|iPhone|iPad)/))) {
+            try {
+                if (main_layout != undefined) {
+                    Mapaframe = main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+                    //winObjectMapa.GetMapFrame()
+
+                    winObjectMapa.Refresh();
+                }
+            }
+            catch (err) { }
+            try {
+                if (parent.main_layout != undefined) {
+                    Mapaframe = parent.main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+                    //winObjectMapa.GetMapFrame()
+                    winObjectMapa.Refresh();
+                }
+            }
+            catch (err) { }
+        } else {
+            try {
+                if (main_layout != undefined) {
+                    Mapaframe = main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+
+                    //winObjectMapa.layerMap.redraw(true);
+
+                    var sourcexy = winObjectMapa.layerMap.getSource();
+                    var params = sourcexy.getParams();
+                    params.t = new Date().getMilliseconds();
+                    sourcexy.updateParams(params);
+                    winObjectMapa.map.render();
+                }
+            }
+            catch (err) { }
+            try {
+                if (parent.main_layout != undefined) {
+                    Mapaframe = parent.main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+
+
+                    //winObjectMapa.layerMap.redraw(true);
+                    var sourcexy = winObjectMapa.layerMap.getSource();
+                    var params = sourcexy.getParams();
+                    params.t = new Date().getMilliseconds();
+                    sourcexy.updateParams(params);
+                    winObjectMapa.map.render();
+                }
+            }
+            catch (err) { }
+        }
+    }
+    function map_zoomtoview(lon,lat) {
+        if ((!navigator.userAgent.match(/(iPod|iPhone|iPad)/))) {
+            try {
+                if (main_layout != undefined) {
+                    Mapaframe = main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow; 
+                     
+                    //setTimeout(winObjectMapa.ZoomToView(geomInfoArray[j].bboxX0 + DistanciaPretendidaX / 2, geomInfoArray[j].bboxY1 + DistanciaPretendidaY / 2, escalatemp * 2, true), 2000);
+                    setTimeout(winObjectMapa.ZoomToView(lon, lat, 2500, true), 2000);
+
+                    $('#divRefresh').hide();
+                }
+            }
+            catch (err) { }
+            try {
+                if (parent.main_layout != undefined) {
+                    Mapaframe = parent.main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+                    setTimeout(winObjectMapa.ZoomToView(lon, lat, 2500, true), 2000);
+                    $('#divRefresh').hide();
+                }
+            }
+            catch (err) { }
+        } else {
+            try {
+                if (main_layout != undefined) {
+                    Mapaframe = main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+
+                    //winObjectMapa.layerMapguide.redraw(true);
+                }
+            }
+            catch (err) { }
+            try {
+                if (parent.main_layout != undefined) {
+                    Mapaframe = parent.main_layout.cells("c").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+
+
+                    //winObjectMapa.layerMapguide.redraw(true);
+
+                }
+            }
+            catch (err) { }
+        }
+    }
+    function PopupCenter(pageURL, title, w, h) {
+        var left = (screen.width / 2) - (w / 2);
+        var top = (screen.height / 2) - (h / 2);
+        var targetWin = window.open(pageURL, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
+    }
+
+</script>
+<body>
+    <form method="post" action="./menu_territorio.aspx?xml=menu_webpdm.xml&amp;separador=webpdm" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+
+
+<script src="/geoportal/ScriptResource.axd?d=NJmAwtEo3Ipnlaxl6CMhvl_P4MgxQSytAEoNobRLyVvn5lwKp9Yq6yITmnKANrhRJ2bgjVJtIRNt1lTzK0aBgKYRgCKxiwr-NfTs1pSNfGv4aL0bWSZRKvar-hF3FRkYaRfyyXG7jyuNmJhDPmB5G5o8yb0-pDlyADdscFiwwFg1&amp;t=5c0e0825" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="D3A1216B" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="5gSZ8S5REp/KVtqEBjCqeqrPm0z7r/NRM49wT/OKDJFLhx3C6O2sqLDbusvozPAoYuOOI6SvE7Zxm8TtuHultnMpra4pcaYfsvpkO9L52XDVRHoJTO4VRL98OGzsNhkV22bujQ8impCNrcHFtrS0qx4ptKH8sXZWhkiZQKP8jn7EMpAHKaiCTLnuLpl1Q58E" />
+<div id="accordion"><h3 class="menuterritorio" id="h3webser" style="background-color:#d1be85;border:#d1be85;color:white;">Pesquisa</h3><div id=webser style='overflow:none'><iframe id=webser name=webser frameborder="0" marginwidth="0" marginheight="0" scrolling="no" title="iframe" src=pesquisa.aspx height=100% style=overflow:hidden width="100%"></iframe></div><h3 class="menuterritorio" id="h3igt" style="background-color:#d1be85;border:#d1be85;color:white;">Planos Municipais de Ordenamento do Territorio - PMOTS</h3><div id=igt style='overflow:none'><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Plano Diretor Municipal</label><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Ordenamento</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='ord_1_1' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Qualificação do Solo</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='ord_1_2' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Áreas de Salvaguarda</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='ord_1_3' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>  Zonamento Acústico</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Condicionantes</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='cond_2_0' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Condicionantes</label><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/quadro_cond.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Quadros Exclusão REN</a><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><a class="legenda" onclick="PopupCenter('Legendas/PDM_Gondomar_2018.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Regulamento PDM</a><br/><label  style=font-family:Verdana;font-size:8px;font-weight:bold;color:#a38242;>NOTA: Consulte as APPS no separador Floresta</label><br/><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='susp_pdm2015' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Documentos Suspensão Parcial do PDM:</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><a class="legenda" onclick="PopupCenter('Legendas/Susp_PDM/2023.07.17-Aviso-DR-Suspensao-Parcial-do-Plano-Diretor-Municipal-de-Gondomar.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Aviso n.º 13612/2023</a><br/><br/><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Plano Pormenor das Quintas da Azenha e Varziela</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='pp_azenha_varzea_imp' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Implantação</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/leg_pp_imp_quintas_Azenha_Varziela.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/pp_varziela_quadro.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Quadro</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='pp_azenha_varzea_cond' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Condicionantes</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/leg_pp_cond_quintas_Azenha_Varziela.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><a class="legenda" onclick="PopupCenter('Legendas/PP_Varziela_Publ_DR.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Regulamento</a><br/><br/><label  style=font-family:Verdana;font-size:8px;font-weight:bold;color:#a38242;>NOTA: As propostas de exclusão da Reserva Ecológica da Planta de Condicionantes do PP das Quintas da Azenha e da Varziela, apenas serão eficazes após a publicação da alteração da Carta da REN, cujo procedimento está em curso.</label><br/><br/><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Plano Pormenor de Boialvo</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='pp_boialvo_imp' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Implantação</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/implant_leg.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/implan_quadro_leg_600.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> Quadro</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='boialvo_cond' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Condicionantes</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/cond_boialvo_leg.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><a class="legenda" onclick="PopupCenter('Legendas/Regulamento_Boialvo.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Regulamento</a><br/><br/><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Reserva Ecológica Nacional</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='ren' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Reserva Ecológica Nacional</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/quadro_ren.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Quadros de Exclusão da REN</a><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/REN_2019.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Aviso nº. 19207/2019</a><br/><br/><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Mapa de Ruído</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='lden' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Lden</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='ln' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Ln</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><a class="legenda" onclick="PopupCenter('Legendas/Minuta AM 15_07_2021.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Aprovação em Assembleia Municipal</a><br/><br/><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>NOTA: Versão informática, não dispensa consulta da versão original.</label><br/></div><h3 class="menuterritorio" id="h3igt1" style="background-color:#d1be85;border:#d1be85;color:white;">Planos Especiais de Ordenamento do Território</h3><div id=igt1 style='overflow:none'><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Plano Ordenamento Albufeira de Crestuma-Lever-POACL</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='poacl_sint' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Síntese</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/Leg_poacl_sint.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='poacl_cond' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Planta de Condicionantes</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><a class="legenda" onclick="PopupCenter('Legendas/Leg_poacl_cond.jpg', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><br/><a class="legenda" onclick="PopupCenter('Legendas/Regulamento_Poacl.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Regulamento</a><br/><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>NOTA: Versão informática, não dispensa consulta da versão original.</label><br/></div><h3 class="menuterritorio" id="h3igt1" style="background-color:#d1be85;border:#d1be85;color:white;">Floresta</h3><div id=igt1 style='overflow:none'><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Programa Sub-regional de Ação de Gestão Integrada de Fogos Rurais da AMP (PSA-AMP)</label><br/><a class="legenda" onclick="PopupCenter('Legendas/apps/psa_amp_021025.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Documento</a><br/><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_APPS_2026GDM' id='PSA_AMP_APPS_2026GDM' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Carta das Áreas Prioritárias de Prevenção e Segurança (APPS)</label><br/><a class="legenda" onclick="PopupCenter('Legendas/apps/apps_legenda.png', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><br/><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Carta das Redes de Defesa</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RPA_2026GDM' id='PSA_AMP_RPA_2026GDM' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>  Rede de Pontos de Água (RPA)</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RVF_2026GDM' id='PSA_AMP_RVF_2026GDM' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>  Rede Viária Florestal (RVF)</label><a class="legenda" onclick="PopupCenter('Legendas/apps/RVF.png', 'Legenda', 800 , 400);" href="javascript:void(0);"> legenda</a><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RVI_2026GDM' id='PSA_AMP_RVI_2026GDM' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>Rede de Vigilância e Deteção de Incêndios (RVI)  </label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Programa Municipal de Execução de Gondomar (PME-GONDOMAR)</label><br/><a class="legenda" onclick="PopupCenter('Legendas/apps/PME_Gondomar_22_05_2026.pdf', 'Legenda', 800 , 400);" href="javascript:void(0);"> Documento</a><br/><br/><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Rede Secundária de Faixas de Gestão de Combustíveis (RSFGC)</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_1' id='PSA_AMP_RS_2026GDM_1' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 1 - Edifícios em Territórios Florestais </label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_2' id='PSA_AMP_RS_2026GDM_2' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 2 - Áreas Edificadas</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_3' id='PSA_AMP_RS_2026GDM_3' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 3 - Campismo e Zonas Industriais</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_4' id='PSA_AMP_RS_2026GDM_4' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 4 - Rede Rodoviária</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_5' id='PSA_AMP_RS_2026GDM_5' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 5 - Rede Ferroviária</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_6' id='PSA_AMP_RS_2026GDM_6' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 6 - Redes de Gás e Produtos Petroliferos</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_7' id='PSA_AMP_RS_2026GDM_7' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 7 - Rede Elétrica de Muito Alta Tensão</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_8' id='PSA_AMP_RS_2026GDM_8' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 10 - Rede Elétrica de Média Tensão</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_13' id='PSA_AMP_RS_2026GDM_13' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 13 - Rede Elétrica de Alta Tensão </label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_15' id='PSA_AMP_RS_2026GDM_15' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 15 - Edifícios em Territórios Agrícolas </label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='PSA_AMP_RS_2026GDM_17' id='PSA_AMP_RS_2026GDM_17' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> 17 - SIRESP </label><br/><a class="legenda" onclick="PopupCenter('Legendas/apps/RSFGC.png', 'Legenda', 800 , 400);" href="javascript:void(0);"> Legenda</a><br/></div><h3 class="menuterritorio" id="h3igt5" style="background-color:#d1be85;border:#d1be85;color:white;">Rede de Apoio Topográfico Municipal</h3><div id=igt5 style='overflow:none'><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='RedeTopografica' id='RedeTopografica' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Marcas Topográficas</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/></div><h3 class="menuterritorio" id="h3cart" style="background-color:#d1be85;border:#d1be85;color:white;">Cartografia</h3><div id=cart style='overflow:none'><label  style=font-family:Verdana;font-size:11px;font-weight:bold;color:#1371a0;> Cartografia</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm10' id='base' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Cartografia</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" checked onclick="javascript:toggleCheckbox(this,'');" name='pdm2' id='ortos' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Ortofotomapa</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" checked onclick="javascript:toggleCheckbox(this,'');" name='pdm5' id='eixos' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Eixos de Via</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm7' id='linhas_agua' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Linhas de Água</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" checked onclick="javascript:toggleCheckbox(this,'');" name='pdm7' id='limites_pps' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Limites dos Planos em Vigor</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><input type="checkbox" checked onclick="javascript:toggleCheckbox(this,'');" name='pdm20' id='Caop' /><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;> Limites do Concelho (CAOP em vigor)</label><label  style=font-family:Verdana;font-size:10px;font-weight:bold;color:#1371a0;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><br/><br/></div></div>
+
+    <div id="UpdatePanel1">
+	
+        <input name="layerandstate" type="text" id="layerandstate" style="display:none;visibility:hidden" />
+            <input type="submit" name="layersonoff" value="Button" id="layersonoff" style="display:none;visibility:hidden" />
+        
+</div>
+        <input name="txtmgSessionId" type="text" id="txtmgSessionId" style="display:none;visibility:hidden" />
+        <input name="txtMyMapName" type="text" id="txtMyMapName" style="display:none;visibility:hidden" />
+  </form>
+</body>
+</html>

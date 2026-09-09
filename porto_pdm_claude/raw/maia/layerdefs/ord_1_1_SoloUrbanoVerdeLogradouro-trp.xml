@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LayerDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="1.0.0" xsi:noNamespaceSchemaLocation="LayerDefinition-1.0.0.xsd">
+  <VectorLayerDefinition>
+    <ResourceId>Library://DCTSIG/Data/pdm2025_db.FeatureSource</ResourceId>
+    <FeatureName>ord_1_1:ord_1_1_SoloUrbanoVerdeLogradouro-trp</FeatureName>
+    <FeatureNameType>FeatureClass</FeatureNameType>
+    <Geometry>geom</Geometry>
+    <ToolTip>'Espaços Verdes - Logradouro'</ToolTip>
+    <VectorScaleRange>
+      <AreaTypeStyle>
+        <AreaRule>
+          <LegendLabel/>
+          <AreaSymbolization2D>
+            <Fill>
+              <FillPattern>Solid</FillPattern>
+              <ForegroundColor>BFBEF868</ForegroundColor>
+              <BackgroundColor>00FFFFFF</BackgroundColor>
+            </Fill>
+          </AreaSymbolization2D>
+        </AreaRule>
+      </AreaTypeStyle>
+    </VectorScaleRange>
+  </VectorLayerDefinition>
+</LayerDefinition>

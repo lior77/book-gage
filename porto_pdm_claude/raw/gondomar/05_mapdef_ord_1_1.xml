@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MapDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:noNamespaceSchemaLocation="MapDefinition-1.0.0.xsd">
+  <Name/>
+  <CoordinateSystem>PROJCS["ETRS89.PT-TM06",GEOGCS["LL-ETRS89",DATUM["ETRS89",SPHEROID["WGS84",6378137.000,298.25722293],TOWGS84[0.0000,0.0000,0.0000,0.000000,0.000000,0.000000,0.00000000]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["false_easting",0.000],PARAMETER["false_northing",0.000],PARAMETER["scale_factor",1.000000000000],PARAMETER["central_meridian",-8.13310833333333],PARAMETER["latitude_of_origin",39.66825833333333],UNIT["Meter",1.00000000000000]]</CoordinateSystem>
+  <Extents>
+    <MinX>-8250.4503147</MinX>
+    <MaxX>12402.018797</MaxX>
+    <MinY>-13271.837154</MinY>
+    <MaxY>11222.400494</MaxY>
+  </Extents>
+  <BackgroundColor>ffffffff</BackgroundColor>
+  <MapLayer>
+    <Name>ord_1_1_2015</Name>
+    <ResourceId>Library://Gismat/Layers/Raster/ord_1_1_2015.LayerDefinition</ResourceId>
+    <Selectable>true</Selectable>
+    <ShowInLegend>true</ShowInLegend>
+    <LegendLabel>ord_1_1_2015</LegendLabel>
+    <ExpandInLegend>true</ExpandInLegend>
+    <Visible>true</Visible>
+    <Group/>
+  </MapLayer>
+</MapDefinition>

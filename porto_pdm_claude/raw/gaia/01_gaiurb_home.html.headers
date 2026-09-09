@@ -1,0 +1,22 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/2 200 
+server: nginx
+date: Wed, 09 Sep 2026 00:47:30 GMT
+content-type: text/html; charset=utf-8
+x-ua-compatible: IE=Edge
+set-cookie: _wmcp_ws=UTVMSWJZNFFMWDlFK3F3VkczK0pBKzR4TWsvd2tPWW5ZditlUVpPMXJndC9jbDNUTkdIakVjbVdER3pJYTNjUS8xTU9NdGdJUmsvTkoxRlgydmJ6elBUbEltVlJRaVFpVE9ZdFptTVNwalVPMThvOXJDRU9HQXp5Kzl0Z0VuNldkajU2MUpRNis0VE81dG50V3lYRUlnPT0tLXl5a0lMN3N3UUhtdTFJRzBTMkxJN0E9PQ%3D%3D--233173f903368ef63bdc89a106c09935a2124a29; path=/; HttpOnly
+set-cookie: _wmcp_ws=TEJYYStWNGxLcS9ZRFo1cUluc2MwR2c5amU2U0lOVzFqbHppMnFWeVFyMzBaRThIYUw3VHorWjF5eDNuZnU0dTMvSmJYeHVVTWxERWFDNWlRMklnRGdzcDNxYlJ3M3ZkVW9aTG50bUdpTFZHU3VlK3hVS0NxVi9uUlpwRTlNdEtINWx6U1RQZ3U4TEhpWEYvZmc2OFRBPT0tLVhoRkllQmJ4VE82bHdIUEM3bHc5Umc9PQ%3D%3D--587fdaa5e64bd7deeffc81f41e6cb4c33bd0ded8; path=/; HttpOnly
+etag: W/"07540852b3401a94cf43283300f73d4b"
+cache-control: max-age=0, private, must-revalidate
+x-request-id: a4985dc3-0ac3-47fa-a101-2f094a13c679
+x-runtime: 0.159205
+content-security-policy: frame-ancestors 'self' ;
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-xss-protection: 1; mode=block
+set-cookie: cookiesession1=678A3E16A36AFBAFD465242ACD1ED492;Expires=Thu, 09 Sep 2027 00:47:30 GMT;Path=/;HttpOnly
+content-length: 24238
+

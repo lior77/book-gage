@@ -1,0 +1,19 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Cache-Control: private
+Content-Type: text/html; charset=utf-8
+Content-Encoding: gzip
+Vary: Accept-Encoding
+Server: Microsoft-IIS/10.0
+Set-Cookie: ASP.NET_SessionId=nggkdevd2esajpn4ltlqy22r; path=/; secure; HttpOnly; SameSite=Lax
+X-AspNetMvc-Version: 5.2
+X-AspNet-Version: 4.0.30319
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Date: Wed, 09 Sep 2026 00:39:56 GMT
+Set-Cookie: cookiesession1=678A3E16976DB8D617731BC2520EBA02;Expires=Thu, 09 Sep 2027 00:39:54 GMT;Path=/;HttpOnly
+Content-Length: 62505
+

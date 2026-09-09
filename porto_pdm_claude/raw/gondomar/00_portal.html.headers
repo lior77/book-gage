@@ -1,0 +1,15 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Content-Type: text/html
+Content-Encoding: gzip
+Last-Modified: Thu, 09 Nov 2023 18:52:21 GMT
+Accept-Ranges: bytes
+ETag: "d682a9de3d13da1:0"
+Vary: Accept-Encoding
+Server: Microsoft-IIS/10.0
+X-Powered-By: ASP.NET
+Date: Wed, 09 Sep 2026 00:37:02 GMT
+Set-Cookie: cookiesession1=678A3E16CF15D006BE8229091E60EC03;Expires=Thu, 09 Sep 2027 00:37:00 GMT;Path=/;HttpOnly
+Content-Length: 186
+

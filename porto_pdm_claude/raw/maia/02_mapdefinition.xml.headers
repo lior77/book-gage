@@ -1,0 +1,16 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Content-Type: text/xml; charset=utf-8
+Content-Encoding: gzip
+Vary: Accept-Encoding
+Server: Microsoft-IIS/10.0
+Status: 200 OK
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Date: Wed, 09 Sep 2026 00:34:41 GMT
+Content-Length: 24269
+Set-Cookie: cookiesession1=678A3E0F586E1D1DB35B34AA4F198920;Expires=Thu, 09 Sep 2027 00:34:41 GMT;Path=/;HttpOnly
+

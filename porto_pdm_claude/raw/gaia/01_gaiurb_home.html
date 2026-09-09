@@ -1,0 +1,493 @@
+<!DOCTYPE HTML>
+<html lang="pt-PT">
+
+<head>
+  <title>Gaiurb</title>
+  <link rel="stylesheet" type="text/css" href="/assets/wm-citizen/stylesheets/frontoffice/smile-citizen-2-a25b70feb3.min.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/mandatory-b73ced5ea4.min.css" media="all"><link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/subscribe-better/subscribe-better-22b60b8092.min.css" media="all">
+<link rel="stylesheet" type="text/css" href="/assets/wm-smile/stylesheets/frontoffice/mega_search-5afe7b92fd.min.css" media="all">
+
+  <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="9ZiDspflMD92s0HeLwn0kCxUNbpncCl4I13dsRfddGJLGaHvsWuJdkIl7sS4lM9e/4QI6VP2bTksQnzzb0EFmg==" />
+  <script src="/assets/wm-smile/javascripts/vendor/smile-frontoffice-0fc0bba368.vendor.js"></script>  <script src="/assets/wm-smile/javascripts/frontoffice/smile-82477b69b7.min.js"></script>
+<script src="/assets/wm-smile/javascripts/frontoffice/subscribe-better/jquery-cfa646be6a.subscribe-better.min.js"></script>
+<script src="/assets/wm-smile/javascripts/frontoffice/widgets-common-34ae43cebc.min.js"></script>
+<script src="/assets/wm-smile/javascripts/frontoffice/mega-search-6a0138b76a.min.js"></script>
+
+  
+
+  <!-- delete the fonts that won't be used -->
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-regular.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-semibold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-semibold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-bold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-extrabold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-extrabold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-light.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/opensans-light.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/icons/fontawesome.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/gaiurb/gaiurb/stylesheets/fontface/icons/fontawesome.woff" as="font" type="font/woff" crossorigin>
+
+  <link rel="stylesheet" type="text/css" href="/assets/gaiurb/gaiurb/stylesheets/landing_caller-b5d23f405e.min.css" media="all">
+  <script src="/assets/gaiurb/gaiurb/javascripts/theme_utils_geral-1e120642b1.min.js"></script>
+
+  <!-- other included scripts are on the bottom of this page -->
+
+  <link rel="shortcut icon" href="/assets/gaiurb/gaiurb/images/favicon.ico" />
+  <link rel="apple-touch-icon" href="/assets/gaiurb/gaiurb/images/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="57x57" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-57x57.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-72x72.png" />
+  <link rel="apple-touch-icon" sizes="76x76" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-76x76.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-114x114.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-120x120.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-144x144.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/gaiurb/gaiurb/images/apple-touch-icon-152x152.png" />
+
+  <meta name="viewport" content="initial-scale=1, width=device-width, maximum-scale=1, minimum-scale=1, user-scalable=yes">
+
+  <!-- FB e TWITTER - usar apenas na homepage-->
+  <!--Não esquecer de alterar os textos-->
+  <meta property="og:site_name" content="Gaiurb - Urbanismo e Habitação, EM" /> <!-- ALTERAR -->
+  <meta property="og:locale" content="pt_PT" />
+  <meta name="description" content="Gaiurb - Urbanismo e Habitação, EM">
+  <meta property="og:title" content="Gaiurb - Urbanismo e Habitação, EM" /> <!-- ALTERAR -->
+  <meta property="og:image" content="/gaiurb/layout/logo_fb.png" />
+  <!-- ALTERAR -->
+  <meta property="og:url" content="http://www.gaiurb.pt/" /> <!-- ALTERAR -->
+  <meta property="og:description" content="Gaiurb - Urbanismo e Habitação, EM" />
+  <!-- ALTERAR -->
+  <meta name="twitter:card" content="Sítio oficial da Gaiurb - Urbanismo e Habitação, EM" /> <!-- ALTERAR -->
+  <meta name="twitter:title" content="Gaiurb - Urbanismo e Habitação, EM" /> <!-- ALTERAR -->
+  <meta name="twitter:description" content="Gaiurb - Urbanismo e Habitação, EM" />
+  <!-- ALTERAR -->
+  <meta name="twitter:image" content="/gaiurb/layout/logo_fb.png" />
+  <!-- ALTERAR -->
+  <!-- fim FB TWITTER-->
+
+  <!-- NAO APAGAR ISTO -->
+  <meta name="keywords" content="">
+  
+
+<script src="/assets/wm-smile/javascripts/frontoffice/cookie_consent-8185edf152.min.js"></script><!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8FZCFSER0E"></script>
+<script>(function(){
+  var googleApiLoaded = false;
+  var hasConsent = function(){
+    var api = window.WMCookieConsent || {};
+    if (typeof api.isCategoryAllowed === 'function') {
+      return api.isCategoryAllowed('analytics');
+    }
+    if (typeof api.hasConsent === 'function') {
+      return api.hasConsent();
+    }
+    return false;
+  };
+  var checkCookieBarGoogleApi = function(){
+    if(googleApiLoaded){ return; }
+    if(hasConsent()){
+      googleApiLoaded = true;
+      
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8FZCFSER0E');
+
+    }
+  };
+  window.addEventListener('wm:cookie:accepted', checkCookieBarGoogleApi);
+  window.addEventListener('wm:cookie:custom', checkCookieBarGoogleApi);
+  window.addEventListener('wm:cookie:updated', checkCookieBarGoogleApi);
+  checkCookieBarGoogleApi();
+})()
+</script></head>
+
+<body class="homepage landing">
+<div id="cookie_bar_1" class="cookie-bar cookie-position--top cookie-bar--horizontal" role="region" aria-live="assertive" data-site-zone="1" tab-index="0" aria-hidden="true" style="display: none;" data-config-digest="0d2861d07895075c2c90eb32d2298852"><div class="cookie-bar__container" style="--cb-bg: #2B2B2B; background: #2B2B2B; border-color: #2B2B2B; --cb-text: #ffffff; --cb-muted: #ffffff; color: #ffffff; --cb-accent: #EDEDED; --cb-accent-strong: #EDEDED"><div class="cookie-bar__text"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="cookie-bar__icon" alt="" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9 3 3 0 0 0 3 3 3 3 0 0 0 3 3 3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="15.5" cy="12.4" r="0.9" fill="currentColor"></circle><circle cx="12" cy="15.4" r="0.9" fill="currentColor"></circle><circle cx="9.3" cy="11.6" r="0.9" fill="currentColor"></circle></svg><div class="cookie-bar__copy"><div class="cookie-bar__title"><strong>Utilizamos cookies</strong></div><div class="cookie-bar__desc">ESTE SITE UTILIZA COOKIES PARA MELHORAR A SUA EXPERIÊNCIA NESTE WEBSITE. <a class="cookie-bar__policy-inline" href="/pages/670">Política de cookies</a>.</div></div></div><div class="cookie-bar__actions"><a class="cookie-btn cookie-btn--settings" role="button" aria-label="Personalizar cookies" style="background: transparent; border-color: #ffffff; color: #ffffff" href="https://www.gaiurb.pt/pages/1248">Personalizar cookies</a><button name="button" type="button" class="cookie-btn cookie-btn--accept" data-cookie-choice="accepted" style="background: #EDEDED; border-color: #EDEDED; color: #2B2B2B">ACEITAR TODOS OS COOKIES</button><button name="button" type="button" class="cookie-btn cookie-btn--reject" data-cookie-choice="declined" style="background: #EDEDED; border-color: #EDEDED; color: #2B2B2B">DESATIVAR COOKIES NÃO ESSENCIAIS</button></div></div></div>
+
+  <div class="loading-overlay"></div>
+  
+  <a href="#accessibilityMainContent" class="hideElement">Passar para o Conteúdo Principal</a>
+
+  <div id="stickyFooter">
+    
+    <header class="grid-container full">
+      <div class="grid-container">
+        <div class="grid-x grid-margin-x">
+          <div class="logo_AREA xxsmall-12 medium-8 cell hidden-post">  
+  
+<div id="html_block_127" class="widget html_block" data-id="127" data-content_type="HtmlBlock">
+
+  <a href="https://www.gaiurb.pt/"><img src="/gaiurb/layout/logotipo-gaiurbNOVO.svg" title="Gaiurb Urbanismo e Habitação, EM" alt="Logótipo" /></a>
+
+</div>
+  
+
+</div>
+          <div class="search_AREA xxsmall-12 medium-4 cell hidden-post">  
+  
+<div id="html_block_90" class="widget html_block" data-id="90" data-content_type="HtmlBlock">
+
+  <div class="headerToolsContainer">   
+
+  <!-- Links -->
+  <div class="headerLinksContainer">
+    <a class="btn-empresa" href="/pages/1238">Empresa</a>&nbsp;&nbsp;
+  </div>
+
+  <!-- Google Translate -->
+  <div class="googleTranslate" style="position: relative; display: inline-block;">
+
+      <!-- Botão customizado visível -->
+      <button id="customTranslateBtn" style="
+          font-weight:bold;
+          cursor:pointer;
+          background:none;
+          border:none;
+          font-size:14px;
+      ">PT ▼</button>
+
+      <!-- Google Translate invisível -->
+      <div id="google_translate_element" style="width:0; height:0; overflow:hidden;"></div>
+
+      <script type="text/javascript">
+          function googleTranslateElementInit() {
+              new google.translate.TranslateElement({
+                  pageLanguage: 'pt',
+                  includedLanguages: 'pt-PT,es,en,fr,it,de,nl,ru,ja,zh-CN',
+                  autoDisplay: false,
+                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+              }, 'google_translate_element');
+
+              // Esperar o botão do Google Translate carregar
+              var checkBtn = setInterval(function() {
+                  var googleBtn = document.querySelector(".goog-te-gadget-simple");
+                  if (googleBtn) {
+                      clearInterval(checkBtn);
+                      // Vincular nosso botão customizado
+                      document.getElementById("customTranslateBtn").onclick = function() {
+                          googleBtn.click();
+                      };
+                  }
+              }, 500);
+          }
+      </script>
+
+      <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  </div>
+
+  <!-- Procurar -->
+  <div class="searchTriggerContainer">
+    <div class="searchTrigger">procurar</div>
+  </div>
+
+</div>
+
+
+</div>
+  <div id="mega_search_4" class="widget mega_search" data-id="4" data-content_type="MegaSearch">
+  <div class="SearchWrap xsmall-12">
+    <div class="home-banner-search" id="home-banner-search">
+      <div class="home-search-wrapper" id="home-search-wrapper">
+        <div class="mega_pesquisa_search_form" role="search">
+          <label class="sr-only-label" for="mega_pesquisa_input_4">
+            Pesquisar conteúdos na plataforma inteira
+          </label>
+          <input id="mega_pesquisa_input_4"
+            name="search"
+            type="search"
+            value=""
+            data-core="gaiurb"
+            data-wmso_url=""
+            data-results_per_page="10"
+            data-show_results_from_service_directory="false"
+            data-show_results_from_wmso="false"
+            data-show_results_from_wm="true"
+            data-show_results_from_ai="false"
+            data-show_results_from_sites="[&quot;https://www.gaiurb.pt&quot;, &quot;www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;, &quot;https://www.gaiurb.pt&quot;]"
+            data-show_results_from_pa="false"
+            data-number_of_questions="3"
+            class="mega_pesquisa_input"
+            role="searchbox"
+            placeholder="Pesquisar conteúdos na plataforma inteira">
+
+          <button type="button" id="mega_pesquisa_button" name="mega_pesquisa" class="mega_pesquisa_button search_button"><span class="sr-only">Pesquisar conteúdos na plataforma inteira</span></button>
+        </div>
+      </div>
+        <div id="search-modal" class="modal" role="dialog" style="">
+          <div class="modal-body">
+            <div class="home-modal-close-wrapper"><a href="#" id="home-modal-close-button"><span class="icone fecharModal">Fechar</span></a></div>
+            <div class="search-home-results-header">
+
+                <div class="home-wm-search-results-header columns">
+                  <h2 class="search-label">Pesquisa Geral</h2>
+                  <div class="search-home-results-panel home-wm-search-results"></div>
+                  <div id="cover-spin"></div>
+                </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+    <div id="template_container">
+
+        <script id="wm-search-results-template" type="text/x-handlebars-template">
+          {{#if this}}
+            <ul class="search-results-buffer" style="display:block">
+              {{#each this}}
+                <li class="teste">
+                  <a href="{{url}}" title="{{safe_title}}">
+                    <div class="search-result-title">
+                      {{#each title}}
+                        {{{.}}}
+                      {{/each}}
+                    </div>
+                    <div aria-hidden="true" class="search-result-snippet">
+                      {{#each maincontent}}
+                        {{{.}}} ...
+                      {{/each}}
+                    </div>
+                  </a>
+                </li>
+              {{/each}}
+            </ul>
+
+            <ul class="search-results-placeholder">
+              <li class="search-page" data-paginator-page="1">
+                <ul class="search-results-inner">
+                </ul>
+              </li>
+            </ul>
+            <div class="paginator page-paginator"></div>
+          {{else}}
+            <ul class="search-results-placeholder">
+              <li class="search-page" data-paginator-page="1">
+                <ul class="search-results-buffer">
+                  <li class="sem-resultados pages">
+                    Sem Resultados
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          {{/if}}
+        </script>
+
+
+
+    </div>
+</div>
+
+</div>
+          <!--<div class="search_AREA xxsmall-12 medium-4 cell hidden-post">  
+  
+<div id="html_block_388" class="widget html_block" data-id="388" data-content_type="HtmlBlock">
+
+  <div style="display:none">
+CONTEUDO PROVISORIO ATE TERMOS ACESSO AO SERVIDOR
+QUANDO TIVERMOS ACESSO, IR AO MODELO DE PAGINA E DESCOMENTAR A AREA PARTILHADA 
+</div>
+
+
+<div class="headerLinksContainer">
+<a class="btn-empresa" href="/pages/659">Empresa</a>
+</div>
+
+</div>
+  
+<div id="html_block_389" class="widget html_block" data-id="389" data-content_type="HtmlBlock">
+
+  <div class="headerToolsContainer"> 
+  <div class="googleTranslate">
+      <div id="google_translate_element"></div>
+      <script type="text/javascript">
+          function googleTranslateElementInit() {
+              new google.translate.TranslateElement({
+                  pageLanguage: 'pt',
+                  includedLanguages: 'pt-PT,es,en,fr,it,de,nl,ru,ja,zh-CN',
+                  autoDisplay: false,
+                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+              }, 'google_translate_element');
+          }
+            $(window).on('load', function(){
+    var $head = $(".goog-te-menu-frame").contents().find("head");
+
+    $head.append($("<link/>",
+                   { rel: "stylesheet", href: "/gaiurb/layout/googletranslate.css", type: "text/css" }
+                ));
+    })
+  </script><script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  </div>
+</div>
+
+</div>
+
+</div>-->
+        </div>
+      </div>
+    </header>
+    
+    <main class="grid-container">
+      <div class="bigContainer introContainer_AREA">  
+  
+<div id="html_block_396" class="widget html_block" data-id="396" data-content_type="HtmlBlock">
+
+  <div class="modelo tresImagens">
+  <ul class="grid-x grid-margin-x grid-margin-y xsmall-up-1 small-up-3">
+    <!-- <li class="cell"><a title="2&ordf; REVIS&Atilde;O DO PLANO DIRETOR MUNICIPAL" href="https://www.gaiurb.pt/p/revisaodopdm" target="_self"><img alt="Revis&atilde;o PDM" src="https://www.gaiurb.pt/gaiurb/uploads/document/file/1173/h2.png" /></a></li> -->
+    <li class="cell"><a title="Contacte-nos" href="https://app.gaiurb.pt/contacto/" target="_self"><img alt="" src="https://www.gaiurb.pt/gaiurb/uploads/document/file/1478/contacte_nos1.png" /></a></li>
+    <li class="cell"><a title="Agendamento Técnico" href="https://nopaper.gaiurb.pt/login.aspx" target="_self"><img alt="" src="/gaiurb/layout/botoes_atendimento_tecnico.jpg"></a></li>
+    <li class="cell"><a title="Simulador" href="https://app.gaiurb.pt/simuladores/" target="_self"><img alt="" src="https://www.gaiurb.pt/gaiurb/uploads/document/file/1420/simulador.png" /></a></li>
+    <li class="cell"><a title="BUPi" href="https://www.gaiurb.pt/p/bupi" target="_self"><img alt="" src="https://www.gaiurb.pt/gaiurb/uploads/document/file/1305/bupi_.png" /></a></li>
+    <li class="cell"><a title="Habitação Acessível" href="/1137" target="_self"><img alt="" src="https://www.gaiurb.pt/gaiurb/uploads/document/file/1326/hab_acessivel.png" /></a></li>
+    <li class="cell"><a title="Geoportal" href="https://www.gaiurb.pt/p/geoportal"><img alt="" src="/gaiurb/layout/geoportal.jpg"></a></li>
+  </ul>
+<br>
+</div>
+
+</div>
+
+</div>
+      <div class="landingNavContainer">
+        <a id="accessibilityMainContent"></a>
+        <div class="microContainer tecnicos_AREA">  
+  
+<div id="html_block_129" class="widget html_block" data-id="129" data-content_type="HtmlBlock">
+
+  <h2>PARA OS TÉCNICOS</h2>
+<!--<a href="https://www.gaiurb.pt/pages/1"><img src="/gaiurb/layout/coloradd-blue.svg" alt="ColorADD azul" />BALCÃO VIRTUAL</a>-->
+<a href="/p/balcaovirtual">BALCÃO VIRTUAL</a>
+<a href="https://app.gaiurb.pt/simuladores/"><img src="/gaiurb/layout/coloradd-blue.svg" alt="ColorADD azul" />SIMULADORES</a>
+
+</div>
+
+</div>
+        <div class="microContainer municipes_AREA">  
+  
+<div id="html_block_130" class="widget html_block" data-id="130" data-content_type="HtmlBlock">
+
+  <h2>Para os Munícipes</h2>
+<!--<a href="https://www.gaiurb.pt/pages/685">Urbanismo</a>-->
+<a href="/p/urbanismo">Urbanismo</a>
+<!--<a href="https://www.gaiurb.pt/pages/686"><img src="/gaiurb/layout/coloradd-green.svg" alt="ColorADD verde" />Habitação</a>-->
+<a href="/p/habitacao"><img src="/gaiurb/layout/coloradd-green.svg" alt="ColorADD verde" />Habitação</a>
+
+</div>
+
+</div>
+        <div class="microContainer servicos_AREA">  
+  
+<div id="html_block_131" class="widget html_block" data-id="131" data-content_type="HtmlBlock">
+
+  <h2>INVESTIMENTO E INOVAÇÃO</h2>
+<!--<a href="https://www.gaiurb.pt/pages/678"><img src="/gaiurb/layout/coloradd-pink.svg" alt="ColorADD vermelho" />GAIA+INOVAÇÃO</a>-->
+<a href="/p/gaiaminovacao"><img src="/gaiurb/layout/coloradd-pink.svg" alt="ColorADD vermelho" />GAIA+INOVAÇÃO</a>
+
+
+</div>
+
+</div>
+      </div>
+    </main>
+
+  </div><!--end stickyFooter -->
+
+  <footer class="full">
+    <div class="footerWrap grid-container">
+      <div class="grid-x grid-margin-x align-middle">
+        <div class="quickLinks_AREA xxsmall-12 xsmall-6 large-2 cell hidden-post">  
+  
+<div id="html_block_92" class="widget html_block" data-id="92" data-content_type="HtmlBlock">
+
+  <ul>
+  <li><a href="https://gaiurb.integrityline.com/frontpage">Prevenção da Corrupção - Canal de Denúncias</a></li>
+  <li><a href="https://www.livroreclamacoes.pt/Inicio/">Livro de Reclamações</a></li>
+  <li><a href="/p/contactos">Contactos</a></li>
+  <!-- <li><a href="/pages/665">Sugestões, Elogios e Reclamações</a></li> -->
+
+
+
+</ul>
+
+</div>
+
+</div>
+        <div class="socialLinks_AREA xxsmall-12 xsmall-6 large-2 cell hidden-post">  
+  
+<div id="html_block_93" class="widget html_block" data-id="93" data-content_type="HtmlBlock">
+
+  <span>Siga-nos</span>
+<ul>
+  <li><a href="https://www.facebook.com/gaiurburbanismohabitacao" target="_blank"><img src="/gaiurb/layout/logo-facebook.svg" alt="Siga-nos no Facebook" /></a></li>
+  <li><a href="https://www.youtube.com/channel/UCPPCAvafFfHnymfTJCmvGLw" target="_blank"><img src="/gaiurb/layout/logo-youtube.svg" alt="Siga-nos no YouTube" /></a></li>
+  <li><a href="https://issuu.com/gaiurb.info" target="_blank"><img src="/gaiurb/layout/logo-issuu.svg" alt="Siga-nos no Issuu" /></a></li>
+  <li><a href="/pages/963.rss" target="_blank"><img src="/gaiurb/layout/logo-rss.svg" alt="Feed RSS" /></a></li>
+</ul>
+
+</div>
+
+</div>
+        <div class="footerLogos_AREA xxsmall-12 large-8 cell hidden-post">  
+  
+<div id="html_block_94" class="widget html_block" data-id="94" data-content_type="HtmlBlock">
+
+  <ul>
+  <li class="neutral"><a href="https://www.co2neutralwebsite.com/crt/dispcust/c/5654/l/13"  target="_blank"><img src="/gaiurb/layout/neutral-trans.png"  width"400" alt="CO2 Neutral" /></a></li>
+  <li class="colorADD"><a href="http://www.coloradd.net/" target="_blank"><img src="/gaiurb/layout/colorADD-vertical.svg" alt="ColorADD" /></a></li>
+ <!--  <li class="sgs"><img src="/gaiurb/layout/logo-sgs.svg" alt="Certificação ISO 9001" /></li>  -->
+  <li class="ipac"><img src="/gaiurb/layout/ipac-trans.png" alt="IPAC Acreditação I0110 ISO/IEC 17020" /></li>
+  <li class="inclusiva"><a href="https://www.gaiurb.pt/pages/932?news_id=204" ><img src="/gaiurb/layout/inclusiva.svg" alt="Entidade Empregadora Inclusiva" /></a></li>
+  <li class="nopaper"><img src="/gaiurb/layout/logo-nopaper.svg" alt="Nopaper" /></li>
+  <li class="ihru"><img src="/gaiurb/layout/logo-ihru.svg" alt="Prémio IHRU" /></li>
+  <li class="gias"><a href="https://www.gaiurb.pt/pages/708" target="_blank"><img src="/gaiurb/layout/logo_gias.png" alt="Gabinete Integrado de Ação Social" /></a></li>
+  <li class="vngaia"><a href="http://www.cm-gaia.pt/pt/" target="_blank"><img src="/gaiurb/layout/logo-cmgaia.svg" alt="Câmara Municipal de Vila Nova de Gaia" /></a></li>
+</ul>
+
+</div>
+
+</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- START OLD BROWSER WARNING -->
+<script> 
+var $buoop = {vs:{i:9,f:15,o:12.1,s:5.1},c:2}; 
+function $buo_f(){ 
+ var e = document.createElement("script"); 
+ e.src = "//browser-update.org/update.js"; 
+ document.body.appendChild(e);
+};
+try {document.addEventListener("DOMContentLoaded", $buo_f,false)}
+catch(e){window.attachEvent("onload", $buo_f)}
+</script>
+<!-- END OLD BROWSER WARNING -->
+  <script>
+    // please review google_analytics settings
+</script>
+
+
+  <script src="/assets/gaiurb/gaiurb/javascripts/vendor/picturefill-aea404604a.min.js"></script>
+  <!-- contain image -->
+  <script src="/assets/gaiurb/gaiurb/javascripts/vendor/ofi-d15e158094.browser.min.js"></script>
+  <!-- contain image for IE -->
+
+  <!-- Contain div with image for IE -->
+  <script>
+    objectFitImages('img.OF-cover');
+
+    /* PRELOADER */
+    window.addEventListener("load", function() {
+      $(".loading-overlay")
+        .delay(100)
+        .fadeOut(250);
+    });
+  </script>
+
+  
+
+</body>
+
+</html>

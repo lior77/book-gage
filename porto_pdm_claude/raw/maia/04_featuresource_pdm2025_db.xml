@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FeatureSource xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:noNamespaceSchemaLocation="FeatureSource-1.0.0.xsd">
+  <Provider>OSGeo.PostgreSQL</Provider>
+  <Parameter>
+    <Name>Service</Name>
+    <Value>dbsig:5433</Value>
+  </Parameter>
+  <Parameter>
+    <Name>Username</Name>
+    <Value>%MG_USERNAME%</Value>
+  </Parameter>
+  <Parameter>
+    <Name>Password</Name>
+    <Value>%MG_PASSWORD%</Value>
+  </Parameter>
+  <Parameter>
+    <Name>DataStore</Name>
+    <Value>pdm2025</Value>
+  </Parameter>
+  <SupplementalSpatialContextInfo>
+    <Name>Default</Name>
+    <CoordinateSystem>PROJCS["ETRS89.PT-TM06",GEOGCS["LL-ETRS89",DATUM["ETRS89",SPHEROID["WGS84",6378137.000,298.25722293],TOWGS84[0.0000,0.0000,0.0000,0.000000,0.000000,0.000000,0.00000000]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["false_easting",0.000],PARAMETER["false_northing",0.000],PARAMETER["scale_factor",1.000000000000],PARAMETER["central_meridian",-8.13310833333333],PARAMETER["latitude_of_origin",39.66825833333333],UNIT["Meter",1.00000000000000]]</CoordinateSystem>
+  </SupplementalSpatialContextInfo>
+</FeatureSource>

@@ -1,0 +1,618 @@
+
+
+
+<!DOCTYPE html >
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>
+
+</title><link href="../resources/Style.css" rel="stylesheet" type="text/css" /><link href="../Content/themes/base/jquery-ui.css" rel="stylesheet" />
+
+    <script src="../Scripts/jquery-3.1.1.js"></script>
+    
+    <script src="../Scripts/jquery-ui-1.12.1.js"></script>
+    <script src="../Scripts/jquery.contextmenu.js"></script>
+
+    <script src="../Scripts/maptools.js" type="text/javascript"></script>
+
+
+    <link href="../Content/fancytree/skin-lion/ui.fancytree.css" rel="stylesheet" />
+    <script src="../Scripts/jquery.fancytree/jquery.fancytree.js"></script>
+</head>
+<style>
+
+.treelink span {
+     cursor:pointer!important;
+     text-decoration:underline!important;
+} 
+.treelink span:hover {
+     text-decoration:none!important;
+     text-shadow: 1px 1px 1px #555!important;
+}
+</style>
+<script>
+
+    var openseparador = '#h3webpdm';
+    $(function accord() {
+
+        //if (openseparador != '') {
+        //    $('#accordion h3.menuterritorio').find("div[id='" + openseparador + "']").parent().click().delay(800);
+        //}
+
+        $("#accordion").accordion({
+            clearStyle: true,
+            autoHeight: true,
+            heightStyle: "fill",
+            active: 0,
+            event: "click"
+        });
+    });
+
+    var menu1 = [
+    ];
+    $(function () {
+        $('#accordion').contextMenu(menu1, { theme: 'vista' });
+    });
+    var update_layername;
+    var update_layericonurl;
+
+   
+
+    function SetTreeIcon(layername, layericonurl) {
+        update_layername = layername;
+        update_layericonurl = layericonurl;
+        //$("#treeview").fancytree("getRootNode").visit(function (node) {
+        //    if (node.data.layer == update_layername)
+        //    {
+        //        alert(node.title);
+        //    }
+        //});
+        
+        //var root = $("#treeview").fancytree("getRootNode");
+         
+        //var nodes = root.children;
+        //alert(root);
+
+
+
+    }
+   // var arvore;
+$(document).ready(function () {
+
+    var size = $(window).height() - 40;
+    document.getElementById('accordion').style.height = size + 'px';
+         
+    $("#accordion").accordion("refresh");
+
+    var node = document.getElementById("accordion");
+
+    for (var i = 0; i < node.childNodes.length; i++) {
+        if (node.childNodes[i].tagName == 'DIV') {
+            node.childNodes[i].outerHTML = node.childNodes[i].outerHTML.replace('overflow: auto;', 'overflow: none;');
+        } 
+    }
+    $("#webpdm").css('overflow', 'auto');
+    $("#webser").css('overflow', 'auto');
+      
+
+    if (openseparador != '') {
+        $(openseparador).trigger('mouseover');
+    }
+         
+    //$("#treeview").btechcotree({
+    //    containerid: "treeview"
+    //    , url: "../xml/igttree.xml"
+    //    , datatype: $treedatatype.Xml
+    //    , dataformat: $treedataformat.Hierarchy
+    //    , class_node_collapse: "ui-icon-circle-plus"
+    //    , class_node_expand: "ui-icon-circle-minus"
+    //    , class_node_item: "ui-icon-clipboard"
+    //    , collapse_tree: false
+    //    , class_node_highlight: "ui-state-highlight"
+    //    , class_node_add: "ui-icon-plusthick"
+    //    , class_node_remove: "ui-icon-minusthick"
+    //    , show_button_check: true
+    //    , show_button_add: true
+    //    , show_button_remove: true
+    //    , node_remove_message: "Are you sure?"
+    //});
+         
+    $('[id^="treeview_"]').fancytree({
+        renderNode: function(event, data) {
+            // Optionally tweak data.node.span
+            var node = data.node;
+            if (!data.node.folder) {
+                var layer = data.node.data.layer;
+                if (layer != undefined) {
+                    if (layer != '') {
+                        for (var i = 0; i < parent.legenda_layers.length; i++) 
+                        {
+                            if (parent.legenda_layers[i].layername == layer) {
+                                var $span = $(node.span);
+                                $span.find("> span.fancytree-icon").css({
+                                    backgroundImage: "url('"+parent.legenda_layers[i].url+"')",
+                                    backgroundPosition: "0 0"
+                                });
+                            }
+                            
+                        }
+
+                    }
+                }
+            }
+            try{
+                var option = data.node.data.option;
+                if (option != undefined) {
+                    if (option == 'removecheck') {
+                        data.node.hideCheckbox = true;
+                    }
+                }
+            } catch (e) {
+
+            }
+            
+        },
+		click: function (event, data) {
+			try{
+                var openpopup = data.node.data.openpopup;
+                if (openpopup != undefined) {
+                   PopupCenter(openpopup, 900 , 500);
+                }
+            } catch (e) {
+
+            }
+			//var node =data.node.data.openpopup;
+			//alert("ID: " + node.key);
+		}
+    });
+     
+
+    //arvore = $("#treeview").fancytree();
+    $('[id^="treeview_"]').fancytree("option", "checkbox", true);
+    $('[id^="treeview_"]').fancytree("option", "selectMode", 3);
+    $('[id^="treeview_"]').on("fancytreebeforeselect", function (event, data) {
+        var checked = data.node.partsel;
+        if (data.node.folder) {
+            var nr_filhos = data.node.children.length;
+            if (nr_filhos != 0) {
+                var layers = '';
+                var layersoff = '';
+                for (var i = 0; i < nr_filhos; i++) {
+                    var layer = data.node.children[i].data.layer;
+                    var layeroff = data.node.children[i].data.layeroff;
+                    if (layer != undefined) {
+                        if (layer != '') {
+                            // map_layers(layer, !checked, '');
+                            if (layers!=''){ layers=layers+';'}
+                            layers = layers + layer + '/' + !checked;
+                        }
+                    }
+                    if (layeroff != undefined) {
+                        if (layeroff != '') {
+                            var nodeoff = data.node.children[i].data.nodeoff;
+                            var aux_n = nodeoff.split('/');
+                            for (var j = 0; j < aux_n.length; j++) { 
+                                if (aux_n[j] != '') {
+                                    var anode = $('[id^="treeview_"]').fancytree("getTree").getNodeByKey(aux_n[j]);
+                                    anode.setActive(false);
+                                    anode.setSelected(false);
+                                }
+                            }
+                             
+
+                            if (layersoff != '') { layersoff = layersoff + ';' }
+                            layersoff = layersoff + layeroff;
+                        }
+                    }
+                }
+
+                map_layers(layers, !checked, '');
+            }
+
+        } else {
+            var layer = data.node.data.layer;
+            var layeroff = data.node.data.layeroff;
+            if (layeroff == undefined) {
+                layeroff = '';
+            } else {
+                var nodeoff = data.node.data.nodeoff;
+                var aux_n = nodeoff.split('/');
+                for (var j = 0; j < aux_n.length; j++) {
+
+                    if (aux_n[j] != '') {
+                        var anode = $('[id^="treeview_"]').fancytree("getTree").getNodeByKey(aux_n[j]);
+                        anode.setActive(false);
+                        anode.setSelected(false);
+                    }
+                } 
+               
+            }
+            if (layer != undefined) {
+                if (layer != '') {
+                    map_layers(layer, !checked, layeroff);
+                }
+            }
+        }
+       
+    });
+
+     
+    //$("#treeview").fancytree({
+    //    checkbox: true,
+    //    selectMode: 2,
+    //    source: "../xml/igttree.xml",
+    //    select: function (event, data) {
+    //        // Display list of selected nodes
+    //        var selNodes = data.tree.getSelectedNodes();
+    //        // convert to title/key array
+    //        var selKeys = $.map(selNodes, function (node) {
+    //            return "[" + node.key + "]: '" + node.title + "'";
+    //        });
+    //        $("#echoSelection2").text(selKeys.join(", "));
+    //    },
+    //    click: function (event, data) {
+    //        // We should not toggle, if target was "checkbox", because this
+    //        // would result in double-toggle (i.e. no toggle)
+    //        if ($.ui.fancytree.getEventTargetType(event) === "title") {
+    //            data.node.toggleSelected();
+    //        }
+    //    },
+    //    keydown: function (event, data) {
+    //        if (event.which === 32) {
+    //            data.node.toggleSelected();
+    //            return false;
+    //        }
+    //    },
+    //    // The following options are only required, if we have more than one tree on one page:
+    //    cookieId: "fancytree-Cb2",
+    //    idPrefix: "fancytree-Cb2-"
+    //});
+
+    //$("input:checkbox").on('click', function () {
+    //    // in the handler, 'this' refers to the box clicked on
+    //    var $box = $(this);
+    //    if ($box.is(":checked")) {
+    //        // the name of the box is retrieved using the .attr() method
+    //        // as it is assumed and expected to be immutable
+    //        var group = "input:checkbox[name='" + $box.attr("name") + "']";
+    //        $('input:checkbox[name='  + $box.attr("name") +  ']').each(function () {
+    //            if ($(this).is(':checked')) {
+    //              toggleCheckbox($(this), '');
+    //            }  
+    //        });
+    //        // the checked state of the group/box on the other hand will change
+    //        // and the current value is retrieved using .prop() method
+    //        $(group).prop("checked", false);
+    //        $box.prop("checked", true);
+    //    } else {
+    //        $box.prop("checked", false);
+    //    }
+    //});
+});
+
+$(window).resize(function () {
+    //var size = $(window).height() - 2;
+    //document.getElementById('accordion').style.height = size + 'px';
+    //$("#accordion").accordion("refresh");
+
+});
+    function toggleCheckbox(element, offelements) {
+        var baseoffelements = offelements;
+        // in the handler, 'this' refers to the box clicked on
+        var $box = $(element);
+        if ($box.is(":checked")) {
+            // the name of the box is retrieved using the .attr() method
+            // as it is assumed and expected to be immutable
+            var group = "input:checkbox[name='" + $box.attr("name") + "']";
+
+            $('input:checkbox[name=' + $box.attr("name") + ']').each(function () {
+                if ($(this).prop('id') != $box.prop('id')) {
+                    if ($(this).is(':checked')) {
+                        if (offelements != '') {
+                            offelements = offelements + '/' + $(this).prop('id');
+                        } else {
+                            offelements =  $(this).prop('id');
+                        }
+                    }
+                }
+            });
+
+            // the checked state of the group/box on the other hand will change
+            // and the current value is retrieved using .prop() method
+            $(group).prop("checked", false);
+            $box.prop("checked", true);
+        } else {
+            $box.prop("checked", false);
+        }
+        if (baseoffelements != '') {
+            var aux = baseoffelements.split('/');
+            for (var i = 0; i < aux.length; i++) {
+                $('input:checkbox').filter('#' + aux[i]).prop("checked", false);
+            }
+        }
+           
+
+        map_layers(element.id, element.checked, offelements);
+
+    }
+
+    function map_layers(layergroup, estado, offelements) {
+
+        if (offelements != '') {
+            var valores = '';
+            var aux = offelements.split('/');
+            for (var i = 0; i < aux.length; i++) {
+                if (aux[i]!=''){
+                    if (valores!=''){
+                        valores = valores + ';' + aux[i] + '/false';
+                    }
+                    else {
+                        valores =  aux[i] + '/false';
+                    }
+                }
+                  
+            }
+            document.getElementById('layerandstate').value = layergroup + '/' + estado + ';' + valores;
+        } else {
+        document.getElementById('layerandstate').value = layergroup + '/' + estado;
+        }
+        
+        document.getElementById('layersonoff').click();
+
+
+    }
+    function zoommapa(x, y, escala) {
+
+        var valor_y = parseFloat(y);
+        var valor_x = parseFloat(x);
+        if (!isNaN(valor_x) && !isNaN(valor_y)) {
+            if ((!navigator.userAgent.match(/(iPod|iPhone|iPad)/))) {
+                try {
+                    if (main_layout != undefined) {
+                        Mapaframe = main_layout.cells("a").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                    }
+                }
+                catch (err) { }
+                try {
+                    if (parent.main_layout != undefined) {
+                        Mapaframe = parent.main_layout.cells("a").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                    }
+                }
+                catch (err) { }
+            } else {
+                try {
+                    if (main_layout != undefined) {
+                        Mapaframe = main_layout.cells("a").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                    }
+                }
+                catch (err) { }
+                try {
+                    if (parent.main_layout != undefined) {
+                        Mapaframe = parent.main_layout.cells("a").getFrame();
+                        winObjectMapa = Mapaframe.contentWindow;
+                        winObjectMapaframe = winObjectMapa.GetMapFrame();
+                           
+
+                    }
+                }
+                catch (err) { }
+            }
+            try {
+                   
+                  
+                var largura = winObjectMapaframe.innerWidth;
+                var altura = winObjectMapaframe.innerHeight;
+
+                var largura_mapa = winObjectMapaframe.GetMapWidth();
+                var altura_mapa = winObjectMapaframe.GetMapHeight();
+                var centrox_mapa = winObjectMapaframe.GetCenter().X;
+                var centroy_mapa = winObjectMapaframe.GetCenter().Y;
+
+                var escala_mapa = winObjectMapaframe.GetScale();
+
+                var cantoinf_esq_x = parseFloat(centrox_mapa - largura_mapa / 2); //  windocument.getElementById('CantoX0');
+                var cantoinf_esq_y = parseFloat(centroy_mapa - altura_mapa / 2); // windocument.getElementById('CantoY0');
+                var cantosup_dir_x = parseFloat(centrox_mapa + largura_mapa / 2); //  windocument.getElementById('CantoX1');
+                var cantosup_dir_y = parseFloat(centroy_mapa + altura_mapa / 2); // windocument.getElementById('CantoY1');
+
+                var cantosup_esq_x1original = winObjectMapaframe.orgExtX1;
+                var cantosup_esq_y1original = winObjectMapaframe.orgExtY1;
+                var cantoinf_dir_x2original = winObjectMapaframe.orgExtX2;
+                var cantoinf_dir_y2original = winObjectMapaframe.orgExtY2;
+
+
+                if (valor_x < cantoinf_dir_x2original || valor_x > cantosup_esq_x1original || valor_y < cantoinf_dir_y2original || valor_y > cantosup_esq_y1original) {
+                    // valores inseridos estao dentro do mapa
+                    winObjectMapaframe.ZoomToView(valor_x, valor_y, escala, true);
+                } else {
+                      
+                    $('#mensagemcoordenadas').show();
+                    $("#mensagemcoordenadas").fadeOut(5000);
+                }
+
+            }
+            catch (err) {
+            }
+        }
+    }
+   
+    function map_refresh() {
+        if ((!navigator.userAgent.match(/(iPod|iPhone|iPad)/))) {
+            try {
+                if (main_layout != undefined) {
+                    Mapaframe = main_layout.cells("a").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+                    //winObjectMapa.GetMapFrame()
+
+                    winObjectMapa.Refresh();
+                }
+            }
+            catch (err) { }
+            try {
+                if (parent.main_layout != undefined) {
+                    Mapaframe = parent.main_layout.cells("a").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+                    //winObjectMapa.GetMapFrame()
+                    winObjectMapa.Refresh();
+                }
+            }
+            catch (err) { }
+        } else {
+            try {
+                if (main_layout != undefined) {
+                    Mapaframe = main_layout.cells("a").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+
+                    winObjectMapa.layerMapguide.redraw(true);
+                }
+            }
+            catch (err) { }
+            try {
+                if (parent.main_layout != undefined) {
+                    Mapaframe = parent.main_layout.cells("a").getFrame();
+                    winObjectMapa = Mapaframe.contentWindow;
+
+
+                    winObjectMapa.layerMapguide.redraw(true);
+
+                }
+            }
+            catch (err) { }
+        }
+    }
+    function PopupCenter(pageURL, title, w, h) {
+        var left = (screen.width / 2) - (w / 2);
+        var top = (screen.height / 2) - (h / 2);
+        var targetWin = window.open(pageURL, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
+    }
+
+</script>
+<body>
+    <form method="post" action="./menu_territorio.aspx?xml=menu_webpdm.xml&amp;separador=webpdm" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+
+
+<script src="/ScriptResource.axd?d=NJmAwtEo3Ipnlaxl6CMhvvknunLolXdp1O94KQxyDXuq7JiDZ3Sfz69mts8eiu_MSCFb4r0KSl-LebpTBDJCJF6GO1NBjckPSdFEIhf44vf795zjsv9Hu2aEo5OWT8Hn62pooXMZdFTDDeMRIiDNzu6sO3XA1qIHuSUrZFFr4vQ1&amp;t=ffffffffe6d5a9ac" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="77EB04F4" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="iWXxmvPlCvN5U+98VxhiU3WMo2qOIhz3AqzlbTWsW1bsKnRheFCNK4XbdeCmBqOXKDha7SJiuVBQqobtArMBSMQAmVmkLnPmvPMrq5d0bFsH2kbFbr8LR1y7KDJCNvTFN+9TsS+tKtG69i1HNGcNUDaoRpOEmnEy+KGrY5WqdoulEnSw1D8IJuer23ybv0mZ" />
+<div id="accordion"><h3 class="menuterritorio" id="h3igt2" style="background-color:#87919b;color:white;">PLANEAMENTO TERRITORIAL</h3><div id=igt2 style='overflow:none'><div id='treeview_igt2'><ul id="treeData" styleXXX="display: none;">
+   
+     
+        <li id="id03"  class="folder unexpanded" data-json='{"option":"removecheck"}' title="2. Elementos que acompanham o Plano"/> Elementos que acompanham o Plano
+<ul>
+<li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/1_ENQUADRAMENTO_REGIONAL_planta.pdf"}' title="Enquadramento regional"/>Enquadramento regional
+  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>Situação Existente    
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/2_SITUACAO_EXISTENTE_planta_A.pdf"}' title="PLANTA A"/>	Planta A
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/2_SITUACAO_EXISTENTE_planta_b.pdf"}' title="PLANTA B"/>	Planta B
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/2_SITUACAO_EXISTENTE_planta_c.pdf"}' title="PLANTA C"/>	Planta C
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/2_SITUACAO_EXISTENTE_planta_d.pdf"}' title="PLANTA D"/>	Planta D
+		 </ul> 
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>Estrutura Ecológica
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/3_ESTRUTURA_ECOLOGICA_planta_A.pdf"}' title="PLANTA A"/>	Planta A
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/3_ESTRUTURA_ECOLOGICA_planta_b.pdf"}' title="PLANTA B"/>	Planta B
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/3_ESTRUTURA_ECOLOGICA_planta_c.pdf"}' title="PLANTA C"/>	Planta C
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/3_ESTRUTURA_ECOLOGICA_planta_d.pdf"}' title="PLANTA D"/>	Planta D
+		 </ul> 	 
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>Compromissos
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/4_COMPROMISSOS_planta_A.pdf"}' title="PLANTA A"/>	Planta A
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/4_COMPROMISSOS_planta_b.pdf"}' title="PLANTA B"/>	Planta B
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/4_COMPROMISSOS_planta_c.pdf"}' title="PLANTA C"/>	Planta C
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/4_COMPROMISSOS_planta_d.pdf"}' title="PLANTA D"/>	Planta D
+		 </ul> 
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>Ponderação e Participações
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/PONDERACAO_PARTICICPACOES_PLANTA_A.pdf"}' title="PLANTA A"/>	Planta A
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/PONDERACAO_PARTICICPACOES_PLANTA_b.pdf"}' title="PLANTA B"/>	Planta B
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/PONDERACAO_PARTICICPACOES_PLANTA_c.pdf"}' title="PLANTA C"/>	Planta C
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/PONDERACAO_PARTICICPACOES_PLANTA_d.pdf"}' title="PLANTA D"/>	Planta D
+		 </ul> 	
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>RAN Final   
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_97C.pdf"}' title="CARTA 97C"/>	CARTA 97C
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_97D.pdf"}' title="CARTA 97D"/>	CARTA 97D
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_110A.pdf"}' title="CARTA 110A"/>	CARTA 110A
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_110B.pdf"}' title="CARTA 110B"/>	CARTA 110B	
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_110C.pdf"}' title=" CARTA 110C"/>	 CARTA 110C
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_110D.pdf"}' title="CARTA 110A"/>	CARTA 110D
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_Final_CARTA_122B.pdf"}' title="CARTA 122B"/>	CARTA 122B
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN_RESERVA_AGRICOLA_NACIONAL_RELATORIO.pdf"}' title="CARTA 122B"/>	Relatório
+	
+	
+		 </ul> 	
+
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>RAN Proposta   
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_97C.pdf"}' title="CARTA 97C"/>	CARTA 97C
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_97D.pdf"}' title="CARTA 97D"/>	CARTA 97D
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_110A.pdf"}' title="CARTA 110A"/>	CARTA 110A
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_110B.pdf"}' title="CARTA 110B"/>	CARTA 110B	
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_110C.pdf"}' title=" CARTA 110C"/>	 CARTA 110C
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_110D.pdf"}' title="CARTA 110A"/>	CARTA 110D
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RAN-Proposta_ExclusoesCARTA_122B.pdf"}' title="CARTA 122B"/>	CARTA 122B
+	 
+	
+		 </ul> 	
+
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>REN Acertos Cartográficos AnexoI  
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_ACERTOS_CARTOGAFICOS_AnexoI_CARTA_A.pdf"}' title="PLANTA A"/>	Planta A
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_ACERTOS_CARTOGAFICOS_AnexoI_CARTA_b.pdf"}' title="PLANTA B"/>	Planta B
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_ACERTOS_CARTOGAFICOS_AnexoI_CARTA_c.pdf"}' title="PLANTA C"/>	Planta C
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_ACERTOS_CARTOGAFICOS_AnexoI_CARTA_d.pdf"}' title="PLANTA D"/>	Planta D
+		 </ul> 	
+	  <li id="id24" class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/>REN Proposta Exclusões 
+      <ul> 
+	<li id="elem24a" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_Proposta_Exclusoes_CARTA_A.pdf"}' title="PLANTA A"/>	Planta A
+	<li id="elem24b" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_Proposta_Exclusoes_CARTA_b.pdf"}' title="PLANTA B"/>	Planta B
+	<li id="elem24c" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_Proposta_Exclusoes_CARTA_c.pdf"}' title="PLANTA C"/>	Planta C
+	<li id="elem24d" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/REN_Proposta_Exclusoes_CARTA_d.pdf"}' title="PLANTA D"/>	Planta D
+		 </ul> 
+
+		 
+ <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/FICHA_DADOS_ESTATISTICOS_NOVO_DOC.pdf"}' title="Ficha de Dados Estatisticos "/>Ficha de Dados Estatisticos   
+	 <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/PROGRAMACAO_EXECUCAO.pdf"}' title="Programação e Execução"/>Programação e Execução
+  	 	   
+	 <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RELATORIO_ARQUEOLOGIA.pdf"}' title="Relatório de Arqueologia"/>Relatório de Arqueologia
+  	 	 <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RELATORIO_COMPROMISSOS_URBANISTICOS.pdf"}' title="Relatório de Compromissos Urbanísticos "/>Relatório de Compromissos Urbanísticos 
+  	 	   
+		  	  	 <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RELATORIO_PONDERACAO_PARTCP.pdf"}' title="Relatório de análise e ponderação das participações recebidas durante período de discussão pública"/>Relatório de análise e ponderação das participações recebidas durante período de discussão pública   	 
+				 <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/2_ELEMENTOS_Q_ACOMPANHAM/RELATORIO_PROPOSTA.pdf"}' title="Relatório da Proposta"/>Relatório da Proposta
+  	 	   
+		  	  	   
+		           <li id="id03"  class="folder unexpanded" data-json='{"option":"removecheck"}' title="Condicionantes"/> Avaliação Ambiental Estratégica
+<ul>
+<li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/3_AVALIACAO_AMBIENTAL_ESTRATEGICA/DECLARACAO_AMBIENTAL.pdf"}' title=" Declaração Ambiental"/> Declaração Ambiental
+ <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/3_AVALIACAO_AMBIENTAL_ESTRATEGICA/RELATORIO_AMBIENTAL.pdf"}' title="Relatório Ambiental"/> Relatório Ambiental
+ <li id="elem01" class="treelink" data-json='{"option":"removecheck" , "openpopup": "https://websig.cm-maia.pt/WebForms/Legendas/PDM2025/3_AVALIACAO_AMBIENTAL_ESTRATEGICA/RESUMO_NAO_TECNICO.pdf"}' title="Resumo Técnico"/> Resumo Técnico
+ 
+ 	  
+		  
+		  
+		  
+    </ul>
+
+    
+</ul> 
+
+</div></div><h3 class="menuterritorio" id="h3igt4" style="background-color:#87919b;color:white;">OUTROS PLANOS</h3><div id=igt4 style='overflow:none'><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='pmat' /><label  style=font-size:11px;>	 1 - Plano Municipal de Acessibilidade Para Todos</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdm' id='pdap' /><label  style=font-size:11px;>	 2 - Plano Diretor de Águas Pluviais</label><br/><label  style=font-weight:bold;font-size:13px;> Áreas de Reabilitação Urbana</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='pdmww' id='arus' /><label  style=font-size:11px;>	 Limites</label></div><h3 class="menuterritorio" id="h3igt4" style="background-color:#87919b;color:white;">PLANEAMENTO FLORESTAL</h3><div id=igt4 style='overflow:none'><label  style=font-weight:bold;font-size:13px;> Programa Regional de Ordenamento Florestal de Entre Douro e Minho </label><br/><label  style=font-size:11px;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='SRH_EDM' /><label  style=font-size:11px;>  Sub-região homogénea (SRH)</label><br/><label  style=font-size:11px;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='CE_EDM' /><label  style=font-size:11px;>  	Ccorredor ecológico (CE)</label><br/><br/><label  style=font-weight:bold;font-size:13px;> Plano Municipal de Defesa da Floresta contra Incêndios</label><a class="legenda" onclick="PopupCenter('https://www.cm-maia.pt/ambiente/ambiente/floresta/plano-municipal-de-defesa-da-floresta-contra-incendios-da-maia', 'Legenda', 900 , 800);" href="javascript:void(0);"> Cadernos</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='ocup_freg' /><label  style=font-size:11px;> Ocupação do Solo (COS18 validada)</label><a class="legenda" onclick="PopupCenter('https://websig.cm-maia.pt/webforms/Legendas/OS.png', 'Legenda', 800 , 400);" href="javascript:void(0);">     Legenda</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='AA_2009_2020' /><label  style=font-size:11px;> Áreas ardidas (entre 2009 e 2020)</label><a class="legenda" onclick="PopupCenter('https://websig.cm-maia.pt/webforms/Legendas/AA.png', 'Legenda', 800 , 400);" href="javascript:void(0);">     Legenda</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt57' id='PIF1306t-Vector' /><label  style=font-size:11px;> Carta de Perigosidade de Incêndio Florestal (CPIR)</label><a class="legenda" onclick="PopupCenter('https://websig.cm-maia.pt/webforms/Legendas/PER.png', 'Legenda', 800 , 400);" href="javascript:void(0);">     Legenda</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='FGC_Maia' /><label  style=font-size:11px;> Rede de Faixas de Gestão de Combustível (RFGC)</label><a class="legenda" onclick="PopupCenter('https://websig.cm-maia.pt/webforms/Legendas/FGC.png', 'Legenda', 800 , 400);" href="javascript:void(0);">     Legenda</a><br/><label  style=font-size:11px;>&nbsp&nbsp&nbsp&nbsp&nbsp</label><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='prog_acao_2024' /><label  style=font-size:11px;> Programa de Ação 2024</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='RVF_Maia' /><label  style=font-size:11px;> Rede Viária Florestal (RVF)</label><a class="legenda" onclick="PopupCenter('https://websig.cm-maia.pt/webforms/Legendas/RVF.png', 'Legenda', 800 , 400);" href="javascript:void(0);">     Legenda</a><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='RPA_MAIA' /><label  style=font-size:11px;> Rede de Pontos de Água (RPA)</label><a class="legenda" onclick="PopupCenter('https://websig.cm-maia.pt/webforms/Legendas/rpa.png', 'Legenda', 800 , 400);" href="javascript:void(0);">     Legenda</a><br/><br/><label  style=font-weight:bold;font-size:13px;> Plano de Gestão Florestal do Parque Florestal do Aeródromo</label><br/><input type="checkbox" unchecked onclick="javascript:toggleCheckbox(this,'');" name='igt5' id='parcelas_V4_pgf' /><label  style=font-size:11px;>  	PGF_Aprovado _ICNF_04052022</label></div><h3 class="menuterritorio" id="h3pesquisaform" style="background-color:#87919b;color:white;">PESQUISA DE ARRUAMENTOS</h3><div id=pesquisaform style='overflow:none'><iframe id=pesquisaform name=pesquisa frameborder="0" marginwidth="0" marginheight="0" scrolling="no" src=pesquisa.aspx height=100% style=overflow:hidden width="100%"></iframe></div></div>
+
+    <div id="UpdatePanel1">
+	
+        <input name="layerandstate" type="text" id="layerandstate" style="display:none;visibility:hidden" />
+            <input type="submit" name="layersonoff" value="Button" id="layersonoff" style="display:none;visibility:hidden" />
+        
+</div>
+        <input name="txtmgSessionId" type="text" id="txtmgSessionId" style="display:none;visibility:hidden" />
+        <input name="txtMyMapName" type="text" id="txtMyMapName" style="display:none;visibility:hidden" />
+  </form>
+</body>
+</html>
