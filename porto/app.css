@@ -87,10 +87,13 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 @keyframes sp{to{transform:rotate(360deg)}}
 .boot.err .spin{display:none}
 
-/* ---------- top bar ---------- */
+/* ---------- the trail, below the halves ---------- */
+/* It sits under the map rather than over it, so the map reaches the top edge
+   of the screen and the phone's own status bar is the only thing above it.
+   The safe-area inset moves with it, from the notch to the home indicator. */
 .top{flex:0 0 auto; display:flex; align-items:center; gap:var(--s1); z-index:30;
-     padding:calc(var(--safe-t) + var(--s2)) var(--s2) var(--s2);
-     background:var(--card); border-block-end:1px solid var(--line)}
+     padding:var(--s2) var(--s2) calc(var(--safe-b) + var(--s2));
+     background:var(--card); border-block-start:1px solid var(--line)}
 .ico{display:grid; place-items:center; width:40px; height:40px;
      border-radius:var(--r-ctl); color:var(--ink-2); position:relative}
 .ico:active{background:var(--bg); color:var(--ink)}
@@ -145,8 +148,28 @@ body.is-dragging{cursor:inherit}
 body.is-dragging #map{pointer-events:none}
 
 /* ---------- map furniture ---------- */
-.tools{position:absolute; z-index:600; inset-block-start:var(--s3);
-       inset-inline-end:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
+/* The column and the button that opens it both sit on the start edge, which in
+   this RTL document is the right — where a thumb on a phone already is.  The
+   column starts one button plus a gap below the menu, so the two read as one
+   stack rather than as two things that happen to be near each other. */
+.menu-btn{position:absolute; z-index:601; inset-block-start:var(--s3);
+          inset-inline-start:var(--s3); touch-action:manipulation}
+.tools{position:absolute; z-index:600;
+       inset-block-start:calc(var(--s3) + 38px + var(--s2));
+       inset-inline-start:var(--s3); display:flex; flex-direction:column; gap:var(--s2)}
+/* Put away, the column is gone rather than faded: half-visible controls over a
+   map read as broken ones.  The menu button never hides — it is the way back. */
+body[data-tools="off"] .tools{display:none}
+/* Landscape puts the map on the left and the text beside it, and both of these
+   are positioned against .split rather than against the map — so the start
+   edge is the screen's, which is over the text.  Pull them back to the map's
+   own edge, which is --f of the way across.  Only the split view needs it:
+   with one half filling the screen the two edges are the same edge again. */
+@media (orientation:landscape){
+  body[data-view="split"] .menu-btn,
+  body[data-view="split"] .tools{
+    inset-inline-start:calc(100% - var(--f) + var(--s3))}
+}
 /* fit and locate act on the map; with the map hidden they have nothing to act
    on, so they go rather than sit there dead.  נ.צ. and its add button stay:
    what they open is the text half, and the add button takes the map over

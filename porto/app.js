@@ -26,6 +26,7 @@ const S = {
   cats: null,          // level 3: which landmark categories are shown
   hi: null,            // { kind, id } — the record highlighted on both halves
   view: 'split',       // split | map | text — which half fills the screen
+  tools: true,         // is the map's tool column showing
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: true,         // rivers and lakes
@@ -1883,6 +1884,37 @@ function applyView() {
   // but only after a frame, and the flash is visible
   if (map) requestAnimationFrame(() => map.invalidateSize({ animate: false }));
 }
+/* The menu button in the map's top corner.  One tap puts the column away or
+   brings it back; two cycle the layout, which is the same thing the layout
+   button in the column does — and has to be reachable from the button that can
+   hide it, or a put-away column would take the layout with it.
+
+   Double-tap is detected from the clicks themselves rather than from a
+   `dblclick` listener, which phones fire unreliably and which competes with
+   double-tap-to-zoom.  The first tap acts immediately, so a single tap has no
+   lag; a second tap within the window toggles the column back on its way past,
+   leaving it as it started, and then cycles the layout.  The undo is the
+   double toggle, not a special case. */
+const DOUBLE_MS = 350;
+let menuLast = 0;
+
+function applyTools() {
+  document.body.dataset.tools = S.tools ? 'on' : 'off';
+  const b = $('#menuBtn');
+  if (!b) return;
+  b.setAttribute('aria-expanded', String(S.tools));
+  b.setAttribute('title', (S.tools ? 'הסתרת הכלים' : 'הצגת הכלים')
+    + ' — לחיצה כפולה מחליפה את פריסת המסך');
+}
+function menuTap() {
+  const now = Date.now();
+  const isSecond = now - menuLast < DOUBLE_MS;
+  menuLast = isSecond ? 0 : now;      // a third tap starts a new pair
+  S.tools = !S.tools;                 // the second tap undoes the first
+  applyTools();
+  if (isSecond) cycleView(); else save();
+}
+
 function cycleView() {
   // No toast confirming it: a message forces the split view back open, so the
   // announcement undid the very thing it was announcing. The screen changing
@@ -2196,7 +2228,7 @@ function wireDivider() {
 function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
-      level: S.level, mun: S.mun, zone: S.zone, view: S.view,
+      level: S.level, mun: S.mun, zone: S.zone, view: S.view, tools: S.tools,
       letters: S.letters, mine: S.mine, photos: S.photos, water: S.water,
       muncol: S.muncol, lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
@@ -2217,6 +2249,7 @@ function restore() {
     if (typeof o.water === 'boolean') S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
+    if (typeof o.tools === 'boolean') S.tools = o.tools;
     if (typeof o.fPort === 'number') S.fPort = o.fPort;
     if (typeof o.fLand === 'number') S.fLand = o.fLand;
     // an older build stored a Porto quarter number under `quarter`; it has no
@@ -2482,6 +2515,7 @@ function wire() {
   $('#fitBtn').addEventListener('click', refit);
   $('#locBtn').addEventListener('click', toggleLocate);
   $('#viewBtn').addEventListener('click', cycleView);
+  $('#menuBtn').addEventListener('click', menuTap);
   $('#layersBtn').addEventListener('click', () => toggleLayers());
   $('#wpBtn').addEventListener('click', toggleWp);
   $('#addBtn').addEventListener('click', startWpAdd);
@@ -2629,6 +2663,7 @@ function wire() {
 
   loadMine();
   applyView();
+  applyTools();
   applySplit();
   initMap();
   initNature();
