@@ -2858,9 +2858,12 @@ function wire() {
     const cat = e.target.closest('[data-cat]');
     if (cat) {
       const c = cat.dataset.cat;
+      // Third copy of the same toggle — menu row, layer panel row, and this
+      // chip — and the guard survived here after the other two lost it, because
+      // the check only ever clicked the menu.
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
-      if (!S.cats.size) S.cats.add(c);              // never leave the map blank
-      drawZone(S.zone); renderZone(S.zone); applyHi();
+      save();
+      drawZone(S.zone); renderZone(S.zone); applyHi(); renderMenu();
       return;
     }
     const act = e.target.closest('[data-mine-act]');

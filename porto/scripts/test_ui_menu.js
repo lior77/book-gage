@@ -195,6 +195,38 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(400);
   ok('and back on again', await catsOn() === 8, String(await catsOn()));
 
+  /* The same toggle exists three times over — this menu row, a row in the layer
+     panel, and a chip on the parish card — and the guard survived on the chip
+     after the other two lost it, because the check only ever clicked the menu.
+     So click the real chip, at the level where it exists. */
+  await page.click('#menuClose');            // the chips are under the menu screen
+  await page.waitForTimeout(300);
+  await page.evaluate(() => goZone(D.freKey(D.fre.find(f => f.mun_num === 1))));
+  await page.waitForTimeout(1000);
+  /* the card is rebuilt after every chip, so the handles go stale — click by
+     the category each chip carries, re-querying each time */
+  const chipCats = await page.$$eval('#doc [data-cat]', els => els.map(e => e.dataset.cat));
+  if (!chipCats.length) {
+    ok('the parish card offers category chips', false, 'none rendered');
+  } else {
+    /* A parish carries only the categories it has, so switching off just its
+       chips would leave the others on and the guard would never fire.  Clear
+       everything else first, so the last chip is the one that empties the set —
+       that is the only click the guard would ever act on. */
+    await page.evaluate(cs => { S.cats.forEach(c => { if (!cs.includes(c)) S.cats.delete(c); }); },
+                        chipCats);
+    await page.waitForTimeout(200);
+    for (const c of chipCats) {
+      await page.click(`#doc [data-cat="${c}"]`);
+      await page.waitForTimeout(250);
+    }
+    ok('the chips on the parish card can be switched off to the last one too',
+       await catsOn() === 0, `${await catsOn()} still on, ${chipCats.length} chips`);
+  }
+  await page.evaluate(() => { D.poiOrder.forEach(c => { if (!S.cats.has(c)) S.cats.add(c); }); goDistrict(); });
+  await page.waitForTimeout(800);
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
+
   /* אזורים draws the orange line, 4 wide */
   await page.click('[data-m="regions"]');
   await page.waitForTimeout(700);
