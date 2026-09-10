@@ -83,7 +83,10 @@ const MINE_COLOUR = '#00897b';
    does not change weight because of what is selected — selection is a fill and
    a highlight colour, which is a different question from what kind of border
    this is. */
-const LINE_W = { region: 4, district: 3.2, mun: 2.1, fre: 1 };
+/* Three widths were the hierarchy; two are, now that the municipalities were
+   asked for at the district's own 3.2.  What separates them is the pane they
+   sit in and the colour the level gives them, not the weight. */
+const LINE_W = { region: 4, district: 3.2, mun: 3.2, fre: 1.6 };
 /* The two NUTS III regions are the one line that is not a shade of the ink.
    They are neither the subject of any level nor part of the district's own
    hierarchy, and a fourth grey among three greys said nothing about that. */
@@ -146,9 +149,20 @@ function drawLines() {
     weight: LINE_W[kind], opacity: .95, fill: false,
     lineJoin: 'round', lineCap: 'round' });
 
-  if (S.lnFre) {
-    LG.lnFre = L.geoJSON(D.bF, { pane: PANE_OF.fre, interactive: false,
-      style: ft => style('fre', ft.properties) }).addTo(map);
+  /* The parish lines are not a district-wide layer any more.  At level 2 they
+     are the chosen municipality's own parishes and nothing else; at level 3 the
+     one parish being looked at, which still needs an outline — the fill under
+     it carries none.  At level 1 they are not drawn at all: 243 outlines over
+     eighteen municipalities was noise, not context. */
+  const freHere = S.level === 'mun'
+    ? ft => ft.properties.mun_num === S.mun
+    : S.level === 'zone'
+      ? ft => ft.properties.mun_num + '|' + ft.properties.name === S.zone
+      : null;
+  if (S.lnFre && freHere) {
+    LG.lnFre = L.geoJSON({ type: 'FeatureCollection', features: D.bF.features.filter(freHere) },
+      { pane: PANE_OF.fre, interactive: false,
+        style: ft => style('fre', ft.properties) }).addTo(map);
   }
   if (S.lnMun) {
     LG.lnMun = L.geoJSON(D.bM, { pane: PANE_OF.mun, interactive: false,
@@ -613,15 +627,31 @@ function drawDistrict() {
   fit(LG.mun.getBounds());
 }
 
-function renderDistrict() {
-  const beltRows = D.belts.map(b => `<div class="belt">
+/* The two NUTS III regions, explained where the line that draws them is on.
+   It used to sit in the district card whether the layer was on or not, which
+   made it a paragraph about something that was not on the map.  Now it is the
+   last thing in the reading half at every level, and only while אזורים is on. */
+function regionsDoc() {
+  if (!S.lnRegion || !D.belts) return '';
+  const rows = D.belts.map(b => `<div class="belt">
       <span class="belt-sw" style="--c:${html(b.colour)}"></span>
       <span class="row-body">
         <span class="row-t">${html(b.he)} <span class="lat">(${html(b.en)})</span></span>
         <span class="row-d">${html(b.sub_he)}</span>
         <span class="row-m num">${html(b.nums.map(n => munCode(D.munByNum.get(n))).sort().join(' · '))}</span>
       </span></div>`).join('');
+  return `<div class="card" id="regionsDoc">
+      <h2>שני האזורים <span class="en lat">(NUTS III)</span></h2>
+      <p class="sub">החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה
+        מקיף את העיריות של כל אזור.</p>
+      ${rows}
+      <p class="note">שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני
+        17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו.
+        האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.</p>
+    </div>`;
+}
 
+function renderDistrict() {
   const list = D.mun.slice().sort((a, b) => munCode(a).localeCompare(munCode(b))).map(m => {
     const chr = (m.profile.find(p => p.label === 'אופי') || {}).text || '';
     return `<button class="row" data-mun="${m.num}">
@@ -653,19 +683,10 @@ function renderDistrict() {
         המספרים על המפה הם קודי DICOFRE הרשמיים.</p>
     </div>
 
-    <div class="card">
-      <h2>שני האזורים <span class="en lat">(NUTS III)</span></h2>
-      <p class="sub">החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. קו בצבע האזור
-        מקיף במפה את העיריות שבו.</p>
-      ${beltRows}
-      <p class="note">שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני
-        17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו.
-        האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.</p>
-    </div>
-
     <div class="grp">18 העיריות — לפי המספור במפה</div>
     <div class="rows">${list}</div>
-    ${mineList(null)}`;
+    ${mineList(null)}
+    ${regionsDoc()}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -817,7 +838,8 @@ function renderMun(num) {
     <p class="note" style="margin-block-start:10px">המספר על כל רובע הוא הקוד
       הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן
       <span class="flag">פורק ב-2025</span> חדל להתקיים כיחידה ברפורמת 2025, והקוד
-      שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.</p>`;
+      שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.</p>
+    ${regionsDoc()}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -1930,7 +1952,8 @@ function renderZone(key) {
     ${mineList(p => {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && D.freKey(at) === key;
-    })}`;
+    })}
+    ${regionsDoc()}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -2006,7 +2029,12 @@ function cycleBounds() {
   [S.lnDistrict, S.lnMun, S.lnFre] = BOUNDS_CYCLE[boundsStep()];
   drawLines(); applySwitches(); renderLayers(); save();
 }
-function toggleRegions() { S.lnRegion = !S.lnRegion; drawLines(); applySwitches(); save(); }
+// The explanation at the foot of the page belongs to this line, so the text
+// half is redrawn with it rather than only the map.
+function toggleRegions() {
+  S.lnRegion = !S.lnRegion;
+  drawLines(); redrawText(); applySwitches(); save();
+}
 
 /* Redraw whichever level is on screen, because the fill belongs to the level
    and each level draws its own. */
@@ -2177,8 +2205,9 @@ function openInfo() { renderInfo(); $('#infoDrawer').hidden = false; }
 function menuPick(k) {
   if (k.startsWith('cat:')) {
     const c = k.slice(4);
+    // All eight can be off at once.  A guard used to put the last one back —
+    // "never leave the map blank" — which made one switch refuse to switch.
     if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
-    if (!S.cats.size) S.cats.add(c);              // never leave the map blank
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
     save(); renderMenu(); return;
   }
@@ -2794,7 +2823,6 @@ function wire() {
     else if (k.startsWith('cat:')) {
       const c = k.slice(4);
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
-      if (!S.cats.size) S.cats.add(c);              // never leave the map blank
     }
     save();
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }

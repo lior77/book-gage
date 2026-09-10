@@ -65,9 +65,9 @@ const css = (page, sel, prop) =>
   const near = (a, b, t = 1.5) => Math.abs(a - b) <= t;
   const menuBtn = await box(page, '#menuBtn');
   const reset = await box(page, '#resetBtn');
-  ok('menu button is 20px below the map\'s top', near(menuBtn.y - map.y, 20),
+  ok('menu button is 10px below the map\'s top', near(menuBtn.y - map.y, 10),
      `${(menuBtn.y - map.y).toFixed(1)}px`);
-  ok('menu button is 20px in from the map\'s right', near(map.right - menuBtn.right, 20),
+  ok('menu button is 10px in from the map\'s right', near(map.right - menuBtn.right, 10),
      `${(map.right - menuBtn.right).toFixed(1)}px`);
   ok('reset button is to the LEFT of the menu button', reset.right <= menuBtn.x + 1,
      `reset right ${reset.right.toFixed(1)}, menu x ${menuBtn.x.toFixed(1)}`);
@@ -82,6 +82,19 @@ const css = (page, sel, prop) =>
   ok('so is the reset button',
      alpha(await css(page, '#resetBtn', 'background-color')) === 1,
      await css(page, '#resetBtn', 'background-color'));
+  /* and darker than the menu they open, or on a pale map they read as a patch
+     of it rather than as controls */
+  const lum = c => { const [r, g, b] = (c.match(/\d+/g) || []).map(Number);
+                     return .2126 * r + .7152 * g + .0722 * b; };
+  const btnBg = await css(page, '#menuBtn', 'background-color');
+  const menuGround = await page.$eval('#menu',
+    el => getComputedStyle(el).backgroundColor);
+  ok('the two on the map are darker than the menu\'s own ground',
+     Math.abs(lum(btnBg) - lum(menuGround)) > 12
+       && (lum(btnBg) < lum(menuGround)) === (lum(menuGround) > 128),
+     `button ${btnBg} (${lum(btnBg).toFixed(0)}) vs menu ${menuGround} (${lum(menuGround).toFixed(0)})`);
+  ok('and the reset button matches the menu button',
+     await css(page, '#resetBtn', 'background-color') === btnBg);
 
   /* 3. the menu is a screen: closed to start, and it covers everything */
   const shown = () => page.$eval('#menu', el => !el.hidden);
@@ -104,15 +117,15 @@ const css = (page, sel, prop) =>
   const rgb = s => (s.match(/\d+/g) || []).slice(0, 3).map(Number);
   ok('and bluish grey rather than neutral', (([r, g, b]) => b > r)(rgb(menuBg)), menuBg);
 
-  /* Portrait: the map's right edge is the screen's, so the close button lands on
-     the very pixels the menu button occupied. */
+  /* The close button kept its 20px when the menu button moved in to 10, so the
+     two deliberately no longer sit on the same pixels. */
   const x = await box(page, '#menuClose');
-  ok('the close button is exactly where the menu button is',
-     near(x.x, menuBtn.x) && near(x.y, menuBtn.y),
-     `close ${x.x.toFixed(1)},${x.y.toFixed(1)} vs menu ${menuBtn.x.toFixed(1)},${menuBtn.y.toFixed(1)}`);
-  ok('which is 20px in from the screen\'s own corner',
+  ok('the close button stayed at 20px from the screen\'s corner',
      near(x.y, 20) && near(vw - x.right, 20),
      `${x.y.toFixed(1)} from top, ${(vw - x.right).toFixed(1)} from right`);
+  ok('and is therefore inside the menu button\'s 10px, not on it',
+     x.y > menuBtn.y && x.right < menuBtn.right,
+     `close ${x.right.toFixed(1)}/${x.y.toFixed(1)}, menu ${menuBtn.right.toFixed(1)}/${menuBtn.y.toFixed(1)}`);
 
   /* 4. the rows, in the order they were asked for */
   const WANT = ['search', 'mine', 'locate',
@@ -168,6 +181,20 @@ const css = (page, sel, prop) =>
        document.querySelector('[data-m="cat:hospital"]').click();
        return had && !now; }));
 
+  /* All eight categories can be off at once.  A guard used to put the last one
+     back, which made one switch refuse to switch — the bug this is here for. */
+  const catsOn = () => page.evaluate(() => S.cats.size);
+  await page.evaluate(() => D.poiOrder.forEach(c => { if (S.cats.has(c)) menuPick('cat:' + c); }));
+  await page.waitForTimeout(500);
+  ok('every category can be switched off, including the last one',
+     await catsOn() === 0, `${await catsOn()} still on`);
+  ok('and the menu shows all eight as off',
+     await page.$$eval('#menuIn [data-m^="cat:"]',
+       els => els.every(e => e.getAttribute('aria-pressed') === 'false')));
+  await page.evaluate(() => D.poiOrder.forEach(c => { if (!S.cats.has(c)) menuPick('cat:' + c); }));
+  await page.waitForTimeout(400);
+  ok('and back on again', await catsOn() === 8, String(await catsOn()));
+
   /* אזורים draws the orange line, 4 wide */
   await page.click('[data-m="regions"]');
   await page.waitForTimeout(700);
@@ -179,6 +206,30 @@ const css = (page, sel, prop) =>
   ok('אזורים draws the orange line at width 4', region === 4, String(region));
   await page.click('[data-m="regions"]');
   await page.waitForTimeout(400);
+
+  /* The regions paragraph belongs to the line that draws them: at the foot of
+     the reading half while the layer is on, and nowhere at all while it is off.
+     It used to sit in the district card either way — a paragraph about
+     something that was not on the map. */
+  const regionsOff = await page.evaluate(() => { if (S.lnRegion) menuPick('regions'); return !!S.lnRegion; });
+  await page.waitForTimeout(600);
+  ok('with אזורים off there is no regions block', await page.$('#regionsDoc') === null);
+  ok('and the district card does not carry one either',
+     !(await page.$eval('#doc', el => el.textContent)).includes('NUTS III'));
+  await page.evaluate(() => menuPick('regions'));
+  await page.waitForTimeout(700);
+  ok('turning אזורים on brings the explanation', await page.$('#regionsDoc') !== null);
+  ok('and it is the last thing on the page',
+     await page.evaluate(() => document.querySelector('#doc').lastElementChild.id) === 'regionsDoc');
+  const rtxt = await page.$eval('#regionsDoc', el => el.textContent);
+  for (const need of ['האזור המטרופוליטני של פורטו', 'טאמגה אה סוזה', 'NUTS III'])
+    ok(`the regions block names ${need}`, rtxt.includes(need));
+  ok('it follows the map to level 2 as well',
+     await page.evaluate(async () => { goMun(13); return true; }) &&
+     (await page.waitForTimeout(800), await page.$('#regionsDoc') !== null));
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+  if (!regionsOff) { await page.evaluate(() => menuPick('regions')); await page.waitForTimeout(500); }
 
   /* גבולות is a cycle, and the row's own text is what reports it */
   const bl = () => page.$eval('[data-m="borders"] .mrow-l', e => e.textContent);
@@ -262,32 +313,56 @@ const css = (page, sel, prop) =>
   }
   await page.click('#menuClose'); await page.waitForTimeout(300);
   const stack = () => page.evaluate(() => {
-    const w = { 4: 'region', 3.2: 'district', 2.1: 'mun', 1: 'fre' };
-    const seen = {};
+    // By pane, not by width: the municipalities were widened to the district's
+    // own 3.2 and a width can no longer tell one layer from another.
+    const o = {};
     for (const el of document.querySelectorAll('#map path')) {
-      const kind = w[Number(el.getAttribute('stroke-width'))];
-      if (!kind || seen[kind]) continue;
       const pane = el.closest('.leaflet-pane');
-      seen[kind] = { pane: pane && pane.className.replace(/leaflet-\S+\s*/g, '').trim(),
-                     z: Number(getComputedStyle(pane).zIndex) };
+      const m = pane && (pane.className.match(/leaflet-ln-(\w+)-pane/));
+      if (m) o[m[1]] = { z: Number(getComputedStyle(pane).zIndex),
+                         w: Number(el.getAttribute('stroke-width')),
+                         n: (o[m[1]] ? o[m[1]].n : 0) + 1 };
     }
-    return seen;
+    return o;
   });
-  const inOrder = st => ['region', 'district', 'mun', 'fre'].every((k, i, a) =>
+  const inOrder = (st, kinds) => kinds.every((k, i, a) =>
     st[k] && (i === 0 || st[k].z > st[a[i - 1]].z));
 
-  for (const [name, go] of [
-        ['level 1 (המחוז)', null],
-        ['level 2 (עירייה)', () => page.evaluate(() => goMun(13))],
+  for (const [name, go, kinds] of [
+        ['level 1 (המחוז)', null, ['region', 'district', 'mun']],
+        ['level 2 (עירייה)', () => page.evaluate(() => goMun(13)),
+         ['region', 'district', 'mun', 'fre']],
         ['level 3 (רובע)', () => page.evaluate(() => goZone(
-            D.freKey(D.fre.find(f => f.mun_num === 13))))],
+            D.freKey(D.fre.find(f => f.mun_num === 13)))),
+         ['region', 'district', 'mun', 'fre']],
       ]) {
     if (go) { await go(); await page.waitForTimeout(900); }
     const st = await stack();
-    ok(`stack holds at ${name}: אזורים < מחוז < עיריות < רובעים`, inOrder(st),
-       ['region', 'district', 'mun', 'fre']
-         .map(k => `${k} ${st[k] ? st[k].z : '—'}`).join('  '));
+    ok(`stack holds at ${name}: ` + kinds.join(' < '), inOrder(st, kinds),
+       kinds.map(k => `${k} ${st[k] ? st[k].z : '—'}`).join('  '));
   }
+
+  /* the widths, and which levels the parish layer is drawn at */
+  const at = async go => { await page.evaluate(go); await page.waitForTimeout(900);
+                           return stack(); };
+  const l1 = await at(() => goDistrict());
+  ok('level 1 draws no parish lines — 243 outlines was noise, not context',
+     l1.fre === undefined, l1.fre && `${l1.fre.n} of them`);
+  ok('גבול המחוז is 3.2 wide', l1.district.w === 3.2, String(l1.district.w));
+  ok('גבולות העיריות are 3.2 too, at every level', l1.mun.w === 3.2, String(l1.mun.w));
+
+  const l2 = await at(() => goMun(13));
+  const want2 = await page.evaluate(() => D.bF.features.filter(f => f.properties.mun_num === 13).length);
+  ok('level 2 draws the chosen municipality\'s parishes and no others',
+     l2.fre && l2.fre.n === want2, `${l2.fre ? l2.fre.n : 0} of ${want2}`);
+  ok('and they are 1.6 wide', l2.fre.w === 1.6, String(l2.fre.w));
+  ok('the municipality lines are still 3.2 there', l2.mun.w === 3.2, String(l2.mun.w));
+
+  const l3 = await at(() => goZone(D.freKey(D.fre.find(f => f.mun_num === 13))));
+  ok('level 3 draws the one parish being looked at — the fill under it has no edge',
+     l3.fre && l3.fre.n === 1, `${l3.fre ? l3.fre.n : 0}`);
+  ok('at 1.6 as well', l3.fre.w === 1.6, String(l3.fre.w));
+
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
   await page.evaluate(() => menuPick('regions'));

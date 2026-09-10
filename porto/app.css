@@ -17,6 +17,8 @@
      enough from --card that the strip reads as its own surface */
   --tool-bg:#c9d3e0; --tool-solid:#c9d3e0; --tool-solid-2:#b7c4d6;
   --tool-line:#aab8cb; --ring-off:#000000;
+  /* the two on the map are darker than the menu they open */
+  --btn-solid:#9fb0c8; --btn-solid-2:#8b9eb9; --btn-line:#7d90ac;
   /* the strip floats over the map, and each button floats over the strip */
   --float:0 2px 6px rgba(16,24,40,.10),0 10px 28px rgba(16,24,40,.16);
   --float-sm:0 1px 2px rgba(16,24,40,.10),0 3px 8px rgba(16,24,40,.14);
@@ -42,6 +44,7 @@
     --miss:#7b8698;
     --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
+    --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#33425c;
     --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
     --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
     --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
@@ -56,6 +59,7 @@
     --miss:#7b8698;
     --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
+    --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#33425c;
     --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
     --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
     --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
@@ -187,14 +191,16 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
   body[data-view="split"] .split{--mapx:calc(100% - var(--f)); --mapy:0px}
 }
 
-/* Neither of these ever dims and neither moves: 20px in from the map's top and
-   start corner, and the reset one button plus a gap along from it. */
+/* Neither of these ever dims and neither moves: 10px in from the map's top and
+   start corner, and the reset one button plus a gap along from it.  A step
+   darker than the menu's own ground (--btn-solid, not --tool-solid), so on a
+   pale map they read as controls rather than as a patch of it. */
 .mt.menu-btn,.mt.reset-btn{position:absolute; z-index:701;
-          inset-block-start:20px; touch-action:manipulation;
-          background:var(--tool-solid); border-color:var(--tool-line)}
-.mt.menu-btn{inset-inline-start:calc(var(--mapx) + 20px)}
-.mt.reset-btn{inset-inline-start:calc(var(--mapx) + 20px + 38px + var(--s2))}
-.mt.menu-btn:active,.mt.reset-btn:active{background:var(--tool-solid-2)}
+          inset-block-start:10px; touch-action:manipulation;
+          background:var(--btn-solid); border-color:var(--btn-line)}
+.mt.menu-btn{inset-inline-start:calc(var(--mapx) + 10px)}
+.mt.reset-btn{inset-inline-start:calc(var(--mapx) + 10px + 38px + var(--s2))}
+.mt.menu-btn:active,.mt.reset-btn:active{background:var(--btn-solid-2)}
 
 /* The menu is a screen over the map area — opaque, so the list is read against
    a surface and not against terrain — and it scrolls, because the list is
@@ -214,12 +220,11 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
       display:flex; flex-direction:column;
       padding:calc(20px + 38px + var(--s4)) 10px calc(10px + var(--safe-b))}
 .mrow,.mgrp,.mnote{max-width:520px; width:100%}
-/* 20px in from the screen's top and start corner.  In portrait that is the very
-   pixel the menu button occupies — the map's right edge is the screen's — so
-   the corner that opens the menu is the corner that shuts it.  Landscape puts
-   the map in the left half and the two stop coinciding; the close button stays
-   in the screen's own corner, because that is the corner of the thing being
-   closed, and a close button halfway across a full-screen menu is not one. */
+/* 20px in from the screen's top and start corner, and it stays there: the menu
+   button moved to 10px and this one was asked to keep its place, so the two no
+   longer sit on the same pixels.  Landscape parts them further — the map's
+   right edge is halfway across — and the close button stays in the screen's own
+   corner, because that is the corner of the thing being closed. */
 .mt.menu-x{position:absolute; z-index:1;
       inset-block-start:20px; inset-inline-start:20px;
       background:var(--tool-solid); border-color:var(--tool-line)}
