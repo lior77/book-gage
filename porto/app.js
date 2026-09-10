@@ -25,6 +25,7 @@ const S = {
   hi: null,            // { kind, id } — the record highlighted on both halves
   view: 'split',       // split | map | text — which half fills the screen
   menu: false,        // the menu screen is open (never restored open)
+  catsOpen: false,    // the eight point categories are listed one by one
   theme: 'auto',      // 'auto' | 'light' | 'dark' — day/night is a choice
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
@@ -32,7 +33,6 @@ const S = {
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
   mine: true,          // draw the points the user added
-  photos: true,        // draw the ones that carry a photo (their own layer)
   // The four boundary layers.  Each is drawn at every level and switched on
   // its own; the level decides which of them are black and which recede.
   lnRegion: false,     // the two NUTS III regions — off until asked for
@@ -69,7 +69,9 @@ const CAT_COLOUR = {
   museum: '#c2790b', culture: '#d81b60', market: '#f57c00',
   civic: '#455a64', landmark: '#101010', green: '#2e7d32',
 };
-const MINE_COLOUR = '#00897b';
+/* One kind of point, one pin.  A photo is something a point may carry, not a
+   different sort of point, so there is no second colour and no second layer. */
+const MINE_COLOUR = '#d32f2f';
 
 /* ------------------------------------------------------------ boundaries --- */
 /* Four layers, one per kind of border, each drawn at every level and switched
@@ -869,7 +871,6 @@ const PHOTO_DB = 'porto-photos';
 const PHOTO_STORE = 'img';
 const PHOTO_MAX = 1600;         // long edge in px of the stored copy
 const PHOTO_Q = 0.82;           // its JPEG quality
-const PHOTO_COLOUR = '#8e24aa';
 
 /* ---- the blob store ---- */
 let photoDb = null;
@@ -1091,46 +1092,35 @@ function saveMine() {
   try { localStorage.setItem(MINE_KEY, JSON.stringify(D.mine)); }
   catch (e) { mapNote('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.', true); }
 }
-const mineIcon = () => L.divIcon({ className: 'me-pin', iconSize: [16, 16], iconAnchor: [8, 8],
-  html: '<span style="display:block;width:12px;height:12px;margin:2px;' +
-        'background:' + MINE_COLOUR + ';border:2px solid #fff;' +
-        'box-shadow:0 0 0 1px rgba(0,0,0,.45);transform:rotate(45deg)"></span>' });
-
-const photoPinIcon = () => L.divIcon({ className: 'me-pin', iconSize: [18, 18], iconAnchor: [9, 9],
-  html: '<span style="display:block;width:12px;height:12px;margin:1px;border-radius:3px;' +
-        'background:' + PHOTO_COLOUR + ';border:2px solid #fff;' +
-        'box-shadow:0 0 0 1px rgba(0,0,0,.45)"></span>' });
-
-/* The pin of a point being managed.  The selected one grows and takes the
-   highlight colour the rest of the app already uses for "this is the one you
+/* A push pin: the teardrop everyone already reads as "a place", in red, with
+   its point — not its middle — on the coordinate.  The selected one grows and
+   takes the highlight colour the rest of the app uses for "this is the one you
    asked about", so a card and its pin are recognisably the same object. */
-function wpIcon(p, on) {
-  const c = p.photo ? PHOTO_COLOUR : MINE_COLOUR;
-  const s = on ? 16 : 12, pad = on ? 4 : 2, box = s + pad * 2 + 4;
-  return L.divIcon({ className: 'me-pin', iconSize: [box, box],
-    iconAnchor: [box / 2, box / 2],
-    html: `<span style="display:block;width:${s}px;height:${s}px;margin:${pad}px;` +
-      (p.photo ? 'border-radius:3px;' : 'transform:rotate(45deg);') +
-      `background:${c};border:2px solid ${on ? 'var(--hi-line)' : '#fff'};` +
-      `box-shadow:0 0 0 ${on ? 2 : 1}px rgba(0,0,0,.45)"></span>` });
+function pinIcon(on) {
+  const w = on ? 30 : 24, h = Math.round(w * 1.32);
+  const ring = on ? 'var(--hi-line)' : '#ffffff';
+  return L.divIcon({ className: 'me-pin', iconSize: [w, h], iconAnchor: [w / 2, h],
+    html: `<svg viewBox="0 0 24 32" width="${w}" height="${h}" aria-hidden="true"
+        style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">
+        <path d="M12 31.2C12 31.2 1.6 18.6 1.6 11.4a10.4 10.4 0 1 1 20.8 0C22.4 18.6 12 31.2 12 31.2z"
+              fill="${MINE_COLOUR}" stroke="${ring}" stroke-width="${on ? 2.4 : 1.8}"/>
+        <circle cx="12" cy="11.2" r="3.6" fill="${ring}"/>
+      </svg>` });
 }
+const mineIcon = () => pinIcon(false);
+const wpIcon = (p, on) => pinIcon(on);
 
-/* Two groups over one list.  A point that carries a photo is drawn in the photo
-   layer and nowhere else, so turning that layer off takes the pictures and
-   their pins together — which is what a layer switch is for.
-
-   Management is a third case and overrides both: it shows every נ.צ. there is,
-   whatever the two switches say, and takes the other points off the map so
-   what is left on it is only what the cards are about. */
+/* One layer over one list.  Management overrides it: it shows every place there
+   is, whatever the switch says, and takes the other points off the map so what
+   is left on it is only what the cards are about. */
 function drawMine() {
   ['mine', 'photos', 'wp'].forEach(k => {
     if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; }
   });
   const pin = p => {
-    const mk = L.marker(p.ll, { icon: p.photo ? photoPinIcon() : mineIcon(),
-      zIndexOffset: p.photo ? 1250 : 1200, title: p.name });
-    mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : '') +
-      (p.photo ? '<br>עם תמונה' : ''), { direction: 'top', className: 'tt' });
+    const mk = L.marker(p.ll, { icon: mineIcon(), zIndexOffset: 1200, title: p.name });
+    mk.bindTooltip(`<b>${html(p.name)}</b>` + (p.desc ? `<br>${html(p.desc)}` : ''),
+      { direction: 'top', className: 'tt' });
     mk.on('click', () => {
       if (S.adding) return;
       if (isSecondTap('mine:' + p.id)) { openInGoogle(p.ll, p.name); return; }
@@ -1155,10 +1145,7 @@ function drawMine() {
     return;
   }
   otherPoints(true);
-  const plain = D.mine.filter(p => !p.photo);
-  const shots = D.mine.filter(p => p.photo);
-  if (S.mine && plain.length) LG.mine = L.layerGroup(plain.map(pin)).addTo(map);
-  if (S.photos && shots.length) LG.photos = L.layerGroup(shots.map(pin)).addTo(map);
+  if (S.mine && D.mine.length) LG.mine = L.layerGroup(D.mine.map(pin)).addTo(map);
 }
 
 /* The landmark dots and the locality letters — the other things on the map that
@@ -1408,28 +1395,102 @@ function harvestWp() {
 function renderWaypoints() {
   dropWpUrls();
   const rows = D.mine;
-  const cards = rows.map(p => mineEditing && mineEditing.id === p.id
-    ? wpEditCard() : wpCard(p));
-  // a brand new one is not in the list yet, so it goes at the top where it can
-  // be seen without scrolling to the end
-  if (mineEditing && !rows.some(p => p.id === mineEditing.id)) cards.unshift(wpEditCard());
+  const cards = rows.map(p => wpCard(p));
+  /* Heading on one line with the button that starts a place, and nothing else:
+     the count said nothing the list does not, and saving and importing live in
+     the menu now — one place for them, not two. */
   $('#doc').innerHTML = `
     <div class="card">
-      <div class="hdr"><div>
-        <h1>נקודות הציון שלי <span class="note num">${rows.length}</span></h1>
-      </div></div>
-      <div class="chips">
-        <button class="chip" data-wpact="add">הוספת נ.צ.</button>
-        <button class="chip" data-mine-act="export">העתקת הנקודות</button>
-        <button class="chip" data-mine-act="import">ייבוא נקודות</button>
+      <div class="wp-top">
+        <h1>המקומות שלי</h1>
+        <button class="chip${wpAdding ? '' : ' is-on'}" data-wpact="${wpAdding ? 'addoff' : 'add'}"
+          >${wpAdding ? 'ביטול' : 'הוספת מיקום'}</button>
       </div>
+      ${wpAdding ? `<div class="chips wp-ways">
+        <button class="chip" data-wpact="way-map">בחירת מקום במפה</button>
+        <button class="chip" data-wpact="way-photo">בחירת מקום מתמונה</button>
+        <button class="chip" data-wpact="way-place">בחירת כתובת מקום</button>
+      </div>
+      <input id="wpPhotoIn" type="file" accept="image/*" multiple hidden>
+      ${wpPlacing ? placePickerHtml() : ''}` : ''}
     </div>
-    ${cards.length ? cards.join('')
-      : ''}`;
-  if (mineEditing) renderPhotoBox();
+    ${cards.length ? cards.join('') : ''}`;
+  renderWpSheet();
   wpThumbs();
   applyWpHi();
 }
+
+/* ---- the three ways a place can be started ---- */
+let wpAdding = false;      // the הוספת מיקום button is armed and the ways are up
+let wpPlacing = false;     // "בחירת כתובת מקום" is showing its search box
+
+function wpAddOn(on) {
+  wpAdding = on;
+  if (!on) wpPlacing = false;
+  renderWaypoints();
+}
+
+/* Not a street geocoder — the app carries no address database and reaches no
+   network.  What it can search is its own gazetteer: the eighteen
+   municipalities, the 243 parishes, and the localities and named sites inside
+   whichever parish they belong to.  Picking one puts the place at that record's
+   own coordinate, and the form says which record it came from. */
+function placePickerHtml() {
+  return `<div class="wp-find">
+      <input id="wpQ" type="search" inputmode="search" autocomplete="off"
+             placeholder="עירייה, רובע, יישוב או אתר" aria-label="חיפוש מקום">
+      <div id="wpQres"><p class="note">שתי אותיות ומעלה. האפליקציה אינה מחפשת
+        כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.</p></div>
+    </div>`;
+}
+function placeHits(term) {
+  const t = term.trim().toLowerCase();
+  if (t.length < 2) return null;
+  const hit = x => String(x || '').toLowerCase().includes(t);
+  const out = [];
+  D.mun.forEach(m => {
+    if (hit(m.he) || hit(m.pt) || hit(m.dicofre)) out.push(
+      { t: m.he, s: m.pt, k: 'עירייה', ll: latlng(m.center) });
+  });
+  D.fre.forEach(f => {
+    if (hit(f.he) || hit(f.pt) || hit(f.dicofre)) out.push(
+      { t: f.he || f.pt, s: bare(f.pt) + ' · ' + f.mun_he, k: 'רובע',
+        ll: f.center ? latlng(f.center) : null });
+  });
+  for (const key of Object.keys(D.zones)) {
+    if (out.length > 60) break;
+    const f = D.freByKey.get(key);
+    if (!f) continue;
+    const where = (f.he || f.pt) + ' · ' + f.mun_he;
+    D.zones[key].bairros.forEach(b => {
+      if (b.ll && (hit(b.he) || hit(b.en))) out.push(
+        { t: b.he || b.en, s: b.en + ' · ' + where, k: b.kind_he || 'יישוב', ll: b.ll });
+    });
+    D.zones[key].pois.forEach(pp => {
+      if (hit(pp.name)) out.push(
+        { t: pp.name, s: (D.poiLabel[pp.cat] || pp.cat) + ' · ' + where, k: 'אתר', ll: pp.ll });
+    });
+  }
+  return out.filter(r => r.ll);
+}
+function runPlaceSearch(term) {
+  const box = $('#wpQres');
+  if (!box) return;
+  const out = placeHits(term);
+  if (out === null) {
+    box.innerHTML = '<p class="note">שתי אותיות ומעלה. האפליקציה אינה מחפשת ' +
+      'כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.</p>';
+    return;
+  }
+  box.innerHTML = out.length
+    ? '<div class="rows">' + out.slice(0, 40).map((r, i) => `<button class="row"
+        data-wpplace="${i}"><span class="row-body"><span class="row-t">${html(r.t)}</span>
+        <span class="row-m"><span class="lat">${html(r.s)}</span></span></span>
+        <span class="note">${html(r.k)}</span></button>`).join('') + '</div>'
+    : `<p class="note">אין תוצאות ל״${html(term)}״.</p>`;
+  wpFound = out.slice(0, 40);
+}
+let wpFound = [];
 
 function wpCard(p) {
   const at = freguesiaAt(p.ll[0], p.ll[1]);
@@ -1438,7 +1499,7 @@ function wpCard(p) {
   const armed = wpArmed === p.id;
   return `<article class="card wp" data-wp="${html(p.id)}">
       <div class="wp-h">
-        <span class="dot mine" style="--c:${p.photo ? PHOTO_COLOUR : MINE_COLOUR}"></span>
+        <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
         <h2>${html(p.name)}</h2>
         <span class="wp-acts">
           <button class="chip" data-wpact="edit" data-id="${html(p.id)}">עריכה</button>
@@ -1454,20 +1515,32 @@ function wpCard(p) {
     </article>`;
 }
 
-function wpEditCard() {
+/* The form is a screen, not a card in a list: it runs from the top of the
+   display down to whatever the keyboard leaves — visualViewport reports that,
+   and 100dvh stands in where it does not exist.  Save and cancel are at the
+   head, where a thumb reaching for the top of a phone lands and where they stay
+   put while the fields below scroll. */
+function renderWpSheet() {
+  const sheet = $('#wpSheet');
+  if (!sheet) return;
+  // never over the map while the map is what is being used: the sheet covers
+  // the whole display, and the crosshair and its two buttons are under it
+  if (!mineEditing || S.adding) { sheet.hidden = true; sheet.innerHTML = ''; return; }
   const p = mineEditing;
   const fresh = !D.mine.some(x => x.id === p.id);
-  return `<article class="card wp is-edit" data-wp="${html(p.id)}">
-      <div class="wp-h">
-        <h2>${fresh ? 'נ.צ. חדשה' : 'עריכת נ.צ.'}</h2>
-        <span class="wp-acts">
-          <button class="chip is-on" data-wpact="save">שמירה</button>
-          <button class="chip" data-wpact="cancel">ביטול</button>
-          ${fresh ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
-            data-wpact="del" data-id="${html(p.id)}"
-            >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
-        </span>
-      </div>
+  sheet.hidden = false;
+  sheet.innerHTML = `
+    <div class="sheet-h">
+      <h2>${fresh ? 'מקום חדש' : 'עריכת מקום'}</h2>
+      <span class="wp-acts">
+        <button class="chip is-on" data-wpact="save">שמירה</button>
+        <button class="chip" data-wpact="cancel">ביטול</button>
+        ${fresh ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
+          data-wpact="del" data-id="${html(p.id)}"
+          >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
+      </span>
+    </div>
+    <div class="sheet-b">
       <p class="note" id="mineWhere">${mineWhereHtml()}</p>
       <label class="fld-l" for="mineName">שם</label>
       <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
@@ -1477,8 +1550,20 @@ function wpEditCard() {
         placeholder="מה שחשוב לזכור על המקום הזה">${html(p.desc || '')}</textarea>
       <label class="fld-l" for="minePhotoIn">תמונה</label>
       <div id="minePhotoBox"></div>
-      <div class="chips"><button class="chip" data-wpact="pick">בחירת נ.צ. על המפה</button></div>
-    </article>`;
+      <div class="chips"><button class="chip" data-wpact="pick">בחירת מקום במפה</button></div>
+    </div>`;
+  sizeSheet();
+  renderPhotoBox();
+}
+
+/* The keyboard does not resize the window on Android, it resizes the visual
+   viewport — so the sheet is told its own height rather than left to guess. */
+function sizeSheet() {
+  const sheet = $('#wpSheet');
+  if (!sheet || sheet.hidden) return;
+  const vv = window.visualViewport;
+  sheet.style.height = vv ? vv.height + 'px' : '';
+  sheet.style.insetBlockStart = vv ? vv.offsetTop + 'px' : '0';
 }
 
 /* The thumbnails are fetched as they come into view.  A shrunk photo is still
@@ -1526,6 +1611,35 @@ function cancelWpEdit() {
   mineEditing = null; minePending = null; dropPhotoUrl();
   wpArmed = null;
   renderWaypoints();
+}
+
+/* A place the user did not name still has to be findable in the list, so it is
+   given the next free number rather than an empty heading.  The next free one,
+   not the count: deleting the third of three and adding one back should not
+   produce a second "נקודת ציון 3". */
+function autoName() {
+  let top = 0;
+  D.mine.forEach(p => {
+    const m = /^נקודת ציון (\d+)$/.exec(String(p.name || '').trim());
+    if (m) top = Math.max(top, Number(m[1]));
+  });
+  return 'נקודת ציון ' + (top + 1);
+}
+
+/* One way in for all three: a fresh record at a known place, with the form up. */
+function openNewAt(ll, from) {
+  minePending = null;
+  dropPhotoUrl();
+  mineEditing = { id: 'p' + Date.now().toString(36), ll: [ll[0], ll[1]],
+                  name: from || '', desc: '' };
+  S.wpSel = mineEditing.id;
+  if (!S.wp) toggleWp();
+  closePanel();
+  drawMine();
+  renderWaypoints();
+  save();
+  const el = $('#mineName');
+  if (el) el.focus();
 }
 
 /* A new one starts as a placement, not as an empty card: the coordinates are
@@ -1600,11 +1714,33 @@ function wpClick(e) {
   if (b) {
     const act = b.dataset.wpact;
     if (act !== 'del') wpArmed = null;
-    if (act === 'add') { startWpAdd(); return true; }
+    if (act === 'add') { wpAddOn(true); return true; }
+    if (act === 'addoff') { wpAddOn(false); return true; }
+    if (act === 'way-map') {
+      wpAddOn(false);
+      if (!S.wp) toggleWp();
+      mineEditing = null; minePending = null; dropPhotoUrl();
+      renderWaypoints();
+      toggleAdd();
+      return true;
+    }
+    if (act === 'way-photo') {
+      const inp = $('#wpPhotoIn');
+      if (inp) inp.click();
+      return true;
+    }
+    if (act === 'way-place') {
+      wpPlacing = !wpPlacing;
+      renderWaypoints();
+      const q = $('#wpQ');
+      if (q) q.focus();
+      return true;
+    }
     if (act === 'edit') { startWpEdit(b.dataset.id); return true; }
     if (act === 'cancel') { cancelWpEdit(); return true; }
     if (act === 'save') { commitMine(); return true; }
     if (act === 'pick') { harvestWp(); toggleAdd(); return true; }
+    if (act === 'fix') { fixPlacing(); return true; }
     if (act === 'del') {
       // two taps, because a card is the only copy of what is on it and the
       // list puts the button under a thumb that is scrolling past
@@ -1613,6 +1749,12 @@ function wpClick(e) {
       deleteMine(b.dataset.id);
       return true;
     }
+  }
+  const hit = e.target.closest('[data-wpplace]');
+  if (hit) {
+    const r = wpFound[Number(hit.dataset.wpplace)];
+    if (r) { wpAddOn(false); openNewAt(r.ll, r.t); }
+    return true;
   }
   const card = e.target.closest('[data-wp]');
   if (card) {
@@ -1630,12 +1772,9 @@ function wpClick(e) {
 
 function commitMine() {
   if (!mineEditing) return;
-  const name = $('#mineName').value.trim();
-  if (!name) {
-    mapNote('לנ.צ. צריך שם.', true);
-    $('#mineName').focus();
-    return;
-  }
+  // No name is not an error: the record is worth keeping for its coordinate
+  // alone, and the app names it rather than refusing to save it.
+  const name = $('#mineName').value.trim() || autoName();
   const rec = { ...mineEditing, name, desc: $('#mineDesc').value.trim(),
     at: mineEditing.at || new Date().toISOString().slice(0, 10) };
   const pend = minePending;
@@ -1766,18 +1905,25 @@ function startPlacing() {
   // dblclick, so the same 450 ms rule the rest of the app uses stands in
   mk.on('click', () => { if (isSecondTap('ghost')) fixPlacing(); });
   ghost = mk;
-  mapNote('<button type="button" data-add="off">ביטול</button>', false, true);
-  // the note opened the text half; placing wants the whole map
+  // The map fills both halves while a place is being chosen, so the two buttons
+  // that end it have to be on the map itself — a note in the text half would be
+  // off screen.  Drag the crosshair, then בחירה.
+  const bar = $('#pickBar');
+  if (bar) bar.hidden = false;
+  hideNote();
   S.view = 'map'; applyView();
 }
 
 function stopPlacing() {
   if (ghost) { map.removeLayer(ghost); ghost = null; }
   S.adding = false;
+  const bar = $('#pickBar');
+  if (bar) bar.hidden = true;
 
   $('#map').style.cursor = '';
   hideNote();
   if (S.viewBefore) { S.view = S.viewBefore; S.viewBefore = null; applyView(); save(); }
+  if (S.wp) renderWaypoints();      // brings the form back if one was open
 }
 
 /* Where the crosshair was let go.  It is either the נ.צ. of the card being
@@ -1791,6 +1937,8 @@ function fixPlacing() {
   ghost = null;
   S.adding = false;
   S.viewBefore = null;
+  const bar = $('#pickBar');
+  if (bar) bar.hidden = true;
 
   hideNote();
   if (mineEditing) mineEditing.ll = ll;
@@ -1964,17 +2112,13 @@ function mineList(within) {
   // at district level the card shows even when empty, so points exported from
   // another phone have somewhere to be pasted in
   if (!rows.length && within) return '';
+  // Saving and importing live in the menu, and only there — three doorways to
+  // the same two actions was three places to keep in step.
   return `<div class="card">
-      <h2>הנקודות שלי <span class="note num">${rows.length}</span></h2>
-      <p class="sub">נשמרות במכשיר הזה בלבד. לא נשלחות לשום מקום ולא מגובות.
-      ההעתקה מוציאה את הנקודות כטקסט; התמונות עצמן נשארות במכשיר ולא נכללות בה.</p>
-      <div class="chips">
-        <button class="chip" data-mine-act="export">העתקת הנקודות</button>
-        <button class="chip" data-mine-act="import">ייבוא נקודות</button>
-      </div>
+      <h2>המקומות שלי</h2>
     </div>
     <div class="rows">${rows.map(p => `<button class="row" data-mine="${html(p.id)}">
-        <span class="dot mine" style="--c:${p.photo ? PHOTO_COLOUR : MINE_COLOUR}"></span>
+        <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
         <span class="row-body">
           <span class="row-t">${html(p.name)}</span>
           ${p.desc ? `<span class="row-d">${html(p.desc)}</span>` : ''}
@@ -2105,6 +2249,7 @@ const ICON = {
   more: '<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
   regions: '<path d="M3 8h8v9H3zM11 5h10v11H11z"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  dots: '<circle cx="7" cy="8" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="5" cy="18" r="1.4"/>',
   save: '<path d="M12 3v11M8 10.5l4 3.5 4-3.5"/><path d="M4 16v3.5h16V16"/>',
   load: '<path d="M12 14V3M8 6.5 12 3l4 3.5"/><path d="M4 16v3.5h16V16"/>',
 };
@@ -2115,7 +2260,14 @@ const menuRows = () => [
   { k: 'search', he: 'חיפוש', icon: 'search', kind: 'act' },
   { k: 'mine', he: 'המקומות שלי', icon: 'pin', kind: 'act' },
   { k: 'locate', he: 'המיקום שלי', icon: 'locate', kind: 'act', mapOnly: true },
-  ...D.poiOrder.map(c => ({ k: 'cat:' + c, he: D.poiLabel[c], icon: c, kind: 'tog' })),
+  /* The eight categories under one heading that switches them together, with a
+     chevron beside it that opens the list so each can be set on its own.  Eight
+     rows at the top of the menu were eight-ninths of what you scrolled past to
+     reach anything else. */
+  { k: 'cats', he: 'נקודות ציון', icon: 'dots', kind: 'tog', more: 'cats-open' },
+  ...(S.catsOpen
+    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: D.poiLabel[c], icon: c, kind: 'tog', sub: true }))
+    : []),
   { grp: 'תצוגה' },
   { k: 'view:split', he: 'גרפיקה וטקסט', icon: 'split', kind: 'radio' },
   { k: 'view:map', he: 'גרפיקה בלבד', icon: 'maponly', kind: 'radio' },
@@ -2145,6 +2297,7 @@ const menuRows = () => [
 
 // what a row's mark should read, or null when the row carries no state
 function menuState(k) {
+  if (k === 'cats') return S.cats.size > 0;
   if (k.startsWith('cat:')) return S.cats.has(k.slice(4));
   if (k.startsWith('view:')) return S.view === k.slice(5);
   if (k.startsWith('theme:')) return (isDark() ? 'dark' : 'light') === k.slice(6);
@@ -2165,11 +2318,20 @@ function renderMenu() {
     const on = menuState(r.k);
     const flag = on === null ? ''
       : (r.kind === 'radio' ? ` aria-current="${on}"` : ` aria-pressed="${on}"`);
-    return `<button class="mrow${r.mapOnly ? ' map-only' : ''}" data-m="${html(r.k)}"${flag}>
+    const row = `<button class="mrow${r.mapOnly ? ' map-only' : ''}${r.sub ? ' mrow-sub' : ''}"
+        data-m="${html(r.k)}"${flag}>
         <svg viewBox="0 0 24 24" aria-hidden="true">${ICON[r.icon] || ''}</svg>
         <span class="mrow-l">${html(r.he)}</span>
         <span class="mrow-k" aria-hidden="true">${r.kind === 'radio' ? '●' : '✓'}</span>
       </button>`;
+    if (!r.more) return row;
+    // the heading switches all eight; the chevron beside it opens the list
+    return `<div class="mrow-pair">${row}
+        <button class="mrow-more" data-m="${html(r.more)}"
+                aria-expanded="${!!S.catsOpen}" aria-label="פירוט נקודות הציון">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      </div>`;
   }).join('') + (S.level === 'zone' ? '' :
     '<p class="mnote">הנקודות עצמן מצוירות ברמת הרובע; הבחירה כאן נשמרת וחלה שם.</p>');
 }
@@ -2203,6 +2365,14 @@ function applyTheme() {
 function openInfo() { renderInfo(); $('#infoDrawer').hidden = false; }
 
 function menuPick(k) {
+  if (k === 'cats-open') { S.catsOpen = !S.catsOpen; renderMenu(); return; }
+  if (k === 'cats') {
+    // one tap sets all eight the same way: off if any were on, on if none were
+    const any = S.cats.size > 0;
+    S.cats = new Set(any ? [] : D.poiOrder);
+    if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
+    save(); renderMenu(); return;
+  }
   if (k.startsWith('cat:')) {
     const c = k.slice(4);
     // All eight can be off at once.  A guard used to put the last one back —
@@ -2276,12 +2446,9 @@ function renderLayers() {
     row(S.tiles, 'tiles', 'רקע המפה (רחובות)', 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
     row(S.muncol, 'muncol', 'צבעי 18 העיריות', 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
     row(S.water, 'water', 'נהרות ומים', '#4a9ad4', true) +
-    row(S.mine, 'mine', 'הנקודות שלי', MINE_COLOUR, true,
-        D.mine.filter(p => !p.photo).length) +
-    row(S.photos, 'photos', 'נקודות עם תמונה', PHOTO_COLOUR, true,
-        D.mine.filter(p => p.photo).length) +
-    (S.wp ? '<p class="note">בזמן ניהול נ.צ. מוצגות כל הנקודות שלכם, ' +
-            'ושתי השכבות האלה חוזרות לפעול ביציאה ממנו.</p>' : '');
+    row(S.mine, 'mine', 'המקומות שלי', MINE_COLOUR, true, D.mine.length) +
+    (S.wp ? '<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ' +
+            'חוזרת לפעול ביציאה ממנו.</p>' : '');
 
   // Which of these are black and which are grey is the level's decision, not
   // the user's; the switch is only whether the line is there at all.
@@ -2494,7 +2661,7 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
-      letters: S.letters, mine: S.mine, photos: S.photos, water: S.water,
+      letters: S.letters, mine: S.mine, water: S.water,
       muncol: S.muncol,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
@@ -2508,7 +2675,6 @@ function restore() {
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
-    if (typeof o.photos === 'boolean') S.photos = o.photos;
     ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
       if (typeof o[k] === 'boolean') S[k] = o[k];
     });
@@ -2814,7 +2980,6 @@ function wire() {
     else if (k === 'water') { S.water = !S.water; applyNature(); }
     else if (k === 'muncol') { S.muncol = !S.muncol; redrawLevel(); }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
-    else if (k === 'photos') { S.photos = !S.photos; drawMine(); }
     else if (k.startsWith('ln:')) {
       const key = LINE_ON[k.slice(3)];
       S[key] = !S[key];
@@ -2831,10 +2996,29 @@ function wire() {
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
-  // the photo picker lives on a card in the text half now, not in the panel
-  $('#doc').addEventListener('change', e => {
+  // the photo picker lives on the form sheet now; the one on the מקומות screen
+  // is the "בחירת מקום מתמונה" way in and starts a place rather than adding to one
+  $('#wpSheet').addEventListener('change', e => {
     if (e.target.id === 'minePhotoIn') takePhotos(e.target.files);
   });
+  $('#wpSheet').addEventListener('click', e => { wpClick(e); });
+  $('#doc').addEventListener('change', e => {
+    if (e.target.id === 'wpPhotoIn') { wpAddOn(false); takePhotos(e.target.files); }
+  });
+  $('#doc').addEventListener('input', e => {
+    if (e.target.id === 'wpQ') runPlaceSearch(e.target.value);
+  });
+  $('#pickBar').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.add === 'off') stopPlacing();
+    else if (b.dataset.wpact === 'fix') fixPlacing();
+  });
+  // the keyboard resizes the visual viewport, not the window
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', sizeSheet);
+    window.visualViewport.addEventListener('scroll', sizeSheet);
+  }
   $('#msgs').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;

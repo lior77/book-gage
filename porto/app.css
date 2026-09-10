@@ -219,7 +219,23 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 .menu-in{height:100%; overflow-y:auto; overscroll-behavior:contain;
       display:flex; flex-direction:column;
       padding:calc(20px + 38px + var(--s4)) 10px calc(10px + var(--safe-b))}
-.mrow,.mgrp,.mnote{max-width:520px; width:100%}
+.mrow,.mgrp,.mnote,.mrow-pair{max-width:520px; width:100%}
+/* The heading switches all eight; the chevron beside it opens the list.  Two
+   buttons, not one with two targets: a row that does one thing when tapped in
+   the middle and another at the end is a row you have to aim at. */
+.mrow-pair{display:flex; align-items:center; gap:var(--s2)}
+.mrow-pair .mrow{flex:1 1 auto; min-width:0; max-width:none}
+.mrow-more{flex:0 0 auto; display:grid; place-items:center; width:44px; height:44px;
+      border-radius:var(--r-ctl); color:var(--ink-2)}
+.mrow-more:active{background:var(--tool-solid-2)}
+.mrow-more svg{width:22px; height:22px; fill:none; stroke:currentColor;
+      stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;
+      transition:transform .15s ease}
+.mrow-more[aria-expanded="true"] svg{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){ .mrow-more svg{transition:none} }
+/* the eight sit under the heading they belong to */
+.mrow-sub{padding-inline-start:var(--s6)}
+.mrow-sub .mrow-l{font-size:.9rem}
 /* 20px in from the screen's top and start corner, and it stays there: the menu
    button moved to 10px and this one was asked to keep its place, so the two no
    longer sit on the same pixels.  Landscape parts them further — the map's
@@ -407,6 +423,40 @@ body[data-view="text"] .map-only{display:none}
        margin-block-start:var(--s1)}
 .row-m{display:block; font-size:.76rem; color:var(--miss); margin-block-start:var(--s2)}
 .row-full .row-d{color:var(--ink); font-size:.9rem}
+
+/* ---------- המקומות שלי ---------- */
+/* Heading and the one button that starts a place, on a line: the button is
+   pushed to the far end with 10px of air after it. */
+.wp-top{display:flex; align-items:center; gap:var(--s3)}
+.wp-top h1{flex:1 1 auto; min-width:0}
+/* The document already keeps 10px off the edge of the reading half, so the
+   button needs no margin of its own: it ends exactly 10px in. */
+.wp-top .chip{flex:0 0 auto}
+.wp-ways{margin-block-start:var(--s3)}
+.wp-find{margin-block-start:var(--s3); display:flex; flex-direction:column; gap:var(--s3)}
+.wp-find input{width:100%; padding:var(--s3) var(--s4); border-radius:var(--r-ctl);
+      border:1px solid var(--line); background:var(--card)}
+#wpQres .rows{max-height:46vh; overflow-y:auto}
+
+/* Two buttons over the map while a place is being chosen on it. */
+.pick-bar{position:absolute; z-index:702; inset-block-end:calc(var(--mapy) + 18px);
+      inset-inline:0; display:flex; justify-content:center; gap:var(--s3);
+      pointer-events:none}
+.pick-bar .chip{pointer-events:auto; padding:var(--s3) var(--s6); font-size:.9rem;
+      box-shadow:var(--float)}
+
+/* The form is a screen of its own.  Its height is set in app.js from
+   visualViewport, so the keyboard takes room from the fields and not from the
+   two buttons at the head, which stay put while the body scrolls. */
+.sheet{position:fixed; inset-inline:0; inset-block-start:0; height:100dvh;
+      z-index:720; display:flex; flex-direction:column;
+      background:var(--card); border-block-end:1px solid var(--line)}
+.sheet-h{flex:0 0 auto; display:flex; align-items:center; gap:var(--s3);
+      padding:calc(var(--safe-t) + var(--s4)) 10px var(--s3);
+      border-block-end:1px solid var(--line); background:var(--card)}
+.sheet-h h2{flex:1 1 auto; min-width:0}
+.sheet-b{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+      display:flex; flex-direction:column; gap:var(--s3); padding:10px}
 
 /* ---------- נ.צ. cards ---------- */
 /* A card is the whole record, not a row that opens one: what was typed is on

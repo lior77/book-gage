@@ -54,6 +54,13 @@
     <div class="menu-in" id="menuIn"></div>
   </nav>
 
+  <!-- Two buttons on the map while a place is being chosen there.  The map is
+       on both halves then, so a note in the text half would be off screen. -->
+  <div class="pick-bar" id="pickBar" hidden>
+    <button class="chip is-on" data-wpact="fix">בחירה</button>
+    <button class="chip" data-add="off">ביטול</button>
+  </div>
+
   <section class="pane pane-text" id="paneText" aria-label="נתונים">
     <div class="msgs" id="msgs" role="status" aria-live="polite"></div>
     <div class="panel" id="panel" hidden role="region" aria-labelledby="panelTitle">
@@ -73,6 +80,10 @@
 <header class="top">
   <nav class="crumb" id="crumb" aria-label="מסלול ניווט"></nav>
 </header>
+
+<!-- The place form: from the top of the display down to whatever the keyboard
+     leaves.  app.js measures that with visualViewport and sets the height. -->
+<section class="sheet" id="wpSheet" hidden aria-label="פרטי המקום"></section>
 
 <div class="drawer" id="infoDrawer" hidden role="dialog" aria-modal="true" aria-labelledby="infoTitle">
   <div class="drawer-in">

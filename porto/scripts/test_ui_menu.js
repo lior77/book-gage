@@ -127,45 +127,78 @@ const css = (page, sel, prop) =>
      x.y > menuBtn.y && x.right < menuBtn.right,
      `close ${x.right.toFixed(1)}/${x.y.toFixed(1)}, menu ${menuBtn.right.toFixed(1)}/${menuBtn.y.toFixed(1)}`);
 
-  /* 4. the rows, in the order they were asked for */
-  const WANT = ['search', 'mine', 'locate',
-    'cat:station', 'cat:hospital', 'cat:university', 'cat:museum',
-    'cat:culture', 'cat:market', 'cat:landmark', 'cat:green',
+  /* 4. the rows, in the order they were asked for.  The eight point categories
+        are folded under one heading now — the heading switches all eight, and
+        the chevron beside it opens the list. */
+  const rowsNow = () => page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
+  const CATS = ['cat:station', 'cat:hospital', 'cat:university', 'cat:museum',
+                'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
+  const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text', 'theme:light', 'theme:dark',
     'tiles', 'glass', 'borders', 'more', 'regions', 'save', 'load', 'info'];
-  const got = await page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
   ok('the menu carries exactly the rows asked for, in order',
-     got.join(' ') === WANT.join(' '), got.join(' '));
+     (await rowsNow()).join(' ') === WANT.join(' '), (await rowsNow()).join(' '));
+  const folded = await rowsNow();
+  ok('the eight categories are folded away, not listed',
+     CATS.every(c => !folded.includes(c)));
+
+  await page.click('[data-m="cats-open"]');
+  await page.waitForTimeout(400);
+  const opened = await rowsNow();
+  ok('the chevron opens the eight, under their heading',
+     CATS.every(c => opened.includes(c))
+       && opened.indexOf('cat:station') === opened.indexOf('cats-open') + 1,
+     opened.join(' '));
+  ok('and they are marked as belonging to it',
+     await page.$$eval('#menuIn [data-m^="cat:"]',
+       els => els.every(e => e.classList.contains('mrow-sub'))));
+  ok('the chevron says it is open',
+     await page.$eval('[data-m="cats-open"]', e => e.getAttribute('aria-expanded')) === 'true');
+  await page.click('[data-m="cats-open"]');
+  await page.waitForTimeout(400);
+  ok('and shuts them again', (await rowsNow()).join(' ') === WANT.join(' '));
+
+  /* the heading is one switch over all eight */
+  const catsOn = () => page.evaluate(() => S.cats.size);
+  ok('all eight start on', await catsOn() === 8, String(await catsOn()));
+  await page.click('[data-m="cats"]');
+  await page.waitForTimeout(400);
+  ok('one tap on the heading switches all eight off', await catsOn() === 0, String(await catsOn()));
+  ok('and the heading reads off',
+     await page.$eval('[data-m="cats"]', e => e.getAttribute('aria-pressed')) === 'false');
+  await page.click('[data-m="cats"]');
+  await page.waitForTimeout(400);
+  ok('another tap brings them all back', await catsOn() === 8, String(await catsOn()));
+
   const HE = { search: 'חיפוש', mine: 'המקומות שלי', locate: 'המיקום שלי',
-    'cat:station': 'תחנות מטרו ורכבת', 'cat:hospital': 'בתי חולים',
-    'cat:university': 'אוניברסיטה והשכלה', 'cat:museum': 'מוזיאונים וגלריות',
-    'cat:culture': 'תיאטרון, ספריות ותרבות', 'cat:market': 'שווקים',
-    'cat:landmark': 'אתרים ומונומנטים', 'cat:green': 'פארקים, גנים וחופים',
+    cats: 'נקודות ציון',
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
     'theme:light': 'תצוגת יום', 'theme:dark': 'תצוגת לילה',
     'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
     'regions': 'אזורים', 'save': 'שמירת נתונים', 'load': 'ייבוא נתונים', 'info': 'מידע' };
   const labels = await page.$$eval('#menuIn [data-m]',
-    els => Object.fromEntries(els.map(e => [e.dataset.m, e.querySelector('.mrow-l').textContent])));
+    els => Object.fromEntries(els.filter(e => e.querySelector('.mrow-l'))
+      .map(e => [e.dataset.m, e.querySelector('.mrow-l').textContent])));
   const wrong = Object.entries(HE).filter(([k, v]) => labels[k] !== v);
   ok('every row reads what it was asked to read', wrong.length === 0,
      wrong.map(([k, v]) => `${k}: "${labels[k]}" ≠ "${v}"`).join(' | '));
   ok('the גבולות row says which of the four states it is in',
      /^גבולות · /.test(labels.borders), labels.borders);
   ok('every row carries an icon, and it is the first thing on the line — the right',
-     await page.$$eval('#menuIn [data-m]', els => els.every(e => {
-       const svg = e.querySelector('svg'), lab = e.querySelector('.mrow-l');
-       if (!svg || !svg.children.length || !lab) return false;
+     await page.$$eval('#menuIn [data-m] .mrow-l', els => els.every(lab => {
+       const e = lab.closest('[data-m]');
+       const svg = e.querySelector('svg');
+       if (!svg || !svg.children.length) return false;
        return svg.getBoundingClientRect().right > lab.getBoundingClientRect().right;
      })));
-  ok('the four groups are titled',
+  ok('the three groups are titled',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean)))
        .join('|') === 'תצוגה|שכבות|נתונים');
 
   /* 5. the switches: a tap flips the row and the state behind it */
   const flag = k => page.$eval(`[data-m="${k}"]`,
     e => e.getAttribute('aria-pressed') || e.getAttribute('aria-current'));
-  for (const k of ['cat:hospital', 'tiles', 'glass', 'regions']) {
+  for (const k of ['cats', 'tiles', 'glass', 'regions']) {
     const was = await flag(k);
     await page.click(`[data-m="${k}"]`);
     await page.waitForTimeout(350);
@@ -174,23 +207,23 @@ const css = (page, sel, prop) =>
     await page.click(`[data-m="${k}"]`);
     await page.waitForTimeout(350);
   }
-  ok('a category the menu switched off is off in the app',
-     await page.evaluate(() => { const had = S.cats.has('hospital');
+  ok('a category switched off from the opened list is off in the app',
+     await page.evaluate(() => { menuPick('cats-open');
+       const had = S.cats.has('hospital');
        document.querySelector('[data-m="cat:hospital"]').click();
        const now = S.cats.has('hospital');
        document.querySelector('[data-m="cat:hospital"]').click();
+       menuPick('cats-open');
        return had && !now; }));
 
   /* All eight categories can be off at once.  A guard used to put the last one
      back, which made one switch refuse to switch — the bug this is here for. */
-  const catsOn = () => page.evaluate(() => S.cats.size);
   await page.evaluate(() => D.poiOrder.forEach(c => { if (S.cats.has(c)) menuPick('cat:' + c); }));
   await page.waitForTimeout(500);
   ok('every category can be switched off, including the last one',
      await catsOn() === 0, `${await catsOn()} still on`);
-  ok('and the menu shows all eight as off',
-     await page.$$eval('#menuIn [data-m^="cat:"]',
-       els => els.every(e => e.getAttribute('aria-pressed') === 'false')));
+  ok('and the menu heading shows them off',
+     await page.$eval('[data-m="cats"]', e => e.getAttribute('aria-pressed')) === 'false');
   await page.evaluate(() => D.poiOrder.forEach(c => { if (!S.cats.has(c)) menuPick('cat:' + c); }));
   await page.waitForTimeout(400);
   ok('and back on again', await catsOn() === 8, String(await catsOn()));
@@ -309,6 +342,105 @@ const css = (page, sel, prop) =>
   await page.click('#menuBtn'); await page.waitForTimeout(300);
   await page.click('[data-m="view:split"]');
   await page.waitForTimeout(600);
+
+  /* 7b. המקומות שלי: one heading, one button, three ways in, one form. */
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
+  await page.click('[data-m="mine"]');
+  await page.waitForTimeout(800);
+  ok('the screen is headed המקומות שלי',
+     (await page.$eval('#doc h1', e => e.textContent)).trim() === 'המקומות שלי',
+     await page.$eval('#doc h1', e => e.textContent));
+  ok('and carries no count beside it',
+     !/\d/.test(await page.$eval('#doc h1', e => e.textContent)));
+  ok('saving and importing are not on this screen — they are in the menu',
+     await page.$('#doc [data-mine-act]') === null);
+
+  const addBtn = await box(page, '[data-wpact="add"]');
+  const h1 = await box(page, '#doc h1');
+  const doc = await box(page, '#doc');
+  ok('הוספת מיקום is on the heading line', near(addBtn.y + addBtn.h / 2, h1.y + h1.h / 2, 6),
+     `${addBtn.y.toFixed(1)} vs ${h1.y.toFixed(1)}`);
+  const pane = await box(page, '#paneText');
+  ok('at the far end of it, 10px from the left of the text area',
+     near(addBtn.x - pane.x, 10, 2), `${(addBtn.x - pane.x).toFixed(1)}px`);
+  ok('and it reads הוספת מיקום',
+     (await page.$eval('[data-wpact="add"]', e => e.textContent)).trim() === 'הוספת מיקום');
+
+  await page.click('[data-wpact="add"]');
+  await page.waitForTimeout(400);
+  ok('tapping it turns it into ביטול',
+     (await page.$eval('[data-wpact="addoff"]', e => e.textContent)).trim() === 'ביטול');
+  ok('and opens the three ways, under the heading line',
+     (await page.$$eval('.wp-ways .chip', els => els.map(e => e.textContent.trim()))).join('|')
+       === 'בחירת מקום במפה|בחירת מקום מתמונה|בחירת כתובת מקום');
+  ok('the ways sit below the heading',
+     (await box(page, '.wp-ways')).y > h1.bottom - 1);
+
+  /* the map way: the map takes the whole screen and carries the two buttons */
+  await page.click('[data-wpact="way-map"]');
+  await page.waitForTimeout(800);
+  ok('בחירת מקום במפה gives the map both halves',
+     await page.evaluate(() => document.body.dataset.view) === 'map');
+  ok('and puts בחירה and ביטול on the map itself',
+     (await page.$$eval('#pickBar .chip', els => els.map(e => e.textContent.trim()))).join('|')
+       === 'בחירה|ביטול');
+  ok('the form is not up while the map is what is being used',
+     await page.$eval('#wpSheet', e => e.hidden));
+  await page.click('#pickBar [data-wpact="fix"]');
+  await page.waitForTimeout(900);
+
+  /* 7c. the form: a screen of its own, save and cancel at its head */
+  ok('choosing opens the form', await page.$eval('#wpSheet', e => e.hidden) === false);
+  const sheet = await box(page, '#wpSheet');
+  const vh = await page.evaluate(() => innerHeight);
+  ok('the form runs from the top of the display', near(sheet.y, 0, 2), `${sheet.y}`);
+  ok('and down to the whole of it — the keyboard is what takes room from it',
+     near(sheet.h, vh, 4), `${sheet.h.toFixed(1)} of ${vh}`);
+  const save = await box(page, '#wpSheet [data-wpact="save"]');
+  const nameBox = await box(page, '#mineName');
+  ok('שמירה and ביטול are at the head of the form',
+     save.y < nameBox.y && save.y - sheet.y < 80,
+     `save ${save.y.toFixed(1)}, sheet ${sheet.y.toFixed(1)}, name ${nameBox.y.toFixed(1)}`);
+  ok('the form asks for a name and a description',
+     await page.$('#mineName') !== null && await page.$('#mineDesc') !== null);
+
+  /* 5: no name is not an error */
+  await page.fill('#mineName', '');
+  await page.click('#wpSheet [data-wpact="save"]');
+  await page.waitForTimeout(900);
+  ok('a place saved with no name is named for you',
+     await page.evaluate(() => D.mine.length === 1 && /^נקודת ציון 1$/.test(D.mine[0].name)),
+     await page.evaluate(() => JSON.stringify(D.mine.map(p => p.name))));
+  ok('and the form closes behind it', await page.$eval('#wpSheet', e => e.hidden));
+
+  /* the address way searches the app's own places, not street addresses */
+  await page.click('[data-wpact="add"]'); await page.waitForTimeout(300);
+  await page.click('[data-wpact="way-place"]'); await page.waitForTimeout(400);
+  await page.fill('#wpQ', 'מאיה'); await page.waitForTimeout(500);
+  ok('בחירת כתובת מקום finds places in the app\'s own gazetteer',
+     (await page.$$('#wpQres .row')).length > 0);
+  await page.click('#wpQres .row'); await page.waitForTimeout(800);
+  ok('and picking one opens the form at its coordinate',
+     await page.$eval('#wpSheet', e => e.hidden) === false
+       && await page.evaluate(() => !!mineEditing && Array.isArray(mineEditing.ll)));
+  await page.click('#wpSheet [data-wpact="cancel"]');
+  await page.waitForTimeout(500);
+
+  /* 3 + 4: one kind of point, and its pin is a red push pin */
+  await page.evaluate(() => { if (S.wp) toggleWp(); });
+  await page.waitForTimeout(800);
+  const pin = await page.evaluate(() => {
+    const el = document.querySelector('#map .me-pin svg path');
+    if (!el) return null;
+    const box = el.getBBox();
+    return { fill: el.getAttribute('fill'), tall: box.height > box.width };
+  });
+  ok('a place is drawn as a pin, not a square', pin && pin.tall, JSON.stringify(pin));
+  ok('and it is red', pin && pin.fill.toLowerCase() === '#d32f2f', pin && pin.fill);
+  ok('there is one points layer, not one for photos and one without',
+     await page.evaluate(() => typeof S.photos === 'undefined' && typeof S.mine === 'boolean'));
+  ok('the layer panel offers one row for them',
+     await page.evaluate(() => (renderLayers().match(/data-lay="(mine|photos)"/g) || []).join() === 'data-lay="mine"'));
 
   /* 8. the close button, and Escape */
   await page.click('#menuBtn'); await page.waitForTimeout(300);
