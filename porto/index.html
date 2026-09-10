@@ -31,76 +31,28 @@
 
   <div class="seam" aria-hidden="true"></div>
 
-  <!-- Top corner of the map — the start edge, which in this RTL document is the
-       right.  One tap shows the column below it, another puts it away. -->
-  <button class="mt menu-btn" id="menuBtn" aria-label="תפריט כלי המפה"
-          aria-expanded="false" aria-controls="tools">
+  <!-- The two that live on the map itself: the way into the menu, and beside it
+       the reset that puts the whole district back inside its half.  Both are
+       20px in from the map's top and start corner, fully opaque, and they do
+       not move — everything else is inside the menu. -->
+  <button class="mt menu-btn" id="menuBtn" aria-label="תפריט"
+          aria-expanded="false" aria-controls="menu">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
+  <button class="mt reset-btn" id="resetBtn" aria-label="איפוס תצוגה">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+  </button>
 
-  <div class="tools" id="tools" hidden>
-    <!-- A column, on the map's start edge — asked for as a column and kept as
-         one after seeing it beside the six-wide switch row: it is taller than
-         the map's top half and leaves the panel wide and mostly empty, and that
-         is the accepted cost of one button per line. -->
-    <button class="mt" id="viewBtn" aria-label="פריסת המסך">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg>
+  <!-- The menu is a screen, not a strip: it covers the map area on an opaque
+       bluish grey, and its close button sits exactly where the menu button was,
+       so the same corner opens it and shuts it.  The list itself is built in
+       app.js from MENU, because every row has to show its own state. -->
+  <nav class="menu" id="menu" hidden aria-label="תפריט">
+    <button class="mt menu-x" id="menuClose" aria-label="סגירת התפריט">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
-    <button class="mt" id="findBtn" aria-label="חיפוש">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
-    </button>
-    <button class="mt map-only" id="fitBtn" aria-label="התאמת המפה למסך">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-    </button>
-    <button class="mt map-only" id="locBtn" aria-label="הצגת המיקום שלי" aria-pressed="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-    </button>
-    <button class="mt" id="infoBtn" aria-label="מקורות ומידע חסר">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
-    </button>
-
-    <!-- What the map shows, one switch each, right to left:
-         the street background · your own points · the level's colour ·
-         the boundaries · the two NUTS III regions · and, at the far end,
-         the one action of the row: adding a point.
-         The first child of an RTL row is the rightmost, so the source order
-         below is the order they read on screen. -->
-    <div class="mt-row">
-      <!-- The full list — water, letters, each border kind on its own, and the
-           point categories of the current parish — at the right end of the line
-           the switches read from.  Sliders rather than a stack of tiles,
-           because the stack now means the street background. -->
-      <button class="mt" id="layerListBtn" aria-label="בחירת שכבות ונקודות"
-              aria-expanded="false" aria-controls="panel">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-      </button>
-      <button class="mt" id="layersBtn" aria-label="רקע המפה" aria-pressed="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/></svg>
-      </button>
-      <button class="mt" id="wpBtn" aria-label="ניהול נקודות ציון" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0c0 4.5 6.5 10.5 6.5 10.5z"/><circle cx="12" cy="10.5" r="2.4"/></svg>
-      </button>
-      <!-- three overlapping tiles, one filled: the colour under the shapes -->
-      <button class="mt" id="fillsBtn" aria-label="צבע השטח" aria-pressed="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z" fill="currentColor" fill-opacity=".28"/><path d="M4 5h16v15H4z"/></svg>
-      </button>
-      <!-- Three rings, one per boundary level, thickest outside: מחוז, עיריות,
-           רובעים.  Blue is drawn; the off one goes to --ring-off.  No
-           aria-pressed — the button has four states, not two, so the label
-           says which one it is in. -->
-      <button class="mt" id="bordersBtn" aria-label="גבולות: הכל מוצג" data-b="">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><circle class="r1" cx="12" cy="12" r="9.5"/><circle class="r2" cx="12" cy="12" r="6"/><circle class="r3" cx="12" cy="12" r="2.75"/></svg>
-      </button>
-      <!-- two areas meeting along one border: the NUTS III pair -->
-      <button class="mt" id="regionsBtn" aria-label="גבולות שני האזורים" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h8v9H3zM11 5h10v11H11z"/></svg>
-      </button>
-      <!-- the same pin as the list button, with a plus where its dot is -->
-      <button class="mt" id="addBtn" aria-label="הוספת נקודת ציון" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0c0 4.5 6.5 10.5 6.5 10.5z"/><path d="M12 7.7v5.6M9.2 10.5h5.6"/></svg>
-      </button>
-    </div>
-  </div>
+    <div class="menu-in" id="menuIn"></div>
+  </nav>
 
   <section class="pane pane-text" id="paneText" aria-label="נתונים">
     <div class="msgs" id="msgs" role="status" aria-live="polite"></div>

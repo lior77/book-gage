@@ -15,7 +15,7 @@
   --miss:#8b95a4;
   /* the tint the map's controls sit on: the neutrals' cool bias, taken far
      enough from --card that the strip reads as its own surface */
-  --tool-bg:rgba(201,211,224,.4); --tool-solid:#c9d3e0; --tool-solid-2:#b7c4d6;
+  --tool-bg:#c9d3e0; --tool-solid:#c9d3e0; --tool-solid-2:#b7c4d6;
   --tool-line:#aab8cb; --ring-off:#000000;
   /* the strip floats over the map, and each button floats over the strip */
   --float:0 2px 6px rgba(16,24,40,.10),0 10px 28px rgba(16,24,40,.16);
@@ -40,7 +40,7 @@
     --accent:#6ea8dd; --accent-ink:#0e1420;
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#7b8698;
-    --tool-bg:rgba(36,48,68,.4); --tool-solid:#243044; --tool-solid-2:#2e3c53;
+    --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
     --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
     --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
@@ -54,7 +54,7 @@
     --accent:#6ea8dd; --accent-ink:#0e1420;
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#7b8698;
-    --tool-bg:rgba(36,48,68,.4); --tool-solid:#243044; --tool-solid-2:#2e3c53;
+    --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
     --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
     --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
@@ -187,29 +187,67 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
   body[data-view="split"] .split{--mapx:calc(100% - var(--f)); --mapy:0px}
 }
 
-/* The way back is never dimmed and never moves: fully opaque, 20px in from the
-   map's top and start corner. */
-.mt.menu-btn{position:absolute; z-index:601;
-          inset-block-start:20px; inset-inline-start:calc(var(--mapx) + 20px);
-          touch-action:manipulation;
+/* Neither of these ever dims and neither moves: 20px in from the map's top and
+   start corner, and the reset one button plus a gap along from it. */
+.mt.menu-btn,.mt.reset-btn{position:absolute; z-index:701;
+          inset-block-start:20px; touch-action:manipulation;
           background:var(--tool-solid); border-color:var(--tool-line)}
-.mt.menu-btn:active{background:var(--tool-solid-2)}
+.mt.menu-btn{inset-inline-start:calc(var(--mapx) + 20px)}
+.mt.reset-btn{inset-inline-start:calc(var(--mapx) + 20px + 38px + var(--s2))}
+.mt.menu-btn:active,.mt.reset-btn:active{background:var(--tool-solid-2)}
 
-/* One card over the map, 10px in on every side, 40% opaque so the terrain it
-   covers is still readable.  The buttons run down its start edge and the last
-   row lands 10px above its foot; the top padding clears the menu button, which
-   sits over the card's own top corner. */
-.tools{position:absolute; z-index:600;
-       inset-block-start:10px; inset-inline-start:calc(var(--mapx) + 10px);
-       inset-inline-end:10px; inset-block-end:calc(var(--mapy) + 10px);
-       display:flex; flex-direction:column; justify-content:space-between;
-       align-items:flex-start; gap:var(--s2);
-       padding:58px 10px 10px; border-radius:var(--r-card);
-       background:var(--tool-bg); box-shadow:var(--float)}
-/* Text only: there is no map to sit inside, and a full-bleed card would blanket
-   the reading half.  Back to something that hugs its own buttons. */
-body[data-view="text"] .tools{inset-block-end:auto; inset-inline-end:auto;
-       justify-content:flex-start}
+/* The menu is a screen over the map area — opaque, so the list is read against
+   a surface and not against terrain — and it scrolls, because the list is
+   longer than a phone's map half.  Its close button is placed by the same rule
+   as the menu button, so the corner that opens it is the corner that shuts it.
+   In text-only view --mapx/--mapy are both zero and it covers the whole area,
+   which is right: there is no map half to stay inside of. */
+/* Above the two buttons on the map, not below them: the menu covers them, and
+   its own close button lands on the very pixels the menu button occupied. */
+/* The whole screen, and above the two buttons on the map rather than beside
+   them: the menu covers them both. */
+.menu{position:fixed; inset:0; z-index:710; background:var(--tool-bg)}
+/* The list scrolls; the close button does not go with it.  A cap on the width
+   keeps the mark beside the label instead of a hand's width away on a wide
+   screen; the list stays against the start edge, where the rows are read from. */
+.menu-in{height:100%; overflow-y:auto; overscroll-behavior:contain;
+      display:flex; flex-direction:column;
+      padding:calc(20px + 38px + var(--s4)) 10px calc(10px + var(--safe-b))}
+.mrow,.mgrp,.mnote{max-width:520px; width:100%}
+/* 20px in from the screen's top and start corner.  In portrait that is the very
+   pixel the menu button occupies — the map's right edge is the screen's — so
+   the corner that opens the menu is the corner that shuts it.  Landscape puts
+   the map in the left half and the two stop coinciding; the close button stays
+   in the screen's own corner, because that is the corner of the thing being
+   closed, and a close button halfway across a full-screen menu is not one. */
+.mt.menu-x{position:absolute; z-index:1;
+      inset-block-start:20px; inset-inline-start:20px;
+      background:var(--tool-solid); border-color:var(--tool-line)}
+.mt.menu-x:active{background:var(--tool-solid-2)}
+
+/* One row per thing the menu can do: the icon on the start edge — the right —
+   then the label, then whatever says the row's state.  A row is 44px so a thumb
+   lands on it, and the rule under it is the only division between them. */
+.mrow{display:flex; align-items:center; gap:var(--s4); width:100%;
+      min-height:44px; padding:var(--s2) var(--s3); border-radius:var(--r-ctl);
+      color:var(--ink); font-size:.95rem}
+.mrow:active{background:var(--tool-solid-2)}
+.mrow svg{width:22px; height:22px; flex:0 0 auto; fill:none; stroke:currentColor;
+      stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.mrow-l{flex:1 1 auto; min-width:0; text-align:start}
+/* The mark is always in the layout, on or off, so the labels do not shift when
+   a row is switched. */
+.mrow-k{flex:0 0 20px; text-align:center; font-weight:700; color:var(--accent);
+      visibility:hidden}
+.mrow[aria-pressed="true"] .mrow-k,.mrow[aria-current="true"] .mrow-k{visibility:visible}
+.mrow[aria-pressed="true"],.mrow[aria-current="true"]{font-weight:700}
+.mgrp{margin-block-start:var(--s5); padding:var(--s2) var(--s3);
+      font-size:.78rem; font-weight:700; letter-spacing:.02em;
+      color:var(--ink-2); border-block-end:1px solid var(--tool-line)}
+.mnote{padding:var(--s2) var(--s3); font-size:.76rem; color:var(--ink-2)}
+/* fit and locate act on the map; with the map hidden they have nothing to act
+   on, so they go rather than sit there dead. */
+body[data-view="text"] .map-only{display:none}
 
 /* Floating, lightly.  The panel lifts off the map and each button lifts off the
    panel — two steps of the same shadow rather than one big one, so the strip
@@ -238,22 +276,6 @@ body[data-view="text"] .tools{inset-block-end:auto; inset-inline-end:auto;
   .mt{transition:none}
   .mt:active{transform:none}
 }
-/* One row of switches for what the map draws, plus the add-a-point action at
-   its far end.  First child is the rightmost in RTL, so source order is reading
-   order.  Six 38px buttons and five gaps come to 258px — inside the strip's
-   padding that still fits a 360px phone, which is the narrowest we target.
-   Everything else in the strip stays a column, one button per line, and the
-   panel is therefore as wide as this row and mostly empty beside it.  That was
-   looked at and chosen. */
-.mt-row{display:flex; flex-direction:row; gap:var(--s2)}
-/* Put away, the column is gone rather than faded: half-visible controls over a
-   map read as broken ones.  The menu button never hides — it is the way back. */
-body[data-tools="off"] .tools{display:none}
-/* fit and locate act on the map; with the map hidden they have nothing to act
-   on, so they go rather than sit there dead.  נ.צ. and its add button stay:
-   what they open is the text half, and the add button takes the map over
-   itself, so neither of them needs the map to already be there. */
-body[data-view="text"] .map-only{display:none}
 /* the נ.צ. button is a pin, drawn like the rest of the column: one stroke in
    currentColor, so it inverts with the button when the mode is on */
 .mt{display:grid; place-items:center; width:38px; height:38px;
@@ -444,8 +466,9 @@ body[data-view="text"] .map-only{display:none}
 /* The one window that is still full screen: it is a reference document, read
    rather than operated, and the panel in the text half is the wrong shape for
    twenty source records. */
-/* above .tools (600): the tool column lives on .split, outside the map
-   half's stacking context, so a drawer at 70 opened underneath it */
+/* above the menu screen (700) and the two buttons on the map (701/702): all of
+   them live on .split, outside the map half's stacking context, so a drawer at
+   70 opened underneath them */
 .drawer{position:fixed; inset:0; z-index:800; display:flex; flex-direction:column;
         background:var(--bg)}
 .drawer-in{display:flex; flex-direction:column; min-height:0; height:100%}
