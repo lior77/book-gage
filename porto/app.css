@@ -446,12 +446,19 @@ body[data-view="text"] .map-only{display:none}
       margin-block-end:var(--s2)}
 .wp.is-hi .wp-acts{display:flex}
 
-/* The three ways, at the head of the new-place screen, and one line each on
-   what they do.  The line in force is the one that is not dimmed. */
-.way-row{display:flex; flex-wrap:wrap; gap:var(--s2); flex:1 1 auto}
-.way-why{margin:0; padding-inline-start:1.1em; font-size:.82rem; color:var(--miss)}
-.way-why li + li{margin-block-start:2px}
-.way-why li.is-on{color:var(--ink)}
+/* The three ways on one line at the head of the new-place screen, packed to the
+   start edge — the right — and a heading and three lines under them.  The lines
+   are buttons as well: the words are what explain the choice, so they are as
+   tappable as the chips, and the one in force is the one not dimmed. */
+.way-row{display:flex; flex-wrap:nowrap; gap:var(--s2); flex:1 1 auto;
+      justify-content:flex-start}
+.way-row .chip{white-space:nowrap}
+.way-hd{margin-block-start:var(--s2)}
+.way-why{display:flex; flex-direction:column; gap:2px}
+.way-li{display:block; width:100%; font-size:.82rem; color:var(--miss);
+      padding:var(--s2) var(--s3); border-radius:var(--r-ctl); text-align:start}
+.way-li:active{background:var(--bg)}
+.way-li.is-on{color:var(--ink)}
 /* two lines to start with, and it grows with what is typed — app.js sets the
    height, so nothing here may fight it with a fixed one */
 /* an explicit line-height so "two lines" is a number and not the browser's

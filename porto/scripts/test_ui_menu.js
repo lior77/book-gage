@@ -18,6 +18,16 @@ const { chromium } = require('playwright');
 const URL = process.env.URL || 'http://127.0.0.1:8123/index.html';
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
+/* A 2x2 baseline JPEG with no EXIF — enough for the browser to decode, shrink
+   and store, which is all the photo way needs to be exercised. */
+const TINY_JPEG =
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a' +
+  'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAACAAIBAREA/8QAHwAAAQUBAQEB' +
+  'AQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1Fh' +
+  'ByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZ' +
+  'WmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXG' +
+  'x8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APn+v//Z';
+
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
   if (cond) { pass++; console.log(`  ok   ${name}`); }
@@ -420,9 +430,33 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(600);
   ok('חדש opens the new-place screen', await page.$eval('#wpSheet', e => e.hidden) === false);
   ok('with the three ways at its head',
-     (await page.$$eval('[data-wpway]', els => els.map(e => e.textContent.trim()))).join('|')
-       === 'מקום ממפה|מקום מתמונה|מקום מכתובת');
-  ok('and a line on each of them', (await page.$$('.way-why li')).length === 3);
+     (await page.$$eval('.way-row [data-wpway]', els => els.map(e => e.textContent.trim()))).join('|')
+       === 'ממפה|מתמונה|מכתובת');
+  ok('on one line', await page.evaluate(() => {
+       const ys = [...document.querySelectorAll('.way-row .chip')]
+         .map(e => Math.round(e.getBoundingClientRect().y));
+       return new Set(ys).size === 1;
+     }));
+  ok('packed to the start edge — the right',
+     await page.evaluate(() => {
+       const r = document.querySelector('.way-row').getBoundingClientRect();
+       const first = document.querySelector('.way-row .chip').getBoundingClientRect();
+       return Math.abs(first.right - r.right) < 2;
+     }));
+  ok('under a heading that says what the row is for',
+     (await page.$eval('.way-hd', e => e.textContent)).trim() === 'מקור מקום חדש',
+     await page.$eval('.way-hd', e => e.textContent));
+  ok('and a line on each of them', (await page.$$('.way-why [data-wpway]')).length === 3);
+  ok('the lines are as tappable as the chips — the words are the explanation',
+     await page.evaluate(() => {
+       const before = wpWay;
+       document.querySelector('.way-why [data-wpway="place"]').click();
+       const after = wpWay;
+       return before !== 'place' && after === 'place';
+     }));
+  await page.waitForTimeout(400);
+  ok('there is no cancel button anywhere on it — home is the way out',
+     await page.$('[data-wpact="cancel"]') === null);
   const ways = await box(page, '.way-row');
   const home = await box(page, '#homeBtn');
   const menuB = await box(page, '#menuBtn');
@@ -436,7 +470,7 @@ const css = (page, sel, prop) =>
   /* the map way shows the map before anything else */
   await page.click('[data-wpway="map"]');
   await page.waitForTimeout(800);
-  ok('מקום ממפה shows the map first',
+  ok('ממפה shows the map first',
      await page.evaluate(() => document.body.dataset.view) === 'map'
        && await page.$eval('#wpSheet', e => e.hidden) === true
        && await page.$eval('#pickBar', e => e.hidden) === false);
@@ -486,6 +520,89 @@ const css = (page, sel, prop) =>
   ok('and the בחירה/ביטול buttons with it', await page.$eval('#pickBar', e => e.hidden));
   ok('and the map is not left on placing', await page.evaluate(() => !S.adding));
 
+  /* 3: מתמונה has to produce a place.  takePhoto() needed a record to already
+        exist, so the photo way opened the picker and then did nothing at all —
+        no form, no place.  A real file goes through the real input here. */
+  await page.evaluate(() => { D.mine = []; saveMine(); if (!S.wp) toggleWp(); });
+  await page.waitForTimeout(500);
+  await page.click('[data-wpact="new"]');
+  await page.waitForTimeout(400);
+  await page.click('.way-why [data-wpway="photo"]');
+  await page.waitForTimeout(400);
+  await page.setInputFiles('#wpPhotoIn', { name: 'a.jpg', mimeType: 'image/jpeg',
+    buffer: Buffer.from(TINY_JPEG, 'base64') });
+  await page.waitForTimeout(2500);
+  ok('מתמונה opens the form for a place of its own',
+     await page.$('#mineName') !== null && await page.evaluate(() => !!mineEditing));
+  ok('with the photo already on it', await page.$('#minePhotoBox img') !== null);
+  ok('and the coordinates it could work out',
+     await page.evaluate(() => Array.isArray(mineEditing.ll) && mineEditing.ll.length === 2));
+  await page.click('#homeBtn');
+  await page.waitForTimeout(800);
+
+  /* 1.1 + 2: home is live on every screen, and it is the way out of one.  There
+     is no cancel button any more, so this is the only way back. */
+  await page.evaluate(() => { if (!S.wp) toggleWp(); S.wpSel = null; renderWaypoints(); });
+  await page.waitForTimeout(500);
+  await page.click('[data-wpact="new"]');
+  await page.waitForTimeout(500);
+  ok('the new-place screen is up', await page.$eval('#wpSheet', e => e.hidden) === false);
+  await page.evaluate(() => goMun(13));
+  await page.waitForTimeout(800);
+  await page.click('#homeBtn');
+  await page.waitForTimeout(900);
+  ok('home works from the new-place screen and shuts it',
+     await page.$eval('#wpSheet', e => e.hidden) === true);
+  ok('and leaves the places screen behind it',
+     await page.evaluate(() => S.wp === false && wpNew === false && !mineEditing));
+  ok('and comes back to the district',
+     await page.evaluate(() => S.level) === 'district');
+  /* home also gets out of placing, which has no buttons of its own but two */
+  await page.evaluate(() => { toggleWp(); });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => { openNewSheet(); pickWay('map'); });
+  await page.waitForTimeout(800);
+  ok('placing is on', await page.evaluate(() => S.adding && !!ghost));
+  await page.click('#homeBtn');
+  await page.waitForTimeout(900);
+  ok('home ends placing and clears the map',
+     await page.evaluate(() => !S.adding && !ghost)
+       && await page.$eval('#pickBar', e => e.hidden));
+
+  /* 5: on the places screen the map is for looking at and for the pins.  A tap
+        on a municipality would take you off the screen you are working on. */
+  await page.evaluate(() => {
+    D.mine = [{ id: 'tap1', name: 'בדיקה', desc: '', ll: [41.2, -8.5], at: '2026-09-11' }];
+    saveMine(); if (!S.wp) toggleWp();
+  });
+  await page.waitForTimeout(700);
+  const lvlBefore = await page.evaluate(() => S.level);
+  await page.evaluate(() => {
+    LG.mun.eachLayer(l => { if (l.feature && l.feature.properties.num === 13) l.fire('click'); });
+  });
+  await page.waitForTimeout(700);
+  ok('a tap on a municipality does not navigate while the places screen is up',
+     await page.evaluate(() => S.level) === lvlBefore,
+     `${lvlBefore} -> ${await page.evaluate(() => S.level)}`);
+  ok('nor does its number label',
+     await page.evaluate(() => {
+       const was = S.level;
+       LG.labels.eachLayer(l => l.fire('click'));
+       return S.level === was;
+     }));
+  ok('but a pin still answers',
+     await page.evaluate(() => {
+       S.wpSel = null;
+       LG.wp.eachLayer(l => l.fire('click'));
+       return S.wpSel === 'tap1';
+     }));
+  /* setZoom is animated and does not land inside one tick, so what is read here
+     is whether the gestures are on — that is what "the map still moves" means */
+  ok('and the map can still be panned and zoomed',
+     await page.evaluate(() => map.dragging.enabled()
+       && map.touchZoom.enabled() && map.scrollWheelZoom.enabled()
+       && map.doubleClickZoom.enabled()));
+
   /* 3 + 4: one kind of point, and its pin is a red push pin */
   await page.evaluate(() => { if (S.wp) toggleWp(); });
   await page.waitForTimeout(800);
@@ -497,6 +614,21 @@ const css = (page, sel, prop) =>
   });
   ok('a place is drawn as a pin, not a square', pin && pin.tall, JSON.stringify(pin));
   ok('and it is red', pin && pin.fill.toLowerCase() === '#d32f2f', pin && pin.fill);
+  /* the chosen one differs in size and in nothing else */
+  const two = await page.evaluate(() => {
+    const read = on => {
+      const el = document.createElement('div');
+      el.innerHTML = pinIcon(on).options.html;
+      const path = el.querySelector('path');
+      return { fill: path.getAttribute('fill'), stroke: path.getAttribute('stroke'),
+               w: Number(el.querySelector('svg').getAttribute('width')) };
+    };
+    return { off: read(false), on: read(true) };
+  });
+  ok('the chosen pin is the same colour as the rest',
+     two.on.fill === two.off.fill && two.on.stroke === two.off.stroke,
+     JSON.stringify(two));
+  ok('and differs only in being bigger', two.on.w > two.off.w, `${two.off.w} -> ${two.on.w}`);
   ok('there is one points layer, not one for photos and one without',
      await page.evaluate(() => typeof S.photos === 'undefined' && typeof S.mine === 'boolean'));
   ok('the layer panel offers one row for them',

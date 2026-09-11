@@ -604,7 +604,7 @@ function drawDistrict() {
     onEachFeature: (ft, l) => {
       const m = D.munByNum.get(ft.properties.num);
       l.on('click', () => {
-        if (S.adding) return;
+        if (S.adding || S.wp) return;
         if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
         goMun(ft.properties.num);
       });
@@ -619,7 +619,7 @@ function drawDistrict() {
     const mk = L.marker(latlng(m.center), { icon: numIcon(munCode(m)), keyboard: false,
       title: munCode(m) + ' · ' + m.he, riseOnHover: true });
     mk.on('click', () => {
-      if (S.adding) return;
+      if (S.adding || S.wp) return;
       if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
       goMun(m.num);
     });
@@ -1097,14 +1097,15 @@ function saveMine() {
    takes the highlight colour the rest of the app uses for "this is the one you
    asked about", so a card and its pin are recognisably the same object. */
 function pinIcon(on) {
-  const w = on ? 30 : 24, h = Math.round(w * 1.32);
-  const ring = on ? 'var(--hi-line)' : '#ffffff';
+  // The chosen one is the same pin at a larger size — nothing else changes.  A
+  // different colour or ring made it read as a different kind of place.
+  const w = on ? 34 : 24, h = Math.round(w * 1.32);
   return L.divIcon({ className: 'me-pin', iconSize: [w, h], iconAnchor: [w / 2, h],
     html: `<svg viewBox="0 0 24 32" width="${w}" height="${h}" aria-hidden="true"
         style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">
         <path d="M12 31.2C12 31.2 1.6 18.6 1.6 11.4a10.4 10.4 0 1 1 20.8 0C22.4 18.6 12 31.2 12 31.2z"
-              fill="${MINE_COLOUR}" stroke="${ring}" stroke-width="${on ? 2.4 : 1.8}"/>
-        <circle cx="12" cy="11.2" r="3.6" fill="${ring}"/>
+              fill="${MINE_COLOUR}" stroke="#ffffff" stroke-width="1.8"/>
+        <circle cx="12" cy="11.2" r="3.6" fill="#ffffff"/>
       </svg>` });
 }
 const mineIcon = () => pinIcon(false);
@@ -1230,6 +1231,16 @@ function renderPhotoBox(msg) {
 function takePhotos(list) {
   const files = Array.from(list || []);
   if (!files.length) return;
+  // The photo way starts with no record at all — takePhoto() needs one to put
+  // the picture on, so the first file makes it.  Its own coordinates place it
+  // if it has any, and the form opens with the photo already on it.
+  if (!mineEditing) {
+    mineEditing = { id: 'p' + Date.now().toString(36), ll: defaultLL(),
+                    name: '', desc: '' };
+    S.wpSel = mineEditing.id;
+    wpNew = false;
+    renderWaypoints();
+  }
   takePhoto(files[0]);
   if (files.length === 1) return;
 
@@ -1416,9 +1427,9 @@ function renderWaypoints() {
    choice changes which fields the form asks for, and the map way shows the map
    before anything else. */
 const WAYS = [
-  { k: 'map',   he: 'מקום ממפה',   why: 'גוררים סימון על המפה ולוחצים בחירה.' },
-  { k: 'photo', he: 'מקום מתמונה', why: 'הקואורדינטות של התמונה קובעות את המקום.' },
-  { k: 'place', he: 'מקום מכתובת', why: 'חיפוש בעיריות, ברובעים וביישובים שבאפליקציה.' },
+  { k: 'map',   he: 'ממפה',   why: 'גוררים סימון על המפה ולוחצים בחירה.' },
+  { k: 'photo', he: 'מתמונה', why: 'הקואורדינטות של התמונה קובעות את המקום.' },
+  { k: 'place', he: 'מכתובת', why: 'חיפוש בעיריות, ברובעים וביישובים שבאפליקציה.' },
 ];
 let wpWay = null;          // which of the three the new-place screen is on
 let wpNew = false;         // the new-place screen is open, with or without a way
@@ -1545,9 +1556,12 @@ function renderWpSheet() {
   const ways = `<div class="way-row">${WAYS.map(w =>
       `<button class="chip${wpWay === w.k ? ' is-on' : ''}" data-wpway="${w.k}"
         >${html(w.he)}</button>`).join('')}</div>`;
-  const why = `<ul class="way-why">${WAYS.map(w =>
-      `<li${wpWay === w.k ? ' class="is-on"' : ''}><b>${html(w.he)}</b> — ${html(w.why)}</li>`
-    ).join('')}</ul>`;
+  /* The lines are buttons too: the words explain the choice, so the words are
+     what a finger is aimed at as readily as the chip above them. */
+  const why = `<h2 class="way-hd">מקור מקום חדש</h2>
+    <div class="way-why">${WAYS.map(w =>
+      `<button class="way-li${wpWay === w.k ? ' is-on' : ''}" data-wpway="${w.k}"
+        ><b>${html(w.he)}</b> — ${html(w.why)}</button>`).join('')}</div>`;
 
   const fields = !placed ? (wpWay === 'place' ? placePickerHtml() : '') : `
       <p class="note" id="mineWhere">${mineWhereHtml()}</p>
@@ -1566,7 +1580,6 @@ function renderWpSheet() {
       ${fresh ? ways : '<h2>עריכת מקום</h2>'}
       <div class="wp-acts">
         ${placed ? '<button class="chip is-on" data-wpact="save">שמירה</button>' : ''}
-        <button class="chip" data-wpact="cancel">ביטול</button>
         ${fresh || !p ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
           data-wpact="del" data-id="${html(p.id)}"
           >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
@@ -1667,6 +1680,20 @@ function autoName() {
 
 /* חדש opens the screen with no way chosen and no record yet: a place has to
    come from somewhere before there is anything to name. */
+/* The one way back, from anywhere. */
+function goHome() {
+  const busy = S.adding || ghost || mineEditing || wpNew || S.wp;
+  if (S.adding || ghost) stopPlacing();
+  wpWay = null; wpNew = false;
+  mineEditing = null; minePending = null; dropPhotoUrl();
+  wpArmed = null;
+  if (S.wp) toggleWp();
+  renderWpSheet();          // toggleWp redraws the level document, not the sheet
+  if (S.level !== 'district') goDistrict();
+  else if (!busy) refit();
+  save();
+}
+
 function openNewSheet() {
   if (!S.wp) toggleWp();
   mineEditing = null; minePending = null; dropPhotoUrl();
@@ -2591,11 +2618,14 @@ function openInGoogle(ll) {
   a.remove();
 }
 
+/* While the places screen is up the map is for looking at and for the pins.
+   A tap on a municipality or a parish would take you off the screen you are
+   working on, so navigation is off — panning and zooming are not. */
 /* --------------------------------------------------------- highlighting --- */
 // One record is "picked" at a time, and both halves show it: the row gets a
 // frame and scrolls into view, the shape or dot on the map gets a heavy ring.
 function pick(hi, from) {
-  if (S.adding) return;               // the tap is placing a point, not choosing one
+  if (S.adding || S.wp) return;               // the tap is placing a point, not choosing one
   if (isSecondTap(hi.kind + ':' + hi.id)) {
     const z = zoneOf(S.zone);
     const it = hi.kind === 'bairro'
@@ -2610,7 +2640,7 @@ function pick(hi, from) {
 // Every parish has a level of its own now, so a tap on one opens it.  The
 // second argument is kept because the map and the list both call this.
 function pickFre(f) {
-  if (S.adding) return;
+  if (S.adding || S.wp) return;
   if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), f.he || f.pt); return; }
   goZone(D.freKey(f));
 }
@@ -3019,11 +3049,11 @@ function renderInfo() {
 
 /* ------------------------------------------------------------------ wire --- */
 function wire() {
-  // Home is a level, not a zoom: it leaves whichever municipality or parish is
-  // open and comes back to the district, fitted.
-  $('#homeBtn').addEventListener('click', () => {
-    if (S.level === 'district') refit(); else goDistrict();
-  });
+  // Home is live on every screen, and it is also the way out of one: it drops
+  // whatever is half done — a place being placed, a form being filled, the
+  // places screen itself — and comes back to the district.  There is no cancel
+  // button anywhere any more; this is it.
+  $('#homeBtn').addEventListener('click', goHome);
   $('#menuBtn').addEventListener('click', menuTap);
   $('#menuClose').addEventListener('click', () => openMenu(false));
   $('#menuIn').addEventListener('click', e => {
