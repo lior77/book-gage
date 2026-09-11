@@ -195,7 +195,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    start corner, and the reset one button plus a gap along from it.  A step
    darker than the menu's own ground (--btn-solid, not --tool-solid), so on a
    pale map they read as controls rather than as a patch of it. */
-.mt.menu-btn,.mt.reset-btn{position:absolute; z-index:701;
+.mt.menu-btn,.mt.reset-btn{position:absolute; z-index:710;
           inset-block-start:10px; touch-action:manipulation;
           background:var(--btn-solid); border-color:var(--btn-line)}
 .mt.menu-btn{inset-inline-start:calc(var(--mapx) + 10px)}
@@ -212,7 +212,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    its own close button lands on the very pixels the menu button occupied. */
 /* The whole screen, and above the two buttons on the map rather than beside
    them: the menu covers them both. */
-.menu{position:fixed; inset:0; z-index:710; background:var(--tool-bg)}
+.menu{position:fixed; inset:0; z-index:720; background:var(--tool-bg)}
 /* The list scrolls; the close button does not go with it.  A cap on the width
    keeps the mark beside the label instead of a hand's width away on a wide
    screen; the list stays against the start edge, where the rows are read from. */
@@ -425,21 +425,41 @@ body[data-view="text"] .map-only{display:none}
 .row-full .row-d{color:var(--ink); font-size:.9rem}
 
 /* ---------- המקומות שלי ---------- */
-/* Heading and the one button that starts a place, on a line: the button is
-   pushed to the far end with 10px of air after it. */
-.wp-top{display:flex; align-items:center; gap:var(--s3)}
-.wp-top h1{flex:1 1 auto; min-width:0}
-/* The document already keeps 10px off the edge of the reading half, so the
-   button needs no margin of its own: it ends exactly 10px in. */
+/* Two buttons on a line, at the start edge — חדש first, so it is the one under
+   the thumb — and the heading beneath them rather than beside them. */
+.wp-top{display:flex; align-items:center; gap:var(--s3); margin-block-end:var(--s3)}
 .wp-top .chip{flex:0 0 auto}
-.wp-ways{margin-block-start:var(--s3)}
 .wp-find{margin-block-start:var(--s3); display:flex; flex-direction:column; gap:var(--s3)}
 .wp-find input{width:100%; padding:var(--s3) var(--s4); border-radius:var(--r-ctl);
       border:1px solid var(--line); background:var(--card)}
 #wpQres .rows{max-height:46vh; overflow-y:auto}
 
+/* Expanded is the default: the photo under the text it belongs to.  List puts
+   the same text beside a thumbnail, so a screenful is a screenful of places. */
+.wp-line{display:flex; align-items:flex-start; gap:var(--s4)}
+.wp-line .wp-txt{flex:1 1 auto; min-width:0}
+.ph-thumb{flex:0 0 84px; width:84px; margin:0}
+.ph-thumb .ph-img{width:84px; height:84px; object-fit:cover; border-radius:var(--r-ctl)}
+/* עריכה and מחיקה belong to the chosen card, above its name and at the start
+   edge — on every card they were two buttons per row of a reading list. */
+.wp .wp-acts{display:none; gap:var(--s2); justify-content:flex-start;
+      margin-block-end:var(--s2)}
+.wp.is-hi .wp-acts{display:flex}
+
+/* The three ways, at the head of the new-place screen, and one line each on
+   what they do.  The line in force is the one that is not dimmed. */
+.way-row{display:flex; flex-wrap:wrap; gap:var(--s2); flex:1 1 auto}
+.way-why{margin:0; padding-inline-start:1.1em; font-size:.82rem; color:var(--miss)}
+.way-why li + li{margin-block-start:2px}
+.way-why li.is-on{color:var(--ink)}
+/* two lines to start with, and it grows with what is typed — app.js sets the
+   height, so nothing here may fight it with a fixed one */
+/* an explicit line-height so "two lines" is a number and not the browser's
+   idea of `normal`, which computes to nothing a check can read */
+#mineDesc{line-height:1.5; min-height:calc(2 * 1.5em + 14px); resize:none; overflow-y:auto}
+
 /* Two buttons over the map while a place is being chosen on it. */
-.pick-bar{position:absolute; z-index:702; inset-block-end:calc(var(--mapy) + 18px);
+.pick-bar{position:absolute; z-index:700; inset-block-end:calc(var(--mapy) + 18px);
       inset-inline:0; display:flex; justify-content:center; gap:var(--s3);
       pointer-events:none}
 .pick-bar .chip{pointer-events:auto; padding:var(--s3) var(--s6); font-size:.9rem;
@@ -449,14 +469,20 @@ body[data-view="text"] .map-only{display:none}
    visualViewport, so the keyboard takes room from the fields and not from the
    two buttons at the head, which stay put while the body scrolls. */
 .sheet{position:fixed; inset-inline:0; inset-block-start:0; height:100dvh;
-      z-index:720; display:flex; flex-direction:column;
+      z-index:705; display:flex; flex-direction:column;
       background:var(--card); border-block-end:1px solid var(--line)}
-.sheet-h{flex:0 0 auto; display:flex; align-items:center; gap:var(--s3);
-      padding:calc(var(--safe-t) + var(--s4)) 10px var(--s3);
+/* The home and menu buttons stay above the sheet and keep working, so its head
+   starts below them: 10px of inset plus a 38px button plus a gap. */
+.sheet-h{flex:0 0 auto; display:flex; align-items:flex-start; gap:var(--s3);
+      flex-wrap:wrap;
+      padding:calc(10px + 38px + var(--s3)) 10px var(--s3);
       border-block-end:1px solid var(--line); background:var(--card)}
 .sheet-h h2{flex:1 1 auto; min-width:0}
 .sheet-b{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
       display:flex; flex-direction:column; gap:var(--s3); padding:10px}
+/* Every field keeps its own height: in a flex column they were shrunk to a
+   sliver by whatever else wanted the room. */
+.sheet-b > *{flex:0 0 auto}
 
 /* ---------- נ.צ. cards ---------- */
 /* A card is the whole record, not a row that opens one: what was typed is on

@@ -64,12 +64,12 @@ const css = (page, sel, prop) =>
         own box, not the screen's, because that is what they are placed inside. */
   const near = (a, b, t = 1.5) => Math.abs(a - b) <= t;
   const menuBtn = await box(page, '#menuBtn');
-  const reset = await box(page, '#resetBtn');
+  const reset = await box(page, '#homeBtn');
   ok('menu button is 10px below the map\'s top', near(menuBtn.y - map.y, 10),
      `${(menuBtn.y - map.y).toFixed(1)}px`);
   ok('menu button is 10px in from the map\'s right', near(map.right - menuBtn.right, 10),
      `${(map.right - menuBtn.right).toFixed(1)}px`);
-  ok('reset button is to the LEFT of the menu button', reset.right <= menuBtn.x + 1,
+  ok('home button is to the LEFT of the menu button', reset.right <= menuBtn.x + 1,
      `reset right ${reset.right.toFixed(1)}, menu x ${menuBtn.x.toFixed(1)}`);
   ok('and on the same line', near(reset.y, menuBtn.y),
      `${reset.y.toFixed(1)} vs ${menuBtn.y.toFixed(1)}`);
@@ -79,9 +79,9 @@ const css = (page, sel, prop) =>
   ok('the menu button is fully opaque',
      alpha(await css(page, '#menuBtn', 'background-color')) === 1,
      await css(page, '#menuBtn', 'background-color'));
-  ok('so is the reset button',
-     alpha(await css(page, '#resetBtn', 'background-color')) === 1,
-     await css(page, '#resetBtn', 'background-color'));
+  ok('so is the home button',
+     alpha(await css(page, '#homeBtn', 'background-color')) === 1,
+     await css(page, '#homeBtn', 'background-color'));
   /* and darker than the menu they open, or on a pale map they read as a patch
      of it rather than as controls */
   const lum = c => { const [r, g, b] = (c.match(/\d+/g) || []).map(Number);
@@ -93,8 +93,8 @@ const css = (page, sel, prop) =>
      Math.abs(lum(btnBg) - lum(menuGround)) > 12
        && (lum(btnBg) < lum(menuGround)) === (lum(menuGround) > 128),
      `button ${btnBg} (${lum(btnBg).toFixed(0)}) vs menu ${menuGround} (${lum(menuGround).toFixed(0)})`);
-  ok('and the reset button matches the menu button',
-     await css(page, '#resetBtn', 'background-color') === btnBg);
+  ok('and the home button matches the menu button',
+     await css(page, '#homeBtn', 'background-color') === btnBg);
 
   /* 3. the menu is a screen: closed to start, and it covers everything */
   const shown = () => page.$eval('#menu', el => !el.hidden);
@@ -343,7 +343,7 @@ const css = (page, sel, prop) =>
   await page.click('[data-m="view:split"]');
   await page.waitForTimeout(600);
 
-  /* 7b. המקומות שלי: one heading, one button, three ways in, one form. */
+  /* 7b. המקומות שלי: two buttons on a line, the heading under them. */
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
   await page.click('[data-m="mine"]');
   await page.waitForTimeout(800);
@@ -355,76 +355,136 @@ const css = (page, sel, prop) =>
   ok('saving and importing are not on this screen — they are in the menu',
      await page.$('#doc [data-mine-act]') === null);
 
-  const addBtn = await box(page, '[data-wpact="add"]');
+  const newBtn = await box(page, '[data-wpact="new"]');
+  const modeBtn = await box(page, '[data-wpact="mode"]');
   const h1 = await box(page, '#doc h1');
-  const doc = await box(page, '#doc');
-  ok('הוספת מיקום is on the heading line', near(addBtn.y + addBtn.h / 2, h1.y + h1.h / 2, 6),
-     `${addBtn.y.toFixed(1)} vs ${h1.y.toFixed(1)}`);
   const pane = await box(page, '#paneText');
-  ok('at the far end of it, 10px from the left of the text area',
-     near(addBtn.x - pane.x, 10, 2), `${(addBtn.x - pane.x).toFixed(1)}px`);
-  ok('and it reads הוספת מיקום',
-     (await page.$eval('[data-wpact="add"]', e => e.textContent)).trim() === 'הוספת מיקום');
+  ok('the button reads חדש',
+     (await page.$eval('[data-wpact="new"]', e => e.textContent)).trim() === 'חדש');
+  ok('and sits at the start edge — the right — 10px in',
+     near(pane.right - newBtn.right, 10, 2), `${(pane.right - newBtn.right).toFixed(1)}px`);
+  ok('רשימה is to its left, on the same line',
+     modeBtn.right <= newBtn.x + 1 && near(modeBtn.y, newBtn.y),
+     `mode right ${modeBtn.right.toFixed(1)}, new x ${newBtn.x.toFixed(1)}`);
+  ok('the heading is under the buttons, not beside them', h1.y > newBtn.bottom - 1,
+     `buttons end ${newBtn.bottom.toFixed(1)}, heading ${h1.y.toFixed(1)}`);
 
-  await page.click('[data-wpact="add"]');
+  /* a place to look at, and the two card shapes */
+  await page.evaluate(() => {
+    D.mine = [{ id: 'tst1', name: 'בדיקה', desc: 'תיאור', ll: [41.2, -8.5], at: '2026-09-10',
+                photo: { w: 4, h: 4, bytes: 1, taken: '', from: 'pin', alt: null } }];
+    saveMine(); renderWaypoints();
+  });
+  await page.waitForTimeout(500);
+  ok('the mode button reads רשימה while the cards are expanded',
+     (await page.$eval('[data-wpact="mode"]', e => e.textContent)).trim() === 'רשימה');
+  ok('expanded: the photo is under the text, not beside it',
+     await page.$('.wp .wp-line') === null && await page.$('.wp .ph-fig') !== null);
+  await page.click('[data-wpact="mode"]');
+  await page.waitForTimeout(500);
+  ok('one tap turns the label to מורחב',
+     (await page.$eval('[data-wpact="mode"]', e => e.textContent)).trim() === 'מורחב');
+  ok('and the card becomes a line with a thumbnail beside the text',
+     await page.$('.wp .wp-line') !== null && await page.$('.wp .ph-thumb') !== null);
+  const txt = await box(page, '.wp .wp-txt');
+  const thumb = await box(page, '.wp .ph-thumb');
+  ok('the thumbnail is on the left of the text', thumb.right <= txt.x + 1,
+     `thumb right ${thumb.right.toFixed(1)}, text x ${txt.x.toFixed(1)}`);
+  await page.click('[data-wpact="mode"]');
+  await page.waitForTimeout(500);
+  ok('and back to expanded', await page.$('.wp .wp-line') === null);
+
+  /* עריכה and מחיקה belong to the chosen card only */
+  await page.evaluate(() => { S.wpSel = null; renderWaypoints(); });
   await page.waitForTimeout(400);
-  ok('tapping it turns it into ביטול',
-     (await page.$eval('[data-wpact="addoff"]', e => e.textContent)).trim() === 'ביטול');
-  ok('and opens the three ways, under the heading line',
-     (await page.$$eval('.wp-ways .chip', els => els.map(e => e.textContent.trim()))).join('|')
-       === 'בחירת מקום במפה|בחירת מקום מתמונה|בחירת כתובת מקום');
-  ok('the ways sit below the heading',
-     (await box(page, '.wp-ways')).y > h1.bottom - 1);
+  const editShown = () => page.$eval('.wp [data-wpact="edit"]',
+    e => getComputedStyle(e.closest('.wp-acts')).display !== 'none');
+  ok('an unchosen card does not show עריכה or מחיקה', await editShown() === false);
+  await page.click('.wp');
+  await page.waitForTimeout(500);
+  ok('choosing one brings them out', await editShown() === true);
+  const acts = await box(page, '.wp .wp-acts');
+  const cardBox = await box(page, '.wp');
+  const editBtn = await box(page, '.wp [data-wpact="edit"]');
+  const nameH = await box(page, '.wp h2');
+  ok('above the name of the place', acts.bottom <= nameH.y + 1,
+     `acts ${acts.bottom.toFixed(1)}, name ${nameH.y.toFixed(1)}`);
+  ok('and aligned to the right', near(editBtn.right, cardBox.right, 14),
+     `edit right ${editBtn.right.toFixed(1)}, card right ${cardBox.right.toFixed(1)}`);
+  await page.evaluate(() => { D.mine = []; saveMine(); S.wpSel = null; renderWaypoints(); });
+  await page.waitForTimeout(400);
 
-  /* the map way: the map takes the whole screen and carries the two buttons */
-  await page.click('[data-wpact="way-map"]');
+  /* 7c. חדש opens a screen: three ways at its head, one line each on what they
+         do, and the home and menu buttons still above it. */
+  await page.click('[data-wpact="new"]');
+  await page.waitForTimeout(600);
+  ok('חדש opens the new-place screen', await page.$eval('#wpSheet', e => e.hidden) === false);
+  ok('with the three ways at its head',
+     (await page.$$eval('[data-wpway]', els => els.map(e => e.textContent.trim()))).join('|')
+       === 'מקום ממפה|מקום מתמונה|מקום מכתובת');
+  ok('and a line on each of them', (await page.$$('.way-why li')).length === 3);
+  const ways = await box(page, '.way-row');
+  const home = await box(page, '#homeBtn');
+  const menuB = await box(page, '#menuBtn');
+  ok('the ways sit below the home and menu buttons', ways.y >= home.bottom - 1,
+     `home ends ${home.bottom.toFixed(1)}, ways ${ways.y.toFixed(1)}`);
+  ok('and those two are still on top of the screen',
+     Number(await css(page, '#homeBtn', 'z-index')) > Number(await css(page, '#wpSheet', 'z-index')),
+     `${await css(page, '#homeBtn', 'z-index')} vs ${await css(page, '#wpSheet', 'z-index')}`);
+  ok('nothing is asked for until a way is chosen', await page.$('#mineName') === null);
+
+  /* the map way shows the map before anything else */
+  await page.click('[data-wpway="map"]');
   await page.waitForTimeout(800);
-  ok('בחירת מקום במפה gives the map both halves',
-     await page.evaluate(() => document.body.dataset.view) === 'map');
-  ok('and puts בחירה and ביטול on the map itself',
-     (await page.$$eval('#pickBar .chip', els => els.map(e => e.textContent.trim()))).join('|')
-       === 'בחירה|ביטול');
-  ok('the form is not up while the map is what is being used',
-     await page.$eval('#wpSheet', e => e.hidden));
+  ok('מקום ממפה shows the map first',
+     await page.evaluate(() => document.body.dataset.view) === 'map'
+       && await page.$eval('#wpSheet', e => e.hidden) === true
+       && await page.$eval('#pickBar', e => e.hidden) === false);
   await page.click('#pickBar [data-wpact="fix"]');
   await page.waitForTimeout(900);
+  ok('and choosing on it brings the fields', await page.$('#mineName') !== null);
 
-  /* 7c. the form: a screen of its own, save and cancel at its head */
-  ok('choosing opens the form', await page.$eval('#wpSheet', e => e.hidden) === false);
-  const sheet = await box(page, '#wpSheet');
-  const vh = await page.evaluate(() => innerHeight);
-  ok('the form runs from the top of the display', near(sheet.y, 0, 2), `${sheet.y}`);
-  ok('and down to the whole of it — the keyboard is what takes room from it',
-     near(sheet.h, vh, 4), `${sheet.h.toFixed(1)} of ${vh}`);
-  const save = await box(page, '#wpSheet [data-wpact="save"]');
-  const nameBox = await box(page, '#mineName');
-  ok('שמירה and ביטול are at the head of the form',
-     save.y < nameBox.y && save.y - sheet.y < 80,
-     `save ${save.y.toFixed(1)}, sheet ${sheet.y.toFixed(1)}, name ${nameBox.y.toFixed(1)}`);
-  ok('the form asks for a name and a description',
-     await page.$('#mineName') !== null && await page.$('#mineDesc') !== null);
+  /* 7: the description starts at two lines and grows with what is typed */
+  const one = await page.evaluate(() => {
+    const t = document.querySelector('#mineDesc');
+    return parseFloat(getComputedStyle(t).lineHeight);
+  });
+  const twoLines = await box(page, '#mineDesc');
+  ok('the description box starts about two lines tall',
+     twoLines.h > one * 1.6 && twoLines.h < one * 3.4,
+     `${twoLines.h.toFixed(1)}px, one line ${one.toFixed(1)}px`);
+  await page.fill('#mineDesc', Array(12).fill('שורה של טקסט ארוך למדי').join('\n'));
+  await page.waitForTimeout(400);
+  const grown = await box(page, '#mineDesc');
+  ok('and grows with the text rather than scrolling inside itself',
+     grown.h > twoLines.h * 2, `${twoLines.h.toFixed(1)} -> ${grown.h.toFixed(1)}`);
 
-  /* 5: no name is not an error */
+  /* 4: saving puts the screen back as it was — no crosshair, no two buttons */
   await page.fill('#mineName', '');
   await page.click('#wpSheet [data-wpact="save"]');
   await page.waitForTimeout(900);
-  ok('a place saved with no name is named for you',
-     await page.evaluate(() => D.mine.length === 1 && /^נקודת ציון 1$/.test(D.mine[0].name)),
+  ok('saving names an unnamed place',
+     await page.evaluate(() => D.mine.length === 1 && /^נקודת ציון \d+$/.test(D.mine[0].name)),
      await page.evaluate(() => JSON.stringify(D.mine.map(p => p.name))));
-  ok('and the form closes behind it', await page.$eval('#wpSheet', e => e.hidden));
+  ok('and closes the form', await page.$eval('#wpSheet', e => e.hidden));
+  ok('and leaves no way chosen', await page.evaluate(() => wpWay === null && wpNew === false));
 
-  /* the address way searches the app's own places, not street addresses */
-  await page.click('[data-wpact="add"]'); await page.waitForTimeout(300);
-  await page.click('[data-wpact="way-place"]'); await page.waitForTimeout(400);
-  await page.fill('#wpQ', 'מאיה'); await page.waitForTimeout(500);
-  ok('בחירת כתובת מקום finds places in the app\'s own gazetteer',
-     (await page.$$('#wpQres .row')).length > 0);
-  await page.click('#wpQres .row'); await page.waitForTimeout(800);
-  ok('and picking one opens the form at its coordinate',
-     await page.$eval('#wpSheet', e => e.hidden) === false
-       && await page.evaluate(() => !!mineEditing && Array.isArray(mineEditing.ll)));
-  await page.click('#wpSheet [data-wpact="cancel"]');
-  await page.waitForTimeout(500);
+  /* Saving while the map is still in placing mode is the case that left the
+     crosshair and its two buttons behind.  Reaching it through the buttons is
+     not possible — the form is down while placing — so it is set up directly:
+     a record being edited, placing started from inside the form, then a save.
+     Without the cleanup in commitMine() the ghost and the bar survive. */
+  await page.evaluate(() => { startWpEdit(D.mine[0].id); });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { harvestWp(); toggleAdd(); });
+  await page.waitForTimeout(700);
+  ok('placing is on and the bar is up', await page.evaluate(() => S.adding && !!ghost)
+     && await page.$eval('#pickBar', e => e.hidden) === false);
+  await page.evaluate(() => commitMine());
+  await page.waitForTimeout(800);
+  ok('saving takes the crosshair off the map', await page.evaluate(() => !ghost));
+  ok('and the בחירה/ביטול buttons with it', await page.$eval('#pickBar', e => e.hidden));
+  ok('and the map is not left on placing', await page.evaluate(() => !S.adding));
 
   /* 3 + 4: one kind of point, and its pin is a red push pin */
   await page.evaluate(() => { if (S.wp) toggleWp(); });
@@ -450,15 +510,14 @@ const css = (page, sel, prop) =>
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   ok('Escape shuts it too', await shown() === false);
 
-  /* 9. reset puts the whole district back inside the map's half */
-  await page.evaluate(() => map.setView([41.0, -8.0], 12));
-  await page.waitForTimeout(500);
-  const far = await page.evaluate(() => [map.getCenter().lat, map.getZoom()]);
-  await page.click('#resetBtn');
+  /* 9. home is a level, not a zoom: it leaves whatever is open and comes back
+        to the district, fitted. */
+  await page.evaluate(() => goMun(13));
   await page.waitForTimeout(900);
-  const home = await page.evaluate(() => [map.getCenter().lat, map.getZoom()]);
-  ok('reset moves the map back', far[0] !== home[0] || far[1] !== home[1],
-     `${far.join('/')} -> ${home.join('/')}`);
+  ok('a municipality is open', await page.evaluate(() => S.level) === 'mun');
+  await page.click('#homeBtn');
+  await page.waitForTimeout(900);
+  ok('home comes back to the district', await page.evaluate(() => S.level) === 'district');
   ok('and the whole district is inside the view',
      await page.evaluate(() => {
        // bB holds the two NUTS III regions as well, and they spill past the
@@ -467,124 +526,14 @@ const css = (page, sel, prop) =>
          features: D.bB.features.filter(f => f.properties.kind !== 'nuts3') };
        return map.getBounds().contains(L.geoJSON(d).getBounds().pad(-0.02));
      }));
-  /* 8c. the stack.  Bottom to top: map, regions, district, municipalities,
-         parishes — and it has to hold at every level, which is why it is panes
-         and not draw order.  Read the resolved z-index of the pane each line
-         actually landed in, at all three levels in turn. */
-  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
-  if (await page.$eval('[data-m="regions"]', e => e.getAttribute('aria-pressed')) === 'false') {
-    await page.click('[data-m="regions"]'); await page.waitForTimeout(600);
-  }
-  await page.click('#menuClose'); await page.waitForTimeout(300);
-  const stack = () => page.evaluate(() => {
-    // By pane, not by width: the municipalities were widened to the district's
-    // own 3.2 and a width can no longer tell one layer from another.
-    const o = {};
-    for (const el of document.querySelectorAll('#map path')) {
-      const pane = el.closest('.leaflet-pane');
-      const m = pane && (pane.className.match(/leaflet-ln-(\w+)-pane/));
-      if (m) o[m[1]] = { z: Number(getComputedStyle(pane).zIndex),
-                         w: Number(el.getAttribute('stroke-width')),
-                         n: (o[m[1]] ? o[m[1]].n : 0) + 1 };
-    }
-    return o;
-  });
-  const inOrder = (st, kinds) => kinds.every((k, i, a) =>
-    st[k] && (i === 0 || st[k].z > st[a[i - 1]].z));
-
-  for (const [name, go, kinds] of [
-        ['level 1 (המחוז)', null, ['region', 'district', 'mun']],
-        ['level 2 (עירייה)', () => page.evaluate(() => goMun(13)),
-         ['region', 'district', 'mun', 'fre']],
-        ['level 3 (רובע)', () => page.evaluate(() => goZone(
-            D.freKey(D.fre.find(f => f.mun_num === 13)))),
-         ['region', 'district', 'mun', 'fre']],
-      ]) {
-    if (go) { await go(); await page.waitForTimeout(900); }
-    const st = await stack();
-    ok(`stack holds at ${name}: ` + kinds.join(' < '), inOrder(st, kinds),
-       kinds.map(k => `${k} ${st[k] ? st[k].z : '—'}`).join('  '));
-  }
-
-  /* the widths, and which levels the parish layer is drawn at */
-  const at = async go => { await page.evaluate(go); await page.waitForTimeout(900);
-                           return stack(); };
-  const l1 = await at(() => goDistrict());
-  ok('level 1 draws no parish lines — 243 outlines was noise, not context',
-     l1.fre === undefined, l1.fre && `${l1.fre.n} of them`);
-  ok('גבול המחוז is 3.2 wide', l1.district.w === 3.2, String(l1.district.w));
-  ok('גבולות העיריות are 3.2 too, at every level', l1.mun.w === 3.2, String(l1.mun.w));
-
-  const l2 = await at(() => goMun(13));
-  const want2 = await page.evaluate(() => D.bF.features.filter(f => f.properties.mun_num === 13).length);
-  ok('level 2 draws the chosen municipality\'s parishes and no others',
-     l2.fre && l2.fre.n === want2, `${l2.fre ? l2.fre.n : 0} of ${want2}`);
-  ok('and they are 1.6 wide', l2.fre.w === 1.6, String(l2.fre.w));
-  ok('the municipality lines are still 3.2 there', l2.mun.w === 3.2, String(l2.mun.w));
-
-  const l3 = await at(() => goZone(D.freKey(D.fre.find(f => f.mun_num === 13))));
-  ok('level 3 draws the one parish being looked at — the fill under it has no edge',
-     l3.fre && l3.fre.n === 1, `${l3.fre ? l3.fre.n : 0}`);
-  ok('at 1.6 as well', l3.fre.w === 1.6, String(l3.fre.w));
-
-  await page.evaluate(() => goDistrict());
-  await page.waitForTimeout(700);
-  await page.evaluate(() => menuPick('regions'));
-  await page.waitForTimeout(400);
-
-  /* 8d. the halves cannot be dragged any more */
-  ok('there is no divider to drag', await page.$('#divider') === null);
-  ok('the seam between the halves is a hairline, not a handle',
-     await page.$eval('.seam', el => el.getBoundingClientRect().height <= 2
-       && getComputedStyle(el).cursor !== 'row-resize'));
-  const wasMap = await box(page, '#paneMap');
-  await page.mouse.move(wasMap.x + wasMap.w / 2, wasMap.bottom + 1);
-  await page.mouse.down();
-  await page.mouse.move(wasMap.x + wasMap.w / 2, wasMap.bottom - 120, { steps: 8 });
-  await page.mouse.up();
-  await page.waitForTimeout(400);
-  const nowMap = await box(page, '#paneMap');
-  ok('dragging the seam does not resize the halves', near(nowMap.h, wasMap.h, 2),
-     `${wasMap.h.toFixed(1)} -> ${nowMap.h.toFixed(1)}`);
-
-  /* 11b. the reading half is one white page, 10px in, and it scrolls */
-  const paneBg = await css(page, '#paneText', 'background-color');
-  const cardBg = await page.$eval('#paneText',
-    el => getComputedStyle(el).getPropertyValue('--card').trim());
-  ok('the text half is the page colour, not the grey ground',
-     paneBg.replace(/\s/g, '') === (m => m ? `rgb(${parseInt(cardBg.slice(1,3),16)},${parseInt(cardBg.slice(3,5),16)},${parseInt(cardBg.slice(5,7),16)})`.replace(/\s/g,'') : paneBg)(cardBg.startsWith('#')),
-     `${paneBg} vs --card ${cardBg}`);
-  for (const side of ['top', 'right', 'bottom', 'left']) {
-    ok(`the document is 10px in from the text area's ${side}`,
-       await css(page, '#doc', 'padding-' + side) === '10px',
-       await css(page, '#doc', 'padding-' + side));
-  }
-  ok('the sections carry no card of their own',
-     await page.$eval('#doc .card', el => {
-       const c = getComputedStyle(el);
-       return c.borderTopWidth === '0px' && c.borderRadius === '0px'
-              && (c.backgroundColor === 'rgba(0, 0, 0, 0)' || c.backgroundColor === 'transparent');
-     }));
-  ok('the reading half scrolls', await page.evaluate(() => {
-       const el = document.querySelector('#paneText');
-       if (el.scrollHeight <= el.clientHeight + 1) return false;
-       el.scrollTop = 120; const moved = el.scrollTop > 0; el.scrollTop = 0; return moved;
-     }));
-
-  /* 11c. the lead does not say again what the table underneath it says.  Back to
-          the district first — earlier sections leave the נ.צ. screen up. */
-  await page.evaluate(() => { if (S.wp) toggleWp(); });
-  await page.waitForTimeout(400);
-  await page.evaluate(() => goDistrict());
-  await page.waitForTimeout(800);
-  const lead = await page.$eval('#doc .lead', el => el.textContent);
-  const shownStats = await page.$$eval('#doc .stats .stat-v', els => els.map(e => e.textContent.trim()));
-  ok('the lead repeats no figure from the table below it',
-     shownStats.every(v => !lead.includes(v.replace(/[^\d,.]/g, ''))),
-     `lead "${lead.trim().slice(0, 60)}…" vs ${shownStats.join(' / ')}`);
-  ok('and the figures are still on the page, in the table',
-     shownStats.length >= 3, shownStats.join(' / '));
-
+  /* at level 1 it still refits, so a panned map has a way back */
+  await page.evaluate(() => map.setView([41.0, -8.0], 12));
+  await page.waitForTimeout(500);
+  const far = await page.evaluate(() => map.getCenter().lat);
+  await page.click('#homeBtn');
+  await page.waitForTimeout(900);
+  ok('and at level 1 it refits a map that was panned away',
+     far !== await page.evaluate(() => map.getCenter().lat));
 
   /* 10. the menu never comes back open: it is a screen, not a preference */
   await page.click('#menuBtn');
@@ -602,13 +551,13 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(700);
   const lMap = await box(page, '#paneMap');
   const lMenu = await box(page, '#menuBtn');
-  const lReset = await box(page, '#resetBtn');
+  const lReset = await box(page, '#homeBtn');
   ok('landscape: map is the left half', lMap.x < 2 && lMap.right < 900,
      `map ${lMap.x}..${lMap.right}`);
   ok('landscape: menu button is over the MAP, not the text',
      lMenu.right <= lMap.right + 1 && lMenu.x >= lMap.x,
      `menu ${lMenu.x}..${lMenu.right}, map ends ${lMap.right}`);
-  ok('landscape: so is the reset button',
+  ok('landscape: so is the home button',
      lReset.right <= lMap.right + 1 && lReset.x >= lMap.x,
      `reset ${lReset.x}..${lReset.right}`);
   await page.click('#menuBtn');

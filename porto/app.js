@@ -1394,41 +1394,34 @@ function harvestWp() {
 
 function renderWaypoints() {
   dropWpUrls();
-  const rows = D.mine;
-  const cards = rows.map(p => wpCard(p));
-  /* Heading on one line with the button that starts a place, and nothing else:
-     the count said nothing the list does not, and saving and importing live in
-     the menu now — one place for them, not two. */
+  /* Two buttons on a line and the heading under them.  חדש is at the start edge
+     — the right — and רשימה sits to its left; the label on רשימה names the mode
+     the next tap gives you, not the one you are in. */
   $('#doc').innerHTML = `
     <div class="card">
       <div class="wp-top">
-        <h1>המקומות שלי</h1>
-        <button class="chip${wpAdding ? '' : ' is-on'}" data-wpact="${wpAdding ? 'addoff' : 'add'}"
-          >${wpAdding ? 'ביטול' : 'הוספת מיקום'}</button>
+        <button class="chip is-on" data-wpact="new">חדש</button>
+        <button class="chip" data-wpact="mode">${S.wpList ? 'מורחב' : 'רשימה'}</button>
       </div>
-      ${wpAdding ? `<div class="chips wp-ways">
-        <button class="chip" data-wpact="way-map">בחירת מקום במפה</button>
-        <button class="chip" data-wpact="way-photo">בחירת מקום מתמונה</button>
-        <button class="chip" data-wpact="way-place">בחירת כתובת מקום</button>
-      </div>
-      <input id="wpPhotoIn" type="file" accept="image/*" multiple hidden>
-      ${wpPlacing ? placePickerHtml() : ''}` : ''}
+      <h1>המקומות שלי</h1>
     </div>
-    ${cards.length ? cards.join('') : ''}`;
+    ${D.mine.map(p => wpCard(p)).join('')}`;
   renderWpSheet();
   wpThumbs();
   applyWpHi();
 }
 
 /* ---- the three ways a place can be started ---- */
-let wpAdding = false;      // the הוספת מיקום button is armed and the ways are up
-let wpPlacing = false;     // "בחירת כתובת מקום" is showing its search box
-
-function wpAddOn(on) {
-  wpAdding = on;
-  if (!on) wpPlacing = false;
-  renderWaypoints();
-}
+/* They live on the new-place screen now, as a row of three at its head: the
+   choice changes which fields the form asks for, and the map way shows the map
+   before anything else. */
+const WAYS = [
+  { k: 'map',   he: 'מקום ממפה',   why: 'גוררים סימון על המפה ולוחצים בחירה.' },
+  { k: 'photo', he: 'מקום מתמונה', why: 'הקואורדינטות של התמונה קובעות את המקום.' },
+  { k: 'place', he: 'מקום מכתובת', why: 'חיפוש בעיריות, ברובעים וביישובים שבאפליקציה.' },
+];
+let wpWay = null;          // which of the three the new-place screen is on
+let wpNew = false;         // the new-place screen is open, with or without a way
 
 /* Not a street geocoder — the app carries no address database and reaches no
    network.  What it can search is its own gazetteer: the eighteen
@@ -1497,21 +1490,35 @@ function wpCard(p) {
   const where = at ? (at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he
                    : 'מחוץ למחוז פורטו';
   const armed = wpArmed === p.id;
-  return `<article class="card wp" data-wp="${html(p.id)}">
-      <div class="wp-h">
-        <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
-        <h2>${html(p.name)}</h2>
-        <span class="wp-acts">
-          <button class="chip" data-wpact="edit" data-id="${html(p.id)}">עריכה</button>
-          <button class="chip${armed ? ' wp-arm' : ''}" data-wpact="del" data-id="${html(p.id)}"
-            >${armed ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>
-        </span>
-      </div>
+  const on = S.wpSel === p.id;
+  /* Two shapes for the same record.  Expanded: the photo under the text it
+     belongs to.  List: the same text with a thumbnail beside it, at the far
+     end, so a screenful is a screenful of places and not of pictures.
+
+     עריכה and מחיקה appear on the chosen card only.  On every card they were
+     two buttons per row of a list, and the list is mostly for reading. */
+  /* Rendered on every card and shown only on the chosen one.  Selection is
+     applied in place — a re-render would drop the thumbnails already fetched
+     and, mid-edit, whatever is half typed — so the two buttons cannot be built
+     at selection time; CSS is what decides they are on screen. */
+  const acts = `<div class="wp-acts">
+        <button class="chip" data-wpact="edit" data-id="${html(p.id)}">עריכה</button>
+        <button class="chip${armed ? ' wp-arm' : ''}" data-wpact="del" data-id="${html(p.id)}"
+          >${armed ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>
+      </div>`;
+  const body = `<div class="wp-txt">
+      <div class="wp-h"><span class="dot mine" style="--c:${MINE_COLOUR}"></span>
+        <h2>${html(p.name)}</h2></div>
       ${p.desc ? `<p class="lead">${html(p.desc)}</p>` : ''}
       <p class="note"><bdi class="num">${p.ll[0].toFixed(5)}, ${p.ll[1].toFixed(5)}</bdi><br>
         ${html(where)}${p.at ? ' · ' + html(p.at) : ''}</p>
-      ${p.photo ? `<figure class="ph-fig" data-wpimg="${html(p.id)}"
-        ><img class="ph-img" alt="${html(p.name)}"></figure>` : ''}
+    </div>`;
+  const fig = p.photo
+    ? `<figure class="ph-fig${S.wpList ? ' ph-thumb' : ''}" data-wpimg="${html(p.id)}"
+        ><img class="ph-img" alt="${html(p.name)}"></figure>` : '';
+  return `<article class="card wp${on ? ' is-hi' : ''}${S.wpList ? ' wp-row' : ''}"
+      data-wp="${html(p.id)}">${acts}
+      ${S.wpList ? `<div class="wp-line">${body}${fig}</div>` : body + fig}
     </article>`;
 }
 
@@ -1525,35 +1532,66 @@ function renderWpSheet() {
   if (!sheet) return;
   // never over the map while the map is what is being used: the sheet covers
   // the whole display, and the crosshair and its two buttons are under it
-  if (!mineEditing || S.adding) { sheet.hidden = true; sheet.innerHTML = ''; return; }
+  if ((!mineEditing && !wpNew) || S.adding) {
+    sheet.hidden = true; sheet.innerHTML = ''; return;
+  }
   const p = mineEditing;
-  const fresh = !D.mine.some(x => x.id === p.id);
+  const fresh = !p || !D.mine.some(x => x.id === p.id);
+  const placed = !!p;
   sheet.hidden = false;
-  sheet.innerHTML = `
-    <div class="sheet-h">
-      <h2>${fresh ? 'מקום חדש' : 'עריכת מקום'}</h2>
-      <span class="wp-acts">
-        <button class="chip is-on" data-wpact="save">שמירה</button>
-        <button class="chip" data-wpact="cancel">ביטול</button>
-        ${fresh ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
-          data-wpact="del" data-id="${html(p.id)}"
-          >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
-      </span>
-    </div>
-    <div class="sheet-b">
+  /* Three ways at the head, one line of what each does, and then the fields the
+     chosen way asks for.  The explanations stay after a choice — they are three
+     short lines, and the one in force is the one that is not dimmed. */
+  const ways = `<div class="way-row">${WAYS.map(w =>
+      `<button class="chip${wpWay === w.k ? ' is-on' : ''}" data-wpway="${w.k}"
+        >${html(w.he)}</button>`).join('')}</div>`;
+  const why = `<ul class="way-why">${WAYS.map(w =>
+      `<li${wpWay === w.k ? ' class="is-on"' : ''}><b>${html(w.he)}</b> — ${html(w.why)}</li>`
+    ).join('')}</ul>`;
+
+  const fields = !placed ? (wpWay === 'place' ? placePickerHtml() : '') : `
       <p class="note" id="mineWhere">${mineWhereHtml()}</p>
       <label class="fld-l" for="mineName">שם</label>
       <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
              value="${html(p.name || '')}">
       <label class="fld-l" for="mineDesc">תיאור</label>
-      <textarea id="mineDesc" rows="4"
+      <textarea id="mineDesc" rows="2"
         placeholder="מה שחשוב לזכור על המקום הזה">${html(p.desc || '')}</textarea>
       <label class="fld-l" for="minePhotoIn">תמונה</label>
       <div id="minePhotoBox"></div>
-      <div class="chips"><button class="chip" data-wpact="pick">בחירת מקום במפה</button></div>
+      <div class="chips"><button class="chip" data-wpact="pick">בחירת מקום במפה</button></div>`;
+
+  sheet.innerHTML = `
+    <div class="sheet-h">
+      ${fresh ? ways : '<h2>עריכת מקום</h2>'}
+      <div class="wp-acts">
+        ${placed ? '<button class="chip is-on" data-wpact="save">שמירה</button>' : ''}
+        <button class="chip" data-wpact="cancel">ביטול</button>
+        ${fresh || !p ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
+          data-wpact="del" data-id="${html(p.id)}"
+          >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
+      </div>
+    </div>
+    <div class="sheet-b">
+      ${fresh ? why : ''}
+      ${fields}
+      <input id="wpPhotoIn" type="file" accept="image/*" multiple hidden>
     </div>`;
   sizeSheet();
-  renderPhotoBox();
+  if (placed) { renderPhotoBox(); growDesc(); }
+}
+
+/* The description starts at two lines and grows with what is typed into it —
+   a fixed box that scrolls inside itself hides the sentence being written. */
+function growDesc() {
+  const t = $('#mineDesc');
+  if (!t) return;
+  const fit = () => {
+    t.style.height = 'auto';
+    t.style.height = Math.min(t.scrollHeight, Math.round(innerHeight * 0.4)) + 'px';
+  };
+  t.addEventListener('input', fit);
+  fit();
 }
 
 /* The keyboard does not resize the window on Android, it resizes the visual
@@ -1599,6 +1637,7 @@ function startWpEdit(id) {
   minePending = null;
   dropPhotoUrl();
   mineEditing = { ...p };
+  wpNew = false; wpWay = null;
   S.wpSel = id;
   wpArmed = null;
   drawMine();
@@ -1624,6 +1663,37 @@ function autoName() {
     if (m) top = Math.max(top, Number(m[1]));
   });
   return 'נקודת ציון ' + (top + 1);
+}
+
+/* חדש opens the screen with no way chosen and no record yet: a place has to
+   come from somewhere before there is anything to name. */
+function openNewSheet() {
+  if (!S.wp) toggleWp();
+  mineEditing = null; minePending = null; dropPhotoUrl();
+  wpWay = null;
+  wpNew = true;
+  wpArmed = null;
+  renderWaypoints();
+}
+function closeNewSheet() {
+  wpWay = null;
+  wpNew = false;
+  mineEditing = null; minePending = null; dropPhotoUrl();
+  wpArmed = null;
+  renderWaypoints();
+}
+function pickWay(k) {
+  wpWay = k;
+  if (k === 'map') {
+    // the map before anything else: there is nothing to fill in until a place
+    // has been chosen on it.  startPlacing() is what takes the sheet down —
+    // rendering it here would render it while S.adding was still false.
+    toggleAdd();
+    return;
+  }
+  renderWaypoints();
+  if (k === 'photo') { const i = $('#wpPhotoIn'); if (i) i.click(); }
+  if (k === 'place') { const q = $('#wpQ'); if (q) q.focus(); }
 }
 
 /* One way in for all three: a fresh record at a known place, with the form up. */
@@ -1714,30 +1784,10 @@ function wpClick(e) {
   if (b) {
     const act = b.dataset.wpact;
     if (act !== 'del') wpArmed = null;
-    if (act === 'add') { wpAddOn(true); return true; }
-    if (act === 'addoff') { wpAddOn(false); return true; }
-    if (act === 'way-map') {
-      wpAddOn(false);
-      if (!S.wp) toggleWp();
-      mineEditing = null; minePending = null; dropPhotoUrl();
-      renderWaypoints();
-      toggleAdd();
-      return true;
-    }
-    if (act === 'way-photo') {
-      const inp = $('#wpPhotoIn');
-      if (inp) inp.click();
-      return true;
-    }
-    if (act === 'way-place') {
-      wpPlacing = !wpPlacing;
-      renderWaypoints();
-      const q = $('#wpQ');
-      if (q) q.focus();
-      return true;
-    }
+    if (act === 'new') { openNewSheet(); return true; }
+    if (act === 'mode') { S.wpList = !S.wpList; save(); renderWaypoints(); return true; }
     if (act === 'edit') { startWpEdit(b.dataset.id); return true; }
-    if (act === 'cancel') { cancelWpEdit(); return true; }
+    if (act === 'cancel') { closeNewSheet(); return true; }
     if (act === 'save') { commitMine(); return true; }
     if (act === 'pick') { harvestWp(); toggleAdd(); return true; }
     if (act === 'fix') { fixPlacing(); return true; }
@@ -1750,10 +1800,12 @@ function wpClick(e) {
       return true;
     }
   }
+  const w = e.target.closest('[data-wpway]');
+  if (w) { pickWay(w.dataset.wpway); return true; }
   const hit = e.target.closest('[data-wpplace]');
   if (hit) {
     const r = wpFound[Number(hit.dataset.wpplace)];
-    if (r) { wpAddOn(false); openNewAt(r.ll, r.t); }
+    if (r) openNewAt(r.ll, r.t);
     return true;
   }
   const card = e.target.closest('[data-wp]');
@@ -1772,10 +1824,16 @@ function wpClick(e) {
 
 function commitMine() {
   if (!mineEditing) return;
+  // The fields are not always on screen — placing takes the form down — and
+  // harvestWp() copies what was typed into mineEditing before that happens.
+  // So the record is the source, and the inputs only override it when they are
+  // there to be read.
+  const fld = id => { const el = $(id); return el ? el.value.trim() : null; };
   // No name is not an error: the record is worth keeping for its coordinate
   // alone, and the app names it rather than refusing to save it.
-  const name = $('#mineName').value.trim() || autoName();
-  const rec = { ...mineEditing, name, desc: $('#mineDesc').value.trim(),
+  const name = (fld('#mineName') ?? mineEditing.name ?? '').trim() || autoName();
+  const desc = (fld('#mineDesc') ?? mineEditing.desc ?? '').trim();
+  const rec = { ...mineEditing, name, desc,
     at: mineEditing.at || new Date().toISOString().slice(0, 10) };
   const pend = minePending;
   if (pend) rec.photo = { w: pend.w, h: pend.h, bytes: pend.bytes,
@@ -1784,6 +1842,10 @@ function commitMine() {
     const i = D.mine.findIndex(x => x.id === rec.id);
     if (i < 0) D.mine.push(rec); else D.mine[i] = rec;
     saveMine();
+    // back to a plain screen: no crosshair left on the map, no בחירה/ביטול over
+    // it, and no way chosen — saving ends the whole business of adding one
+    if (S.adding || ghost) stopPlacing();
+    wpWay = null; wpNew = false;
     mineEditing = null; minePending = null; dropPhotoUrl();
     S.wpSel = rec.id;
     drawMine(); redrawText();
@@ -1912,6 +1974,7 @@ function startPlacing() {
   if (bar) bar.hidden = false;
   hideNote();
   S.view = 'map'; applyView();
+  renderWpSheet();          // S.adding is set now, so the sheet goes down
 }
 
 function stopPlacing() {
@@ -2662,7 +2725,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
       letters: S.letters, mine: S.mine, water: S.water,
-      muncol: S.muncol,
+      muncol: S.muncol, wpList: S.wpList,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles,
@@ -2680,6 +2743,7 @@ function restore() {
     });
     if (typeof o.water === 'boolean') S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
+    if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (o.theme === 'light' || o.theme === 'dark' || o.theme === 'auto') S.theme = o.theme;
     // an older build stored a Porto quarter number under `quarter`; it has no
@@ -2955,7 +3019,11 @@ function renderInfo() {
 
 /* ------------------------------------------------------------------ wire --- */
 function wire() {
-  $('#resetBtn').addEventListener('click', refit);
+  // Home is a level, not a zoom: it leaves whichever municipality or parish is
+  // open and comes back to the district, fitted.
+  $('#homeBtn').addEventListener('click', () => {
+    if (S.level === 'district') refit(); else goDistrict();
+  });
   $('#menuBtn').addEventListener('click', menuTap);
   $('#menuClose').addEventListener('click', () => openMenu(false));
   $('#menuIn').addEventListener('click', e => {
@@ -2999,15 +3067,12 @@ function wire() {
   // the photo picker lives on the form sheet now; the one on the מקומות screen
   // is the "בחירת מקום מתמונה" way in and starts a place rather than adding to one
   $('#wpSheet').addEventListener('change', e => {
-    if (e.target.id === 'minePhotoIn') takePhotos(e.target.files);
+    if (e.target.id === 'minePhotoIn' || e.target.id === 'wpPhotoIn') takePhotos(e.target.files);
   });
-  $('#wpSheet').addEventListener('click', e => { wpClick(e); });
-  $('#doc').addEventListener('change', e => {
-    if (e.target.id === 'wpPhotoIn') { wpAddOn(false); takePhotos(e.target.files); }
-  });
-  $('#doc').addEventListener('input', e => {
+  $('#wpSheet').addEventListener('input', e => {
     if (e.target.id === 'wpQ') runPlaceSearch(e.target.value);
   });
+  $('#wpSheet').addEventListener('click', e => { wpClick(e); });
   $('#pickBar').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
