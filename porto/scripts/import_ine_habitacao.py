@@ -23,9 +23,13 @@ Three things about this source decide almost every line below.
     months of the same sales, and the difference between them is not a quarterly
     change.  The app must never present one.
 
-3.  A cell INE could not publish carries the marker `-`, which the fetch script
-    kept verbatim in the `flag` column with the value left empty.  That is a
-    missing value and stays missing.
+3.  A cell INE does not publish carries the marker `-`, defined by INE's own
+    metadata as `- = Dado nulo ou não aplicável` — a null or non-applicable
+    datum.  That is the whole of what the source says: *why* a given cell is
+    not published is not part of the publication, so nothing here, and nothing
+    in sources.json, may name a reason for it.  The fetch script kept the
+    marker verbatim in the `flag` column with the value left empty; it is a
+    missing value and it stays missing.
 
 One period is taken for all units — the latest in the file — rather than the
 latest that each unit happens to have.  Mixing periods per unit would put two
@@ -105,7 +109,7 @@ def block(rows, series, period, meta):
     for r in rows:
         if r["period"] != period or r["dwelling_type"] != series:
             continue
-        # `-` is INE's own marker for a cell it does not publish.  It is not a
+        # `-` is INE's own marker: "Dado nulo ou não aplicável".  It is not a
         # zero and it is not an invitation to interpolate.
         if r["flag"] == "-" or r["value_eur_m2"] == "":
             skipped += 1

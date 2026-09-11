@@ -349,6 +349,19 @@ def main():
                          "caveat_he", "confidence"):
                 if not entry.get(want):
                     fail("%s: no %s recorded" % (skey, want))
+            # Rule 4 of the accuracy contract, enforced where it was actually
+            # broken: the caveat may quote INE's definition of its own missing
+            # marker, and may not offer a reason of our own for a cell INE does
+            # not publish.  A plausible reason is still not what the source
+            # said, and it reads as helpful, which is why it slipped through.
+            cav = entry.get("caveat_he") or ""
+            if "Dado nulo ou não aplicável" not in cav:
+                fail("%s: the caveat does not quote INE's own definition of "
+                     "its missing marker" % skey)
+            for guess in ("מספר העסקאות", "סודיות", "מעט מדי"):
+                if guess in cav:
+                    fail("%s: the caveat gives a reason for a cell INE does not "
+                         "publish (%r). INE publishes no reason." % (skey, guess))
             # A single source is `reported`.  Calling it verified would need a
             # second, independent source reaching the same number.
             if entry.get("confidence") != "reported":
