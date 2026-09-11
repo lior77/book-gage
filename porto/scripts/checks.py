@@ -25,6 +25,7 @@ Exit code 0 = all green, 1 = at least one hard failure.
 """
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -392,6 +393,35 @@ def main():
             if price is not None and rent is not None and price < rent * 10:
                 fail("%s %s: sale %s and rent %s are not two different units"
                      % (level, r["pt"], price, rent))
+
+    # ---- 7e. the comparison screen offers nothing without a source ---------
+    # app.js filters a field out of השוואת נתונים when its source record is
+    # missing, which is the right behaviour and a silent one: rename a key in
+    # sources.json and a column of the screen simply stops existing. So the
+    # list is read back out of app.js and every entry checked here, where a
+    # missing record is a failed run rather than a quietly shorter menu.
+    app = open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    block = re.search(r"const CMP_ALL = \[(.*?)\n\];", app, re.S)
+    if not block:
+        fail("app.js: CMP_ALL is not where checks.py looks for it")
+    else:
+        house = set(re.findall(r"'([a-z0-9_]+)'",
+                               re.search(r"CMP_HOUSING = new Set\(\[(.*?)\]\)",
+                                         app, re.S).group(1)))
+        n_cmp = 0
+        for m in re.finditer(r"\{ g: '[^']*', k: '([a-z0-9_]+)'(.*?)\}", block.group(1), re.S):
+            key, rest = m.group(1), m.group(2)
+            only = re.search(r"only: '(\w+)'", rest)
+            for level in ("municipio", "freguesia"):
+                if only and only.group(1) != level:
+                    continue
+                skey = "%s.%s" % (level, "housing" if key in house else key)
+                if skey not in sources["fields"]:
+                    fail("the comparison screen offers %s at %s, and %s has no "
+                         "source record" % (key, level, skey))
+                n_cmp += 1
+        if n_cmp < 40:
+            fail("only %d comparable fields were read out of CMP_ALL" % n_cmp)
 
     # ---- level 3 covers every parish, not only Porto's seven ---------------
     zones = load("zones.json")["zones"]

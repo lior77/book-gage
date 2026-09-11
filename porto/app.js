@@ -42,6 +42,11 @@ const S = {
   adding: false,       // waiting for a tap on the map to place a new point
   wp: false,           // נ.צ. management: the cards in the text half
   wpSel: null,         // the id of the card and pin being looked at
+  // השוואת נתונים: one field ranked across the units of the level.  A screen,
+  // like the menu, so it never comes back open — and never at level 3.
+  cmp: false,
+  cmpScope: 'mun',     // level 1 only: 'mun' | 'fre'
+  cmpField: null,      // the field being ranked, or null for the field cards
 };
 const MINE_KEY = 'porto-mine-v1';
 const D = {};
@@ -366,6 +371,19 @@ async function load() {
   // for both so level 2 and level 3 agree.
   D.quarterOfFre = new Map(D.city.map(q => [q.en, q.num]));
   D.fre.filter(f => f.mun_num === 1).forEach(f => { f.q = D.quarterOfFre.get(bare(f.pt)) || null; });
+  // Shapes by unit, for the comparison screen, which draws parishes from any
+  // municipality at once.  Porto's seven come from porto_city, the rest from
+  // the district layer, and freOfFeature() already knows which is which.
+  D.munGeo = new Map(D.bM.features.map(ft => [ft.properties.num, ft]));
+  D.freGeo = new Map();
+  D.bF.features.forEach(ft => {
+    const f = D.freByKey.get(ft.properties.mun_num + '|' + ft.properties.name);
+    if (f) D.freGeo.set(D.freKey(f), ft);
+  });
+  D.bC.features.forEach(ft => {
+    const f = freOfFeature(1, ft.properties);
+    if (f) D.freGeo.set(D.freKey(f), ft);
+  });
   // Porto's parishes are ordered by their official code like everyone else's;
   // f.q stays as the link to the city quarter's 53 bairros, not as a label.
   D.totPop = D.mun.reduce((a, m) => a + (m.pop2021 || 0), 0);
@@ -1365,6 +1383,7 @@ function dropWpUrls() { wpUrls.forEach(u => URL.revokeObjectURL(u)); wpUrls = []
 
 function toggleWp() {
   if (S.adding) stopPlacing();
+  if (!S.wp && S.cmp) { S.cmp = false; S.cmpField = null; redrawLevel(); }
   S.wp = !S.wp;
   renderMenu();
   if (!S.wp) {
@@ -1714,12 +1733,13 @@ function autoName() {
    come from somewhere before there is anything to name. */
 /* The one way back, from anywhere. */
 function goHome() {
-  const busy = S.adding || ghost || mineEditing || wpNew || S.wp;
+  const busy = S.adding || ghost || mineEditing || wpNew || S.wp || S.cmp;
   if (S.adding || ghost) stopPlacing();
   wpWay = null; wpNew = false;
   mineEditing = null; minePending = null; dropPhotoUrl();
   wpArmed = null;
   if (S.wp) toggleWp();
+  if (S.cmp) { S.cmp = false; S.cmpField = null; S.cmpScope = 'mun'; renderMenu(); }
   renderWpSheet();          // toggleWp redraws the level document, not the sheet
   if (S.level !== 'district') goDistrict();
   else if (!busy) refit();
@@ -2306,6 +2326,7 @@ function toggleRegions() {
 /* Redraw whichever level is on screen, because the fill belongs to the level
    and each level draws its own. */
 function redrawLevel() {
+  if (S.cmp) { drawCmp(); return; }
   if (S.level === 'district') drawDistrict();
   else if (S.level === 'mun') drawMun(S.mun);
   else drawZone(S.zone);
@@ -2375,10 +2396,403 @@ const ICON = {
   dots: '<circle cx="7" cy="8" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="5" cy="18" r="1.4"/>',
   save: '<path d="M12 3v11M8 10.5l4 3.5 4-3.5"/><path d="M4 16v3.5h16V16"/>',
   load: '<path d="M12 14V3M8 6.5 12 3l4 3.5"/><path d="M4 16v3.5h16V16"/>',
+  cmp: '<path d="M4 20V11M10 20V5M16 20v-6M22 20V8"/>',
 };
 
 /* The eight point categories are the same eight the data ships, in the same
    order and under the same Hebrew names — the menu does not rename them. */
+/* ==================================================== השוואת נתונים === */
+/* One field at a time, across the units of one level, with the map coloured by
+   rank and the same ranking listed beside it.
+
+   Why rank and not value.  Eighteen steps of one hue are not eighteen steps
+   anyone can tell apart, and colouring by value makes it worse: most of these
+   fields bunch, so fifteen municipalities would land on almost the same shade
+   and the three outliers would take the whole scale.  Rank spreads the ramp
+   evenly by construction — every unit gets its own step — and the rank number
+   is printed on the map beside it, so the colour carries the gradient and the
+   number carries the fact.  That is also what was asked for: the colour
+   represents the ranking.
+
+   The ramp runs between two hues through a pale middle rather than from light
+   to dark of one hue, because two hues separate at a glance where one does not.
+   It is deliberately NOT a good-to-bad scale: most of these fields have no
+   good end, and `high_is` says "neutral" for almost all of them.  Blue is the
+   top of the list and terracotta the bottom, and neither means better.
+
+   A unit with no value is not ranked, not coloured and not counted.  Ranking a
+   missing value would place it somewhere on the scale, which is exactly the
+   estimate the accuracy contract forbids — so it sits in its own group under
+   the list, and the map leaves it grey. */
+
+const CMP_RAMP = {
+  light: [[27, 94, 139], [238, 229, 206], [178, 68, 40]],
+  dark:  [[62, 136, 190], [60, 58, 51], [206, 99, 63]],
+};
+// t: 0 is the bottom of the ranking, 1 is the top.
+function rampAt(t) {
+  const a = CMP_RAMP[isDark() ? 'dark' : 'light'];
+  const k = Math.max(0, Math.min(1, t));
+  const [c0, c1] = k < .5 ? [a[0], a[1]] : [a[1], a[2]];
+  const u = k < .5 ? k * 2 : (k - .5) * 2;
+  const v = c0.map((c, i) => Math.round(c + (c1[i] - c) * u));
+  return '#' + v.map(c => c.toString(16).padStart(2, '0')).join('');
+}
+// Black or white on top of a swatch, by its own luminance — not by the theme.
+function inkOn(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const l = (.299 * (n >> 16) + .587 * ((n >> 8) & 255) + .114 * (n & 255)) / 255;
+  return l > .58 ? '#12212f' : '#ffffff';
+}
+
+const CMP_HOUSING = new Set(['dwellings', 'vacant_pct', 'second_home_pct', 'owner_pct',
+  'rented_pct', 'parking_pct', 'buildings', 'repair_pct', 'deep_repair_pct',
+  'pre1946_pct', 'since2011_pct']);
+
+/* The fields offered, grouped the way the cards already group them elsewhere in
+   the app.  `src` is the source record the value chip opens — every number in
+   this screen is clickable like every other number in the app, and cmpFields()
+   drops any field whose record is missing rather than showing a number with no
+   source behind it. */
+const CMP_ALL = [
+  { g: 'אנשים', k: 'pop2021', he: 'תושבים', unit: '', dec: 0 },
+  { g: 'אנשים', k: 'density', he: 'צפיפות', unit: 'לקמ״ר', dec: 0 },
+  { g: 'אנשים', k: 'median_age', he: 'גיל חציוני', unit: 'שנים', dec: 1 },
+  { g: 'אנשים', k: 'ageing_index', he: 'מדד הזדקנות', unit: '', dec: 1 },
+  { g: 'אנשים', k: 'pct_0_14', he: 'בני 0–14', unit: '%', dec: 1 },
+  { g: 'אנשים', k: 'pct_65plus', he: 'בני 65+', unit: '%', dec: 1 },
+  { g: 'אנשים', k: 'foreign_pct', he: 'אזרחות זרה', unit: '%', dec: 1 },
+  { g: 'אנשים', k: 'education_pct', he: 'השכלה גבוהה', unit: '%', dec: 1 },
+  { g: 'אנשים', k: 'unemployment_pct', he: 'אבטלה', unit: '%', dec: 1 },
+  { g: 'שוק הדיור', k: 'price_eur_m2', he: 'מכירות', unit: '€/מ״ר', dec: 0 },
+  { g: 'שוק הדיור', k: 'price_new_eur_m2', he: 'דירות חדשות', unit: '€/מ״ר', dec: 0 },
+  { g: 'שוק הדיור', k: 'price_used_eur_m2', he: 'דירות קיימות', unit: '€/מ״ר', dec: 0 },
+  { g: 'שוק הדיור', k: 'rent_eur_m2', he: 'שכירות', unit: '€/מ״ר', dec: 2 },
+  { g: 'דיור ובניינים', k: 'dwellings', he: 'דירות', unit: '', dec: 0 },
+  { g: 'דיור ובניינים', k: 'vacant_pct', he: 'דירות ריקות', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'second_home_pct', he: 'בית שני', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'owner_pct', he: 'בבעלות הדיירים', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'rented_pct', he: 'בשכירות', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'parking_pct', he: 'עם חניה', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'buildings', he: 'בניינים', unit: '', dec: 0 },
+  { g: 'דיור ובניינים', k: 'repair_pct', he: 'זקוקים לתיקון', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'deep_repair_pct', he: 'מהם תיקון עמוק', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'pre1946_pct', he: 'נבנו לפני 1946', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'since2011_pct', he: 'נבנו מ-2011', unit: '%', dec: 1 },
+  { g: 'שטח ומרחק', k: 'area_km2', he: 'שטח', unit: 'קמ״ר', dec: 1 },
+  { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי מפורטו', unit: 'ק״מ', dec: 1,
+    only: 'municipio' },
+];
+
+const cmpSrcKey = (lvl, k) => lvl + '.' + (CMP_HOUSING.has(k) ? 'housing' : k);
+const cmpValue = (o, k) => {
+  const v = CMP_HOUSING.has(k) ? (o.housing || {})[k] : o[k];
+  return v === undefined ? null : v;
+};
+
+// 'municipio' when the units being compared are municipalities, 'freguesia'
+// when they are parishes — the source records are keyed by that word.
+function cmpLevelWord() { return cmpUnits().kind === 'mun' ? 'municipio' : 'freguesia'; }
+
+function cmpFields() {
+  const lvl = cmpLevelWord();
+  return CMP_ALL.filter(f => (!f.only || f.only === lvl)
+    && D.sources.fields[cmpSrcKey(lvl, f.k)]);
+}
+
+/* Which units this screen is comparing, and where their shapes come from.
+   Level 1 offers the choice; level 2 has none to offer — there the parishes of
+   the open municipality are the only thing there is to compare, which is why
+   the two buttons are not drawn there. */
+function cmpUnits() {
+  if (S.level === 'mun') {
+    return { kind: 'fre', all: false, rows: (D.freByMun.get(S.mun) || []).slice() };
+  }
+  if (S.cmpScope === 'fre') return { kind: 'fre', all: true, rows: D.fre.slice() };
+  return { kind: 'mun', all: false, rows: D.mun.slice() };
+}
+
+const cmpName = o => o.he || o.pt;
+const cmpId = o => (o.mun_num === undefined ? 'm' + o.num : 'f' + D.freKey(o));
+
+/* The ranking itself.  Rank 1 is the largest value — that is what "the highest
+   in the ranking" means — and the list below runs the other way, smallest
+   first, because that is how it was asked for; every row prints its rank so
+   the two orders can never be confused. */
+function cmpRank(field) {
+  const u = cmpUnits();
+  const have = [], none = [];
+  u.rows.forEach(o => {
+    const v = cmpValue(o, field.k);
+    (v === null ? none : have).push({ o, v });
+  });
+  have.sort((a, b) => b.v - a.v);
+  have.forEach((r, i) => { r.rank = i + 1; });
+  const n = have.length;
+  have.forEach(r => { r.t = n < 2 ? 1 : (n - r.rank) / (n - 1); });
+  none.sort((a, b) => cmpName(a.o).localeCompare(cmpName(b.o), 'he'));
+  return { have, none, n, total: u.rows.length, kind: u.kind, all: u.all };
+}
+
+/* At level 1 the parishes are 243 and the map is the district: showing all of
+   them would be a map of 243 shapes at district zoom, which is not a
+   comparison.  The ten highest and the ten lowest are drawn and listed, each
+   keeping its own place on the ramp, so the position inside each ten is as
+   visible as the split between them. */
+const CMP_ENDS = 10;
+function cmpShown(rk) {
+  if (!rk.all || rk.n <= CMP_ENDS * 2) return { list: rk.have, cut: 0 };
+  return { list: rk.have.slice(0, CMP_ENDS).concat(rk.have.slice(-CMP_ENDS)),
+           cut: rk.n - CMP_ENDS * 2 };
+}
+
+/* ---- the map half ---- */
+function cmpGeo(o) {
+  if (o.mun_num === undefined) return D.munGeo.get(o.num) || null;
+  return D.freGeo.get(D.freKey(o)) || null;
+}
+
+function rankIcon(text, bg, ink) {
+  const w = String(text).length > 2 ? 28 : 20;
+  return L.divIcon({ className: 'lbl rank', iconSize: [w, 20], iconAnchor: [w / 2, 10],
+    html: `<span style="background:${bg};color:${ink}">${html(text)}</span>` });
+}
+
+function drawCmp() {
+  clearMap();
+  const field = cmpField();
+  const rk = field ? cmpRank(field) : null;
+  const paint = new Map();      // unit id -> { colour, rank }
+  if (rk) cmpShown(rk).list.forEach(r => {
+    paint.set(cmpId(r.o), { c: rampAt(r.t), rank: r.rank, v: r.v });
+  });
+
+  // The base the comparison sits on: municipalities at level 1, the open
+  // municipality's parishes at level 2.  Unpainted shapes keep a neutral fill
+  // rather than an end of the ramp — a unit with no value is not last.
+  const base = S.level === 'mun' ? freFeatures(S.mun) : D.bM;
+  const unitOf = ft => S.level === 'mun'
+    ? freOfFeature(S.mun, ft.properties)
+    : D.munByNum.get(ft.properties.num);
+
+  LG.mun = L.geoJSON(base, {
+    style: ft => {
+      const o = unitOf(ft);
+      const p = o && paint.get(cmpId(o));
+      return { weight: 0, opacity: .9,
+        fillColor: p ? p.c : (isDark() ? '#2a3340' : '#dfe5ec'),
+        fillOpacity: p ? .92 : .45 };
+    },
+    onEachFeature: (ft, l) => {
+      const o = unitOf(ft);
+      if (!o) return;
+      const p = paint.get(cmpId(o));
+      l.on('click', () => {
+        // Level 3 is not part of this screen, so a parish does not descend;
+        // it scrolls its row into view instead.  A municipality still opens,
+        // because level 2 is where its parishes are compared.
+        if (S.level === 'mun') { cmpFocus(cmpId(o)); return; }
+        if (S.cmpScope === 'fre') { cmpFocus(cmpId(o)); return; }
+        goMun(o.num);
+      });
+      l.bindTooltip(`<b>${html(cmpName(o))}</b><br>${
+        field ? (p ? `${html(field.he)}: <b>${html(nf(p.v, field.dec))}</b> ${
+                      html(field.unit)}<br>מקום ${html(p.rank)} מתוך ${html(rk.n)}`
+                   : html(field.he) + ': ' + MISSING)
+              : `<span class="lat">${html(o.pt)}</span>`}`,
+        { sticky: true, className: 'tt' });
+    },
+  }).addTo(map);
+
+  // At level 1 with parishes chosen, the twenty sit on top of the eighteen.
+  if (rk && rk.all) {
+    const fc = { type: 'FeatureCollection', features: [] };
+    cmpShown(rk).list.forEach(r => {
+      const g = cmpGeo(r.o);
+      if (g) fc.features.push({ type: 'Feature', properties: { id: cmpId(r.o) }, geometry: g.geometry });
+    });
+    LG.fre = L.geoJSON(fc, {
+      style: ft => ({ weight: 1, color: isDark() ? '#0b1118' : '#ffffff', opacity: .9,
+        fillColor: paint.get(ft.properties.id).c, fillOpacity: .95 }),
+      onEachFeature: (ft, l) => {
+        l.on('click', () => cmpFocus(ft.properties.id));
+      },
+    }).addTo(map);
+  }
+
+  drawLines();
+
+  if (rk) {
+    LG.labels = L.layerGroup(cmpShown(rk).list.map(r => {
+      const c = rampAt(r.t);
+      return L.marker(latlng(r.o.center),
+        { icon: rankIcon(r.rank, c, inkOn(c)), keyboard: false,
+          title: `${r.rank}. ${cmpName(r.o)}`, riseOnHover: true })
+        .on('click', () => cmpFocus(cmpId(r.o)));
+    })).addTo(map);
+  }
+
+  fit(LG.mun.getBounds());
+}
+
+function cmpFocus(id) {
+  const el = $(`#doc [data-cmpu="${CSS.escape(id)}"]`);
+  if (!el) return;
+  $$('#doc .cmp-row.is-hi').forEach(e => e.classList.remove('is-hi'));
+  el.classList.add('is-hi');
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+/* ---- the text half ---- */
+function cmpField() {
+  return cmpFields().find(f => f.k === S.cmpField) || null;
+}
+
+function cmpRowHtml(r, field, lvl, rk) {
+  const c = rampAt(r.t), ink = inkOn(c);
+  const w = rk.n < 2 ? 100 : 8 + 92 * r.t;
+  return `<div class="cmp-row" data-cmpu="${html(cmpId(r.o))}">
+    <span class="cmp-rank" style="background:${c};color:${ink}">${r.rank}</span>
+    <span class="cmp-body">
+      <span class="cmp-n">${html(cmpName(r.o))} <span class="lat">(${html(bare(r.o.pt))})</span></span>
+      <span class="cmp-bar"><i style="width:${w.toFixed(1)}%;background:${c}"></i></span>
+    </span>
+    <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">
+      <span class="num">${html(nf(r.v, field.dec))}</span>${
+      field.unit ? ' <span class="cmp-u">' + html(field.unit) + '</span>' : ''}
+    </button>
+  </div>`;
+}
+
+function renderCmp() {
+  const lvl = cmpLevelWord();
+  const fields = cmpFields();
+  const field = cmpField();
+  const atDistrict = S.level !== 'mun';
+  const m = S.level === 'mun' ? D.munByNum.get(S.mun) : null;
+
+  // Requirement: the two buttons exist only where there is a choice to make.
+  const scope = atDistrict ? `
+    <div class="cmp-scope" role="group" aria-label="מה להשוות">
+      <button class="cmp-sc" data-cmpscope="mun"
+        aria-pressed="${S.cmpScope !== 'fre'}">עיריות</button>
+      <button class="cmp-sc" data-cmpscope="fre"
+        aria-pressed="${S.cmpScope === 'fre'}">רובעים</button>
+    </div>` : '';
+
+  const head = `<div class="cmp-head">
+    <h1>השוואת נתונים</h1>
+    ${scope}
+    <p class="cmp-what">${atDistrict
+      ? (S.cmpScope === 'fre'
+         ? '243 הרובעים של המחוז — עשרת הגבוהים ועשרת הנמוכים.'
+         : '18 העיריות של המחוז.')
+      : `${html((D.freByMun.get(S.mun) || []).length)} הרובעים של ${html(m.he)}.
+         ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים.`}</p>
+  </div>`;
+
+  if (!field) {
+    const groups = [...new Set(fields.map(f => f.g))].map(g => `
+      <div class="grp">${html(g)}</div>
+      <div class="cmp-fields">${fields.filter(f => f.g === g).map(f => {
+        const n = cmpUnits().rows.filter(o => cmpValue(o, f.k) !== null).length;
+        const tot = cmpUnits().rows.length;
+        return `<button class="cmp-f${n < tot ? ' part' : ''}" data-cmpf="${html(f.k)}">
+          <span class="cmp-f-t">${html(f.he)}</span>
+          <span class="cmp-f-u">${html(f.unit || '—')}</span>
+          <span class="cmp-f-c num">${n}/${tot}</span>
+        </button>`;
+      }).join('')}</div>`).join('');
+    return head + `<div class="cmp-body-wrap">
+      <p class="note cmp-note">בחרו שדה. המפה תיצבע לפי הדירוג בשדה שנבחר,
+        והרשימה כאן תסודר מהקטן לגדול. המספר שעל הכרטיסייה הוא כמה יחידות
+        יש להן ערך בשדה הזה — בשאר יוצג ׳אין נתון׳ והן לא ידורגו.</p>
+      ${groups}</div>`;
+  }
+
+  const rk = cmpRank(field);
+  const sh = cmpShown(rk);
+  // Asked for smallest first.  The ranking runs the other way, so the list is
+  // the ranking reversed, and every row carries its rank number.
+  const asc = sh.list.slice().reverse();
+  let rows = '';
+  if (sh.cut) {
+    const low = asc.slice(0, CMP_ENDS), high = asc.slice(CMP_ENDS);
+    rows = `<div class="grp">עשרת הנמוכים — מקומות ${rk.n - CMP_ENDS + 1}–${rk.n}</div>
+      <div class="cmp-rows">${low.map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>
+      <div class="cmp-cut"><span>${nf(sh.cut)} רובעים באמצע הדירוג אינם מוצגים</span></div>
+      <div class="grp">עשרת הגבוהים — מקומות 1–${CMP_ENDS}</div>
+      <div class="cmp-rows">${high.map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`;
+  } else {
+    rows = `<div class="grp">מהקטן לגדול — ${nf(rk.n)} ${
+      rk.kind === 'mun' ? 'עיריות' : 'רובעים'}</div>
+      <div class="cmp-rows">${asc.map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`;
+  }
+
+  const none = rk.none.length ? `
+    <div class="grp">${nf(rk.none.length)} בלי נתון — לא מדורגים</div>
+    <div class="cmp-rows">${rk.none.map(r => `
+      <div class="cmp-row no" data-cmpu="${html(cmpId(r.o))}">
+        <span class="cmp-rank none">–</span>
+        <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}
+          <span class="lat">(${html(bare(r.o.pt))})</span></span></span>
+        <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${MISSING}</button>
+      </div>`).join('')}</div>
+    <p class="note">ערך חסר אינו מקום אחרון. היחידות האלה אינן מדורגות, אינן
+      צבועות במפה ואינן נספרות בדירוג.</p>` : '';
+
+  return head + `<div class="cmp-body-wrap">
+    <div class="cmp-picked">
+      <span class="cmp-picked-t">${html(field.he)}${
+        field.unit ? ' <span class="cmp-u">' + html(field.unit) + '</span>' : ''}</span>
+      <button class="cmp-swap" data-cmpf="">החלפת שדה</button>
+    </div>
+    <div class="cmp-legend" aria-hidden="true">
+      <span>מקום ${nf(rk.n)}</span>
+      <span class="cmp-ramp" style="background:linear-gradient(to left,${
+        rampAt(0)},${rampAt(.5)},${rampAt(1)})"></span>
+      <span>מקום 1</span>
+    </div>
+    ${rows}
+    ${none}
+    <p class="note">הצבע מייצג את המקום בדירוג ולא את גודל הערך, כדי שכל יחידה
+      תקבל גוון משלה גם כשהערכים צפופים. המספר שעל המפה הוא המקום עצמו.
+      אין כאן צד ״טוב״ ואין צד ״רע״ — רק ראש הרשימה וסופה.</p>`;
+}
+
+function toggleCmp() {
+  if (S.adding) stopPlacing();
+  S.cmp = !S.cmp;
+  if (S.cmp) {
+    if (S.wp) { S.wp = false; S.wpSel = null; }
+    // Level 3 is not part of this screen.
+    if (S.level === 'zone') { S.level = 'mun'; S.zone = null; S.hi = null; }
+    if (S.view === 'map') { S.view = 'split'; applyView(); }
+  }
+  closePanel();
+  renderMenu();
+  redrawLevel(); drawMine(); redrawText();
+  if (S.cmp) $('#paneText').scrollTop = 0;
+  save();
+}
+
+function cmpClick(e) {
+  const f = e.target.closest('[data-cmpf]');
+  if (f) {
+    S.cmpField = f.dataset.cmpf || null;
+    redrawLevel(); redrawText();
+    $('#paneText').scrollTop = 0;
+    return true;
+  }
+  const sc = e.target.closest('[data-cmpscope]');
+  if (sc) {
+    S.cmpScope = sc.dataset.cmpscope;
+    redrawLevel(); redrawText();
+    return true;
+  }
+  return false;
+}
+
 const menuRows = () => [
   { k: 'search', he: 'חיפוש', icon: 'search', kind: 'act' },
   { k: 'mine', he: 'המקומות שלי', icon: 'pin', kind: 'act' },
@@ -2391,6 +2805,10 @@ const menuRows = () => [
   ...(S.catsOpen
     ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: D.poiLabel[c], icon: c, kind: 'tog', sub: true }))
     : []),
+  // Below the eight, not between the heading and them: the expanded categories
+  // have to follow their own heading with nothing in between or they stop
+  // reading as belonging to it.
+  { k: 'cmp', he: 'השוואת נתונים', icon: 'cmp', kind: 'tog' },
   { grp: 'תצוגה' },
   { k: 'view:split', he: 'גרפיקה וטקסט', icon: 'split', kind: 'radio' },
   { k: 'view:map', he: 'גרפיקה בלבד', icon: 'maponly', kind: 'radio' },
@@ -2429,6 +2847,7 @@ function menuState(k) {
   if (k === 'regions') return S.lnRegion;
   if (k === 'locate') return !!meWatch;
   if (k === 'mine') return S.wp;
+  if (k === 'cmp') return S.cmp;
   return null;
 }
 
@@ -2481,7 +2900,9 @@ function themeAttr() {
 function applyTheme() {
   themeAttr();
   if (!map) return;
-  redrawLevel(); drawMine(); applyHi();
+  // The comparison ramp has a light set and a dark set, so the list beside the
+  // map has to be written again too, not only the shapes on it.
+  redrawLevel(); drawMine(); if (S.cmp) redrawText(); else applyHi();
 }
 
 /* Sources, accuracy and what is missing — the one full-screen window. */
@@ -2513,6 +2934,7 @@ function menuPick(k) {
   switch (k) {
     case 'search':  openMenu(false); openSearch(); break;
     case 'mine':    openMenu(false); toggleWp(); break;
+    case 'cmp':     openMenu(false); toggleCmp(); break;
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
@@ -2609,6 +3031,7 @@ function toggleLayers(force) {
 function redrawText() {
   // management replaces the level document: the map is still at its level and
   // still navigable, but the text half is the list of נ.צ. until it is closed
+  if (S.cmp) { $('#doc').innerHTML = renderCmp(); return; }
   if (S.wp) { renderWaypoints(); return; }
   if (S.level === 'district') renderDistrict();
   else if (S.level === 'mun') renderMun(S.mun);
@@ -2674,6 +3097,7 @@ function pick(hi, from) {
 // second argument is kept because the map and the list both call this.
 function pickFre(f) {
   if (S.adding || S.wp) return;
+  if (S.cmp) { cmpFocus('f' + D.freKey(f)); return; }
   if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), f.he || f.pt); return; }
   goZone(D.freKey(f));
 }
@@ -2732,15 +3156,17 @@ function applyHi(from) {
 /* ------------------------------------------------------------ navigation --- */
 function goDistrict() {
   S.level = 'district'; S.mun = null; S.zone = null; S.hi = null;
-  drawDistrict(); redrawText(); afterNav();
+  redrawLevel(); redrawText(); afterNav();
 }
 function goMun(num) {
   S.level = 'mun'; S.mun = num; S.zone = null; S.hi = null;
-  drawMun(num); redrawText(); afterNav();
+  redrawLevel(); redrawText(); afterNav();
 }
 function goZone(key) {
   const f = D.freByKey.get(key);
   if (!f) return;
+  // Level 3 is not part of the comparison screen; asking for it leaves it.
+  if (S.cmp) toggleCmp();
   S.level = 'zone'; S.mun = f.mun_num; S.zone = key; S.hi = null;
   S.cats = new Set(D.poiOrder);
   drawZone(key); redrawText(); afterNav();
@@ -3167,6 +3593,7 @@ function wire() {
     if (S.wp && wpClick(e)) return;
     const src = e.target.closest('[data-src]');
     if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
+    if (S.cmp && cmpClick(e)) return;
     const cat = e.target.closest('[data-cat]');
     if (cat) {
       const c = cat.dataset.cat;

@@ -143,7 +143,7 @@ const css = (page, sel, prop) =>
   const rowsNow = () => page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
   const CATS = ['cat:station', 'cat:hospital', 'cat:university', 'cat:museum',
                 'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
-  const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open',
+  const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
     'view:split', 'view:map', 'view:text', 'theme:light', 'theme:dark',
     'tiles', 'glass', 'borders', 'more', 'regions', 'save', 'load', 'info'];
   ok('the menu carries exactly the rows asked for, in order',
@@ -788,6 +788,191 @@ const css = (page, sel, prop) =>
      gf && !gf.note.includes('אינו מפרסם ברמת הרובע'));
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
+
+  /* 10c. השוואת נתונים.  Seven things were asked for and each has a check:
+     the menu row, the split screen, the two buttons and where they are, the
+     field cards, the map coloured by rank, the ten-and-ten at level 1, no
+     buttons at level 2, and no level 3 at all.
+
+     The one that matters most is the last line of the accuracy contract in a
+     new place: a unit with no value must not be ranked.  Ranking it would put
+     it at the bottom of the scale, which is a number we made up. */
+  const cmpRows = () => page.$$eval('#doc .cmp-row', els => els.map(e => ({
+    id: e.dataset.cmpu,
+    rank: e.querySelector('.cmp-rank').textContent.trim(),
+    name: e.querySelector('.cmp-n').firstChild.textContent.trim(),
+    val: e.querySelector('.cmp-v').textContent.trim(),
+    src: e.querySelector('.cmp-v').dataset.src,
+    none: e.classList.contains('no'),
+    bar: (() => { const b = e.querySelector('.cmp-bar i');
+                  return b ? +b.style.width.replace('%', '') : null; })(),
+  })));
+  const rankPills = () => page.$$eval('.lbl.rank > span', els => els.map(e => ({
+    n: e.textContent.trim(), bg: e.style.background || e.style.backgroundColor,
+  })));
+
+  await page.click('#homeBtn'); await page.waitForTimeout(700);
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
+  await page.click('[data-m="cmp"]');
+  await page.waitForTimeout(900);
+  ok('the menu row opens השוואת נתונים', await page.evaluate(() => S.cmp) === true);
+  ok('and closes the menu behind it', await page.$eval('#menu', e => e.hidden) === true);
+  ok('the screen is map above and text below — not one of them alone',
+     await page.evaluate(() => document.body.dataset.view) === 'split');
+  ok('its heading says what it is',
+     (await page.$eval('#doc .cmp-head h1', e => e.textContent)).trim() === 'השוואת נתונים');
+
+  /* the two buttons: at the start edge, which in this RTL page is the right */
+  const scope = await box(page, '#doc .cmp-scope');
+  const bMun = await box(page, '[data-cmpscope="mun"]');
+  const bFre = await box(page, '[data-cmpscope="fre"]');
+  ok('the two buttons are עיריות and רובעים',
+     (await page.$eval('[data-cmpscope="mun"]', e => e.textContent)).trim() === 'עיריות'
+     && (await page.$eval('[data-cmpscope="fre"]', e => e.textContent)).trim() === 'רובעים');
+  ok('they are aligned right, not centred or spread',
+     Math.abs(scope.right - bMun.right) <= 1.5, `${scope.right} vs ${bMun.right}`);
+  ok('עיריות is the first of the two, coming in from the right',
+     bMun.right > bFre.right);
+  ok('and עיריות is the one pressed to begin with',
+     await page.$eval('[data-cmpscope="mun"]', e => e.getAttribute('aria-pressed')) === 'true');
+
+  /* the field cards, before any field is chosen */
+  const cards = await page.$$eval('#doc [data-cmpf]', els => els.map(e => e.dataset.cmpf));
+  ok('a field is not chosen to begin with, so the cards are what is shown',
+     cards.length > 12 && (await cmpRows()).length === 0, String(cards.length));
+  ok('the cards cover people, market, housing and area',
+     ['pop2021', 'price_eur_m2', 'vacant_pct', 'area_km2'].every(k => cards.includes(k)),
+     cards.join(' '));
+  ok('each card says how many units have a value for it',
+     await page.$$eval('#doc .cmp-f-c', els => els.every(e => /^\d+\/\d+$/.test(e.textContent.trim()))));
+
+  /* choosing one colours the map by rank */
+  await page.click('#doc [data-cmpf="price_eur_m2"]');
+  await page.waitForTimeout(800);
+  const mun = await cmpRows();
+  ok('all 18 municipalities are listed', mun.length === 18, String(mun.length));
+  ok('and the list runs from the smallest value up, as asked',
+     (() => { const v = mun.map(r => parseFloat(r.val.replace(/[^\d.]/g, '')));
+              return v.every((x, i) => i === 0 || x >= v[i - 1]); })(),
+     mun.map(r => r.val).join(' '));
+  ok('rank 1 is the largest and sits last in that list',
+     mun[mun.length - 1].rank === '1' && mun[0].rank === '18',
+     `${mun[0].rank} .. ${mun[mun.length - 1].rank}`);
+  ok('every row carries its own rank, 1 to 18 with no gaps',
+     new Set(mun.map(r => r.rank)).size === 18);
+
+  const pills = await rankPills();
+  ok('the map carries one rank label per municipality', pills.length === 18, String(pills.length));
+  ok('and they are the same 1..18',
+     pills.map(p => +p.n).sort((a, b) => a - b).join(',')
+       === Array.from({ length: 18 }, (_, i) => i + 1).join(','));
+  /* Requirement: eighteen steps that can actually be told apart.  Distinct is
+     the floor; the ramp is two hues through a pale middle so that neighbouring
+     steps separate rather than merely differ in the last digit. */
+  ok('all 18 map colours are different from one another',
+     new Set(pills.map(p => p.bg)).size === 18, String(new Set(pills.map(p => p.bg)).size));
+  const steps = await page.evaluate(() => {
+    const hx = s => { const m = s.match(/\d+/g); return m ? m.map(Number) : null; };
+    const els = [...document.querySelectorAll('.lbl.rank > span')];
+    const by = {}; els.forEach(e => { by[e.textContent.trim()] = hx(getComputedStyle(e).backgroundColor); });
+    const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    let worst = 1e9;
+    for (let i = 1; i < 18; i++) worst = Math.min(worst, d(by[i], by[i + 1]));
+    return { worst: Math.round(worst), ends: Math.round(d(by[1], by[18])) };
+  });
+  ok('neighbouring ranks are visibly apart, and the two ends far apart',
+     steps.worst >= 8 && steps.ends > 150, JSON.stringify(steps));
+
+  /* the bar grows from the start edge — it drew from the left in the first cut */
+  ok('the bars grow from the right, the start edge of an RTL row',
+     await page.$$eval('#doc .cmp-row', els => els.every(e => {
+       const t = e.querySelector('.cmp-bar'), f = e.querySelector('.cmp-bar i');
+       return !t || !f || Math.abs(t.getBoundingClientRect().right - f.getBoundingClientRect().right) < 1.5;
+     })));
+  ok('and the bar is longest for rank 1 and shortest for the last',
+     mun[mun.length - 1].bar === 100 && mun[0].bar < 20,
+     `${mun[0].bar} .. ${mun[mun.length - 1].bar}`);
+
+  /* every number opens its own source record, like every other number here */
+  ok('each value points at the municipality source record',
+     mun.every(r => r.src === 'municipio.price_eur_m2'));
+  await page.click('#doc .cmp-row .cmp-v');
+  await page.waitForTimeout(400);
+  ok('and tapping one opens it',
+     !(await page.$eval('#panel', e => e.hidden))
+       && (await page.$eval('#panelBody', e => e.textContent)).includes('0012234'));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+
+  /* רובעים at level 1: ten and ten, and the rest named rather than dropped */
+  await page.click('[data-cmpscope="fre"]');
+  await page.waitForTimeout(900);
+  const fre = await cmpRows();
+  const ranked = fre.filter(r => !r.none);
+  ok('exactly twenty parishes are listed — ten and ten', ranked.length === 20, String(ranked.length));
+  const rk = ranked.map(r => +r.rank);
+  ok('and they are the top ten and the bottom ten of the ranking',
+     rk.slice(-10).sort((a, b) => a - b).join(',') === '1,2,3,4,5,6,7,8,9,10'
+       && Math.min(...rk.slice(0, 10)) > 10,
+     rk.join(','));
+  const cut = await page.$eval('#doc .cmp-cut', e => e.textContent).catch(() => '');
+  ok('the parishes in between are named, not silently dropped',
+     /\d/.test(cut) && cut.includes('אינם מוצגים'), cut.trim());
+  ok('each of the twenty keeps its own place on the ramp, not one colour per ten',
+     new Set(ranked.map(r => r.bar)).size === 20,
+     String(new Set(ranked.map(r => r.bar)).size));
+  ok('the map draws the same twenty', (await rankPills()).length === 20);
+
+  /* a unit with no value is not ranked.  This is the accuracy contract in a
+     new place: giving it a rank would place it on the scale. */
+  ok('parishes with no price are listed apart, without a rank',
+     fre.some(r => r.none) && fre.filter(r => r.none).every(r => r.rank === '–'),
+     `${fre.filter(r => r.none).length} without`);
+  ok('and they read אין נתון rather than a number',
+     fre.filter(r => r.none).every(r => r.val === 'אין נתון'));
+  ok('nor are they counted in the ranking',
+     await page.evaluate(() => {
+       const n = D.fre.filter(f => f.price_eur_m2 !== undefined).length;
+       return document.querySelector('.cmp-cut').textContent.includes(
+         new Intl.NumberFormat('he-IL').format(n - 20));
+     }));
+
+  /* level 2: no choice to offer, so the two buttons are not there */
+  await page.evaluate(() => goMun(1));
+  await page.waitForTimeout(900);
+  ok('the comparison survives going down a level', await page.evaluate(() => S.cmp) === true);
+  ok('at level 2 the two buttons are gone', await page.$('#doc .cmp-scope') === null);
+  const p2 = await cmpRows();
+  ok('and what is compared is that municipality\'s parishes',
+     p2.length === 7 && p2.every(r => r.src === 'freguesia.price_eur_m2'),
+     String(p2.length));
+
+  /* level 3 is not part of this screen */
+  await page.evaluate(() => { const f = D.fre.find(x => x.mun_num === 1); goZone(D.freKey(f)); });
+  await page.waitForTimeout(900);
+  ok('asking for level 3 leaves the comparison rather than showing it there',
+     await page.evaluate(() => S.cmp) === false);
+  ok('and the app is at level 3, not stuck', await page.evaluate(() => S.level) === 'zone');
+
+  /* and a tap on a parish inside the comparison does not descend */
+  await page.click('#homeBtn'); await page.waitForTimeout(700);
+  await page.evaluate(() => { toggleCmp(); goMun(1); S.cmpField = 'price_eur_m2';
+                              redrawLevel(); redrawText(); });
+  await page.waitForTimeout(800);
+  await page.evaluate(() => { const f = D.fre.find(x => x.mun_num === 1); pickFre(f, 'map'); });
+  await page.waitForTimeout(500);
+  ok('a tap on a parish highlights it instead of opening level 3',
+     await page.evaluate(() => S.level) === 'mun'
+       && await page.evaluate(() => S.cmp) === true
+       && await page.$('#doc .cmp-row.is-hi') !== null);
+
+  /* home is the way out of this screen too */
+  await page.click('#homeBtn');
+  await page.waitForTimeout(900);
+  ok('home closes the comparison', await page.evaluate(() => S.cmp) === false);
+  ok('and comes back to the district', await page.evaluate(() => S.level) === 'district');
+  ok('and the field it was on is forgotten, so it opens on the cards again',
+     await page.evaluate(() => S.cmpField) === null);
 
   /* 11. landscape.  The map moves to the left half and the text beside it, so
      "the map's top corner" is no longer the screen's corner — an earlier cut of
