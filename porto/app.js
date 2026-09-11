@@ -257,6 +257,37 @@ function shown(val, dec, step) {
   return nf(Math.round(val / step) * step, 0);
 }
 
+// The four INE housing-market series. They sit in their own card because they
+// are the only figures here that are not Censos 2021, and because the caveat
+// under them is not the census caveat: every value is the median of the twelve
+// months ending in the quarter named, so two quarters side by side would share
+// nine months of the same sales and the difference between them would not be a
+// quarterly change. The app therefore shows one quarter and never a delta.
+//
+// INE publishes at parish level in eleven of the eighteen municipalities. In the
+// other seven every parish is empty, and the card says so rather than leaving
+// four "אין נתון" chips to look like a bug.
+function marketStats(o, lvl) {
+  const f = D.sources.fields[lvl + '.price_eur_m2'] || {};
+  const per = f.reference_period || '';
+  const none = lvl === 'freguesia' && o.price_eur_m2 === undefined
+    && o.price_used_eur_m2 === undefined && o.rent_eur_m2 === undefined;
+  return `<div class="card">
+    <h2>שוק הדיור — INE${per ? ' ' + html(per) : ''}</h2>
+    <div class="stats">
+      ${stat('מכירות', o.price_eur_m2, '€/מ״ר', 0, lvl + '.price_eur_m2')}
+      ${stat('דירות חדשות', o.price_new_eur_m2, '€/מ״ר', 0, lvl + '.price_new_eur_m2')}
+      ${stat('דירות קיימות', o.price_used_eur_m2, '€/מ״ר', 0, lvl + '.price_used_eur_m2')}
+      ${stat('שכירות', o.rent_eur_m2, '€/מ״ר לחודש', 2, lvl + '.rent_eur_m2')}
+    </div>
+    <p class="note">כל ערך הוא החציון של שנים עשר החודשים שמסתיימים ב-${
+      html(per || 'רבעון הייחוס')} — לא של הרבעון עצמו.
+      השכירות היא של חוזים חדשים בלבד, לא של כלל מלאי השכירות.${
+      none ? ' INE אינו מפרסם ברמת הרובע בעירייה הזאת, ולכן אין כאן ולו ערך אחד.'
+           : ''}</p>
+  </div>`;
+}
+
 function stat(label, val, unit, dec, srcKey, step) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
@@ -829,6 +860,7 @@ function renderMun(num) {
 
     ${peopleStats(m, 'municipio')}
     ${housingStats(m, 'municipio')}
+    ${marketStats(m, 'municipio')}
 
     <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הרובעים'} — לפי המספור במפה</div>
     ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
@@ -2163,6 +2195,7 @@ function renderZone(key) {
     ${splitTable(f)}
     ${peopleStats(f, 'freguesia')}
     ${housingStats(f, 'freguesia')}
+    ${marketStats(f, 'freguesia')}
 
     ${z.bairros.length ? `
       <div class="grp">${z.bairros.length} ${curated ? 'שכונות' : 'יישובים ושכונות'} — האותיות במפה</div>

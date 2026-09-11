@@ -415,6 +415,118 @@
    "coverage": "25/25",
    "validation_he": "בכל אחת מ-25 היחידות שפורקו, סכום היורשים שווה בדיוק לאוכלוסיית היחידה כפי שהמפקד סופר אותה. יחידה שלא הייתה מסתדרת — הפילוח שלה לא היה נכנס בכלל.",
    "caveat_he": "מספרי תושבים בלבד. הגבולות של רובעי 2025 אינם באפליקציה, ולכן היורשים מוצגים כרשימה ולא כשכבה על המפה."
+  },
+  "municipio.price_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Total",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. כל הדירות — Total אצל INE."
+  },
+  "freguesia.price_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Total",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "70/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. כל הדירות — Total אצל INE."
+  },
+  "municipio.price_new_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Novos",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "17/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות חדשות בלבד — Novos אצל INE."
+  },
+  "freguesia.price_new_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Novos",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "32/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות חדשות בלבד — Novos אצל INE."
+  },
+  "municipio.price_used_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Existentes",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות קיימות בלבד — Existentes אצל INE."
+  },
+  "freguesia.price_used_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Existentes",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "64/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות קיימות בלבד — Existentes אצל INE."
+  },
+  "municipio.rent_eur_m2": {
+   "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de Rendas da Habitação ao nível local (Metodologia 2026) — אינדיקטור 0014696, פורסם 2026-06-26",
+   "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²)",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0014696&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
+  },
+  "freguesia.rent_eur_m2": {
+   "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de Rendas da Habitação ao nível local (Metodologia 2026) — אינדיקטור 0014696, פורסם 2026-06-26",
+   "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²)",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0014696&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "60/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. INE אינו מפרסם ערך ליחידה שבה מספר העסקאות קטן מדי — שם מופיע ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
   }
  },
  "missing": {
@@ -482,17 +594,18 @@
     ]
    },
    {
-    "field": "municipio.price_eur_m2 / freguesia.price_eur_m2",
-    "label_he": "מחיר למ״ר",
-    "why_he": "idealista.pt/media, Confidencial Imobiliário ומדד הדיור של INE — כולם חסומים.",
-    "fetch": "scripts/fetch_ine_habitacao.py",
+    "field": "freguesia.price_eur_m2 / freguesia.rent_eur_m2 — בשבע עיריות",
+    "label_he": "מחיר ושכר דירה למ״ר ברמת הרובע, בשבע העיריות המזרחיות",
+    "why_he": "מ-1.25.0 ארבע הסדרות של INE באפליקציה: מכירות (הכל, חדשות, קיימות) ושכר דירה בחוזים חדשים, ברבעון 2026Q1. ברמת העירייה יש ערך לכל 18. ברמת הרובע INE מפרסם ב-11 עיריות בלבד. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל — 131 רובעים — אין ולו שורה אחת, ולכן מוצג ׳אין נתון׳. זה לא חסם רשת ולא פער בהורדה: INE פשוט אינו מפרסם שם, כי מספר העסקאות קטן מכדי לעמוד בסף הסטטיסטי שלו.",
+    "important_he": "אסור לתת לרובע את החציון של העירייה שלו. חציון עירוני אינו חציון של רובע, וההבדל בין רובעי אותה עירייה הוא בדיוק מה שהמשתמש בא לחפש. גם בתוך 11 העיריות שכן מתפרסמות, INE משמיט רובע שבו מעט עסקאות: ב-2026Q1 יש מכירות ב-70 מתוך 112 הרובעים המתפרסמים ושכר דירה ב-60. השאר ריקים, וכך הם נשארים.",
+    "decision_he": "שלוש הסתייגויות המקור נשמרות במלואן: (1) המדד הוא חציון של שנים עשר החודשים האחרונים, ולכן האפליקציה אינה מציגה ואינה מחשבת שינוי רבעוני; (2) הסימון ׳-׳ של INE נשמר כערך חסר ולא כאפס; (3) הגאוגרפיה היא NUTS-2024, כלומר חלוקת הרובעים של 2013 — אותה חלוקה שעליה בנויה שכבת CAOP 2020 של האפליקציה, ולכן 112 מתוך 112 הקודים מתאימים בדיוק. במעבר עתידי ל-CAOP 2025 השיוך הזה יישבר: 183 מ-275 הרובעים החדשים לא יהיה להם ערך כלל.",
+    "fetch": "scripts/fetch_ine_habitacao.py · scripts/import_ine_habitacao.py",
     "candidate_sources": [
      "https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=0012234&lang=PT",
      "https://www.idealista.pt/media/relatorios-preco-habitacao/",
      "https://www.ine.pt/ine/json_indicador/pindica.jsp"
     ],
-    "raw_data_arrived_he": "2026-09-07: ine.pt מעולם לא היה חסום — check_network.py בדק ב-HEAD, ו-INE עונה ל-HEAD בסגירת החיבור. הסדרות כאן: data/raw/ine/ine_precos_venda.csv (מדד 0012234, מכירות, 2019Q4–2026Q1) ו-ine_rendas.csv (מדד 0014696, שכירות חדשה, 2020Q1–2026Q1). שני המדדים אומתו מול המטא-דאטה של INE ולא נלקחו מהזיכרון.",
-    "important_he": "שלוש הסתייגויות, וכולן חוסמות הצגה נאיבית: (1) המדד הוא חציון של 12 החודשים האחרונים, ולכן אסור לגזור ממנו שינוי רבעוני; (2) INE מסמן ערך מושמט ב-'-' וזה נשמר בעמודת flag, כשהערך נשאר ריק; (3) הגאוגרפיה היא NUTS-2024, כלומר חלוקת הרובעים של 2013. במחוז 13 יש מחיר ברמת רובע ל-112 רובעים בלבד, מהם 20 הם איחודים שפורקו ואינם קיימים ב-CAOP2025, ו-183 מ-275 הרובעים החדשים אין להם שורה כלל. אסור לתת לרובע חדש את המחיר של האיחוד שהוא היה חלק ממנו ולהציג אותו כמחיר של הרובע."
+    "raw_data_arrived_he": "2026-09-07: ine.pt מעולם לא היה חסום — check_network.py בדק ב-HEAD, ו-INE עונה ל-HEAD בסגירת החיבור. הסדרות כאן: data/raw/ine/ine_precos_venda.csv (מדד 0012234, מכירות, 2019Q4–2026Q1) ו-ine_rendas.csv (מדד 0014696, שכירות חדשה, 2020Q1–2026Q1). שני המדדים אומתו מול המטא-דאטה של INE ולא נלקחו מהזיכרון."
    },
    {
     "field": "bairro.boundary",

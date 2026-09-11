@@ -162,8 +162,23 @@ PENDING_INDICATORS = [
      "fetch": "scripts/fetch_pordata.py --indicator crime", "levels": ["municipio"],
      "warning_he": "סך העבירות הרשומות — לא ׳פשיעה חמורה׳. RASI מפרסמת criminalidade "
                    "violenta e grave לפי מחוז ופיקוד משטרתי בלבד, ולא לפי עירייה."},
-    {"key": "price_eur_m2", "label_he": "מחיר למ״ר", "unit": "€/מ״ר",
-     "fetch": "scripts/fetch_idealista.py", "levels": ["municipio", "freguesia"]},
+    # The four INE housing-market series.  scripts/import_ine_habitacao.py writes
+    # them; the labels and the twelve-month-window caveat travel in their meta,
+    # so nothing here restates what INE publishes.  INE gives a parish figure for
+    # eleven of the eighteen municipalities only — the parishes of the other
+    # seven stay empty rather than inherit their municipality's median.
+    {"key": "price_eur_m2", "label_he": "ערך חציוני של מכירות דירות למ״ר",
+     "unit": "€/מ״ר", "fetch": "scripts/import_ine_habitacao.py",
+     "levels": ["municipio", "freguesia"]},
+    {"key": "price_new_eur_m2", "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר",
+     "unit": "€/מ״ר", "fetch": "scripts/import_ine_habitacao.py",
+     "levels": ["municipio", "freguesia"]},
+    {"key": "price_used_eur_m2", "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר",
+     "unit": "€/מ״ר", "fetch": "scripts/import_ine_habitacao.py",
+     "levels": ["municipio", "freguesia"]},
+    {"key": "rent_eur_m2", "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר",
+     "unit": "€/מ״ר", "fetch": "scripts/import_ine_habitacao.py",
+     "levels": ["municipio", "freguesia"]},
     # One INE Censos 2021 download fills all five of these at once, for the 18
     # municipalities and the 243 freguesias together.
     {"key": "ageing_index", "label_he": "מדד הזדקנות", "unit": "65+/0-14 ×100",

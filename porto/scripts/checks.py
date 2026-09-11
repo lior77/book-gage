@@ -316,6 +316,70 @@ def main():
     if origins.get("app") and "freguesia.note" not in sources["fields"]:
         fail("descriptions written for the app are not documented in sources.json")
 
+    # ---- 7d. the INE housing-market figures --------------------------------
+    # Four series, one source, and one way for them to go wrong that would be
+    # invisible on screen: a parish inheriting its municipality's median. INE
+    # publishes at parish level in eleven municipalities and in no other, so a
+    # value on a parish of the other seven means something filled it in.
+    MARKET = ("price_eur_m2", "price_new_eur_m2", "price_used_eur_m2",
+              "rent_eur_m2")
+    # DICOFRE of the eleven INE publishes parishes for.  The list is in
+    # scripts/import_ine_habitacao.py too; here it is the assertion, there it is
+    # the filter, and the two disagreeing is exactly what this is meant to catch.
+    FRE_PUBLISHED = {"1304", "1306", "1308", "1310", "1312", "1313", "1314",
+                     "1315", "1316", "1317", "1318"}
+    # The band each series stays inside.  Not a guess: the published Porto-
+    # district range at 2026Q1 is 841-4252 EUR/m2 for sales and 3.13-15.17
+    # EUR/m2 for rent, and these bounds sit well outside it.  They exist to
+    # catch a unit slip or the two files swapping places, not to second-guess
+    # INE.
+    BAND = {"price_eur_m2": (200, 20000), "price_new_eur_m2": (200, 20000),
+            "price_used_eur_m2": (200, 20000), "rent_eur_m2": (1, 100)}
+    for level, rows in (("municipio", mun), ("freguesia", fre)):
+        for key in MARKET:
+            skey = "%s.%s" % (level, key)
+            present = [r for r in rows if r.get(key) is not None]
+            if not present:
+                continue
+            entry = sources["fields"].get(skey)
+            if not entry:
+                fail("%s has no source record" % skey)
+                continue
+            for want in ("source", "reference_year", "reference_period",
+                         "caveat_he", "confidence"):
+                if not entry.get(want):
+                    fail("%s: no %s recorded" % (skey, want))
+            # A single source is `reported`.  Calling it verified would need a
+            # second, independent source reaching the same number.
+            if entry.get("confidence") != "reported":
+                fail("%s: confidence is %r, but INE is the only source"
+                     % (skey, entry.get("confidence")))
+            lo, hi = BAND[key]
+            for r in present:
+                v = r[key]
+                if not isinstance(v, (int, float)) or v <= 0:
+                    fail("%s %s: %s is %r" % (level, r["pt"], key, v))
+                elif not lo <= v <= hi:
+                    fail("%s %s: %s is %s EUR/m2, outside %s-%s"
+                         % (level, r["pt"], key, v, lo, hi))
+    for f in fre:
+        if f.get("dicofre", "")[:4] in FRE_PUBLISHED:
+            continue
+        for key in MARKET:
+            if f.get(key) is not None:
+                fail("freguesia %s (%s): %s is %s, but INE publishes no parish "
+                     "figure in that municipality — something filled it in"
+                     % (f["pt"], f.get("dicofre"), key, f[key]))
+    # Rent is EUR/m2 per month and a sale price is EUR/m2 outright; they differ
+    # by two orders of magnitude everywhere.  If one unit ever comes out of the
+    # same range as the other, the two series have been crossed.
+    for level, rows in (("municipio", mun), ("freguesia", fre)):
+        for r in rows:
+            price, rent = r.get("price_eur_m2"), r.get("rent_eur_m2")
+            if price is not None and rent is not None and price < rent * 10:
+                fail("%s %s: sale %s and rent %s are not two different units"
+                     % (level, r["pt"], price, rent))
+
     # ---- level 3 covers every parish, not only Porto's seven ---------------
     zones = load("zones.json")["zones"]
     missing_z = [f["pt"] for f in fre if "%d|%s" % (f["mun_num"], f["pt"]) not in zones]

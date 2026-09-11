@@ -675,6 +675,120 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(1200);
   ok('a reload does not reopen the menu', await page.$eval('#menu', el => el.hidden) === true);
 
+  /* 10b. the INE housing-market card.  Four numbers, every one of them a chip
+     that opens its own source record, and the seven municipalities INE does not
+     publish parishes for showing "אין נתון" rather than their municipality's
+     median.  The fill-down is the failure this is here for: it would look
+     perfectly plausible on screen. */
+  const cardOf = h => page.evaluate(t => {
+    const c = [...document.querySelectorAll('#doc .card')]
+      .find(el => (el.querySelector('h2') || {}).textContent?.includes(t));
+    if (!c) return null;
+    return {
+      title: c.querySelector('h2').textContent.trim(),
+      note: (c.querySelector('.note') || {}).textContent || '',
+      chips: [...c.querySelectorAll('.stat')].map(b => ({
+        label: b.querySelector('.stat-l').textContent.trim(),
+        value: b.querySelector('.stat-v').textContent.trim(),
+        year: b.querySelector('.stat-y').textContent.trim(),
+        src: b.dataset.src,
+        missing: b.classList.contains('no'),
+      })),
+    };
+  }, h);
+
+  await page.evaluate(() => goMun(1));          // Porto
+  await page.waitForTimeout(800);
+  const mk = await cardOf('שוק הדיור');
+  ok('the market card is on the municipality page', mk !== null);
+  ok('its heading names INE and the quarter',
+     mk && /INE\s+\d{4}Q\d/.test(mk.title), mk && mk.title);
+  ok('it carries the four series', mk && mk.chips.length === 4,
+     mk && String(mk.chips.length));
+  ok('each chip points at its own source record',
+     mk && new Set(mk.chips.map(c => c.src)).size === 4
+        && mk.chips.every(c => c.src.startsWith('municipio.')),
+     mk && mk.chips.map(c => c.src).join(' '));
+  ok('Porto has a sale price and it is a number',
+     mk && !mk.chips[0].missing && /\d/.test(mk.chips[0].value),
+     mk && mk.chips[0].value);
+  ok('and the year on the chip is the reference year, not today',
+     mk && /^\d{4}$/.test(mk.chips[0].year), mk && mk.chips[0].year);
+  ok('the note says the value is a twelve-month median, not the quarter',
+     mk && mk.note.includes('שנים עשר החודשים'), mk && mk.note.slice(0, 60));
+  ok('and that the rent is new contracts only',
+     mk && mk.note.includes('חוזים חדשים'));
+
+  /* the chip opens the source record, and the record carries the caveat */
+  await page.click('#doc .card .stat[data-src="municipio.rent_eur_m2"]');
+  await page.waitForTimeout(400);
+  const rec = await page.evaluate(() =>
+    document.querySelector('#panel').hidden ? '' :
+    document.querySelector('#panelBody').textContent);
+  ok('tapping the rent chip opens its source record',
+     rec.includes('0014696'), rec.slice(0, 80));
+  ok('the record repeats the twelve-month caveat',
+     rec.includes('שנים עשר החודשים'));
+  ok('and says the value is reported, not verified',
+     !rec.includes('מאומת') || rec.includes('מדווח'));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+
+  /* one of the seven: INE publishes the municipality and none of its parishes */
+  // The count is the assertion, not the sample.  Picking whichever municipality
+  // happens to be empty would keep passing while six of the seven quietly
+  // filled up, which is the shape of a check that cannot fail.
+  const blind = await page.evaluate(() => {
+    const has = new Set(D.fre.filter(f => f.price_eur_m2 !== undefined)
+                             .map(f => f.mun_num));
+    return D.mun.filter(x => !has.has(x.num)).map(x => x.pt);
+  });
+  ok('INE publishes parishes in eleven municipalities and no more',
+     blind.length === 7, `${blind.length}: ${blind.join(', ')}`);
+  ok('and they are the seven the source record names',
+     blind.slice().sort().join('|') === ['Amarante', 'Baião', 'Felgueiras',
+       'Lousada', 'Marco de Canaveses', 'Paços de Ferreira', 'Penafiel']
+       .sort().join('|'), blind.join(', '));
+  const blindNum = await page.evaluate(names => {
+    const m = D.mun.find(x => x.pt === names[0]);
+    goMun(m.num);
+    return m.num;
+  }, blind);
+  await page.waitForTimeout(800);
+  const pm = await cardOf('שוק הדיור');
+  ok('a municipality with no published parish still has its own figure',
+     pm && !pm.chips[0].missing, pm && pm.chips[0].value);
+  const pz = await page.evaluate(n => {
+    const f = D.fre.find(x => x.mun_num === n);
+    goZone(f.mun_num + '|' + f.pt);
+    return f.pt;
+  }, blindNum);
+  await page.waitForTimeout(900);
+  const pf = await cardOf('שוק הדיור');
+  ok(`${pz}: every one of the four reads אין נתון`,
+     pf && pf.chips.length === 4 && pf.chips.every(c => c.missing),
+     pf && pf.chips.map(c => c.value).join(' | '));
+  ok('and the card says why rather than leaving four blanks',
+     pf && pf.note.includes('אינו מפרסם ברמת הרובע'), pf && pf.note.slice(-70));
+  ok('the parish chips point at the parish records, not the municipality ones',
+     pf && pf.chips.every(c => c.src.startsWith('freguesia.')),
+     pf && pf.chips.map(c => c.src).join(' '));
+
+  /* a parish INE does publish, in one of the eleven */
+  const okp = await page.evaluate(() => {
+    const f = D.fre.find(x => x.price_eur_m2 !== undefined);
+    goZone(f.mun_num + '|' + f.pt);
+    return f.pt;
+  });
+  await page.waitForTimeout(900);
+  const gf = await cardOf('שוק הדיור');
+  ok(`${okp}: a published parish shows its own number`,
+     gf && !gf.chips[0].missing, gf && gf.chips[0].value);
+  ok('and it does not carry the seven-municipality note',
+     gf && !gf.note.includes('אינו מפרסם ברמת הרובע'));
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+
   /* 11. landscape.  The map moves to the left half and the text beside it, so
      "the map's top corner" is no longer the screen's corner — an earlier cut of
      this change put the controls over the text, which is what this catches. */
