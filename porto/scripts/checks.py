@@ -769,6 +769,42 @@ def main():
     print("data files shipped %d/%d by both the bundle and the APK"
           % (len(wanted), len(wanted)))
 
+    # ---- 7q. nothing is FULLY published and still listed as missing --------
+    # missing.items is part of the product: it is the app telling the reader
+    # what it will not claim and why. A record that stays there after the field
+    # arrives is the app making a false statement about itself — and a quiet
+    # one, because the number shows on screen while the record sits in a panel
+    # nobody re-reads. municipio.foreign_pct and municipio.median_age both said
+    # "PORDATA and AIMA are blocked" while sitting at 18/18 and 243/243 from
+    # the 2021 census, and i18n.prose said the prose was deliberately
+    # untranslated on the very build that translated it.
+    #
+    # The test is COMPLETE coverage, not any coverage. The first version asked
+    # whether the field had any values at all and flagged
+    # freguesia.price_eur_m2, which is published for 70 parishes of 243 and
+    # absent in seven whole municipalities — a partial gap with a reason is
+    # exactly what this list exists to carry. That finding was the check being
+    # wrong, not the data.
+    rows_at = {"municipio": mun, "freguesia": fre}
+    contradictions = []
+    for item in sources["missing"]["items"]:
+        head = item["field"].split(" — ")[0]
+        for name in re.split(r"\s*/\s*", head):
+            name = name.strip()
+            level, _, key = name.partition(".")
+            rows = rows_at.get(level)
+            if not rows or name not in sources["fields"]:
+                continue
+            have = sum(1 for r in rows if r.get(key) is not None)
+            if have == len(rows):
+                contradictions.append((name, "%d/%d" % (have, len(rows))))
+    if contradictions:
+        fail("%d fields are fully published AND listed in missing.items — the "
+             "missing list is telling the reader something untrue about the "
+             "app: %s" % (len(contradictions), contradictions[:3]))
+    print("missing.items %d records, none of them fully published"
+          % len(sources["missing"]["items"]))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a

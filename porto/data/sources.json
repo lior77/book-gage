@@ -617,26 +617,6 @@
     ]
    },
    {
-    "field": "municipio.foreign_pct",
-    "label_he": "אחוז תושבים זרים",
-    "why_he": "AIMA (לשעבר SEF) ו-PORDATA חסומים.",
-    "fetch": "scripts/fetch_pordata.py --indicator foreign",
-    "candidate_sources": [
-     "https://www.pordata.pt/municipios/populacao+estrangeira+com+estatuto+legal+de+residente+total+e+por+algumas+nacionalidades-45",
-     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-    ]
-   },
-   {
-    "field": "municipio.median_age",
-    "label_he": "גיל חציוני",
-    "why_he": "PORDATA טוענת את הטבלאות ב-JavaScript; INE חסום.",
-    "fetch": "scripts/fetch_ine.py --indicator median_age",
-    "candidate_sources": [
-     "https://www.pordata.pt/municipios/idade+mediana+da+populacao-6",
-     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-    ]
-   },
-   {
     "field": "freguesia.price_eur_m2 / freguesia.rent_eur_m2 — בשבע עיריות",
     "label_he": "מחיר ושכר דירה למ״ר ברמת הרובע, בשבע העיריות המזרחיות",
     "why_he": "מ-1.25.0 ארבע הסדרות של INE באפליקציה: מכירות (הכל, חדשות, קיימות) ושכר דירה בחוזים חדשים, ברבעון 2026Q1. ברמת העירייה יש ערך לכל 18. ברמת הרובע INE מפרסם ב-11 עיריות בלבד. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל — 131 רובעים — אין ולו שורה אחת, ולכן מוצג ׳אין נתון׳. זה לא חסם רשת ולא פער בהורדה: לשבע העיריות האלה אין שורה ברמת הרובע בקובץ של INE כלל — לא שורה ריקה, אלא היעדר מוחלט. הסיבה אינה מתפרסמת ולכן אינה נאמרת כאן.",
