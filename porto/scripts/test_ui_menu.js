@@ -55,6 +55,30 @@ const css = (page, sel, prop) =>
 
   const vw = page.viewportSize().width;
 
+  /* 0. the defaults a fresh install opens on.  A default that changes in the
+     code alone changes nothing on a phone that already has the app — the old
+     value is in localStorage and restore() puts it straight back — so PREF_REV
+     drops the switches named in DEFAULT_RESET once.  Both halves are checked:
+     the value, and the fact that a stored true does not survive a bump. */
+  ok('the rivers are off until they are asked for',
+     await page.evaluate(() => S.water) === false);
+  ok('and no boundary is drawn thicker than a municipality',
+     await page.evaluate(() => LINE_W.mun === 2.4 && LINE_W.district === 2.4
+       && LINE_W.fre === 1.2 && LINE_W.region === 3.2),
+     await page.evaluate(() => JSON.stringify(LINE_W)));
+  ok('a river switch stored by an older build does not come back',
+     await page.evaluate(() => {
+       const k = Object.keys(localStorage).find(x => /porto/i.test(x)) || KEY;
+       const kept = localStorage.getItem(k);
+       localStorage.setItem(k, JSON.stringify({ water: true, rev: PREF_REV - 1 }));
+       const before = S.water;
+       S.water = false; restore();
+       const after = S.water;
+       localStorage.setItem(k, kept === null ? '{}' : kept);
+       S.water = before;
+       return after === false;
+     }));
+
   /* 1. the trail sits below the map, and is only as tall as its own line */
   const map = await box(page, '#paneMap');
   const top = await box(page, 'header.top');
@@ -270,7 +294,7 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(800);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
 
-  /* אזורים draws the orange line, 4 wide */
+  /* אזורים draws the orange line, 3.2 wide */
   await page.click('[data-m="regions"]');
   await page.waitForTimeout(700);
   const region = await page.evaluate(() => {
@@ -278,7 +302,7 @@ const css = (page, sel, prop) =>
       .find(el => (el.getAttribute('stroke') || '').toLowerCase() === '#e2761b');
     return p ? Number(p.getAttribute('stroke-width')) : null;
   });
-  ok('אזורים draws the orange line at width 4', region === 4, String(region));
+  ok('אזורים draws the orange line at width 3.2', region === 3.2, String(region));
   await page.click('[data-m="regions"]');
   await page.waitForTimeout(400);
 
@@ -818,10 +842,14 @@ const css = (page, sel, prop) =>
      itself.  The first cut of this check passed with the code that turns it off
      deleted. */
   await page.evaluate(() => { if (!S.tiles) toggleTiles(); });
+  /* Same trap as the background: switch the rivers ON going in, or "they are
+     off inside" passes on a page where they were never on. */
+  await page.evaluate(() => { if (!S.water) { S.water = true; applyNature(); } });
   await page.waitForTimeout(300);
   const tilesBefore = await page.evaluate(() => S.tiles);
   ok('the street background is on before the comparison is opened',
      tilesBefore === true);
+  ok('and so are the rivers', await page.evaluate(() => S.water) === true);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
   await page.click('[data-m="cmp"]');
   await page.waitForTimeout(1000);
@@ -831,6 +859,9 @@ const css = (page, sel, prop) =>
        && await page.evaluate(() => S.cmpScope) === 'mun');
   ok('with the street background off',
      await page.evaluate(() => S.tiles) === false);
+  /* A blue line crossing a blue fill is read as part of the scale. */
+  ok('and the rivers off with it', await page.evaluate(() => S.water) === false
+     && await page.evaluate(() => !!(NAT.water && map.hasLayer(NAT.water))) === false);
   ok('and the field it opens on is the municipalities\' area',
      await page.evaluate(() => S.cmpField) === 'area_km2');
   ok('the screen is map above and text below',
@@ -917,15 +948,37 @@ const css = (page, sel, prop) =>
      SC 2.5.8 puts the floor at 24 CSS px */
   ok('and the label\'s own box is a 24px target, as 2.5.8 requires',
      lblStyle.hit >= 24, String(lblStyle.hit));
-  /* and the boundaries are white, not the black the map normally draws */
+  /* The boundary while comparing is white AND dark — a casing with a core
+     inside it.  Neither colour clears 3:1 over all five blues and both plates
+     on its own, and the edge of the district against the day plate, white on
+     #eef1f5 at 1.13, was the one the eye lost first.  So the test is not "white
+     everywhere" any more; it is that both strokes are there, in every pane that
+     draws a boundary, and that the dark one is present on the district's own
+     outline, which is the silhouette. */
   // Leaflet names the pane element leaflet-<name>-pane, not <name>
-  const lines = await page.evaluate(() => [...new Set(
-    ['ln-mun', 'ln-district', 'ln-fre'].flatMap(p =>
-      [...document.querySelectorAll(`.leaflet-${p}-pane path`)]
-        .map(x => x.getAttribute('stroke')).filter(Boolean)))]);
-  ok('the boundaries are white while comparing, never black',
-     lines.length > 0 && lines.every(c => /255/.test(c) || c === '#ffffff'),
-     lines.join(' | '));
+  const strokesIn = p => page.evaluate(pane => [...new Set(
+    [...document.querySelectorAll(`.leaflet-${pane}-pane path`)]
+      .map(x => (x.getAttribute('stroke') || '').toLowerCase()).filter(Boolean))], p);
+  for (const pane of ['ln-mun', 'ln-district']) {
+    const c = await strokesIn(pane);
+    ok(`${pane}: the boundary is cased — white outside, dark core inside`,
+       c.includes('#ffffff') && c.includes('#1b2532'), c.join(' | '));
+  }
+  const cased = await page.evaluate(() => {
+    const of = pane => [...document.querySelectorAll(`.leaflet-${pane}-pane path`)]
+      .map(x => ({ c: (x.getAttribute('stroke') || '').toLowerCase(),
+                   w: Number(x.getAttribute('stroke-width')) }));
+    const m = of('ln-mun');
+    const white = m.find(x => x.c === '#ffffff');
+    const dark = m.find(x => x.c === '#1b2532');
+    return { white: white && white.w, dark: dark && dark.w };
+  });
+  ok('and the core is the narrower of the two, so it reads as one line',
+     cased.dark > 0 && cased.dark < cased.white,
+     `casing ${cased.white}, core ${cased.dark}`);
+  ok('no boundary is left black while comparing',
+     !(await strokesIn('ln-mun')).includes('#000000')
+       && !(await strokesIn('ln-district')).includes('#000000'));
 
   /* רובעים at level 1 must draw ALL 243, not a sample.  An earlier cut drew the
      twenty ends and hatched the eighteen municipalities underneath them, which
@@ -946,6 +999,24 @@ const css = (page, sel, prop) =>
   ok('and they still take only the five colours',
      new Set(freRows.map(r => r.fill)).size === 5,
      String(new Set(freRows.map(r => r.fill)).size));
+  /* A fill with no edge is not a unit — it is a stain that runs into the next
+     one.  At level 1 the parish lines are off on the ordinary map, which is why
+     they were missing here: the comparison is the one place that needs all 243
+     of them, because all 243 are carrying a value. */
+  const freLines = await page.$$eval('.leaflet-ln-fre-pane path',
+    els => els.filter(e => e.getAttribute('stroke')).length);
+  ok('and every parish has a boundary drawn, not only a fill',
+     freLines >= freRows.length, `${freLines} strokes for ${freRows.length} parishes`);
+  ok('the parish line stays the receding one — the municipality above it is stronger',
+     await page.evaluate(() => {
+       const w = pane => {
+         const el = document.querySelector(`.leaflet-${pane}-pane path[stroke="#ffffff"]`)
+           || document.querySelector(`.leaflet-${pane}-pane path`);
+         return el ? Number(el.getAttribute('stroke-width')) : 0;
+       };
+       // an absent pane gives 0, and 0 < anything is true — so require both
+       return w('ln-fre') > 0 && w('ln-mun') > 0 && w('ln-fre') < w('ln-mun');
+     }));
   await page.click('[data-cmpscope="mun"]');
   await page.waitForTimeout(900);
 
@@ -956,6 +1027,16 @@ const css = (page, sel, prop) =>
      await page.evaluate(() => S.level) === 'mun' && await page.evaluate(() => S.cmp) === true);
   ok('at level 2 the two scope buttons are gone',
      await page.$('#doc .cmp-sc') === null);
+  /* There is no street map under the other seventeen, so their outlines would
+     be lines around a picture of one municipality, and the district edge would
+     cross the empty corner on its way to nowhere. */
+  ok('and the plate holds that municipality alone — no neighbours, no district',
+     await page.evaluate(() => {
+       const n = p => document.querySelectorAll(`.leaflet-${p}-pane path`).length;
+       return n('ln-mun') <= 2 && n('ln-district') === 0;
+     }),
+     await page.evaluate(() => JSON.stringify(['ln-mun', 'ln-district']
+       .map(p => [p, document.querySelectorAll(`.leaflet-${p}-pane path`).length]))));
   ok('but החלפת נתון is still there', await page.$('[data-cmppick="1"]') !== null);
   const p2 = await cmpRows();
   ok('and the parishes of that municipality are what is compared',
@@ -1011,6 +1092,8 @@ const css = (page, sel, prop) =>
   ok('and gives the street background back exactly as it was',
      await page.evaluate(() => S.tiles) === tilesBefore,
      `${tilesBefore} → ${await page.evaluate(() => S.tiles)}`);
+  ok('and the rivers back too, since they were on going in',
+     await page.evaluate(() => S.water) === true);
   ok('and comes back to the district', await page.evaluate(() => S.level) === 'district');
 
   /* 11. landscape.  The map moves to the left half and the text beside it, so

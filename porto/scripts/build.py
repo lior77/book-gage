@@ -26,6 +26,7 @@ so) and "approx" (derived or proxied, never a measurement).  Anything below
 it carries a comment saying the same.  Search this file for CONFIDENCE.
 """
 import json
+import itertools
 import math
 import os
 import re
@@ -34,7 +35,7 @@ import unicodedata
 from datetime import date
 
 from geographiclib.geodesic import Geodesic
-from shapely.geometry import shape, mapping
+from shapely.geometry import Point, shape, mapping
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -91,10 +92,95 @@ def geom_area_km2(geom):
     return total / 1e6
 
 
-def simplify(geom, tol, ndigits=5):
+def label_point(geom):
+    """The point inside the shape that is farthest from its edge.
+
+    ``representative_point`` only promises to land inside the polygon: GEOS
+    takes a horizontal line through the shape and returns the middle of one
+    crossing, so on a bent or lobed municipality the label can sit right up
+    against a border — Penafiel's ``5`` did.  What a label wants is the pole of
+    inaccessibility: the most interior point there is, which is what reads as
+    optically centred.
+
+    This is Mapbox's polylabel — a grid of square cells in a priority queue,
+    each split in four while its best possible distance still beats the best
+    point found so far.  On a MultiPolygon the label belongs in the largest
+    part; the small islands are not where the name goes.
+    """
+    import heapq
+
+    polys = [geom] if geom.geom_type == "Polygon" else list(geom.geoms)
+    poly = max(polys, key=lambda p: p.area)
+    boundary = poly.boundary
+    minx, miny, maxx, maxy = poly.bounds
+    w, h = maxx - minx, maxy - miny
+    size = min(w, h)
+    if size == 0:
+        return poly.representative_point()
+
+    def signed(x, y):
+        """Distance to the edge — negative outside, so cells outside lose."""
+        pt = Point(x, y)
+        d = boundary.distance(pt)
+        return d if poly.contains(pt) else -d
+
+    def cell(x, y, half):
+        d = signed(x, y)
+        # the most any point in this cell could be worth
+        return (-(d + half * math.sqrt(2)), next(seq), x, y, half, d)
+
+    # The walk is over the cells' left and bottom edges, not their centres: step
+    # by centre and the last column and row fall outside the loop, which loses a
+    # whole cell of the shape along two sides. Guilhufe e Urrô's label landed
+    # 15% short of the roomiest spot that way, and check 7h is what said so.
+    seq = itertools.count()
+    queue = []
+    half = size / 2.0
+    x = minx
+    while x < maxx:
+        y = miny
+        while y < maxy:
+            heapq.heappush(queue, cell(x + half, y + half, half))
+            y += size
+        x += size
+
+    best = poly.representative_point()
+    best_d = signed(best.x, best.y)
+    start = poly.centroid
+    if poly.contains(start):
+        d = signed(start.x, start.y)
+        if d > best_d:
+            best, best_d = start, d
+
+    # a hundredth of the shape is close enough for a label; it stops the queue
+    precision = size / 100.0
+    while queue:
+        bound, _, x, y, half, d = heapq.heappop(queue)
+        if d > best_d:
+            best, best_d = Point(x, y), d
+        if -bound - best_d <= precision:
+            continue
+        q = half / 2.0
+        for dx, dy in ((-q, -q), (q, -q), (-q, q), (q, q)):
+            heapq.heappush(queue, cell(x + dx, y + dy, q))
+    return best
+
+
+# What the app actually draws. The label has to be centred on that shape and not
+# on the source polygon: at these tolerances a border moves by up to a hundred
+# metres, which is the same order as the clearance that decides whether a number
+# touches the line it sits next to.
+SIMPLIFY_MUN = 0.0006
+SIMPLIFY_FRE = 0.0004
+
+
+def simplify_geom(geom, tol):
     g = geom.simplify(tol, preserve_topology=True).buffer(0)
-    if g.is_empty:
-        g = geom
+    return geom if g.is_empty else g
+
+
+def simplify(geom, tol, ndigits=5):
+    g = simplify_geom(geom, tol)
     return json.loads(json.dumps(mapping(g)), parse_float=lambda s: round(float(s), ndigits))
 
 
@@ -722,7 +808,7 @@ def main():
             src = taken.get(caop_name)
             geom = shape(ft["geometry"]).buffer(0)
             area = geom_area_km2(geom)
-            pt = geom.representative_point()
+            pt = label_point(simplify_geom(geom, SIMPLIFY_FRE))
             rec = {
                 "mun_num": n,
                 "mun": mun,
@@ -810,7 +896,7 @@ def main():
         en, he, colour, fields = porto_pages.PROFILES[n]
         geom = mun_geom[mun]
         area = geom_area_km2(geom)
-        pt = geom.representative_point()
+        pt = label_point(simplify_geom(geom, SIMPLIFY_MUN))
         kids = [f for f in freguesias if f["mun_num"] == n]
         known = [f["pop2021"] for f in kids if "pop2021" in f]
         rec = {
@@ -900,7 +986,7 @@ def main():
         mun_fc["features"].append({
             "type": "Feature",
             "properties": {"num": NUM[mun], "name": mun},
-            "geometry": simplify(mun_geom[mun], 0.0006),
+            "geometry": simplify(mun_geom[mun], SIMPLIFY_MUN),
         })
     fre_fc = {"type": "FeatureCollection", "features": []}
     for ft in caop_fre["features"]:
@@ -908,7 +994,7 @@ def main():
         fre_fc["features"].append({
             "type": "Feature",
             "properties": {"mun_num": pr["mun_num"], "name": pr["name"]},
-            "geometry": simplify(shape(ft["geometry"]).buffer(0), 0.0004),
+            "geometry": simplify(shape(ft["geometry"]).buffer(0), SIMPLIFY_FRE),
         })
 
     # ---- optional indicators from the fetch_* scripts ----------------------

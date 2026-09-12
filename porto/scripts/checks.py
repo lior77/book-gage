@@ -437,6 +437,75 @@ def main():
         fail("docs/DESIGN.html has drifted from app.css — "
              "run python3 scripts/build_design.py  (%s)" % r.stdout.strip())
 
+    # ---- 7h. a label sits where a label can be read ------------------------
+    # The number on a municipality used to come from representative_point(),
+    # which only promises to land inside the shape: GEOS takes a horizontal line
+    # through the polygon and returns the middle of one crossing. On Matosinhos
+    # that was 0.0035° from the border — about three pixels at the opening zoom,
+    # so the label touched the line. build.py now takes the pole of
+    # inaccessibility instead, and this is what makes sure it stays taken: every
+    # stored centre has to be inside its own shape and no closer to the edge
+    # than either of the two cheap answers it replaced.
+    # No try/except around this import. A check that skips itself when a library
+    # is missing is a check that cannot fail, and this file has been caught that
+    # way three times — see section 11. build.py needs shapely anyway, so an
+    # environment that can build can run this.
+    import numpy as _np
+    import shapely as _sh
+    from shapely.geometry import shape as _shape, Point as _Point
+
+    def edge_gap(geom, x, y):
+        pt = _Point(x, y)
+        return geom.boundary.distance(pt) if geom.contains(pt) else -1.0
+
+    # The test is a grid, not a second run of build.py's own function: re-running
+    # the code that produced the number proves only that the file is not stale.
+    # A 24x24 lattice over the shape is an independent opinion about where the
+    # roomiest spot is, and the stored centre has to beat every point on it.
+    def best_on_grid(poly, n=24):
+        minx, miny, maxx, maxy = poly.bounds
+        gx, gy = _np.meshgrid(_np.linspace(minx, maxx, n), _np.linspace(miny, maxy, n))
+        gx, gy = gx.ravel(), gy.ravel()
+        inside = _sh.contains_xy(poly, gx, gy)
+        if not inside.any():
+            return 0.0
+        return float(_sh.distance(poly.boundary, _sh.points(gx[inside], gy[inside])).max())
+
+    def check_centres(features, key_of, centres, what):
+        bad = []
+        for ft in features:
+            k = key_of(ft["properties"])
+            c = centres.get(k)
+            if c is None:
+                bad.append("%s: on the map but not in the data" % (k,))
+                continue
+            g = _shape(ft["geometry"]).buffer(0)
+            parts = [g] if g.geom_type == "Polygon" else list(g.geoms)
+            big = max(parts, key=lambda q: q.area)
+            got = edge_gap(big, c[0], c[1])
+            if got < 0:
+                bad.append("%s: the centre is outside the shape" % (k,))
+                continue
+            # the lattice is coarse, so it is allowed to come within a tenth of
+            # the stored point — what it must not do is beat it outright
+            grid = best_on_grid(big)
+            if grid > got * 1.1:
+                bad.append("%s: %.5f from the edge, but a plain grid finds %.5f"
+                           % (k, got, grid))
+        if bad:
+            fail("%d %s labels sit badly — run python3 scripts/build.py: %s"
+                 % (len(bad), what, bad[:3]))
+
+    check_centres(load("boundaries_municipios.geojson")["features"],
+                  lambda pr: pr["num"],
+                  {m["num"]: m["center"] for m in load("municipios.json")["items"]},
+                  "municipality")
+    check_centres(load("boundaries_freguesias.geojson")["features"],
+                  lambda pr: (pr["mun_num"], pr["name"]),
+                  {(f["mun_num"], f["pt"]): f["center"]
+                   for f in load("freguesias.json")["items"]},
+                  "parish")
+
     # ---- 7g. a ≥ in Hebrew prose keeps its direction -----------------------
     # The bidi algorithm mirrors ≥ into ≤ when it resolves inside an RTL run, so
     # "טקסט ≥ 4.5:1" is read by the user as the opposite requirement. The source

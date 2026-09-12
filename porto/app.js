@@ -29,7 +29,7 @@ const S = {
   theme: 'auto',      // 'auto' | 'light' | 'dark' — day/night is a choice
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
-  water: true,         // rivers and lakes
+  water: false,        // rivers and lakes — off until asked for
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
   mine: true,          // draw the points the user added
@@ -92,9 +92,14 @@ const MINE_COLOUR = '#d32f2f';
    a highlight colour, which is a different question from what kind of border
    this is. */
 /* Three widths were the hierarchy; two are, now that the municipalities were
-   asked for at the district's own 3.2.  What separates them is the pane they
-   sit in and the colour the level gives them, not the weight. */
-const LINE_W = { region: 4, district: 3.2, mun: 3.2, fre: 1.6 };
+   asked for at the district's own weight.  What separates them is the pane they
+   sit in and the colour the level gives them, not the weight.
+
+   The weights came down a step on every page and every level: at 3.2 the
+   municipality outline was thick enough to eat the shape behind it on a phone,
+   and the hierarchy survives the thinning because it was never carried by
+   width alone. */
+const LINE_W = { region: 3.2, district: 2.4, mun: 2.4, fre: 1.2 };
 /* The two NUTS III regions are the one line that is not a shade of the ink.
    They are neither the subject of any level nor part of the district's own
    hierarchy, and a fourth grey among three greys said nothing about that. */
@@ -143,9 +148,18 @@ const lineColour = (kind, props) => {
     && (!props || ownFeature(kind, props));
   /* While comparing, every unit is a filled colour and the black lines the map
      normally uses read as a second, competing layer over them.  White separates
-     the shapes without adding a value of its own — and it works over all five
-     blues, which black does not. */
-  if (S.cmp) return own ? '#ffffff' : 'rgba(255,255,255,.65)';
+     the shapes without adding a value of its own — but only over the three
+     darkest blues.  Measured against the five fills and the two plates:
+
+       white   1.98  2.47  4.08  6.94  12.26   plate 1.13 (day)  18.43 (night)
+       ink     7.83  6.26  3.80  2.23   1.26   plate 13.66       1.19
+
+     Neither colour is a boundary on its own, and the edge of the district —
+     white against the day plate at 1.13 — was the one the eye lost first.  So
+     the line is drawn twice: a white casing with a dark core inside it.  Under
+     every fill and both plates one of the two clears 3:1, which is what SC
+     1.4.11 asks of a boundary that carries meaning. */
+  if (S.cmp) return own ? '#ffffff' : 'rgba(255,255,255,.7)';
   return isDark()
     ? (own ? '#ffffff' : 'rgba(255,255,255,.5)')
     : (own ? '#000000' : 'rgba(0,0,0,.5)');
@@ -154,36 +168,77 @@ const lineColour = (kind, props) => {
 /* Drawn after the filled shapes of whichever level is on screen, so a boundary
    is never buried under a fill.  The fills carry no stroke of their own any
    more — every line on the map comes from here. */
+/* The dark half of the comparison line.  It is drawn inside the white one, at
+   half its weight, so what the eye reads is still a single thin boundary — the
+   white is a casing, not a second line. */
+const CMP_CORE = '#1b2532';
+const LINE_KEYS = ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre',
+                   'lnRegionC', 'lnDistrictC', 'lnMunC', 'lnFreC'];
+
 function drawLines() {
-  ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
+  LINE_KEYS.forEach(k => {
     if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; }
   });
   const style = (kind, props) => ({ color: lineColour(kind, props),
     weight: LINE_W[kind], opacity: .95, fill: false,
     lineJoin: 'round', lineCap: 'round' });
+  const core = (kind, props) => ({ color: CMP_CORE,
+    weight: LINE_W[kind] / 2, opacity: lineColour(kind, props) === '#ffffff' ? .95 : .6,
+    fill: false, lineJoin: 'round', lineCap: 'round' });
+
+  /* One boundary, two strokes.  The casing goes in first and the core on top of
+     it inside the same pane, where Leaflet keeps insertion order — so the pane
+     stacking that decides which kind of line wins is untouched. */
+  const add = (key, data, kind, props) => {
+    LG[key] = L.geoJSON(data, { pane: PANE_OF[kind], interactive: false,
+      style: ft => style(kind, ft.properties) }).addTo(map);
+    // the regions are the one line that is a colour rather than an ink; a dark
+    // core inside the orange would be a second thing to read, not a casing
+    if (S.cmp && kind !== 'region') {
+      LG[key + 'C'] = L.geoJSON(data, { pane: PANE_OF[kind], interactive: false,
+        style: ft => core(kind, ft.properties) }).addTo(map);
+    }
+    return LG[key];
+  };
 
   /* The parish lines are not a district-wide layer any more.  At level 2 they
      are the chosen municipality's own parishes and nothing else; at level 3 the
      one parish being looked at, which still needs an outline — the fill under
      it carries none.  At level 1 they are not drawn at all: 243 outlines over
-     eighteen municipalities was noise, not context. */
+     eighteen municipalities was noise, not context.
+
+     The comparison screen is the exception, and only when the parishes are what
+     is being compared.  There all 243 carry a value and a colour of their own,
+     and a fill with no edge is not a unit — it is a stain that runs into its
+     neighbour.  They stay the receding line, not the black one: the
+     municipality outline above them is what says where you are looking. */
   const freHere = S.level === 'mun'
     ? ft => ft.properties.mun_num === S.mun
     : S.level === 'zone'
       ? ft => ft.properties.mun_num + '|' + ft.properties.name === S.zone
-      : null;
+      : S.cmp && S.cmpScope === 'fre'
+        ? () => true
+        : null;
   if (S.lnFre && freHere) {
-    LG.lnFre = L.geoJSON({ type: 'FeatureCollection', features: D.bF.features.filter(freHere) },
-      { pane: PANE_OF.fre, interactive: false,
-        style: ft => style('fre', ft.properties) }).addTo(map);
+    add('lnFre', { type: 'FeatureCollection', features: D.bF.features.filter(freHere) }, 'fre');
   }
   if (S.lnMun) {
-    LG.lnMun = L.geoJSON(D.bM, { pane: PANE_OF.mun, interactive: false,
-      style: ft => style('mun', ft.properties) }).addTo(map);
+    /* While comparing at level 2 only one municipality is on the plate, and
+       there is no street map under the others to tie their outlines to
+       anything.  Drawing them would be eighteen shapes' worth of line around a
+       picture of one. */
+    const munData = S.cmp && S.level === 'mun'
+      ? { type: 'FeatureCollection',
+          features: D.bM.features.filter(ft => ft.properties.num === S.mun) }
+      : D.bM;
+    add('lnMun', munData, 'mun');
     // the chosen municipality's own outline goes on top of its neighbours',
     // or a grey line drawn later would sit over the black one
     if (S.level === 'mun') {
       LG.lnMun.eachLayer(l => {
+        if (l.feature && l.feature.properties.num === S.mun) l.bringToFront();
+      });
+      if (LG.lnMunC) LG.lnMunC.eachLayer(l => {
         if (l.feature && l.feature.properties.num === S.mun) l.bringToFront();
       });
     }
@@ -192,14 +247,14 @@ function drawLines() {
   const pick = kind => ({ type: 'FeatureCollection',
     features: D.bB.features.filter(ft => (ft.properties.kind === 'nuts3'
       ? 'region' : 'district') === kind) });
-  if (S.lnRegion) {
-    LG.lnRegion = L.geoJSON(pick('region'), { pane: PANE_OF.region,
-      interactive: false, style: () => style('region') }).addTo(map);
-  }
-  if (S.lnDistrict) {
-    LG.lnDistrict = L.geoJSON(pick('district'), { pane: PANE_OF.district,
-      interactive: false, style: () => style('district') }).addTo(map);
-  }
+  /* Same reason as the neighbouring municipalities: while comparing one
+     municipality the plate holds that municipality and nothing else, and the
+     district edge crossing the empty corner is a line to nowhere.  On the
+     ordinary map it is context over a street background; here there is no
+     background for it to be context on. */
+  const wide = !(S.cmp && S.level === 'mun');
+  if (S.lnRegion && wide) add('lnRegion', pick('region'), 'region');
+  if (S.lnDistrict && wide) add('lnDistrict', pick('district'), 'district');
 }
 
 function isDark() {
@@ -2816,10 +2871,16 @@ function toggleCmp() {
     S.cmpPick = false;
     cmpTilesWere = S.tiles;
     if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+    /* The rivers are geography, and this screen is not showing geography: a
+       blue line crossing a blue fill is read as part of the scale.  Off with
+       the streets, and back with them if they were on. */
+    cmpWaterWere = S.water;
+    if (S.water) { S.water = false; applyNature(); }
     if (S.level !== 'district') goDistrict();
   } else {
     S.cmpPick = false;
     if (cmpTilesWere && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+    if (cmpWaterWere && !S.water) { S.water = true; applyNature(); }
   }
   closePanel();
   applySwitches();
@@ -2828,6 +2889,7 @@ function toggleCmp() {
   save();
 }
 let cmpTilesWere = true;
+let cmpWaterWere = false;
 
 function cmpClick(e) {
   const pick = e.target.closest('[data-cmppick]');
@@ -3276,7 +3338,7 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
-      letters: S.letters, mine: S.mine, water: S.water,
+      letters: S.letters, mine: S.mine, water: S.water, rev: PREF_REV,
       muncol: S.muncol, wpList: S.wpList,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
@@ -3284,16 +3346,25 @@ function save() {
     }));
   } catch (e) { /* private mode */ }
 }
+/* A default that changes still has to reach a phone that already has the app.
+   The old value is sitting in localStorage, and restore() would put it back —
+   so changing a default in the code alone changes nothing for the only person
+   using it.  Bumping PREF_REV drops the switches named here once, after which
+   the user's own choice sticks again. */
+const PREF_REV = 1;
+const DEFAULT_RESET = ['water'];
+
 function restore() {
   try {
     const o = JSON.parse(localStorage.getItem(KEY) || '{}');
+    const fresh = k => !((o.rev | 0) < PREF_REV && DEFAULT_RESET.indexOf(k) >= 0);
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
     ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
       if (typeof o[k] === 'boolean') S[k] = o[k];
     });
-    if (typeof o.water === 'boolean') S.water = o.water;
+    if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
