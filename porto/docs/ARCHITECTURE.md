@@ -1251,7 +1251,9 @@ app's manifest, then request this permission at runtime*״.
 - **שינוי בשרשרת** → סעיף 4
 - **שדה שהושלם או שנוסף לחסרים** → סעיף 12
 
-מסמכים אחיים: `docs/DATA-ACQUIRED.md` (מה נמשך בפועל, מאיפה, ומה ההסתייגויות),
+מסמכים אחיים: `docs/WORKPLAN.md` (באיזה סדר לסגור את `missing.items`, מה חוסם
+כל פריט, ואיך יודעים ששלב הסתיים),
+`docs/DATA-ACQUIRED.md` (מה נמשך בפועל, מאיפה, ומה ההסתייגויות),
 `docs/DATA-REQUEST.md` (מה לבקש ממי שיש לו רשת),
 `docs/NETWORK-ALLOWLIST.md` (איך לפתוח את הרשת),
 `data/source_files/INDEX.md` (מה התקבל ומתי), `android/SIGNING.md`.
