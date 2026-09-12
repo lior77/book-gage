@@ -519,6 +519,44 @@ def main():
              "wrap them with U+2066..U+2069 (see bidi_math in build_design.py): %s"
              % (len(bare), [doc[i - 12:i + 10] for i in bare[:2]]))
 
+    # The same algorithm moves a leading # to the end of a colour in an RTL line:
+    # "#1b2532" is read as "1b2532#". Only text the reader sees is examined — a
+    # hex inside <style> or an attribute is not prose — and it has to sit under
+    # an element that declares dir="ltr". This caught one in a paragraph the
+    # generator itself writes, in a section added after the rule was recorded.
+    from html.parser import HTMLParser
+
+    class LooseHex(HTMLParser):
+        def __init__(self):
+            HTMLParser.__init__(self)
+            self.stack = []
+            self.mute = 0
+            self.found = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag in ("style", "script"):
+                self.mute += 1
+            if tag not in ("br", "meta", "img", "hr", "input"):
+                self.stack.append(dict(attrs).get("dir") == "ltr")
+
+        def handle_endtag(self, tag):
+            if tag in ("style", "script") and self.mute:
+                self.mute -= 1
+            if self.stack:
+                self.stack.pop()
+
+        def handle_data(self, data):
+            if self.mute or any(self.stack):
+                return
+            for m in re.finditer(r"#[0-9a-fA-F]{6}\b", data):
+                self.found.append(data[max(0, m.start() - 30):m.end()].strip())
+
+    seen = LooseHex()
+    seen.feed(doc)
+    if seen.found:
+        fail('%d colours in docs/DESIGN.html sit in RTL text without dir="ltr" '
+             "and render back to front: %s" % (len(seen.found), seen.found[:2]))
+
     # ---- level 3 covers every parish, not only Porto's seven ---------------
     zones = load("zones.json")["zones"]
     missing_z = [f["pt"] for f in fre if "%d|%s" % (f["mun_num"], f["pt"]) not in zones]

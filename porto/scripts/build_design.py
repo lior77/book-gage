@@ -94,6 +94,19 @@ def read_type(css):
     }
 
 
+def read_lines(js):
+    """The four boundary weights and the two inks the comparison line is made of."""
+    m = re.search(r"const LINE_W = \{([^}]*)\}", js)
+    if not m:
+        raise SystemExit("LINE_W not found in app.js")
+    w = dict(re.findall(r"(\w+):\s*([\d.]+)", m.group(1)))
+    core = re.search(r"const CMP_CORE = '(#[0-9a-fA-F]{6})'", js)
+    region = re.search(r"const REGION_COLOUR = '(#[0-9a-fA-F]{6})'", js)
+    if not core or not region:
+        raise SystemExit("CMP_CORE / REGION_COLOUR not found in app.js")
+    return {"w": w, "core": core.group(1), "region": region.group(1)}
+
+
 def read_icons(js):
     block = js[js.index("const ICON = {"):]
     block = block[:block.index("\n};")]
@@ -243,7 +256,7 @@ def verdict(v, need):
     return '<span class="%s">%.2f:1</span>' % (cls, v)
 
 
-def page(light, dark, dark_keys, ty, icons, motion):
+def page(light, dark, dark_keys, ty, icons, motion, lines):
     def table(pal, mode):
         bg, card = pal["--bg"], pal["--card"]
         out = []
@@ -442,6 +455,28 @@ footer{margin-block-start:52px; padding-block-start:18px;
   מתחרה על הקצה הבהיר של הסולם.</p>
 <div class="hatch" style="background:repeating-linear-gradient(%(ha)s,%(hl)s 0 %(hw)s,transparent %(hw)s %(hg)s)"></div>
 
+<h2>גבולות המפה</h2>
+<p>ארבע שכבות, שני עוביים אפקטיביים. מה שמפריד ביניהן הוא ה-pane שהן יושבות בו
+  והצבע שהרמה נותנת להן — לא המשקל, ולכן בדיקה שמזהה קו לפי
+  <code dir="ltr">stroke-width</code> תפסיק להבחין בין מחוז לעירייה.</p>
+<div class="scroll"><table>
+<thead><tr><th>השכבה</th><th>עובי</th><th>הצבע ברמה שלה</th></tr></thead>
+<tbody>%(lnw)s</tbody></table></div>
+
+<h3>הקו המצופה של השוואת נתונים</h3>
+<p>מעל מילויים משתנים קו יחיד אינו עובד. לבן ו-<code dir="ltr">%(core)s</code>
+  הם תמונת ראי זה של זה:
+  לבן נעלם על שתי המדרגות הבהירות ועל משטח היום, והדיו הכהה על שתי הכהות ועל
+  משטח הלילה. לכן הקו מצויר פעמיים באותו pane — ציפוי לבן ברוחב המלא וליבה
+  כהה בחצי ממנו. תחת כל מילוי ומול שני המשטחים אחד מהשניים עובר 3:1, וזו
+  הדרישה של SC 1.4.11 מגבול שנושא משמעות. העין קוראת קו דק אחד.</p>
+<div class="scroll"><table>
+<thead><tr><th>הדיו</th>%(lnhead)s<th>משטח יום</th><th>משטח לילה</th></tr></thead>
+<tbody>%(lncontrast)s</tbody></table></div>
+<div class="note"><b>הכתום של האזורים אינו מקבל ליבה.</b> הוא הקו היחיד במפה
+  שהוא צבע ולא דיו — הוא אינו הנושא של שום רמה ואינו חלק מהיררכיית המחוז —
+  וליבה כהה בתוכו הייתה דבר שני לקרוא, לא ציפוי.</div>
+
 <h2>טיפוגרפיה</h2>
 <p>גוף הטקסט: <code dir="ltr">%(tfam)s</code> · %(tsize)spx · משקל %(tw)s · גובה שורה
   %(tline)s. גובה השורה עומד בדרישת SC 1.4.12, שמחייבת שהטקסט ישרוד 1.5×.
@@ -491,6 +526,27 @@ footer{margin-block-start:52px; padding-block-start:18px;
         "rules": rules, "light": table(light, "day"), "dark": table(dark, "night"),
         "blues": blues, "gaps": "".join(blue_gaps),
         "darktokens": DARK_TOKENS,
+        "lnw": "".join(
+            '<tr><td>%s</td><td class="n" dir="ltr">%s</td><td>%s</td></tr>'
+            % (esc(he), esc(lines["w"][k]), role)
+            for k, he, role in (
+                ("region", "region — שני אזורי NUTS III",
+                 'כתום <code dir="ltr">%s</code>, בכל רמה, כשהמתג דלוק'
+                 % lines["region"]),
+                ("district", "district — גבול מחוז פורטו", "שחור ברמה 1, נסוג אחר כך"),
+                ("mun", "mun — גבולות 18 העיריות", "שחור ברמות 1 ו-2, לפי הפיצ׳ר"),
+                ("fre", "fre — גבולות הרובעים",
+                 "רמות 2 ו-3, וברמה 1 רק בהשוואה עם ״רובעים״"))),
+        "lnhead": "".join('<th dir="ltr">%s</th>' % c for c in BLUES),
+        "lncontrast": "".join(
+            '<tr><td><span class="sw" style="background:%s"></span> '
+            '<code dir="ltr">%s</code></td>%s%s%s</tr>'
+            % (c, c,
+               "".join('<td>%s</td>' % verdict(contrast(c, b), 3) for b in BLUES),
+               '<td>%s</td>' % verdict(contrast(c, light["--bg"]), 3),
+               '<td>%s</td>' % verdict(contrast(c, dark["--bg"]), 3))
+            for c in ("#ffffff", lines["core"])),
+        "core": esc(lines["core"]),
         "gaphead": "".join("<th>%d→%d</th>" % (i + 1, i + 2) for i in range(4)),
         "blueground": blue_ground,
         "hw": HATCH["w"], "hg": HATCH["gap"], "ha": HATCH["angle"], "hl": HATCH["light"],
@@ -504,7 +560,8 @@ def build():
     css = open(CSS, encoding="utf-8").read()
     js = open(JS, encoding="utf-8").read()
     light, dark, dark_keys = read_palettes(css)
-    return page(light, dark, dark_keys, read_type(css), read_icons(js), read_motion(css))
+    return page(light, dark, dark_keys, read_type(css), read_icons(js),
+                read_motion(css), read_lines(js))
 
 
 def main():

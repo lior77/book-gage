@@ -185,6 +185,28 @@ footer{margin-block-start:52px; padding-block-start:18px;
   מתחרה על הקצה הבהיר של הסולם.</p>
 <div class="hatch" style="background:repeating-linear-gradient(45°,#9aa6b4 0 1.2px,transparent 1.2px 4px)"></div>
 
+<h2>גבולות המפה</h2>
+<p>ארבע שכבות, שני עוביים אפקטיביים. מה שמפריד ביניהן הוא ה-pane שהן יושבות בו
+  והצבע שהרמה נותנת להן — לא המשקל, ולכן בדיקה שמזהה קו לפי
+  <code dir="ltr">stroke-width</code> תפסיק להבחין בין מחוז לעירייה.</p>
+<div class="scroll"><table>
+<thead><tr><th>השכבה</th><th>עובי</th><th>הצבע ברמה שלה</th></tr></thead>
+<tbody><tr><td>region — שני אזורי NUTS III</td><td class="n" dir="ltr">3.2</td><td>כתום <code dir="ltr">#e2761b</code>, בכל רמה, כשהמתג דלוק</td></tr><tr><td>district — גבול מחוז פורטו</td><td class="n" dir="ltr">2.4</td><td>שחור ברמה 1, נסוג אחר כך</td></tr><tr><td>mun — גבולות 18 העיריות</td><td class="n" dir="ltr">2.4</td><td>שחור ברמות 1 ו-2, לפי הפיצ׳ר</td></tr><tr><td>fre — גבולות הרובעים</td><td class="n" dir="ltr">1.2</td><td>רמות 2 ו-3, וברמה 1 רק בהשוואה עם ״רובעים״</td></tr></tbody></table></div>
+
+<h3>הקו המצופה של השוואת נתונים</h3>
+<p>מעל מילויים משתנים קו יחיד אינו עובד. לבן ו-<code dir="ltr">#1b2532</code>
+  הם תמונת ראי זה של זה:
+  לבן נעלם על שתי המדרגות הבהירות ועל משטח היום, והדיו הכהה על שתי הכהות ועל
+  משטח הלילה. לכן הקו מצויר פעמיים באותו pane — ציפוי לבן ברוחב המלא וליבה
+  כהה בחצי ממנו. תחת כל מילוי ומול שני המשטחים אחד מהשניים עובר 3:1, וזו
+  הדרישה של SC 1.4.11 מגבול שנושא משמעות. העין קוראת קו דק אחד.</p>
+<div class="scroll"><table>
+<thead><tr><th>הדיו</th><th dir="ltr">#a1bbd9</th><th dir="ltr">#82a8d3</th><th dir="ltr">#4380c7</th><th dir="ltr">#265b97</th><th dir="ltr">#13365d</th><th>משטח יום</th><th>משטח לילה</th></tr></thead>
+<tbody><tr><td><span class="sw" style="background:#ffffff"></span> <code dir="ltr">#ffffff</code></td><td><span class="fail">1.98:1</span></td><td><span class="fail">2.47:1</span></td><td><span class="pass">4.08:1</span></td><td><span class="pass">6.94:1</span></td><td><span class="pass">12.26:1</span></td><td><span class="fail">1.13:1</span></td><td><span class="pass">18.43:1</span></td></tr><tr><td><span class="sw" style="background:#1b2532"></span> <code dir="ltr">#1b2532</code></td><td><span class="pass">7.83:1</span></td><td><span class="pass">6.26:1</span></td><td><span class="pass">3.80:1</span></td><td><span class="fail">2.23:1</span></td><td><span class="fail">1.26:1</span></td><td><span class="pass">13.66:1</span></td><td><span class="fail">1.19:1</span></td></tr></tbody></table></div>
+<div class="note"><b>הכתום של האזורים אינו מקבל ליבה.</b> הוא הקו היחיד במפה
+  שהוא צבע ולא דיו — הוא אינו הנושא של שום רמה ואינו חלק מהיררכיית המחוז —
+  וליבה כהה בתוכו הייתה דבר שני לקרוא, לא ציפוי.</div>
+
 <h2>טיפוגרפיה</h2>
 <p>גוף הטקסט: <code dir="ltr">system-ui,-apple-system,&quot;Noto Sans Hebrew&quot;,&quot;Heebo&quot;,Arial,sans-serif</code> · 16px · משקל 400 · גובה שורה
   1.55. גובה השורה עומד בדרישת SC 1.4.12, שמחייבת שהטקסט ישרוד 1.5×.
