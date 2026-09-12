@@ -280,9 +280,15 @@ function peopleStats(o, lvl) {
       ${stat('אזרחות זרה', o.foreign_pct, '%', 0, lvl + '.foreign_pct')}
       ${stat('השכלה גבוהה', o.education_pct, '%', 0, lvl + '.education_pct')}
       ${stat('אבטלה', o.unemployment_pct, '%', 0, lvl + '.unemployment_pct')}
+      ${D.sources.fields[lvl + '.pop_growth_pct']
+        ? stat('שינוי מ-2011', o.pop_growth_pct, '%', 1, lvl + '.pop_growth_pct',
+               null, signed)
+        : ''}
     </div>
     <p class="note">הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון
-      בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14.</p>
+      בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14.
+      השינוי מ-2011 הוא כפי ש-INE מפרסמת אותו על גאוגרפיית מפקד 2021 — לא חושב
+      כאן, כי חלוקת הרובעים של 2011 אינה זו של 2021.</p>
   </div>`;
 }
 function housingStats(o, lvl) {
@@ -321,6 +327,14 @@ function housingStats(o, lvl) {
 function shown(val, dec, step) {
   if (!step) return nf(val, dec);
   return nf(Math.round(val / step) * step, 0);
+}
+
+/* A change needs its sign on both sides.  A decline arrives with its minus, so a
+   rise shown as "0.5%" reads as a quantity rather than as a direction, and the
+   two look like different kinds of number in the same column. */
+function signed(val, dec) {
+  const t = shown(Math.abs(val), dec);
+  return (val > 0 ? '+' : val < 0 ? '−' : '') + t;
 }
 
 // The four INE housing-market series. They sit in their own card because they
@@ -395,10 +409,10 @@ function safetyStats(o, lvl) {
   </div>`;
 }
 
-function stat(label, val, unit, dec, srcKey, step) {
+function stat(label, val, unit, dec, srcKey, step, fmt) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
-  const text = has ? shown(val, dec, step) : MISSING;
+  const text = has ? (fmt ? fmt(val, dec) : shown(val, dec, step)) : MISSING;
   // Only when rounding actually changed something.  Porto's census population
   // is 231 800 to begin with, and offering "the exact value" beside an
   // identical figure would make the panel look like it was hiding one.
@@ -2596,6 +2610,7 @@ const CMP_HOUSING = new Set(['dwellings', 'vacant_pct', 'second_home_pct', 'owne
    source behind it. */
 const CMP_ALL = [
   { g: 'אנשים', k: 'pop2021', he: 'תושבים', unit: '', dec: 0 },
+  { g: 'אנשים', k: 'pop_growth_pct', he: 'שינוי מ-2011', unit: '%', dec: 1 },
   { g: 'אנשים', k: 'density', he: 'צפיפות', unit: 'לקמ״ר', dec: 0 },
   { g: 'אנשים', k: 'median_age', he: 'גיל חציוני', unit: 'שנים', dec: 1 },
   { g: 'אנשים', k: 'ageing_index', he: 'מדד הזדקנות', unit: '', dec: 1 },

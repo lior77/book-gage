@@ -166,6 +166,8 @@ def main():
     ap.add_argument("--dim", action="append", default=[], metavar="dim_3=T",
                     help="keep only rows whose dimension has this category; "
                          "repeatable. Use --dims to see what a response carries")
+    ap.add_argument("--freguesias", action="store_true",
+                    help="also keep six-digit DICOFRE rows as parish values")
     ap.add_argument("--dims", action="store_true",
                     help="list the dimensions and categories in the response "
                          "and exit, without writing anything")
@@ -232,8 +234,16 @@ def main():
         k, v = spec.split("=", 1)
         want[k] = v
 
-    values, unresolved = {}, []
+    # An INE response often carries both levels at once: a four-digit geocod is
+    # a municipality, a six-digit one is a parish's DICOFRE. Taking only the
+    # first threw away 243 rows that were already in the file.
+    by_code = store.freguesia_by_dicofre()
+    values, fvalues, unresolved = {}, {}, []
     for geocod, geodsg, val in rows_of(doc, args.period, want or None):
+        code = re.sub(r"\D", "", str(geocod))
+        if args.freguesias and len(code) == 6 and code in by_code:
+            fvalues[by_code[code]] = round(val * args.scale, 4)
+            continue
         name = store.resolve_municipio(geocod) or store.resolve_municipio(geodsg)
         if name:
             values[name] = round(val * args.scale, 4)
@@ -243,6 +253,8 @@ def main():
         print("unresolved Porto-district rows: %s" % unresolved)
     if len(values) < 18:
         print("WARNING: only %d/18 municipalities matched" % len(values))
+    if args.freguesias and len(fvalues) < 243:
+        print("WARNING: only %d/243 parishes matched" % len(fvalues))
 
     store.save(key, {
         "label_he": label, "unit": unit,
@@ -251,7 +263,7 @@ def main():
                                                         args.varcd, args.period),
         "url": DATA % (args.varcd, args.period),
         "dimension_he": ", ".join("%s=%s" % kv for kv in sorted(want.items())) or None,
-    }, municipios=values)
+    }, municipios=values, freguesias=fvalues or None)
     return 0
 
 

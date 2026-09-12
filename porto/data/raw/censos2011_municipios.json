@@ -1,0 +1,27 @@
+{
+ "_note_he": "אוכלוסייה במפקד 2011 לפי עירייה, מ-INE. נשמר כאן כדי ששינוי האוכלוסייה 2011→2021 ייבדק מול מקור ולא רק מול עצמו: pop2021 / (1 + rate) חייב להחזיר את המספר הזה. ברמת הרובע אין השוואה כזו — חלוקת הרובעים של 2011 אינה זו של 2021, ולכן INE מפרסמת את השינוי על גאוגרפיית 2021 ואנחנו מקבלים אותה כפי שהיא.",
+ "indicator": "0005980",
+ "source": "INE — População residente (N.º) por Local de residência (à data dos Censos 2011), Sexo e Estado civil; HM, Total",
+ "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0005980&Dim1=S7A2011&lang=PT",
+ "retrieved": "2026-09-12",
+ "municipios": {
+  "Amarante": 56217,
+  "Baião": 20522,
+  "Felgueiras": 58065,
+  "Gondomar": 168027,
+  "Lousada": 47387,
+  "Maia": 135306,
+  "Marco de Canaveses": 53450,
+  "Matosinhos": 175478,
+  "Paredes": 86854,
+  "Paços de Ferreira": 56340,
+  "Penafiel": 72265,
+  "Porto": 237584,
+  "Póvoa de Varzim": 63408,
+  "Santo Tirso": 71530,
+  "Trofa": 38999,
+  "Valongo": 93858,
+  "Vila Nova de Gaia": 302296,
+  "Vila do Conde": 79533
+ }
+}

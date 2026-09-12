@@ -54,6 +54,11 @@ def warn(msg):
 def load(name):
     return json.load(open(os.path.join(PROC, name), encoding="utf-8"))
 
+def load_raw(name):
+    """A file from data/raw — the sources kept beside the processed output."""
+    return json.load(open(os.path.join(ROOT, "data", "raw", name), encoding="utf-8"))
+
+
 
 def coords_of(geom):
     t = geom["type"]
@@ -552,6 +557,47 @@ def main():
             fail("the income figure has one producer; the older NUTS-2013 series "
                  "is frozen and disagrees for 2021, so it confirms nothing — "
                  "'reported', not %r" % rec_i.get("confidence"))
+
+    # ---- 7l. the population change reconciles with the 2011 census ---------
+    # This is the check that caught a real swap. indicator_store typed the INE
+    # municipality codes by hand and had 1315/1318 the wrong way round — Trofa
+    # was created in 1998 out of Santo Tirso and took the LAST code, not its
+    # alphabetical one — so every series joined on those codes gave Trofa
+    # Valongo's number and Valongo Trofa's. Nothing looks wrong on screen when
+    # that happens: both places exist and both get a plausible figure.
+    #
+    # pop2021 / (1 + rate) has to come back to the 2011 census population INE
+    # published separately. There is no such test at parish level: the 2011
+    # parishes are not the 2021 parishes, which is exactly why INE computes the
+    # parish change itself rather than leaving it to be derived.
+    c11 = load_raw("censos2011_municipios.json")["municipios"]
+    by_name = {m["pt"]: m for m in mun}
+    off = []
+    for name, p11 in c11.items():
+        m = by_name.get(name)
+        if not m:
+            fail("censos2011_municipios.json names %r, which is not a municipality" % name)
+            continue
+        p21, rate = m.get("pop2021"), m.get("pop_growth_pct")
+        if p21 is None or rate is None:
+            fail("%s has no population or no change rate" % name)
+            continue
+        implied = p21 / (1.0 + rate / 100.0)
+        gap = abs(implied / p11 - 1) * 100
+        # 0.3%, not 0.01%. Two INE publications do not agree to the person:
+        # Amarante's rate implies 56,263 residents in 2011 against the 56,217
+        # the 2011 census publishes — 46 people, 0.08%. That is INE's own
+        # spread between a rate and a count, and it is recorded in the source
+        # record rather than tuned away. A swapped municipality is out by tens
+        # of thousands, so this threshold still catches the thing it was
+        # written for.
+        if gap > 0.3:
+            off.append((name, round(implied), p11, round(gap, 2)))
+    if len(c11) != 18:
+        fail("the 2011 census file holds %d municipalities, not 18" % len(c11))
+    if off:
+        fail("%d municipalities do not reconcile with the 2011 census — "
+             "pop2021/(1+rate) vs INE 2011: %s" % (len(off), off[:3]))
 
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.

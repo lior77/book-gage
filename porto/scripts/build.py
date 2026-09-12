@@ -296,8 +296,16 @@ PENDING_INDICATORS = [
      "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
     {"key": "pct_0_14", "label_he": "אחוז בני 0–14", "unit": "%",
      "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
-    {"key": "pop_growth_pct", "label_he": "שינוי אוכלוסייה 2011→2021", "unit": "%",
-     "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
+    # INE computes the change itself and publishes it on the 2021 census
+    # geography, which is what makes a parish figure possible at all: the 2011
+    # parishes are not the 2021 parishes, so we could not have derived it.
+    {"key": "pop_growth_pct", "label_he": "שינוי באוכלוסייה בין מפקד 2011 למפקד 2021",
+     "unit": "%", "decimals": 1, "high_is": "neutral",
+     "fetch": "scripts/fetch_ine.py --varcd 0012272 --period S7A2021 "
+              "--dim dim_3=T --dim dim_4=T --freguesias",
+     "levels": ["municipio", "freguesia"],
+     "note_he": "השינוי כפי ש-INE מפרסמת אותו, לא כפי שחושב כאן. גאוגרפיית "
+                "מפקד 2021, שני המינים, כל קבוצות הגיל."},
     {"key": "education_pct", "label_he": "בעלי השכלה גבוהה", "unit": "%",
      "fetch": "scripts/import_censos_seccoes.py", "levels": ["municipio", "freguesia"]},
     {"key": "unemployment_pct", "label_he": "אבטלה", "unit": "%",

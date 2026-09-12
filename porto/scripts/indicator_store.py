@@ -40,14 +40,26 @@ MUNICIPALITIES = [
     "Marco de Canaveses", "Baião",
 ]
 # INE municipality codes, from the ref:ine tags on the OSM boundary relations.
-INE_CODE = {
-    "1301": "Amarante", "1302": "Baião", "1303": "Felgueiras", "1304": "Gondomar",
-    "1305": "Lousada", "1306": "Maia", "1307": "Marco de Canaveses",
-    "1308": "Matosinhos", "1309": "Paços de Ferreira", "1310": "Paredes",
-    "1311": "Penafiel", "1312": "Porto", "1313": "Póvoa de Varzim",
-    "1314": "Santo Tirso", "1315": "Trofa", "1316": "Vila do Conde",
-    "1317": "Vila Nova de Gaia", "1318": "Valongo",
-}
+# The four-digit municipality codes, read from the parishes' own DICOFRE rather
+# than typed here.  They were typed once, and two of them were wrong: 1315 and
+# 1318 had Trofa and Valongo the wrong way round, because the list looked
+# alphabetical and Trofa — created in 1998 out of Santo Tirso — was given the
+# last code, not its alphabetical one.  Nothing about a swap like that looks
+# wrong on screen: both municipalities exist, both get a number, and the number
+# is simply the other one's.  A table that can be derived should never be typed.
+def _codes_from_parishes():
+    path = os.path.join(ROOT, "data", "processed", "freguesias.json")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    for f in json.load(open(path, encoding="utf-8"))["items"]:
+        code = str(f.get("dicofre") or "")
+        if len(code) >= 6:
+            out[code[:4]] = f["mun"]
+    return out
+
+
+INE_CODE = _codes_from_parishes()
 _STOP = {"de", "do", "da", "dos", "das", "e"}
 
 
@@ -83,6 +95,26 @@ def freguesia_index():
         out.setdefault("%s %s" % (norm(f["mun"]), norm(f["pt"])),
                        []).append("%s|%s" % (f["mun"], f["pt"]))
     return {k: v for k, v in out.items() if len(v) == 1}
+
+
+def freguesia_by_dicofre():
+    """{DICOFRE: "Municipio|Parish"} over all 243 parishes.
+
+    Matching a parish by name is guesswork — "União das freguesias de ..." is
+    spelled differently by every producer, and two municipalities can hold a
+    parish of the same name. The six-digit DICOFRE is the official key and
+    every parish here carries one, so an outside table that publishes codes
+    should be joined on codes and never on names.
+    """
+    path = os.path.join(ROOT, "data", "processed", "freguesias.json")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    for f in json.load(open(path, encoding="utf-8"))["items"]:
+        code = str(f.get("dicofre") or "").strip()
+        if code:
+            out[code.zfill(6)] = "%s|%s" % (f["mun"], f["pt"])
+    return out
 
 
 def load():
