@@ -789,190 +789,178 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
 
-  /* 10c. השוואת נתונים.  Seven things were asked for and each has a check:
-     the menu row, the split screen, the two buttons and where they are, the
-     field cards, the map coloured by rank, the ten-and-ten at level 1, no
-     buttons at level 2, and no level 3 at all.
+  /* 10c. השוואת נתונים.  The screen as it was specified: eighteen municipalities
+     with the street background off, area as the field it opens on, the field's
+     own name as the heading, three controls above it, a key that binds each of
+     the five colours to a range, and the units listed small to large.
 
-     The one that matters most is the last line of the accuracy contract in a
-     new place: a unit with no value must not be ranked.  Ranking it would put
-     it at the bottom of the scale, which is a number we made up. */
+     Two of these are the accuracy contract in a new place: a unit with no value
+     is HATCHED rather than given an end of the scale, and the key's ranges are
+     read off the units rather than assumed. */
   const cmpRows = () => page.$$eval('#doc .cmp-row', els => els.map(e => ({
-    id: e.dataset.cmpu,
-    rank: e.querySelector('.cmp-rank').textContent.trim(),
+    code: e.querySelector('.cmp-sw').textContent.trim(),
     name: e.querySelector('.cmp-n').firstChild.textContent.trim(),
     val: e.querySelector('.cmp-v').textContent.trim(),
     src: e.querySelector('.cmp-v').dataset.src,
     none: e.classList.contains('no'),
-    bar: (() => { const b = e.querySelector('.cmp-bar i');
-                  return b ? +b.style.width.replace('%', '') : null; })(),
+    mun: e.dataset.mun || null,
+    fill: getComputedStyle(e.querySelector('.cmp-sw')).backgroundColor,
   })));
-  const rankPills = () => page.$$eval('.lbl.rank > span', els => els.map(e => ({
-    n: e.textContent.trim(), bg: e.style.background || e.style.backgroundColor,
+  const keyRows = () => page.$$eval('#doc .cmp-k', els => els.map(e => ({
+    range: e.querySelector('.cmp-k-r').textContent.replace(/\s+/g, ' ').trim(),
+    n: +e.querySelector('.cmp-k-n').textContent.trim(),
+    nd: e.querySelector('.cmp-k-sw').classList.contains('cmp-k-nd'),
   })));
 
   await page.click('#homeBtn'); await page.waitForTimeout(700);
+  /* The background has to be ON going in, or "it is off inside" proves nothing:
+     the run aborts every tile request, and the failure path switches it off by
+     itself.  The first cut of this check passed with the code that turns it off
+     deleted. */
+  await page.evaluate(() => { if (!S.tiles) toggleTiles(); });
+  await page.waitForTimeout(300);
+  const tilesBefore = await page.evaluate(() => S.tiles);
+  ok('the street background is on before the comparison is opened',
+     tilesBefore === true);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
   await page.click('[data-m="cmp"]');
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(1000);
   ok('the menu row opens השוואת נתונים', await page.evaluate(() => S.cmp) === true);
-  ok('and closes the menu behind it', await page.$eval('#menu', e => e.hidden) === true);
-  ok('the screen is map above and text below — not one of them alone',
+  ok('it opens on the district, the eighteen municipalities',
+     await page.evaluate(() => S.level) === 'district'
+       && await page.evaluate(() => S.cmpScope) === 'mun');
+  ok('with the street background off',
+     await page.evaluate(() => S.tiles) === false);
+  ok('and the field it opens on is the municipalities\' area',
+     await page.evaluate(() => S.cmpField) === 'area_km2');
+  ok('the screen is map above and text below',
      await page.evaluate(() => document.body.dataset.view) === 'split');
-  ok('its heading says what it is',
-     (await page.$eval('#doc .cmp-head h1', e => e.textContent)).trim() === 'השוואת נתונים');
 
-  /* the two buttons: at the start edge, which in this RTL page is the right */
-  const scope = await box(page, '#doc .cmp-scope');
+  /* the heading is the field's own name */
+  const head = await page.$eval('#doc .cmp-h', e => e.textContent.replace(/\s+/g, ' ').trim());
+  ok('the heading is the name of the field on screen', head.startsWith('שטח'), head);
+
+  /* three controls above it, and where they sit */
+  const ctl = await box(page, '#doc .cmp-top');
   const bMun = await box(page, '[data-cmpscope="mun"]');
   const bFre = await box(page, '[data-cmpscope="fre"]');
-  ok('the two buttons are עיריות and רובעים',
-     (await page.$eval('[data-cmpscope="mun"]', e => e.textContent)).trim() === 'עיריות'
-     && (await page.$eval('[data-cmpscope="fre"]', e => e.textContent)).trim() === 'רובעים');
-  ok('they are aligned right, not centred or spread',
-     Math.abs(scope.right - bMun.right) <= 1.5, `${scope.right} vs ${bMun.right}`);
-  ok('עיריות is the first of the two, coming in from the right',
-     bMun.right > bFre.right);
-  ok('and עיריות is the one pressed to begin with',
-     await page.$eval('[data-cmpscope="mun"]', e => e.getAttribute('aria-pressed')) === 'true');
+  const bSwap = await box(page, '[data-cmppick="1"]');
+  const headBox = await box(page, '#doc .cmp-h');
+  ok('the three controls sit above the heading', ctl.bottom <= headBox.y + 1,
+     `${ctl.bottom} vs ${headBox.y}`);
+  ok('עיריות and רובעים are at the start edge — the right',
+     Math.abs(ctl.right - bMun.right) <= 2 && bMun.right > bFre.right,
+     `${ctl.right} / ${bMun.right} / ${bFre.right}`);
+  ok('החלפת נתון is at the end edge — the left',
+     Math.abs(bSwap.x - ctl.x) <= 2, `${bSwap.x} vs ${ctl.x}`);
+  ok('and it reads החלפת נתון',
+     (await page.$eval('[data-cmppick="1"]', e => e.textContent)).trim() === 'החלפת נתון');
 
-  /* the field cards, before any field is chosen */
-  const cards = await page.$$eval('#doc [data-cmpf]', els => els.map(e => e.dataset.cmpf));
-  ok('a field is not chosen to begin with, so the cards are what is shown',
-     cards.length > 12 && (await cmpRows()).length === 0, String(cards.length));
-  ok('the cards cover people, market, housing and area',
-     ['pop2021', 'price_eur_m2', 'vacant_pct', 'area_km2'].every(k => cards.includes(k)),
-     cards.join(' '));
-  ok('each card says how many units have a value for it',
-     await page.$$eval('#doc .cmp-f-c', els => els.every(e => /^\d+\/\d+$/.test(e.textContent.trim()))));
+  /* the key: five colours, each bound to the range it covers */
+  const key = await keyRows();
+  ok('the key has one row per colour that has units in it',
+     key.length === 5 && key.every(k => k.n > 0), JSON.stringify(key.map(k => k.n)));
+  ok('every row names the range it stands for',
+     key.every(k => /\d/.test(k.range)), key.map(k => k.range).join(' | '));
+  /* Both ends, not just the starts: five bands that interleave still have
+     ascending first numbers, which is how the first cut of this passed with the
+     banding scrambled. */
+  ok('the ranges climb and do not overlap',
+     (() => { const nums = k => (k.range.match(/[\d.,]+/g) || [])
+                .map(x => parseFloat(x.replace(/,/g, '')));
+              const b = key.map(k => nums(k));
+              return b.every(x => x.length >= 1)
+                && b.every((x, i) => i === 0 || x[0] > b[i - 1][b[i - 1].length - 1]); })(),
+     key.map(k => k.range).join(' | '));
+  ok('and the counts add up to the eighteen', key.reduce((a, k) => a + k.n, 0) === 18);
 
-  /* choosing one colours the map by rank */
-  await page.click('#doc [data-cmpf="price_eur_m2"]');
-  await page.waitForTimeout(800);
+  /* the list, smallest first */
   const mun = await cmpRows();
   ok('all 18 municipalities are listed', mun.length === 18, String(mun.length));
-  ok('and the list runs from the smallest value up, as asked',
+  ok('and the list runs from the smallest value up',
      (() => { const v = mun.map(r => parseFloat(r.val.replace(/[^\d.]/g, '')));
               return v.every((x, i) => i === 0 || x >= v[i - 1]); })(),
      mun.map(r => r.val).join(' '));
-  ok('rank 1 is the largest and sits last in that list',
-     mun[mun.length - 1].rank === '1' && mun[0].rank === '18',
-     `${mun[0].rank} .. ${mun[mun.length - 1].rank}`);
-  ok('every row carries its own rank, 1 to 18 with no gaps',
-     new Set(mun.map(r => r.rank)).size === 18);
+  ok('each row carries the unit\'s own DICOFRE code, as everywhere else',
+     mun.every(r => /^\d{2}$/.test(r.code)), mun.map(r => r.code).join(' '));
+  ok('and its value opens the municipality source record',
+     mun.every(r => r.src === 'municipio.area_km2'));
+  /* five distinct fills and no more: the whole point of five classes */
+  ok('the rows take exactly five colours, not one per unit',
+     new Set(mun.map(r => r.fill)).size === 5,
+     String(new Set(mun.map(r => r.fill)).size));
 
-  const pills = await rankPills();
-  ok('the map carries one rank label per municipality', pills.length === 18, String(pills.length));
-  ok('and they are the same 1..18',
-     pills.map(p => +p.n).sort((a, b) => a - b).join(',')
-       === Array.from({ length: 18 }, (_, i) => i + 1).join(','));
-  /* Requirement: eighteen steps that can actually be told apart.  Distinct is
-     the floor; the ramp is two hues through a pale middle so that neighbouring
-     steps separate rather than merely differ in the last digit. */
-  ok('all 18 map colours are different from one another',
-     new Set(pills.map(p => p.bg)).size === 18, String(new Set(pills.map(p => p.bg)).size));
-  const steps = await page.evaluate(() => {
-    const hx = s => { const m = s.match(/\d+/g); return m ? m.map(Number) : null; };
-    const els = [...document.querySelectorAll('.lbl.rank > span')];
-    const by = {}; els.forEach(e => { by[e.textContent.trim()] = hx(getComputedStyle(e).backgroundColor); });
-    const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-    let worst = 1e9;
-    for (let i = 1; i < 18; i++) worst = Math.min(worst, d(by[i], by[i + 1]));
-    return { worst: Math.round(worst), ends: Math.round(d(by[1], by[18])) };
-  });
-  ok('neighbouring ranks are visibly apart, and the two ends far apart',
-     steps.worst >= 8 && steps.ends > 150, JSON.stringify(steps));
+  /* the map: eighteen shapes, one of five colours each, plus the code labels */
+  const mapFills = await page.$$eval('#map .leaflet-overlay-pane path',
+    els => els.map(e => e.getAttribute('fill')).filter(f => f && f.startsWith('#')));
+  ok('the map paints the same five colours', new Set(mapFills).size === 5,
+     String(new Set(mapFills).size));
+  ok('and the labels on it are the DICOFRE codes',
+     await page.$$eval('#map .lbl', els => els.every(e => /^\d{2}$/.test(e.textContent.trim()))));
 
-  /* the bar grows from the start edge — it drew from the left in the first cut */
-  ok('the bars grow from the right, the start edge of an RTL row',
-     await page.$$eval('#doc .cmp-row', els => els.every(e => {
-       const t = e.querySelector('.cmp-bar'), f = e.querySelector('.cmp-bar i');
-       return !t || !f || Math.abs(t.getBoundingClientRect().right - f.getBoundingClientRect().right) < 1.5;
-     })));
-  ok('and the bar is longest for rank 1 and shortest for the last',
-     mun[mun.length - 1].bar === 100 && mun[0].bar < 20,
-     `${mun[0].bar} .. ${mun[mun.length - 1].bar}`);
-
-  /* every number opens its own source record, like every other number here */
-  ok('each value points at the municipality source record',
-     mun.every(r => r.src === 'municipio.price_eur_m2'));
-  await page.click('#doc .cmp-row .cmp-v');
-  await page.waitForTimeout(400);
-  ok('and tapping one opens it',
-     !(await page.$eval('#panel', e => e.hidden))
-       && (await page.$eval('#panelBody', e => e.textContent)).includes('0012234'));
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(300);
-
-  /* רובעים at level 1: ten and ten, and the rest named rather than dropped */
-  await page.click('[data-cmpscope="fre"]');
+  /* a municipality opens level 2, from the list and from the map alike */
+  await page.click('#doc .cmp-row[data-mun]');
   await page.waitForTimeout(900);
-  const fre = await cmpRows();
-  const ranked = fre.filter(r => !r.none);
-  ok('exactly twenty parishes are listed — ten and ten', ranked.length === 20, String(ranked.length));
-  const rk = ranked.map(r => +r.rank);
-  ok('and they are the top ten and the bottom ten of the ranking',
-     rk.slice(-10).sort((a, b) => a - b).join(',') === '1,2,3,4,5,6,7,8,9,10'
-       && Math.min(...rk.slice(0, 10)) > 10,
-     rk.join(','));
-  const cut = await page.$eval('#doc .cmp-cut', e => e.textContent).catch(() => '');
-  ok('the parishes in between are named, not silently dropped',
-     /\d/.test(cut) && cut.includes('אינם מוצגים'), cut.trim());
-  ok('each of the twenty keeps its own place on the ramp, not one colour per ten',
-     new Set(ranked.map(r => r.bar)).size === 20,
-     String(new Set(ranked.map(r => r.bar)).size));
-  ok('the map draws the same twenty', (await rankPills()).length === 20);
-
-  /* a unit with no value is not ranked.  This is the accuracy contract in a
-     new place: giving it a rank would place it on the scale. */
-  ok('parishes with no price are listed apart, without a rank',
-     fre.some(r => r.none) && fre.filter(r => r.none).every(r => r.rank === '–'),
-     `${fre.filter(r => r.none).length} without`);
-  ok('and they read אין נתון rather than a number',
-     fre.filter(r => r.none).every(r => r.val === 'אין נתון'));
-  ok('nor are they counted in the ranking',
-     await page.evaluate(() => {
-       const n = D.fre.filter(f => f.price_eur_m2 !== undefined).length;
-       return document.querySelector('.cmp-cut').textContent.includes(
-         new Intl.NumberFormat('he-IL').format(n - 20));
-     }));
-
-  /* level 2: no choice to offer, so the two buttons are not there */
-  await page.evaluate(() => goMun(1));
-  await page.waitForTimeout(900);
-  ok('the comparison survives going down a level', await page.evaluate(() => S.cmp) === true);
-  ok('at level 2 the two buttons are gone', await page.$('#doc .cmp-scope') === null);
+  ok('a tap on a municipality row opens it',
+     await page.evaluate(() => S.level) === 'mun' && await page.evaluate(() => S.cmp) === true);
+  ok('at level 2 the two scope buttons are gone',
+     await page.$('#doc .cmp-sc') === null);
+  ok('but החלפת נתון is still there', await page.$('[data-cmppick="1"]') !== null);
   const p2 = await cmpRows();
-  ok('and what is compared is that municipality\'s parishes',
-     p2.length === 7 && p2.every(r => r.src === 'freguesia.price_eur_m2'),
+  ok('and the parishes of that municipality are what is compared',
+     p2.length === await page.evaluate(() => (D.freByMun.get(S.mun) || []).length)
+       && p2.every(r => r.src === 'freguesia.area_km2'),
      String(p2.length));
+  ok('the heading is still the field, not the municipality',
+     (await page.$eval('#doc .cmp-h', e => e.textContent)).trim().startsWith('שטח'));
 
-  /* level 3 is not part of this screen */
-  await page.evaluate(() => { const f = D.fre.find(x => x.mun_num === 1); goZone(D.freKey(f)); });
+  /* החלפת נתון opens the picker, and choosing puts the screen back */
+  await page.click('[data-cmppick="1"]'); await page.waitForTimeout(500);
+  ok('החלפת נתון opens the field picker',
+     await page.evaluate(() => S.cmpPick) === true
+       && (await page.$$eval('#doc [data-cmpf]', e => e.length)) > 12);
+  ok('and the key and the list are not on screen while it is open',
+     await page.$('#doc .cmp-k') === null && (await cmpRows()).length === 0);
+  await page.evaluate(() => goMun(9));            // Santo Tirso: 6 of 14 priced
+  await page.waitForTimeout(700);
+  await page.click('[data-cmppick="1"]').catch(() => {});
+  await page.waitForTimeout(300);
+  if (await page.evaluate(() => !S.cmpPick)) { await page.click('[data-cmppick="1"]'); await page.waitForTimeout(400); }
+  await page.click('#doc [data-cmpf="price_eur_m2"]');
   await page.waitForTimeout(900);
-  ok('asking for level 3 leaves the comparison rather than showing it there',
-     await page.evaluate(() => S.cmp) === false);
-  ok('and the app is at level 3, not stuck', await page.evaluate(() => S.level) === 'zone');
+  ok('choosing a field closes the picker and names it in the heading',
+     await page.evaluate(() => S.cmpPick) === false
+       && (await page.$eval('#doc .cmp-h', e => e.textContent)).includes('מכירות'));
 
-  /* and a tap on a parish inside the comparison does not descend */
-  await page.click('#homeBtn'); await page.waitForTimeout(700);
-  await page.evaluate(() => { toggleCmp(); goMun(1); S.cmpField = 'price_eur_m2';
-                              redrawLevel(); redrawText(); });
-  await page.waitForTimeout(800);
-  await page.evaluate(() => { const f = D.fre.find(x => x.mun_num === 1); pickFre(f, 'map'); });
-  await page.waitForTimeout(500);
-  ok('a tap on a parish highlights it instead of opening level 3',
-     await page.evaluate(() => S.level) === 'mun'
-       && await page.evaluate(() => S.cmp) === true
-       && await page.$('#doc .cmp-row.is-hi') !== null);
+  /* the one that matters: no value is a hatch, never an end of the scale */
+  const st = await cmpRows();
+  const blank = st.filter(r => r.none);
+  ok('the parishes INE does not publish are listed apart, without a colour',
+     blank.length === 8, String(blank.length));
+  ok('and they read אין נתון', blank.every(r => r.val === 'אין נתון'));
+  ok('the map hatches them rather than giving them a shade',
+     await page.$$eval('#map .leaflet-overlay-pane path',
+       els => els.filter(e => (e.getAttribute('fill') || '').includes('cmp-nodata')).length) === 8);
+  ok('and the pattern is the one specified — 1.2px lines 4px apart, at 45°',
+     await page.evaluate(() => {
+       const p = document.querySelector('#cmp-nodata');
+       if (!p) return false;
+       const l = p.querySelector('line');
+       return p.getAttribute('width') === '4' && p.getAttribute('patternTransform') === 'rotate(45)'
+         && l.getAttribute('stroke-width') === '1.2';
+     }));
+  const k2 = await keyRows();
+  ok('the key names the missing group too, with its own hatch',
+     k2.some(k => k.nd && k.n === 8), JSON.stringify(k2));
 
-  /* home is the way out of this screen too */
+  /* home closes it and puts the background back as it was */
   await page.click('#homeBtn');
   await page.waitForTimeout(900);
   ok('home closes the comparison', await page.evaluate(() => S.cmp) === false);
+  ok('and gives the street background back exactly as it was',
+     await page.evaluate(() => S.tiles) === tilesBefore,
+     `${tilesBefore} → ${await page.evaluate(() => S.tiles)}`);
   ok('and comes back to the district', await page.evaluate(() => S.level) === 'district');
-  ok('and the field it was on is forgotten, so it opens on the cards again',
-     await page.evaluate(() => S.cmpField) === null);
 
   /* 11. landscape.  The map moves to the left half and the text beside it, so
      "the map's top corner" is no longer the screen's corner — an earlier cut of
