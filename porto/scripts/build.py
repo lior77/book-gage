@@ -244,10 +244,21 @@ PENDING_INDICATORS = [
                    "INE (25–64) הסקריפט מסרב לחשב."},
     {"key": "median_income", "label_he": "הכנסה חציונית", "unit": "€/שנה",
      "fetch": "scripts/fetch_ine.py --indicator income", "levels": ["municipio"]},
+    # Arrived 2026-09-12 from INE, not from PORDATA: dados.gov.pt carries the
+    # varcd for every INE indicator, which is what made it findable at all.
     {"key": "crimes_per_1000", "label_he": "עבירות רשומות לאלף תושבים", "unit": "לאלף",
-     "fetch": "scripts/fetch_pordata.py --indicator crime", "levels": ["municipio"],
+     "fetch": "scripts/fetch_ine.py --varcd 0012260 --period S7A2024 --dim dim_3=T",
+     "levels": ["municipio"], "decimals": 1, "high_is": "low",
      "warning_he": "סך העבירות הרשומות — לא ׳פשיעה חמורה׳. RASI מפרסמת criminalidade "
-                   "violenta e grave לפי מחוז ופיקוד משטרתי בלבד, ולא לפי עירייה."},
+                   "violenta e grave לפי מחוז ופיקוד משטרתי בלבד, ולא לפי עירייה.",
+     "note_he": "המדד הוא Taxa de criminalidade של INE, בקטגוריה Total. המפיק "
+                "הוא המנהל הכללי למדיניות המשפט (DGPJ), וההערה של INE מפרטת "
+                "אילו גופים נכללים בסכום: PJ, PSP, GNR, AT, PM, PJM, ASAE, "
+                "ו-SEF עד 2023 — וגם עבירות שמיקומן אינו ידוע או אינו ניתן "
+                "לסיווג, שנרשמו בידי גופים הפועלים ברמה ארצית.",
+     "caveat_he": "נתוני 2021–2025 עודכנו בעקבות עדכון אומדני האוכלוסייה "
+                  "השנתיים שפרסם INE ב-22 ביוני 2026. ערכי 2025 ארעיים, ולכן "
+                  "מוצגת כאן שנת 2024."},
     # The four INE housing-market series.  scripts/import_ine_habitacao.py writes
     # them; the labels and the twelve-month-window caveat travel in their meta,
     # so nothing here restates what INE publishes.  INE gives a parish figure for

@@ -106,7 +106,10 @@ def save(key, meta, municipios=None, freguesias=None):
             entry[name] = merged
     os.makedirs(RAW, exist_ok=True)
     with open(STORE, "w", encoding="utf-8") as fh:
-        json.dump(store, fh, ensure_ascii=False, indent=1, sort_keys=True)
+        # indent only, never sort_keys. The file is 4,000 lines; sorting it
+        # turns "one indicator added" into a whole-file reorder, and a diff
+        # nobody can read is a diff nobody checks. Section 11.
+        json.dump(store, fh, ensure_ascii=False, indent=1)
     n_m = len(entry.get("municipios", {}))
     n_f = len(entry.get("freguesias", {}))
     print("wrote %s -> %s   municipalities %d/18, freguesias %d/243"

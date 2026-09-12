@@ -520,6 +520,41 @@ def main():
                    for f in load("freguesias.json")["items"]},
                   "parish")
 
+    # ---- 7j. the crime rate is the municipality's, and stays there ---------
+    # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
+    # The temptation is the same one the housing prices already have: give a
+    # parish its municipality's number so the map has no holes. That is an
+    # unmarked interpolation, and it erases exactly the difference between two
+    # parishes that a reader came to find.
+    crime = {m["num"]: m.get("crimes_per_1000") for m in mun}
+    blank = [n for n, v in crime.items() if v is None]
+    if blank:
+        fail("%d municipalities have no crime rate: %s" % (len(blank), blank[:4]))
+    # fail() records and carries on, so this line still runs after a missing
+    # value was reported — and None < 500 raises rather than reporting.
+    odd = [(n, v) for n, v in crime.items() if v is not None and not (0 < v < 500)]
+    if odd:
+        fail("crime rate outside a plausible band (per 1000): %s" % odd[:3])
+    leaked = [(f["mun_num"], f["pt"]) for f in fre if f.get("crimes_per_1000") is not None]
+    if leaked:
+        fail("%d parishes carry a crime rate — DGPJ publishes it by municipality "
+             "only, so this can only be its municipality's number copied down: %s"
+             % (len(leaked), leaked[:3]))
+    rec = sources["fields"].get("municipio.crimes_per_1000")
+    if not rec:
+        fail("municipio.crimes_per_1000 has no source record")
+    else:
+        # rule 4: the source counts registered offences. Calling that "violent
+        # crime" is the restatement the contract forbids, and the warning is
+        # what stops the next person from writing it.
+        warn_he = rec.get("warning_he", "")
+        if "violenta e grave" not in warn_he or "RASI" not in warn_he:
+            fail("the crime record must keep the source's own distinction: "
+                 "criminalidade violenta e grave is a different series (RASI)")
+        if rec.get("confidence") != "reported":
+            fail("the crime rate has one producer and no independent second "
+                 "source, so it is 'reported' — not %r" % rec.get("confidence"))
+
     # ---- 7g. a ≥ in Hebrew prose keeps its direction -----------------------
     # The bidi algorithm mirrors ≥ into ≤ when it resolves inside an RTL run, so
     # "טקסט ≥ 4.5:1" is read by the user as the opposite requirement. The source

@@ -527,6 +527,20 @@
    "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
    "confidence": "reported",
    "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
+  },
+  "municipio.crimes_per_1000": {
+   "label_he": "עבירות רשומות לאלף תושבים",
+   "value_type": "number",
+   "reference_year": 2024,
+   "source": "INE — Taxa de criminalidade (‰) por Localização geográfica (NUTS - 2024) e Categoria de crime; Anual, אינדיקטור 0012260. המפיק: Direcção-Geral da Política de Justiça (DGPJ)",
+   "definition_pt": "Taxa de criminalidade (‰) — Categoria de crime: Total",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012260&Dim1=S7A2024&lang=PT",
+   "retrieved": "2026-09-12",
+   "coverage": "18/18",
+   "confidence": "reported",
+   "warning_he": "סך העבירות הרשומות — לא ׳פשיעה חמורה׳. ‏criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.",
+   "caveat_he": "בלשון המקור: הסכום כולל את נתוני PJ, PSP, GNR, AT, PM, PJM, ASAE, ו-SEF עד שנת 2023, וכן עבירות שמיקומן אינו ידוע או אינו ניתן לסיווג שנרשמו בידי גופים הפועלים ברמה ארצית. נתוני 2021–2025 עודכנו בעקבות עדכון אומדני האוכלוסייה השנתיים שפרסם INE ב-22 ביוני 2026. ערכי 2025 ארעיים ולכן מוצגת שנת 2024.",
+   "crosscheck_he": "אותו מדד בגרסת NUTS 2013 (אינדיקטור 0008074) לשנת 2021 מחזיר ערך זהה ב-18 מתוך 18 העיריות. זו בדיקת עקביות ולא מקור שני: אותו מפיק ואותם נתונים, ולכן רמת הביטחון נשארת reported ולא verified."
   }
  },
  "missing": {
@@ -581,16 +595,6 @@
     "candidate_sources": [
      "https://www.pordata.pt/municipios/rendimento+bruto+declarado+por+sujeito+passivo+de+irs-124",
      "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-    ]
-   },
-   {
-    "field": "municipio.crimes_per_1000",
-    "label_he": "עבירות רשומות לאלף תושבים",
-    "why_he": "PORDATA חסומה.",
-    "important_he": "זה סך העבירות הרשומות (crimes registados pelas polícias por 1000 habitantes) — לא 'פשיעה חמורה'. criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה. אסור להציג את האחד כאילו הוא האחר.",
-    "fetch": "scripts/fetch_pordata.py --indicator crime",
-    "candidate_sources": [
-     "https://www.pordata.pt/municipios/crimes+registados+pelas+policias+por+mil+habitantes-995"
     ]
    },
    {

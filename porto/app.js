@@ -354,6 +354,27 @@ function marketStats(o, lvl) {
   </div>`;
 }
 
+/* Its own card, and only at the municipality level: DGPJ publishes the rate by
+   municipality and nothing finer.  The card carries the source's own warning
+   rather than a summary of it — "registered offences" is what INE counts, and
+   "violent crime" is a different series that exists only by district. */
+function safetyStats(o, lvl) {
+  const key = lvl + '.crimes_per_1000';
+  const f = D.sources.fields[key];
+  if (!f) return '';
+  const yr = f.reference_year ? ' ' + f.reference_year : '';
+  return `<div class="card">
+    <h2>עבירות רשומות — INE${html(yr)}</h2>
+    <div class="stats">
+      ${stat('לאלף תושבים', o.crimes_per_1000, 'לאלף', 1, key)}
+    </div>
+    <p class="note">סך העבירות שנרשמו בידי רשויות האכיפה, חלקי האוכלוסייה
+      המשוערת של אותה שנה. <b>זו אינה ׳פשיעה חמורה׳</b> — ‏criminalidade
+      violenta e grave מתפרסמת לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת
+      עירייה.</p>
+  </div>`;
+}
+
 function stat(label, val, unit, dec, srcKey, step) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
@@ -973,6 +994,7 @@ function renderMun(num) {
     ${peopleStats(m, 'municipio')}
     ${housingStats(m, 'municipio')}
     ${marketStats(m, 'municipio')}
+    ${safetyStats(m, 'municipio')}
 
     <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הרובעים'} — לפי המספור במפה</div>
     ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
@@ -2576,6 +2598,11 @@ const CMP_ALL = [
   { g: 'דיור ובניינים', k: 'deep_repair_pct', he: 'מהם תיקון עמוק', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'pre1946_pct', he: 'נבנו לפני 1946', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'since2011_pct', he: 'נבנו מ-2011', unit: '%', dec: 1 },
+  /* Its own group: this is the one figure on the screen where a high value is
+     bad, and putting it beside the housing market or the census would invite
+     reading the ramp the same way in all of them. */
+  { g: 'ביטחון', k: 'crimes_per_1000', he: 'עבירות רשומות', unit: 'לאלף',
+    dec: 1, only: 'municipio' },
   { g: 'שטח ומרחק', k: 'area_km2', he: 'שטח', unit: 'קמ״ר', dec: 1 },
   { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי מפורטו', unit: 'ק״מ', dec: 1,
     only: 'municipio' },

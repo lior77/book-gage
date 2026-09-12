@@ -38,6 +38,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -64,13 +65,33 @@ PRESETS = {
 }
 
 
-def get(url):
+def get(url, tries=5):
+    """INE answers, then rate-limits, then answers again.
+
+    The same URL returns 200 and 500 minutes apart, and a 500 here is not "the
+    indicator is gone" — it is "ask again in a moment". Without the retry this
+    script fails on a working source and the failure reads like a missing
+    dataset, which is exactly the mistake this project already made once about
+    INE being blocked at all.
+    """
     req = urllib.request.Request(url, headers={
         "User-Agent": "porto-district-app/1.0 (data completion script)",
         "Accept": "application/json, text/plain, */*",
     })
-    with urllib.request.urlopen(req, timeout=90) as fh:
-        raw = fh.read()
+    last = None
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as fh:
+                raw = fh.read()
+            break
+        except Exception as exc:            # HTTPError, URLError, timeouts alike
+            last = exc
+            if attempt == tries - 1:
+                raise
+            wait = 4 * (attempt + 1)
+            print("  %s — retrying in %ds (%d/%d)"
+                  % (exc, wait, attempt + 2, tries), file=sys.stderr)
+            time.sleep(wait)
     try:
         return json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -87,14 +108,25 @@ def indicator_title(meta):
     if isinstance(meta, list) and meta:
         meta = meta[0]
     if isinstance(meta, dict):
-        for k in ("IndicadorDsg", "title", "Indicador"):
+        # the metadata endpoint says IndicadorNome; the data endpoint says
+        # IndicadorDsg. Reading only one of them made --expect refuse every
+        # write, which is the safe direction to fail but still a bug.
+        for k in ("IndicadorNome", "IndicadorDsg", "title", "Indicador"):
             if meta.get(k):
                 return str(meta[k])
     return ""
 
 
-def rows_of(doc, period):
-    """Yield (geocod, geodsg, value) from a pindica.jsp response."""
+def rows_of(doc, period, want=None):
+    """Yield (geocod, geodsg, value) from a pindica.jsp response.
+
+    `want` is a {dimension: category} filter.  Most INE indicators carry more
+    than the number you came for — the crime rate arrives split into six
+    categories plus a total, all under the same municipality code — and without
+    a filter the last row silently wins.  A wrong category looks exactly like a
+    right one, so the filter is required rather than optional whenever the
+    response has extra dimensions.
+    """
     if isinstance(doc, list):
         doc = doc[0] if doc else {}
     dados = doc.get("Dados") or {}
@@ -105,6 +137,8 @@ def rows_of(doc, period):
         sys.exit("no data for period %r; periods available: %s"
                  % (period, sorted(dados)))
     for row in block:
+        if want and any(str(row.get(k)) != v for k, v in want.items()):
+            continue
         val = row.get("valor", row.get("Valor"))
         if val in (None, "", "x", "//", "-"):
             continue
@@ -129,6 +163,12 @@ def main():
     ap.add_argument("--scale", type=float, default=1.0,
                     help="multiply every value (e.g. 0.001 for thousands)")
     ap.add_argument("--expect", help="substring the indicator title must contain")
+    ap.add_argument("--dim", action="append", default=[], metavar="dim_3=T",
+                    help="keep only rows whose dimension has this category; "
+                         "repeatable. Use --dims to see what a response carries")
+    ap.add_argument("--dims", action="store_true",
+                    help="list the dimensions and categories in the response "
+                         "and exit, without writing anything")
     ap.add_argument("--yes", action="store_true", help="write without confirming")
     args = ap.parse_args()
 
@@ -154,6 +194,25 @@ def main():
     if not key or not label:
         sys.exit("--key and --label are required")
 
+    # --dims only looks; it must not pass through the confirmation prompt, or it
+    # blocks on stdin in a script that was meant to print and exit.
+    if args.dims:
+        doc = get(DATA % (args.varcd, args.period))
+        block = (doc[0] if isinstance(doc, list) else doc).get("Dados", {})
+        rows = list(block.values())[0] if block else []
+        seen = {}
+        for r in rows:
+            for k in r:
+                if re.fullmatch(r"dim_\d+", k):
+                    seen.setdefault(k, {}).setdefault(str(r[k]), r.get(k + "_t", ""))
+        for k in sorted(seen):
+            print("%s:" % k)
+            for cat, label in seen[k].items():
+                print("   %-4s %s" % (cat, label))
+        if not seen:
+            print("no extra dimensions — the response is one value per place")
+        return 0
+
     meta = show_meta(args.varcd)
     title = indicator_title(meta)
     print("\nindicator title: %s" % (title or "(not reported)"))
@@ -165,8 +224,16 @@ def main():
             return 1
 
     doc = get(DATA % (args.varcd, args.period))
+
+    want = {}
+    for spec in args.dim:
+        if "=" not in spec:
+            sys.exit("--dim wants dim_3=T, got %r" % spec)
+        k, v = spec.split("=", 1)
+        want[k] = v
+
     values, unresolved = {}, []
-    for geocod, geodsg, val in rows_of(doc, args.period):
+    for geocod, geodsg, val in rows_of(doc, args.period, want or None):
         name = store.resolve_municipio(geocod) or store.resolve_municipio(geodsg)
         if name:
             values[name] = round(val * args.scale, 4)
@@ -183,6 +250,7 @@ def main():
         "source_he": "INE — %s (varcd %s, תקופה %s)" % (title or "indicador",
                                                         args.varcd, args.period),
         "url": DATA % (args.varcd, args.period),
+        "dimension_he": ", ".join("%s=%s" % kv for kv in sorted(want.items())) or None,
     }, municipios=values)
     return 0
 

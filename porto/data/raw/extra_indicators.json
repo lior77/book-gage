@@ -4124,5 +4124,36 @@
    "131216": 14.87,
    "131217": 15.17
   }
+ },
+ "crimes_per_1000": {
+  "meta": {
+   "label_he": "עבירות רשומות לאלף תושבים",
+   "unit": "לאלף",
+   "reference_year": 2024,
+   "source_he": "INE — Taxa de criminalidade (‰) por Localização geográfica (NUTS - 2024) e Categoria de crime; Anual - Direcção-Geral da Política de Justiça (varcd 0012260, תקופה S7A2024)",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012260&Dim1=S7A2024&lang=PT",
+   "dimension_he": "dim_3=T",
+   "retrieved": "2026-09-12"
+  },
+  "municipios": {
+   "Trofa": 17.4,
+   "Gondomar": 19.1,
+   "Lousada": 19.3,
+   "Amarante": 19.7,
+   "Santo Tirso": 20.7,
+   "Póvoa de Varzim": 21.0,
+   "Valongo": 21.8,
+   "Paços de Ferreira": 22.0,
+   "Paredes": 22.3,
+   "Penafiel": 22.5,
+   "Marco de Canaveses": 23.2,
+   "Baião": 24.8,
+   "Felgueiras": 24.9,
+   "Vila Nova de Gaia": 25.5,
+   "Vila do Conde": 26.0,
+   "Maia": 28.6,
+   "Matosinhos": 28.6,
+   "Porto": 55.9
+  }
  }
 }
