@@ -648,6 +648,21 @@
     "label_he": "גבולות שכונה (מתחת לרובע)",
     "why_he": "אין שכבה מנהלית רשמית מתחת לרובע בפורטוגל. ב-OSM יש בעיקר נקודות, לא פוליגונים. אפשרות מדויקת: subsecções estatísticas (BGRI) של INE — פוליגונים ממוספרים ללא שם.",
     "decision_he": "לא הומצאו גבולות. האפליקציה מציגה את 53 השכונות של פורטו כטקסט ואת נקודות ה-OSM על המפה."
+   },
+   {
+    "field": "map.ren / map.ran / map.perigosidade_incendio",
+    "label_he": "מגבלות בנייה — REN, RAN, וסכנת שריפה",
+    "why_he": "לא חסם רשת — נבדק ב-2026-09-12 ונמשך בהצלחה מ-ogcapi.dgterritorio.gov.pt. החסם הוא גודל ושתי שאלות פתוחות.",
+    "probe_2026_09_12_he": "בתיבה החוסמת של המחוז: REN ‏71 מצולעים, RAN ‏44, סכנת שריפה **173,047**. מצולע בודד של REN שוקל כ-5MB ושל RAN כ-6MB — הם מפורטים מאוד. זה לא נכנס ל-APK של 730KB, ולכן השאלה אינה איך למשוך אלא **איך להגיש**: הורדה לפי דרישה מתוך release אל IndexedDB היא ההצעה שעל השולחן וטרם הוכרעה.",
+    "bbox_he": "התיבה חורגת מהמחוז: בדגימה חזרו פשו דה רגואה (17), קסטלו דה פאיבה ואארוקה (01). סינון לפי dtcc/dtccs ל-13 הוא תנאי, אחרת ייכנסו שטחים של מחוזות אחרים.",
+    "fire_year_he": "**החסם על שנת מפת השריפות אושר בראיות.** ‏serv_data מחזיר 2006-06-28, ו-serv_dr באותה רשומה הוא ׳Decreto-Lei 124/2006׳ — כלומר זהו תאריך החוק ולא שנת המפה. ‏designacao הוא ׳Planeamento de Defesa da Floresta Contra Incêndios׳ ו-tipologia הוא מחלקת הסכנה (׳Alta׳). בלי שנת ייחוס הנתון אינו עומד בכלל הראשון של חוזה הדיוק, ולכן לא מתפרסם.",
+    "wording_he": "‏perigosidade הוא **סכנה**, לא risco. אלה שני מונחים שונים אצל המקור, ואסור לתרגם את האחד לשני.",
+    "fetch": "python3 scripts/fetch_dgt_ogcapi.py ren_areas ren_linhas ran perigosidade_incendio crus",
+    "candidate_sources": [
+     "https://ogcapi.dgterritorio.gov.pt/collections/srup_ren_areal",
+     "https://ogcapi.dgterritorio.gov.pt/collections/srup_ran",
+     "https://ogcapi.dgterritorio.gov.pt/collections/srup_perigosidade_inc_rural"
+    ]
    }
   ]
  }

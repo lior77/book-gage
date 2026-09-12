@@ -28,6 +28,7 @@ import io
 import os
 import re
 import sys
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -557,6 +558,35 @@ def main():
             fail("the income figure has one producer; the older NUTS-2013 series "
                  "is frozen and disagrees for 2021, so it confirms nothing — "
                  "'reported', not %r" % rec_i.get("confidence"))
+
+    # ---- 7m. the two municipality-code tables agree ------------------------
+    # When indicator_store had 1315/1318 swapped, fetch_dgt_ogcapi had them
+    # right — the correct mapping was already in the repository, in another
+    # file, and nothing compared them. Two hand-kept copies of the same table
+    # is one copy too many; this makes them check each other.
+    import re as _re
+    dgt = io.open(os.path.join(HERE, "fetch_dgt_ogcapi.py"), encoding="utf-8").read()
+    blk = dgt[dgt.index("CRUS_MUNICIPIOS = {"):]
+    blk = blk[:blk.index("}")]
+    crus = dict(_re.findall(r'"(\d{4})":\s*"([a-z_]+)"', blk))
+    if len(crus) != 18:
+        fail("CRUS_MUNICIPIOS holds %d codes, not 18" % len(crus))
+    slug = lambda t: _re.sub(r"[^a-z]+", "_",
+                             unicodedata.normalize("NFD", t.lower())
+                             .encode("ascii", "ignore").decode()).strip("_")
+    by_code = {}
+    for f in fre:
+        code = str(f.get("dicofre") or "")
+        if len(code) >= 6:
+            by_code[code[:4]] = f["mun"]
+    for code, name in sorted(crus.items()):
+        want = by_code.get(code)
+        if want is None:
+            fail("CRUS names code %s, which no parish carries" % code)
+        elif slug(want) != name:
+            fail("code %s is %r in the parishes' DICOFRE and %r in "
+                 "fetch_dgt_ogcapi — one of the two tables is wrong"
+                 % (code, slug(want), name))
 
     # ---- 7l. the population change reconciles with the 2011 census ---------
     # This is the check that caught a real swap. indicator_store typed the INE
