@@ -24,6 +24,7 @@ Rules enforced (from BRIEF.md):
 Exit code 0 = all green, 1 = at least one hard failure.
 """
 import json
+import io
 import os
 import re
 import sys
@@ -435,6 +436,19 @@ def main():
     if r.returncode != 0:
         fail("docs/DESIGN.html has drifted from app.css — "
              "run python3 scripts/build_design.py  (%s)" % r.stdout.strip())
+
+    # ---- 7g. a ≥ in Hebrew prose keeps its direction -----------------------
+    # The bidi algorithm mirrors ≥ into ≤ when it resolves inside an RTL run, so
+    # "טקסט ≥ 4.5:1" is read by the user as the opposite requirement. The source
+    # looks right in the editor, which is why this has to be checked on the
+    # output. Every ≥ has to sit inside U+2066..U+2069.
+    doc = io.open(os.path.join(ROOT, "docs", "DESIGN.html"), encoding="utf-8").read()
+    bare = [m.start() for m in re.finditer("\u2265", doc)
+            if "\u2066" not in doc[max(0, m.start() - 3):m.start()]]
+    if bare:
+        fail("%d ≥ in docs/DESIGN.html are not bidi-isolated and render as ≤ — "
+             "wrap them with U+2066..U+2069 (see bidi_math in build_design.py): %s"
+             % (len(bare), [doc[i - 12:i + 10] for i in bare[:2]]))
 
     # ---- level 3 covers every parish, not only Porto's seven ---------------
     zones = load("zones.json")["zones"]

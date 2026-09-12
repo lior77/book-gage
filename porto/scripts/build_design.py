@@ -29,6 +29,12 @@ JS = os.path.join(ROOT, "app.js")
 OUT = os.path.join(ROOT, "docs", "DESIGN.html")
 
 # ------------------------------------------------------------- colour maths --
+DARK_TOKENS = """
+  color-scheme:dark;
+  --pg:#0d141c; --sf:#161f2a; --sk:#111925; --tx:#e3eaf2; --tx2:#93a2b4;
+  --ln:#243040; --ac:#79ade6; --ok:#5fd39a; --no:#ff8a80;
+"""
+
 def rgb(h):
     h = h.strip()
     if h.startswith("#") and len(h) == 4:
@@ -215,6 +221,16 @@ def swatch_rows(pal, mode, bg_key, card_key):
 
 
 # --------------------------------------------------------------- the page ----
+def bidi_math(s):
+    """Isolate a ≥ and the number after it.
+
+    Hebrew is RTL, and the bidi algorithm mirrors ≥ into ≤ when it resolves to an
+    RTL run — a document that states requirements would show the opposite of what
+    it means. U+2066..U+2069 pin the comparison to LTR so the glyph stays itself.
+    """
+    return re.sub("(\u2265 [\\d.:\u00d7 ]*\\d)", "\u2066\\1\u2069", s)
+
+
 def esc(s):
     return (str(s).replace("&", "&amp;").replace("<", "&lt;")
             .replace(">", "&gt;").replace('"', "&quot;"))
@@ -293,7 +309,7 @@ def page(light, dark, dark_keys, ty, icons, motion):
     rules = "".join(
         '<tr><td>%s</td><td>%s</td><td><span class="lvl %s">%s</span></td>'
         '<td><a href="%s" target="_blank" rel="noopener">%s</a></td></tr>'
-        % (esc(a), esc(b), "req" if "WCAG" in c else "rec", esc(c), esc(e), esc(d))
+        % (esc(a), bidi_math(esc(b)), "req" if "WCAG" in c else "rec", esc(c), esc(e), esc(d))
         for a, b, c, d, e in RULES)
 
     icon_list = " · ".join('<code dir="ltr">%s</code>' % esc(i) for i in icons)
@@ -306,15 +322,15 @@ def page(light, dark, dark_keys, ty, icons, motion):
 <title>פורטולנד — השפה העיצובית</title>
 <style>
 :root{
+  color-scheme:light;
   --pg:#f4f6f9; --sf:#ffffff; --sk:#eef2f6; --tx:#16212e; --tx2:#5b6a7d;
   --ln:#dbe2ea; --ac:#15568f; --ok:#1c7a4a; --no:#b3261e;
   --mo:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme:dark){:root{
-  --pg:#0d141c; --sf:#161f2a; --sk:#111925; --tx:#e3eaf2; --tx2:#93a2b4;
-  --ln:#243040; --ac:#79ade6; --ok:#5fd39a; --no:#ff8a80;
-}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){%(darktokens)s}}
+:root[data-theme="dark"]{%(darktokens)s}
 *{box-sizing:border-box}
+html{direction:rtl}
 body{margin:0; background:var(--pg); color:var(--tx); direction:rtl;
   font:400 16px/1.6 system-ui,"Noto Sans Hebrew","Heebo",Arial,sans-serif;
   -webkit-text-size-adjust:100%%}
@@ -474,6 +490,7 @@ footer{margin-block-start:52px; padding-block-start:18px;
 """ % {
         "rules": rules, "light": table(light, "day"), "dark": table(dark, "night"),
         "blues": blues, "gaps": "".join(blue_gaps),
+        "darktokens": DARK_TOKENS,
         "gaphead": "".join("<th>%d→%d</th>" % (i + 1, i + 2) for i in range(4)),
         "blueground": blue_ground,
         "hw": HATCH["w"], "hg": HATCH["gap"], "ha": HATCH["angle"], "hl": HATCH["light"],
