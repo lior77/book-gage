@@ -242,8 +242,20 @@ PENDING_INDICATORS = [
      "warning_he": "אם קובץ המפקד מפרסם גיל חציוני — זה הערך שלו. אם יש בו רק פסי "
                    "גיל, הערך מחושב באינטרפולציה ומסומן כמקורב; ובפסים הרחבים של "
                    "INE (25–64) הסקריפט מסרב לחשב."},
-    {"key": "median_income", "label_he": "הכנסה חציונית", "unit": "€/שנה",
-     "fetch": "scripts/fetch_ine.py --indicator income", "levels": ["municipio"]},
+    # A real median, and named for what it is a median OF.  "הכנסה חציונית"
+    # would say the median income of a household; what INE publishes is the
+    # median of the gross income DECLARED to the tax authority per fiscal
+    # household, which is a narrower thing.
+    {"key": "median_income",
+     "label_he": "ערך חציוני של הכנסה ברוטו מוצהרת למשק בית פיסקאלי",
+     "unit": "€", "decimals": 0, "high_is": "neutral",
+     "fetch": "scripts/fetch_ine.py --varcd 0012712 --period S7A2024",
+     "levels": ["municipio"],
+     "note_he": "הכנסה שנתית ברוטו כפי שהוצהרה לרשות המסים, החציון על פני "
+                "משקי הבית הפיסקאליים בעירייה. מ-2018 המידע מיוחס לעירייה של "
+                "מען המס של הנישום ואינו כולל תושבי חוץ.",
+     "warning_he": "לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו. מי שאינו מגיש "
+                   "דוח אינו נספר."},
     # Arrived 2026-09-12 from INE, not from PORDATA: dados.gov.pt carries the
     # varcd for every INE indicator, which is what made it findable at all.
     {"key": "crimes_per_1000", "label_he": "עבירות רשומות לאלף תושבים", "unit": "לאלף",

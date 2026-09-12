@@ -4155,5 +4155,36 @@
    "Matosinhos": 28.6,
    "Porto": 55.9
   }
+ },
+ "median_income": {
+  "meta": {
+   "label_he": "ערך חציוני של הכנסה ברוטו מוצהרת למשק בית פיסקאלי",
+   "unit": "€/שנה",
+   "reference_year": 2024,
+   "source_he": "INE — Valor mediano do rendimento bruto declarado por agregado fiscal (€) por Localização geográfica (NUTS - 2024); Anual - INE, Estatísticas do Rendimento ao nível local com base na informação produzida pelo Ministério das Finanças - Autoridade Tributária e Aduaneira. (varcd 0012712, תקופה S7A2024)",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012712&Dim1=S7A2024&lang=PT",
+   "dimension_he": null,
+   "retrieved": "2026-09-12"
+  },
+  "municipios": {
+   "Marco de Canaveses": 12786.0,
+   "Baião": 13205.0,
+   "Amarante": 13211.0,
+   "Felgueiras": 13404.0,
+   "Paredes": 14778.0,
+   "Lousada": 13541.0,
+   "Paços de Ferreira": 14334.0,
+   "Penafiel": 15949.0,
+   "Póvoa de Varzim": 14920.0,
+   "Porto": 15523.0,
+   "Santo Tirso": 15666.0,
+   "Gondomar": 15673.0,
+   "Trofa": 15684.0,
+   "Vila do Conde": 16180.0,
+   "Vila Nova de Gaia": 16256.0,
+   "Valongo": 17622.0,
+   "Matosinhos": 17562.0,
+   "Maia": 18512.0
+  }
  }
 }

@@ -520,6 +520,39 @@ def main():
                    for f in load("freguesias.json")["items"]},
                   "parish")
 
+    # ---- 7k. the income figure says what it is a median of -----------------
+    # "הכנסה חציונית" claims the median income of a household. What INE
+    # publishes is the median of the gross income DECLARED to the tax authority
+    # per fiscal household: households that file nothing are not counted, and
+    # it is gross, not net. Calling the narrow thing by the broad name is the
+    # restatement rule 4 forbids — and it is the mistake this project already
+    # made once, in 1.25.0, with an invented reason for a blank INE cell.
+    inc = {m["num"]: m.get("median_income") for m in mun}
+    blank_i = [n for n, v in inc.items() if v is None]
+    if blank_i:
+        fail("%d municipalities have no income figure: %s" % (len(blank_i), blank_i[:4]))
+    odd_i = [(n, v) for n, v in inc.items() if v is not None and not (3000 < v < 80000)]
+    if odd_i:
+        fail("declared income outside a plausible annual band (€): %s" % odd_i[:3])
+    leaked_i = [(f["mun_num"], f["pt"]) for f in fre if f.get("median_income") is not None]
+    if leaked_i:
+        fail("%d parishes carry an income figure — INE publishes it by "
+             "municipality only: %s" % (len(leaked_i), leaked_i[:3]))
+    rec_i = sources["fields"].get("municipio.median_income")
+    if not rec_i:
+        fail("municipio.median_income has no source record")
+    else:
+        lab = rec_i.get("label_he", "")
+        if "מוצהרת" not in lab:
+            fail("the income label must say the income is DECLARED — %r claims "
+                 "more than INE publishes" % lab)
+        if "ברוטו" not in lab and "ברוטו" not in rec_i.get("warning_he", ""):
+            fail("the income record must say the figure is gross, not net")
+        if rec_i.get("confidence") != "reported":
+            fail("the income figure has one producer; the older NUTS-2013 series "
+                 "is frozen and disagrees for 2021, so it confirms nothing — "
+                 "'reported', not %r" % rec_i.get("confidence"))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a

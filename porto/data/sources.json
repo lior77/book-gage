@@ -541,6 +541,20 @@
    "warning_he": "סך העבירות הרשומות — לא ׳פשיעה חמורה׳. ‏criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.",
    "caveat_he": "בלשון המקור: הסכום כולל את נתוני PJ, PSP, GNR, AT, PM, PJM, ASAE, ו-SEF עד שנת 2023, וכן עבירות שמיקומן אינו ידוע או אינו ניתן לסיווג שנרשמו בידי גופים הפועלים ברמה ארצית. נתוני 2021–2025 עודכנו בעקבות עדכון אומדני האוכלוסייה השנתיים שפרסם INE ב-22 ביוני 2026. ערכי 2025 ארעיים ולכן מוצגת שנת 2024.",
    "crosscheck_he": "אותו מדד בגרסת NUTS 2013 (אינדיקטור 0008074) לשנת 2021 מחזיר ערך זהה ב-18 מתוך 18 העיריות. זו בדיקת עקביות ולא מקור שני: אותו מפיק ואותם נתונים, ולכן רמת הביטחון נשארת reported ולא verified."
+  },
+  "municipio.median_income": {
+   "label_he": "ערך חציוני של הכנסה ברוטו מוצהרת למשק בית פיסקאלי",
+   "value_type": "number",
+   "reference_year": 2024,
+   "source": "INE — Valor mediano do rendimento bruto declarado por agregado fiscal (€), אינדיקטור 0012712. Estatísticas do Rendimento ao nível local, על בסיס מידע של Autoridade Tributária e Aduaneira",
+   "definition_pt": "Valor mediano do rendimento bruto declarado por agregado fiscal (€)",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012712&Dim1=S7A2024&lang=PT",
+   "retrieved": "2026-09-12",
+   "coverage": "18/18",
+   "confidence": "reported",
+   "warning_he": "זו הכנסה ברוטו **מוצהרת** לרשות המסים, לכל משק בית פיסקאלי — לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו. משקי בית שאינם מגישים דוח אינם נספרים, וההכנסה היא של מי שמוצהר, לא של מי שמתגורר.",
+   "caveat_he": "בלשון המקור: מ-2018 המידע מיוחס לעירייה של מען המס של הנישום ואינו כולל תושבי חוץ (כולל נישומים עם ׳תושבות מס חלקית׳), ומשום כך נתוני 2018 עודכנו.",
+   "crosscheck_he": "הגרסה הישנה של אותו מדד (NUTS 2013, אינדיקטור 0009763) מכסה 2015–2021 ועודכנה לאחרונה ב-2023-07-25; הסדרה שכאן עודכנה ב-2026-07-24. לשנת 2021 הן חלוקות ב-4 מתוך 18 העיריות (פרדש, פסוש דה פריירה, פנאפיאל, ולונגו), עד 14%. זהו עדכון של INE ולא שגיאה — הסדרה הישנה מוקפאת. ומשום כך היא **אינה** מקור שני בלתי תלוי, והביטחון נשאר reported."
   }
  },
  "missing": {
@@ -584,16 +598,6 @@
     "fetch": "scripts/fetch_ine.py --indicator median_age",
     "candidate_sources": [
      "https://www.pordata.pt/municipios/idade+mediana+da+populacao-6",
-     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-    ]
-   },
-   {
-    "field": "municipio.median_income",
-    "label_he": "הכנסה חציונית",
-    "why_he": "INE ו-PORDATA חסומים.",
-    "fetch": "scripts/fetch_ine.py --indicator income",
-    "candidate_sources": [
-     "https://www.pordata.pt/municipios/rendimento+bruto+declarado+por+sujeito+passivo+de+irs-124",
      "https://www.ine.pt/ine/json_indicador/pindica.jsp"
     ]
    },

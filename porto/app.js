@@ -358,6 +358,26 @@ function marketStats(o, lvl) {
    municipality and nothing finer.  The card carries the source's own warning
    rather than a summary of it — "registered offences" is what INE counts, and
    "violent crime" is a different series that exists only by district. */
+/* Its own card rather than a row inside the housing one: that card's note
+   explains the twelve-month window INE uses for prices, and a figure sitting
+   under it would look as though the note covered it too.  This one is annual
+   declared income from tax returns — a different source and a different year. */
+function incomeStats(o, lvl) {
+  const key = lvl + '.median_income';
+  const f = D.sources.fields[key];
+  if (!f) return '';
+  return `<div class="card">
+    <h2>הכנסה מוצהרת — INE${f.reference_year ? ' ' + html(f.reference_year) : ''}</h2>
+    <div class="stats">
+      ${stat('חציון למשק בית פיסקאלי', o.median_income, '€ לשנה', 0, key)}
+    </div>
+    <p class="note">הכנסה שנתית ברוטו כפי שהוצהרה לרשות המסים, החציון על פני
+      משקי הבית הפיסקאליים. <b>לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו</b> —
+      מי שאינו מגיש דוח אינו נספר. מ-2018 הערך מיוחס לעירייה של מען המס ואינו
+      כולל תושבי חוץ.</p>
+  </div>`;
+}
+
 function safetyStats(o, lvl) {
   const key = lvl + '.crimes_per_1000';
   const f = D.sources.fields[key];
@@ -994,6 +1014,7 @@ function renderMun(num) {
     ${peopleStats(m, 'municipio')}
     ${housingStats(m, 'municipio')}
     ${marketStats(m, 'municipio')}
+    ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
 
     <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הרובעים'} — לפי המספור במפה</div>
@@ -2583,6 +2604,11 @@ const CMP_ALL = [
   { g: 'אנשים', k: 'foreign_pct', he: 'אזרחות זרה', unit: '%', dec: 1 },
   { g: 'אנשים', k: 'education_pct', he: 'השכלה גבוהה', unit: '%', dec: 1 },
   { g: 'אנשים', k: 'unemployment_pct', he: 'אבטלה', unit: '%', dec: 1 },
+  /* Not in 'אנשים': the census counts people, this comes from tax returns and
+     covers only what was declared. Beside the housing market is where it is
+     actually read — what a household here declares, next to what a home costs. */
+  { g: 'שוק הדיור', k: 'median_income', he: 'הכנסה מוצהרת (חציון)', unit: '€',
+    dec: 0, only: 'municipio' },
   { g: 'שוק הדיור', k: 'price_eur_m2', he: 'מכירות', unit: '€/מ״ר', dec: 0 },
   { g: 'שוק הדיור', k: 'price_new_eur_m2', he: 'דירות חדשות', unit: '€/מ״ר', dec: 0 },
   { g: 'שוק הדיור', k: 'price_used_eur_m2', he: 'דירות קיימות', unit: '€/מ״ר', dec: 0 },
