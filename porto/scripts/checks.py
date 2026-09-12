@@ -629,6 +629,43 @@ def main():
         fail("%d municipalities do not reconcile with the 2011 census — "
              "pop2021/(1+rate) vs INE 2011: %s" % (len(off), off[:3]))
 
+    # ---- 7n. every Hebrew string the UI shows has an English one -----------
+    # t() falls back to the Hebrew when a key is missing, which is the right
+    # behaviour at runtime and a silent one in a diff: a new Hebrew label would
+    # simply appear, in Hebrew, in the middle of the English build. This reads
+    # every t('...') call in app.js and requires the table to answer it.
+    appjs2 = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    head = appjs2[:appjs2.index("Object.assign(EN, {")]
+    calls = set()
+    for m in re.finditer(r"(?<![A-Za-z0-9_$])t\(\s*('((?:[^'\\]|\\.)*)'"
+                         r'|"((?:[^"\\]|\\.)*)")\s*\)', head):
+        calls.add(m.group(2) if m.group(2) is not None else m.group(3))
+    table = appjs2[appjs2.index("Object.assign(EN, {"):]
+    have = set()
+    for m in re.finditer(r"\n  ('((?:[^'\\]|\\.)*)'" r'|"((?:[^"\\]|\\.)*)")\s*:',
+                         table):
+        have.add(m.group(2) if m.group(2) is not None else m.group(3))
+    gone = sorted(k for k in calls if k not in have)
+    if gone:
+        fail("%d Hebrew strings reach the screen with no English: %s"
+             % (len(gone), [g[:40] for g in gone[:3]]))
+    # a value that is still Hebrew is a translation that was never written
+    untranslated = []
+    for m in re.finditer(r"\n  (?:'((?:[^'\\]|\\.)*)'" r'|"((?:[^"\\]|\\.)*)")\s*:\s*\n?\s*'
+                         r"(?:'((?:[^'\\]|\\.)*)'" r'|"((?:[^"\\]|\\.)*)")', table):
+        k = m.group(1) if m.group(1) is not None else m.group(2)
+        v = m.group(3) if m.group(3) is not None else m.group(4)
+        if k is None or v is None:
+            continue
+        # a language names itself in its own language — that one is deliberate
+        if k == v and k != "עברית":
+            untranslated.append(k)
+        elif re.search("[\u0590-\u05ff]", v or "") and k != "עברית":
+            untranslated.append(k)
+    if untranslated:
+        fail("%d entries in EN are still Hebrew: %s"
+             % (len(untranslated), untranslated[:3]))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a

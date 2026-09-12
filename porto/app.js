@@ -13,10 +13,83 @@
 
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-const MISSING = 'אין נתון';
+/* ---------------------------------------------------------------- language ---
+   Hebrew is the source and the default.  Every string in this file is written in
+   Hebrew and stays written in Hebrew; the English is a table beside it, keyed by
+   the Hebrew itself, so the code reads as one language rather than as a pair of
+   keys and a lookup.
+
+   t() is the IDENTITY FUNCTION while the app is in Hebrew.  That is what makes
+   it safe to apply to five hundred strings at once: the Hebrew build cannot
+   change, and the whole existing test suite still describes it exactly.
+
+   A string with no English entry falls back to the Hebrew rather than to its own
+   key or to an empty box.  An English reader then sees a Hebrew sentence, which
+   is honest — that text has not been translated yet — where a machine
+   translation presented in the app's own voice would not be. */
+const EN = Object.create(null);
+function t(s) {
+  if (S.lang !== 'en') return s;
+  const v = EN[s];
+  return v === undefined ? s : v;
+}
+
+/* A place's name in the language being read.  Every municipality, parish and
+   locality already carries its official Portuguese name — that is what an
+   English reader wants, and it is the name on the road signs. */
+function nm(o) {
+  if (!o) return '';
+  return S.lang === 'en' ? (o.pt || o.en || o.he || '') : (o.he || o.pt || o.en || '');
+}
+
+/* The name, with the official Portuguese one beside it.  In Hebrew the Latin
+   original is context worth showing; in English it IS the name, so there is
+   nothing to put in the brackets and the brackets go. */
+function nmPair(o, latin) {
+  const main = nm(o);
+  const lat = latin === undefined ? (o.pt || o.en || '') : latin;
+  if (S.lang === 'en' || !lat || lat === main) return html(main);
+  return html(main) + ' <span class="lat">(' + html(lat) + ')</span>';
+}
+
+/* Prose that was written for this app exists in Hebrew and has not been
+   translated: the municipality profiles, the parish notes, the locality
+   descriptions.  An English reader gets the Hebrew with a mark saying so,
+   rather than a machine translation in the app's own voice — the app would then
+   be asserting something nobody wrote.  What is translated is every label,
+   every caveat and every unit; what is not is marked. */
+function heOnly(text) {
+  if (S.lang !== 'en' || !text || !/[\u0590-\u05ff]/.test(String(text))) return '';
+  return ' <span class="flag" dir="ltr">Hebrew only</span>';
+}
+
+/* The same prose, written to the page.  A Hebrew paragraph inside an English
+   page needs its own direction or the bidi algorithm hands it back with the
+   full stop at the wrong end — the rule from section 11, in the other
+   direction. */
+function prose(text) {
+  if (!text) return '';
+  const heb = /[\u0590-\u05ff]/.test(String(text));
+  const body = html(text);
+  if (S.lang !== 'en' || !heb) return body;
+  return '<span dir="rtl" lang="he">' + body + '</span>' + heOnly(text);
+}
+
+function applyLang() {
+  const r = document.documentElement;
+  /* The few strings that live in index.html rather than here carry their Hebrew
+     in data-t, so they can be written again in the other language. */
+  $$('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+  r.lang = S.lang === 'en' ? 'en' : 'he';
+  r.dir = S.lang === 'en' ? 'ltr' : 'rtl';
+}
+
+const MISSING_HE = 'אין נתון';   // the source string; miss() translates it
+const miss = () => t(MISSING_HE);
 const KEY = 'porto-split-v1';
 
 const S = {
+  lang: 'he',          // 'he' | 'en' — Hebrew is the default
   level: 'district',   // district | mun | zone
   mun: null,           // municipality number, 1..18
   zone: null,          // level 3: the parish key, "mun_num|name"
@@ -53,7 +126,7 @@ const MINE_KEY = 'porto-mine-v1';
 const D = {};
 
 /* ------------------------------------------------------------ formatting --- */
-const nf = (v, dec) => v === null || v === undefined ? MISSING
+const nf = (v, dec) => v === null || v === undefined ? miss()
   : new Intl.NumberFormat('he-IL', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }).format(v);
 const html = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -271,24 +344,21 @@ function isDark() {
 // it comes out of the same INE file, the same table and the same year.
 function peopleStats(o, lvl) {
   return `<div class="card">
-    <h2>אנשים — מפקד 2021</h2>
+    <h2>${t('אנשים — מפקד 2021')}</h2>
     <div class="stats">
-      ${stat('גיל חציוני', o.median_age, 'שנים', 0, lvl + '.median_age')}
-      ${stat('בני 0–14', o.pct_0_14, '%', 0, lvl + '.pct_0_14')}
-      ${stat('בני 65+', o.pct_65plus, '%', 0, lvl + '.pct_65plus')}
-      ${stat('מדד הזדקנות', o.ageing_index, '', 0, lvl + '.ageing_index')}
-      ${stat('אזרחות זרה', o.foreign_pct, '%', 0, lvl + '.foreign_pct')}
-      ${stat('השכלה גבוהה', o.education_pct, '%', 0, lvl + '.education_pct')}
-      ${stat('אבטלה', o.unemployment_pct, '%', 0, lvl + '.unemployment_pct')}
+      ${stat(t('גיל חציוני'), o.median_age, t('שנים'), 0, lvl + '.median_age')}
+      ${stat(t('בני 0–14'), o.pct_0_14, '%', 0, lvl + '.pct_0_14')}
+      ${stat(t('בני 65+'), o.pct_65plus, '%', 0, lvl + '.pct_65plus')}
+      ${stat(t('מדד הזדקנות'), o.ageing_index, '', 0, lvl + '.ageing_index')}
+      ${stat(t('אזרחות זרה'), o.foreign_pct, '%', 0, lvl + '.foreign_pct')}
+      ${stat(t('השכלה גבוהה'), o.education_pct, '%', 0, lvl + '.education_pct')}
+      ${stat(t('אבטלה'), o.unemployment_pct, '%', 0, lvl + '.unemployment_pct')}
       ${D.sources.fields[lvl + '.pop_growth_pct']
-        ? stat('שינוי מ-2011', o.pop_growth_pct, '%', 1, lvl + '.pop_growth_pct',
+        ? stat(t('שינוי מ-2011'), o.pop_growth_pct, '%', 1, lvl + '.pop_growth_pct',
                null, signed)
         : ''}
     </div>
-    <p class="note">הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון
-      בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14.
-      השינוי מ-2011 הוא כפי ש-INE מפרסמת אותו על גאוגרפיית מפקד 2021 — לא חושב
-      כאן, כי חלוקת הרובעים של 2011 אינה זו של 2021.</p>
+    <p class="note">${t('הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14. השינוי מ-2011 הוא כפי ש-INE מפרסמת אותו על גאוגרפיית מפקד 2021 — לא חושב כאן, כי חלוקת הרובעים של 2011 אינה זו של 2021.')}</p>
   </div>`;
 }
 function housingStats(o, lvl) {
@@ -296,22 +366,21 @@ function housingStats(o, lvl) {
   if (!h) return '';
   const k = lvl + '.housing';
   return `<div class="card">
-    <h2>דיור ובניינים — מפקד 2021</h2>
+    <h2>${t('דיור ובניינים — מפקד 2021')}</h2>
     <div class="stats">
-      ${stat('דירות', h.dwellings, '', 0, k)}
-      ${stat('דירות ריקות', h.vacant_pct, '%', 1, k)}
-      ${stat('בית שני', h.second_home_pct, '%', 1, k)}
-      ${stat('בבעלות הדיירים', h.owner_pct, '%', 1, k)}
-      ${stat('בשכירות', h.rented_pct, '%', 1, k)}
-      ${stat('עם חניה', h.parking_pct, '%', 1, k)}
-      ${stat('בניינים', h.buildings, '', 0, k)}
-      ${stat('זקוקים לתיקון', h.repair_pct, '%', 1, k)}
-      ${stat('מהם תיקון עמוק', h.deep_repair_pct, '%', 1, k)}
-      ${stat('נבנו לפני 1946', h.pre1946_pct, '%', 1, k)}
-      ${stat('נבנו מ-2011', h.since2011_pct, '%', 1, k)}
+      ${stat(t('דירות'), h.dwellings, '', 0, k)}
+      ${stat(t('דירות ריקות'), h.vacant_pct, '%', 1, k)}
+      ${stat(t('בית שני'), h.second_home_pct, '%', 1, k)}
+      ${stat(t('בבעלות הדיירים'), h.owner_pct, '%', 1, k)}
+      ${stat(t('בשכירות'), h.rented_pct, '%', 1, k)}
+      ${stat(t('עם חניה'), h.parking_pct, '%', 1, k)}
+      ${stat(t('בניינים'), h.buildings, '', 0, k)}
+      ${stat(t('זקוקים לתיקון'), h.repair_pct, '%', 1, k)}
+      ${stat(t('מהם תיקון עמוק'), h.deep_repair_pct, '%', 1, k)}
+      ${stat(t('נבנו לפני 1946'), h.pre1946_pct, '%', 1, k)}
+      ${stat(t('נבנו מ-2011'), h.since2011_pct, '%', 1, k)}
     </div>
-    <p class="note">׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה
-      כמעט בכל מקום; השורה שמתחתיו — תיקון עמוק — היא זו שמעידה על מצב הבניין.</p>
+    <p class="note">${t('׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה כמעט בכל מקום; השורה שמתחתיו — תיקון עמוק — היא זו שמעידה על מצב הבניין.')}</p>
   </div>`;
 }
 
@@ -353,17 +422,16 @@ function marketStats(o, lvl) {
   const none = lvl === 'freguesia' && o.price_eur_m2 === undefined
     && o.price_used_eur_m2 === undefined && o.rent_eur_m2 === undefined;
   return `<div class="card">
-    <h2>שוק הדיור — INE${per ? ' ' + html(per) : ''}</h2>
+    <h2>${t('שוק הדיור — INE')}${per ? ' ' + html(per) : ''}</h2>
     <div class="stats">
-      ${stat('מכירות', o.price_eur_m2, '€/מ״ר', 0, lvl + '.price_eur_m2')}
-      ${stat('דירות חדשות', o.price_new_eur_m2, '€/מ״ר', 0, lvl + '.price_new_eur_m2')}
-      ${stat('דירות קיימות', o.price_used_eur_m2, '€/מ״ר', 0, lvl + '.price_used_eur_m2')}
-      ${stat('שכירות', o.rent_eur_m2, '€/מ״ר לחודש', 2, lvl + '.rent_eur_m2')}
+      ${stat(t('מכירות'), o.price_eur_m2, t('€/מ״ר'), 0, lvl + '.price_eur_m2')}
+      ${stat(t('דירות חדשות'), o.price_new_eur_m2, t('€/מ״ר'), 0, lvl + '.price_new_eur_m2')}
+      ${stat(t('דירות קיימות'), o.price_used_eur_m2, t('€/מ״ר'), 0, lvl + '.price_used_eur_m2')}
+      ${stat(t('שכירות'), o.rent_eur_m2, t('€/מ״ר לחודש'), 2, lvl + '.rent_eur_m2')}
     </div>
-    <p class="note">כל ערך הוא החציון של שנים עשר החודשים שמסתיימים ב-${
-      html(per || 'רבעון הייחוס')} — לא של הרבעון עצמו.
-      השכירות היא של חוזים חדשים בלבד, לא של כלל מלאי השכירות.${
-      none ? ' INE אינו מפרסם ברמת הרובע בעירייה הזאת, ולכן אין כאן ולו ערך אחד.'
+    <p class="note">${t('כל ערך הוא החציון של שנים עשר החודשים שמסתיימים ב-')}${
+      html(per || t('רבעון הייחוס'))} ${t('— לא של הרבעון עצמו. השכירות היא של חוזים חדשים בלבד, לא של כלל מלאי השכירות.')}${
+      none ? t(' INE אינו מפרסם ברמת הרובע בעירייה הזאת, ולכן אין כאן ולו ערך אחד.')
            : ''}</p>
   </div>`;
 }
@@ -381,14 +449,11 @@ function incomeStats(o, lvl) {
   const f = D.sources.fields[key];
   if (!f) return '';
   return `<div class="card">
-    <h2>הכנסה מוצהרת — INE${f.reference_year ? ' ' + html(f.reference_year) : ''}</h2>
+    <h2>${t('הכנסה מוצהרת — INE')}${f.reference_year ? ' ' + html(f.reference_year) : ''}</h2>
     <div class="stats">
-      ${stat('חציון למשק בית פיסקאלי', o.median_income, '€ לשנה', 0, key)}
+      ${stat(t('חציון למשק בית פיסקאלי'), o.median_income, t('€ לשנה'), 0, key)}
     </div>
-    <p class="note">הכנסה שנתית ברוטו כפי שהוצהרה לרשות המסים, החציון על פני
-      משקי הבית הפיסקאליים. <b>לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו</b> —
-      מי שאינו מגיש דוח אינו נספר. מ-2018 הערך מיוחס לעירייה של מען המס ואינו
-      כולל תושבי חוץ.</p>
+    <p class="note">${t('הכנסה שנתית ברוטו כפי שהוצהרה לרשות המסים, החציון על פני משקי הבית הפיסקאליים.')} <b>${t('לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו')}</b> ${t('— מי שאינו מגיש דוח אינו נספר. מ-2018 הערך מיוחס לעירייה של מען המס ואינו כולל תושבי חוץ.')}</p>
   </div>`;
 }
 
@@ -398,21 +463,18 @@ function safetyStats(o, lvl) {
   if (!f) return '';
   const yr = f.reference_year ? ' ' + f.reference_year : '';
   return `<div class="card">
-    <h2>עבירות רשומות — INE${html(yr)}</h2>
+    <h2>${t('עבירות רשומות — INE')}${html(yr)}</h2>
     <div class="stats">
-      ${stat('לאלף תושבים', o.crimes_per_1000, 'לאלף', 1, key)}
+      ${stat(t('לאלף תושבים'), o.crimes_per_1000, t('לאלף'), 1, key)}
     </div>
-    <p class="note">סך העבירות שנרשמו בידי רשויות האכיפה, חלקי האוכלוסייה
-      המשוערת של אותה שנה. <b>זו אינה ׳פשיעה חמורה׳</b> — ‏criminalidade
-      violenta e grave מתפרסמת לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת
-      עירייה.</p>
+    <p class="note">${t('סך העבירות שנרשמו בידי רשויות האכיפה, חלקי האוכלוסייה המשוערת של אותה שנה.')} <b>${t('זו אינה ׳פשיעה חמורה׳')}</b> ${t('— ‏criminalidade violenta e grave מתפרסמת לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.')}</p>
   </div>`;
 }
 
 function stat(label, val, unit, dec, srcKey, step, fmt) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
-  const text = has ? (fmt ? fmt(val, dec) : shown(val, dec, step)) : MISSING;
+  const text = has ? (fmt ? fmt(val, dec) : shown(val, dec, step)) : miss();
   // Only when rounding actually changed something.  Porto's census population
   // is 231 800 to begin with, and offering "the exact value" beside an
   // identical figure would make the panel look like it was hiding one.
@@ -424,7 +486,7 @@ function stat(label, val, unit, dec, srcKey, step, fmt) {
     <span class="stat-l">${html(label)}</span>
     <span class="stat-v ${has ? 'num' : ''}">${text}${
       has && unit ? ' <span class="stat-u">' + html(unit) + '</span>' : ''}</span>
-    <span class="stat-y">${f.reference_year ? html(f.reference_year) : 'מקור'}</span>
+    <span class="stat-y">${f.reference_year ? html(f.reference_year) : t('מקור')}</span>
   </button>`;
 }
 
@@ -547,8 +609,9 @@ function initMap() {
     map.removeLayer(tileLayer);
     S.tiles = false;
     applySwitches();
-    mapNote('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.',
-            false, true);
+    const tileNote = () =>
+      t('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.');
+    mapNote(tileNote(), false, true, tileNote);
   });
   if (S.tiles) tileLayer.addTo(map);
 
@@ -696,17 +759,24 @@ function freguesiaAt(lat, lon) {
    opens the text half to be read.  A message that arrives on its own — a tile
    that would not load — passes `quiet`, because taking the screen back from a
    layout the user had just chosen is worse than the notice is useful. */
-function mapNote(inner, bad, quiet) {
+/* A notice is written in the language that was on when it appeared.  Most of
+   them answer something the user just pressed and are gone by the next tap, so
+   on a language change they are cleared rather than replayed in the old words.
+   A notice that is ambient — the one about tiles that will not load — passes a
+   `redraw` and is written again in the new language. */
+let lastNote = null;
+function mapNote(inner, bad, quiet, redraw) {
+  lastNote = redraw ? { redraw, bad } : null;
   const n = $('#msgs');
   n.innerHTML = `<div class="msg${bad ? ' bad' : ''}">
       <div class="msg-body">${inner}</div>
-      <button class="msg-x" type="button" data-close="1" aria-label="סגירת ההודעה">✕</button>
+      <button class="msg-x" type="button" data-close="1" aria-label="${t('סגירת ההודעה')}">✕</button>
     </div>`;
   if (quiet) return;
   if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
   $('#paneText').scrollTop = 0;
 }
-function hideNote() { $('#msgs').innerHTML = ''; }
+function hideNote() { lastNote = null; $('#msgs').innerHTML = ''; }
 
 function showMe(pos) {
   const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
@@ -735,27 +805,24 @@ function showMe(pos) {
   const m = f ? D.munByNum.get(f.mun_num) : null;
   if (f) {
     if (first) map.panTo(ll);
-    mapNote(`אתה ב<b>${html(f.he || f.pt)}</b>, ${html(m.he)} ·
-      דיוק ${nf(Math.round(acc))} מ׳
-      <button type="button" data-jump="fre:${html(D.freKey(f))}">פתיחת הרובע</button>`);
+    mapNote(`${t('אתה ב')}<b>${html(nm(f))}</b>, ${html(nm(m))} ${t('· דיוק')} ${nf(Math.round(acc))} ${t('מ׳ <button type="button" data-jump="fre:')}${html(D.freKey(f))}">${t('פתיחת הרובע')}</button>`);
   } else {
     // Anywhere else on earth: say so, and say how far, instead of dropping the
     // map on an empty spot in the ocean.
     const km = Math.round(map.distance(ll, [41.14961, -8.61099]) / 1000);
     if (first) map.panTo(ll);
-    mapNote(`המיקום שלך אינו בתוך מחוז פורטו — כ-${nf(km)} ק״מ ממרכז פורטו.
-      דיוק ${nf(Math.round(acc))} מ׳.
-      <button type="button" data-loc="back">חזרה למפת המחוז</button>`, true);
+    mapNote(`${t('המיקום שלך אינו בתוך מחוז פורטו — כ-')}${nf(km)} ${t('ק״מ ממרכז פורטו. דיוק')} ${nf(Math.round(acc))} ${t('מ׳.')}
+      <button type="button" data-loc="back">${t('חזרה למפת המחוז')}</button>`, true);
   }
 }
 
 function locError(err) {
   stopLocate();
   const why = {
-    1: 'לא ניתנה הרשאת מיקום. אפשר לאשר אותה מהאייקון שליד כתובת האתר בדפדפן.',
-    2: 'הטלפון לא הצליח לקבוע מיקום. כדאי לבדוק שה-GPS דלוק ולנסות שוב בחוץ.',
-    3: 'קביעת המיקום ארכה יותר מדי. נסה שוב.',
-  }[err && err.code] || 'לא הצלחתי לקבל מיקום.';
+    1: t('לא ניתנה הרשאת מיקום. אפשר לאשר אותה מהאייקון שליד כתובת האתר בדפדפן.'),
+    2: t('הטלפון לא הצליח לקבוע מיקום. כדאי לבדוק שה-GPS דלוק ולנסות שוב בחוץ.'),
+    3: t('קביעת המיקום ארכה יותר מדי. נסה שוב.'),
+  }[err && err.code] || t('לא הצלחתי לקבל מיקום.');
   mapNote(why, true);
 }
 
@@ -770,19 +837,18 @@ function stopLocate() {
 function toggleLocate() {
   if (meWatch !== null) { stopLocate(); hideNote(); return; }
   if (!navigator.geolocation) {
-    mapNote('הדפדפן הזה לא תומך באיתור מיקום.', true); return;
+    mapNote(t('הדפדפן הזה לא תומך באיתור מיקום.'), true); return;
   }
   // https or localhost only.  Saying this plainly beats a silent failure that
   // looks like a bug: the standalone file opened from the phone's storage is
   // a file:// page, and no browser will hand it a position.
   if (!window.isSecureContext) {
-    mapNote(`הדפדפן נותן מיקום רק בחיבור מאובטח. הדף הזה נפתח מ־
-      <span class="lat">${html(location.protocol)}</span>, ולכן המיקום חסום.
-      הקישור המקוון (https) יעבוד.`, true);
+    mapNote(`${t('הדפדפן נותן מיקום רק בחיבור מאובטח. הדף הזה נפתח מ־')}
+      <span class="lat">${html(location.protocol)}</span>${t(', ולכן המיקום חסום. הקישור המקוון (https) יעבוד.')}`, true);
     return;
   }
   renderMenu();
-  mapNote('מחפש מיקום…');
+  mapNote(t('מחפש מיקום…'));
   meWatch = navigator.geolocation.watchPosition(showMe, locError, {
     enableHighAccuracy: true, maximumAge: 15000, timeout: 20000,
   });
@@ -803,10 +869,10 @@ function drawDistrict() {
       const m = D.munByNum.get(ft.properties.num);
       l.on('click', () => {
         if (S.adding || S.wp) return;
-        if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
+        if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), nm(m)); return; }
         goMun(ft.properties.num);
       });
-      l.bindTooltip(`<b>${html(munCode(m) + ' · ' + m.he)}</b><br><span class="lat">${html(m.pt)}</span>`,
+      l.bindTooltip(`<b>${html(munCode(m) + ' · ' + nm(m))}</b><br><span class="lat">${html(m.pt)}</span>`,
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
@@ -815,7 +881,7 @@ function drawDistrict() {
 
   LG.labels = L.layerGroup(D.mun.map(m => {
     const mk = L.marker(latlng(m.center), { icon: numIcon(munCode(m)), keyboard: false,
-      title: munCode(m) + ' · ' + m.he, riseOnHover: true });
+      title: munCode(m) + ' · ' + nm(m), riseOnHover: true });
     mk.on('click', () => {
       if (S.adding || S.wp) return;
       if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
@@ -836,18 +902,15 @@ function regionsDoc() {
   const rows = D.belts.map(b => `<div class="belt">
       <span class="belt-sw" style="--c:${html(b.colour)}"></span>
       <span class="row-body">
-        <span class="row-t">${html(b.he)} <span class="lat">(${html(b.en)})</span></span>
-        <span class="row-d">${html(b.sub_he)}</span>
+        <span class="row-t">${nmPair(b, b.en)}</span>
+        <span class="row-d">${html(S.lang === 'en' && b.sub_en ? b.sub_en : b.sub_he)}</span>
         <span class="row-m num">${html(b.nums.map(n => munCode(D.munByNum.get(n))).sort().join(' · '))}</span>
       </span></div>`).join('');
   return `<div class="card" id="regionsDoc">
-      <h2>שני האזורים <span class="en lat">(NUTS III)</span></h2>
-      <p class="sub">החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה
-        מקיף את העיריות של כל אזור.</p>
+      <h2>${t('שני האזורים')} <span class="en lat">(NUTS III)</span></h2>
+      <p class="sub">${t('החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה מקיף את העיריות של כל אזור.')}</p>
       ${rows}
-      <p class="note">שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני
-        17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו.
-        האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.</p>
+      <p class="note">${t('שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני 17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו. האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.')}</p>
     </div>`;
 }
 
@@ -857,11 +920,11 @@ function renderDistrict() {
     return `<button class="row" data-mun="${m.num}">
       <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
       <span class="row-body">
-        <span class="row-t">${html(m.he)} <span class="lat">(${html(m.en)})</span></span>
-        <span class="row-d">${html(chr)}</span>
-        <span class="row-m">${html(m.belt)} · <span class="num">${shown(m.pop2021, 0, 100)}</span> תושבים ·
-          <span class="num">${nf(m.area_km2, 1)}</span> קמ״ר ·
-          <span class="num">${nf(m.n_freguesias)}</span> רובעים</span>
+        <span class="row-t">${nmPair(m, m.en)}</span>
+        <span class="row-d">${prose(chr)}</span>
+        <span class="row-m">${html(t(m.belt))} · <span class="num">${shown(m.pop2021, 0, 100)}</span> ${t('תושבים ·')}
+          <span class="num">${nf(m.area_km2, 1)}</span> ${t('קמ״ר ·')}
+          <span class="num">${nf(m.n_freguesias)}</span> ${t('רובעים')}</span>
       </span>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
     </button>`;
@@ -869,21 +932,19 @@ function renderDistrict() {
 
   $('#doc').innerHTML = `
     <div class="card">
-      <h1>מחוז פורטו <span class="en lat">(Distrito do Porto)</span></h1>
+      <h1>${S.lang === 'en' ? 'Distrito do Porto' : t('מחוז פורטו') + ' <span class="en lat">(Distrito do Porto)</span>'}</h1>
       <!-- The population and the area are the two rows of the table right
            below, and a lead that says them again is the same fact twice. -->
-      <p class="lead">18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי
-        במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.</p>
+      <p class="lead">${t('18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.')}</p>
       <div class="stats">
-        ${stat('תושבים', D.totPop, '', 0, 'municipio.pop2021', 100)}
-        ${stat('שטח', D.totArea, 'קמ״ר', 1, 'municipio.area_km2')}
-        ${stat('צפיפות', D.totPop / D.totArea, 'לקמ״ר', 0, 'municipio.density', 100)}
+        ${stat(t('תושבים'), D.totPop, '', 0, 'municipio.pop2021', 100)}
+        ${stat(t('שטח'), D.totArea, t('קמ״ר'), 1, 'municipio.area_km2')}
+        ${stat(t('צפיפות'), D.totPop / D.totArea, t('לקמ״ר'), 0, 'municipio.density', 100)}
       </div>
-      <p class="note">כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו.
-        המספרים על המפה הם קודי DICOFRE הרשמיים.</p>
+      <p class="note">${t('כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו. המספרים על המפה הם קודי DICOFRE הרשמיים.')}</p>
     </div>
 
-    <div class="grp">18 העיריות — לפי המספור במפה</div>
+    <div class="grp">${t('18 העיריות — לפי המספור במפה')}</div>
     <div class="rows">${list}</div>
     ${mineList(null)}
     ${regionsDoc()}`;
@@ -917,7 +978,7 @@ function splitNote(f) {
   if (!f.split2025 || !f.split2025.length) return '';
   const kids = f.split2025.map(s =>
     `<span class="lat" dir="ltr">${html(s.pt)} (${html(s.dicofre)})</span>`).join(' · ');
-  return 'ברפורמת 2025 חולק ל־' + f.split2025.length + ' רובעים נפרדים: ' + kids;
+  return t('ברפורמת 2025 חולק ל־') + f.split2025.length + t(' רובעים נפרדים: ') + kids;
 }
 // The same split as a table, for the card: how the 2021 population divided
 // between the parishes that replaced the unit. The shares come from the census
@@ -926,7 +987,7 @@ function splitTable(f) {
   const kids = (f.split2025 || []).filter(s => s.pop2021 != null);
   if (!kids.length) return '';
   return `<div class="card">
-    <h2>מה החליף אותו — 2025</h2>
+    <h2>${t('מה החליף אותו — 2025')}</h2>
     <div class="rows">${kids.map(s => `<div class="row row-full">
       <span class="pin pin-sq" style="--c:#dfe6ef">${html(s.code)}</span>
       <span class="row-body">
@@ -935,9 +996,7 @@ function splitTable(f) {
           <span class="num">${nf(100 * s.pop2021 / f.pop2021, 1)}</span>% מהיחידה ·
           קוד <span class="lat num">${html(s.dicofre)}</span></span>
       </span></div>`).join('')}</div>
-    <p class="note">החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של
-      מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות
-      עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.</p>
+    <p class="note">${t('החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.')}</p>
   </div>`;
 }
 
@@ -958,7 +1017,7 @@ function drawMun(num) {
       if (!f) return;
       l.feature.__key = D.freKey(f);
       l.on('click', () => pickFre(f, 'map'));
-      l.bindTooltip(`<b>${html(freNum(f) + '. ' + (f.he || f.pt))}</b><br><span class="lat">${html(bare(f.pt))}</span>`,
+      l.bindTooltip(`<b>${html(freNum(f) + '. ' + nm(f))}</b><br><span class="lat">${html(bare(f.pt))}</span>`,
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
@@ -967,7 +1026,7 @@ function drawMun(num) {
 
   LG.labels = L.layerGroup(rows.map(f => {
     const mk = L.marker(latlng(f.center), { icon: numIcon(freNum(f)), keyboard: false,
-      title: freNum(f) + '. ' + (f.he || f.pt), riseOnHover: true });
+      title: freNum(f) + '. ' + nm(f), riseOnHover: true });
     mk.__key = D.freKey(f);
     mk.on('click', () => pickFre(f, 'map'));
     return mk;
@@ -982,24 +1041,24 @@ function renderMun(num) {
   const isPorto = num === 1;
 
   const profile = m.profile.map(p =>
-    `<div><dt>${html(p.label)}</dt><dd>${html(p.text)}</dd></div>`).join('');
+    `<div><dt>${html(t(p.label))}</dt><dd>${prose(p.text)}</dd></div>`).join('');
 
   const list = rows.map(f => {
     const n = freNum(f);
     const q = isPorto ? D.quarterByNum.get(f.q) : null;
     const desc = q ? q.desc : (f.note || '');
     const flag = !q && f.note && f.note_origin === 'app'
-      ? '<span class="flag">תיאור שנכתב לאפליקציה</span>' : '';
+      ? t('<span class="flag">תיאור שנכתב לאפליקציה</span>') : '';
     const code = `<span class="lat num">${html(f.dicofre || '')}</span>`
-      + (f.split2025 ? ' <span class="flag">פורק ב-2025</span>' : '');
+      + (f.split2025 ? t(' <span class="flag">פורק ב-2025</span>') : '');
     return `<button class="row row-full" data-fre="${html(D.freKey(f))}">
       <span class="pin" style="--c:${html(f.colour)}">${n}</span>
       <span class="row-body">
-        <span class="row-t">${html(f.he || f.pt)} <span class="lat">(${html(bare(f.pt))})</span>${flag}</span>
-        <span class="row-d">${desc ? html(desc) : '<span class="muted">' + MISSING + ' — אין תיאור לרובע הזו</span>'}</span>
-        <span class="row-m"><span class="num">${shown(f.pop2021, 0, 100)}</span> תושבים (2021) ·
-          <span class="num">${nf(f.area_km2, 2)}</span> קמ״ר ·
-          <span class="num">${nf(f.density)}</span> לקמ״ר${q ? ' · <span class="num">' + q.bairros.length + '</span> שכונות' : ''}
+        <span class="row-t">${nmPair(f, bare(f.pt))}${flag}</span>
+        <span class="row-d">${desc ? html(desc) + heOnly(desc) : '<span class="muted">' + miss() + t(' — אין תיאור לרובע הזו</span>')}</span>
+        <span class="row-m"><span class="num">${shown(f.pop2021, 0, 100)}</span> ${t('תושבים (2021) ·')}
+          <span class="num">${nf(f.area_km2, 2)}</span> ${t('קמ״ר ·')}
+          <span class="num">${nf(f.density)}</span> ${t('לקמ״ר')}${q ? ' · <span class="num">' + q.bairros.length + t('</span> שכונות') : ''}
           · ${code}</span>
         ${f.split2025 ? `<span class="row-m">${splitNote(f)}</span>` : ''}
       </span>
@@ -1011,18 +1070,18 @@ function renderMun(num) {
     <div class="card">
       <div class="hdr">
         <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
-        <div><h1>${html(m.he)} <span class="en lat">(${html(m.en)})</span></h1>
-          <p class="sub">${html(m.belt)} · <span class="num">${nf(m.n_freguesias)}</span> רובעים${m.dicofre
-            ? ' · קוד רשמי <span class="lat num">' + html(m.dicofre) + '</span>' : ''}</p></div>
+        <div><h1>${nmPair(m, m.en)}</h1>
+          <p class="sub">${html(t(m.belt))} · <span class="num">${nf(m.n_freguesias)}</span> ${t('רובעים')}${m.dicofre
+            ? t(' · קוד רשמי <span class="lat num">') + html(m.dicofre) + '</span>' : ''}</p></div>
       </div>
       <div class="stats">
-        ${stat('תושבים', m.pop2021, '', 0, 'municipio.pop2021', 100)}
-        ${stat('שטח', m.area_km2, 'קמ״ר', 1, 'municipio.area_km2')}
-        ${stat('צפיפות', m.density, 'לקמ״ר', 0, 'municipio.density', 100)}
-        ${stat('מפורטו', m.dist_porto_km, 'ק״מ', 1, 'municipio.dist_porto_km')}
+        ${stat(t('תושבים'), m.pop2021, '', 0, 'municipio.pop2021', 100)}
+        ${stat(t('שטח'), m.area_km2, t('קמ״ר'), 1, 'municipio.area_km2')}
+        ${stat(t('צפיפות'), m.density, t('לקמ״ר'), 0, 'municipio.density', 100)}
+        ${stat(t('מפורטו'), m.dist_porto_km, t('ק״מ'), 1, 'municipio.dist_porto_km')}
       </div>
       <dl class="kv">${profile}
-        <div><dt>תחבורה</dt><dd>${html(m.transport)}</dd></div></dl>
+        <div><dt>${t('תחבורה')}</dt><dd>${prose(m.transport)}</dd></div></dl>
     </div>
 
     ${peopleStats(m, 'municipio')}
@@ -1031,17 +1090,15 @@ function renderMun(num) {
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
 
-    <div class="grp">${rows.length} ${isPorto ? 'רבעי העיר' : 'הרובעים'} — לפי המספור במפה</div>
-    ${isPorto ? '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>' : ''}
+    <div class="grp">${rows.length} ${isPorto ? t('רבעי העיר') : t('הרובעים')} ${t('— לפי המספור במפה')}</div>
+    ${isPorto ? t('<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>') : ''}
     <div class="rows">${list}</div>
     ${mineList(p => {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && at.mun_num === num;
     })}
-    <p class="note" style="margin-block-start:10px">המספר על כל רובע הוא הקוד
-      הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן
-      <span class="flag">פורק ב-2025</span> חדל להתקיים כיחידה ברפורמת 2025, והקוד
-      שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.</p>
+    <p class="note" style="margin-block-start:10px">${t('המספר על כל רובע הוא הקוד הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן')}
+      <span class="flag">${t('פורק ב-2025')}</span> ${t('חדל להתקיים כיחידה ברפורמת 2025, והקוד שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.')}</p>
     ${regionsDoc()}`;
   $('#paneText').scrollTop = 0;
 }
@@ -1078,7 +1135,7 @@ let photoDb = null;
 function openPhotoDb() {
   if (photoDb) return Promise.resolve(photoDb);
   return new Promise((res, rej) => {
-    if (!window.indexedDB) { rej(new Error('אין IndexedDB בדפדפן הזה')); return; }
+    if (!window.indexedDB) { rej(new Error(t('אין IndexedDB בדפדפן הזה'))); return; }
     const rq = indexedDB.open(PHOTO_DB, 1);
     rq.onupgradeneeded = () => {
       if (!rq.result.objectStoreNames.contains(PHOTO_STORE))
@@ -1266,7 +1323,7 @@ function openLightbox(url, alt) {
     el = document.createElement('div');
     el.id = 'lightbox';
     el.className = 'lb';
-    el.innerHTML = '<button class="lb-x" type="button" aria-label="סגירה">✕</button>' +
+    el.innerHTML = t('<button class="lb-x" type="button" aria-label="סגירה">✕</button>') +
                    '<img class="lb-img" alt="">';
     document.body.appendChild(el);
     el.addEventListener('click', () => { el.hidden = true; });
@@ -1291,7 +1348,7 @@ function loadMine() {
 }
 function saveMine() {
   try { localStorage.setItem(MINE_KEY, JSON.stringify(D.mine)); }
-  catch (e) { mapNote('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.', true); }
+  catch (e) { mapNote(t('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.'), true); }
 }
 /* A push pin: the teardrop everyone already reads as "a place", in red, with
    its point — not its middle — on the coordinate.  The selected one grows and
@@ -1369,8 +1426,8 @@ function mineWhereHtml() {
   const at = freguesiaAt(mineEditing.ll[0], mineEditing.ll[1]);
   const meta = minePending || mineEditing.photo;
   return `${at ? html((at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he)
-               : 'מחוץ למחוז פורטו'}` +
-    (meta && meta.from === 'exif' ? ' · <span class="flag">מהתמונה</span>' : '') +
+               : t('מחוץ למחוז פורטו')}` +
+    (meta && meta.from === 'exif' ? t(' · <span class="flag">מהתמונה</span>') : '') +
     `<br><bdi class="num">${mineEditing.ll[0].toFixed(5)}, ${mineEditing.ll[1].toFixed(5)}</bdi>`;
 }
 
@@ -1384,8 +1441,8 @@ function photoMetaHtml(m) {
   // Exif writes the moment as 2026:09:07 15:50:41
   if (m.taken) bits.push(String(m.taken).replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
   return (m.from === 'exif'
-      ? 'הנקודה מוקמה לפי הקואורדינטות של התמונה.'
-      : 'בתמונה אין מיקום — הנקודה נשארה איפה שסומנה.') +
+      ? t('הנקודה מוקמה לפי הקואורדינטות של התמונה.')
+      : t('בתמונה אין מיקום — הנקודה נשארה איפה שסומנה.')) +
     (bits.length ? `<br><bdi class="num">${html(bits.join(' · '))}</bdi>` : '');
 }
 
@@ -1398,20 +1455,20 @@ function renderPhotoBox(msg) {
   // the markup so a plain sibling selector can show the focus ring
   const input = '<input id="minePhotoIn" class="ph-in" type="file" accept="image/*" multiple>' +
     `<label class="chip ph-pick" for="minePhotoIn">${
-      meta ? 'החלפת התמונה' : 'בחירת תמונות'}</label>`;
+      meta ? t('החלפת התמונה') : t('בחירת תמונות')}</label>`;
   if (!meta) {
     box.innerHTML = `<div class="chips">${input}</div>` +
       `<p class="note ph-note">${msg ? html(msg)
-      : 'תמונה שצולמה במקום תמקם את הנקודה לפי הקואורדינטות שלה, במקום לפי הסימון על המפה.'}</p>`;
+      : t('תמונה שצולמה במקום תמקם את הנקודה לפי הקואורדינטות שלה, במקום לפי הסימון על המפה.')}</p>`;
     return;
   }
   box.innerHTML =
-    `<figure class="ph-fig"><img class="ph-img" alt="${html(mineEditing.name || 'תמונת הנקודה')}"></figure>
+    `<figure class="ph-fig"><img class="ph-img" alt="${html(mineEditing.name || t('תמונת הנקודה'))}"></figure>
      <p class="note ph-note">${photoMetaHtml(meta)}${msg ? '<br>' + html(msg) : ''}</p>
-     <div class="chips">${input}<button class="chip" type="button" data-pt="rmphoto">הסרת התמונה</button></div>`;
+     <div class="chips">${input}<button class="chip" type="button" data-pt="rmphoto">${t('הסרת התמונה')}</button></div>`;
   const fig = box.querySelector('.ph-fig');
-  const gone = () => { fig.innerHTML = '<p class="note">התמונה אינה במכשיר הזה. ' +
-    'נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>'; };
+  const gone = () => { fig.innerHTML = t('<p class="note">התמונה אינה במכשיר הזה. ') +
+    t('נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>'); };
   if (minePending) box.querySelector('.ph-img').src = setPhotoUrl(minePending.blob);
   else getPhoto(mineEditing.id).then(
     b => { if (b) box.querySelector('.ph-img').src = setPhotoUrl(b); else gone(); }, gone);
@@ -1476,15 +1533,15 @@ function takePhotos(list) {
         saveMine();
         drawMine();
         renderWaypoints();
-        mapNote(`נוספו ${rest.length} נקודות מהתמונות — `
-          + `${placed} לפי הקואורדינטות שבתמונה, ${unplaced} בפינת המפה.`, false);
+        mapNote(`${t('נוספו')} ${rest.length} ${t('נקודות מהתמונות —')} `
+          + `${placed} ${t('לפי הקואורדינטות שבתמונה,')} ${unplaced} ${t('בפינת המפה.')}`, false);
       });
   });
 }
 
 function takePhoto(file) {
   if (!file || !mineEditing) return;
-  renderPhotoBox('קורא את התמונה…');
+  renderPhotoBox(t('קורא את התמונה…'));
   const head = file.slice(0, Math.min(file.size, 512 * 1024));
   const read = head.arrayBuffer ? head.arrayBuffer() : new Promise((res, rej) => {
     const fr = new FileReader();
@@ -1503,15 +1560,15 @@ function takePhoto(file) {
       const where = $('#mineWhere');
       if (where) where.innerHTML = mineWhereHtml();
       renderPhotoBox(gps
-        ? 'הנקודה הועברה לקואורדינטות של התמונה.'
-        : 'בתמונה אין מיקום שמיש. ייתכן שתיוג המיקום במצלמה כבוי — ' +
-          'הנקודה נשארה במקום שסימנת.');
+        ? t('הנקודה הועברה לקואורדינטות של התמונה.')
+        : t('בתמונה אין מיקום שמיש. ייתכן שתיוג המיקום במצלמה כבוי — ') +
+          t('הנקודה נשארה במקום שסימנת.'));
       if (gps) map.setView(gps.ll, Math.max(map.getZoom(), 15));
     })
     .catch(() => {
       minePending = null;
-      renderPhotoBox('לא הצלחתי לקרוא את התמונה. ייתכן שהיא בפורמט שהדפדפן ' +
-        'לא פותח, כמו HEIC — צילום ב-JPEG יעבוד.');
+      renderPhotoBox(t('לא הצלחתי לקרוא את התמונה. ייתכן שהיא בפורמט שהדפדפן ') +
+        t('לא פותח, כמו HEIC — צילום ב-JPEG יעבוד.'));
     });
 }
 
@@ -1613,10 +1670,10 @@ function renderWaypoints() {
   $('#doc').innerHTML = `
     <div class="card">
       <div class="wp-top">
-        <button class="chip is-on" data-wpact="new">חדש</button>
-        <button class="chip" data-wpact="mode">${S.wpList ? 'מורחב' : 'רשימה'}</button>
+        <button class="chip is-on" data-wpact="new">${t('חדש')}</button>
+        <button class="chip" data-wpact="mode">${S.wpList ? t('מורחב') : t('רשימה')}</button>
       </div>
-      <h1>המקומות שלי</h1>
+      <h1>${t('המקומות שלי')}</h1>
     </div>
     ${D.mine.map(p => wpCard(p)).join('')}`;
   renderWpSheet();
@@ -1644,9 +1701,8 @@ let wpNew = false;         // the new-place screen is open, with or without a wa
 function placePickerHtml() {
   return `<div class="wp-find">
       <input id="wpQ" type="search" inputmode="search" autocomplete="off"
-             placeholder="עירייה, רובע, יישוב או אתר" aria-label="חיפוש מקום">
-      <div id="wpQres"><p class="note">שתי אותיות ומעלה. האפליקציה אינה מחפשת
-        כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.</p></div>
+             placeholder="${t('עירייה, רובע, יישוב או אתר')}" aria-label="${t('חיפוש מקום')}">
+      <div id="wpQres"><p class="note">${t('שתי אותיות ומעלה. האפליקציה אינה מחפשת כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.')}</p></div>
     </div>`;
 }
 function placeHits(term) {
@@ -1656,25 +1712,25 @@ function placeHits(term) {
   const out = [];
   D.mun.forEach(m => {
     if (hit(m.he) || hit(m.pt) || hit(m.dicofre)) out.push(
-      { t: m.he, s: m.pt, k: 'עירייה', ll: latlng(m.center) });
+      { t: nm(m), s: m.pt, k: t('עירייה'), ll: latlng(m.center) });
   });
   D.fre.forEach(f => {
     if (hit(f.he) || hit(f.pt) || hit(f.dicofre)) out.push(
-      { t: f.he || f.pt, s: bare(f.pt) + ' · ' + f.mun_he, k: 'רובע',
+      { t: nm(f), s: bare(f.pt) + ' · ' + f.mun_he, k: t('רובע'),
         ll: f.center ? latlng(f.center) : null });
   });
   for (const key of Object.keys(D.zones)) {
     if (out.length > 60) break;
     const f = D.freByKey.get(key);
     if (!f) continue;
-    const where = (f.he || f.pt) + ' · ' + f.mun_he;
+    const where = nm(f) + ' · ' + f.mun_he;
     D.zones[key].bairros.forEach(b => {
       if (b.ll && (hit(b.he) || hit(b.en))) out.push(
-        { t: b.he || b.en, s: b.en + ' · ' + where, k: b.kind_he || 'יישוב', ll: b.ll });
+        { t: b.he || b.en, s: b.en + ' · ' + where, k: b.kind_he || t('יישוב'), ll: b.ll });
     });
     D.zones[key].pois.forEach(pp => {
       if (hit(pp.name)) out.push(
-        { t: pp.name, s: (D.poiLabel[pp.cat] || pp.cat) + ' · ' + where, k: 'אתר', ll: pp.ll });
+        { t: pp.name, s: (D.poiLabel[pp.cat] || pp.cat) + ' · ' + where, k: t('אתר'), ll: pp.ll });
     });
   }
   return out.filter(r => r.ll);
@@ -1684,8 +1740,8 @@ function runPlaceSearch(term) {
   if (!box) return;
   const out = placeHits(term);
   if (out === null) {
-    box.innerHTML = '<p class="note">שתי אותיות ומעלה. האפליקציה אינה מחפשת ' +
-      'כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.</p>';
+    box.innerHTML = t('<p class="note">שתי אותיות ומעלה. האפליקציה אינה מחפשת ') +
+      t('כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.</p>');
     return;
   }
   box.innerHTML = out.length
@@ -1693,15 +1749,15 @@ function runPlaceSearch(term) {
         data-wpplace="${i}"><span class="row-body"><span class="row-t">${html(r.t)}</span>
         <span class="row-m"><span class="lat">${html(r.s)}</span></span></span>
         <span class="note">${html(r.k)}</span></button>`).join('') + '</div>'
-    : `<p class="note">אין תוצאות ל״${html(term)}״.</p>`;
+    : `<p class="note">${t('אין תוצאות ל״')}${html(term)}${t('״.')}</p>`;
   wpFound = out.slice(0, 40);
 }
 let wpFound = [];
 
 function wpCard(p) {
   const at = freguesiaAt(p.ll[0], p.ll[1]);
-  const where = at ? (at.he || at.pt) + ', ' + D.munByNum.get(at.mun_num).he
-                   : 'מחוץ למחוז פורטו';
+  const where = at ? nm(at) + ', ' + nm(D.munByNum.get(at.mun_num))
+                   : t('מחוץ למחוז פורטו');
   const armed = wpArmed === p.id;
   const on = S.wpSel === p.id;
   /* Two shapes for the same record.  Expanded: the photo under the text it
@@ -1715,9 +1771,9 @@ function wpCard(p) {
      and, mid-edit, whatever is half typed — so the two buttons cannot be built
      at selection time; CSS is what decides they are on screen. */
   const acts = `<div class="wp-acts">
-        <button class="chip" data-wpact="edit" data-id="${html(p.id)}">עריכה</button>
+        <button class="chip" data-wpact="edit" data-id="${html(p.id)}">${t('עריכה')}</button>
         <button class="chip${armed ? ' wp-arm' : ''}" data-wpact="del" data-id="${html(p.id)}"
-          >${armed ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>
+          >${armed ? t('למחוק? לחיצה נוספת') : t('מחיקה')}</button>
       </div>`;
   const body = `<div class="wp-txt">
       <div class="wp-h"><span class="dot mine" style="--c:${MINE_COLOUR}"></span>
@@ -1757,34 +1813,33 @@ function renderWpSheet() {
      short lines, and the one in force is the one that is not dimmed. */
   const ways = `<div class="way-row">${WAYS.map(w =>
       `<button class="chip${wpWay === w.k ? ' is-on' : ''}" data-wpway="${w.k}"
-        >${html(w.he)}</button>`).join('')}</div>`;
+        >${html(t(w.he))}</button>`).join('')}</div>`;
   /* The lines are buttons too: the words explain the choice, so the words are
      what a finger is aimed at as readily as the chip above them. */
-  const why = `<h2 class="way-hd">מקור מקום חדש</h2>
+  const why = `<h2 class="way-hd">${t('מקור מקום חדש')}</h2>
     <div class="way-why">${WAYS.map(w =>
       `<button class="way-li${wpWay === w.k ? ' is-on' : ''}" data-wpway="${w.k}"
-        ><b>${html(w.he)}</b> — ${html(w.why)}</button>`).join('')}</div>`;
+        ><b>${html(t(w.he))}</b> — ${html(t(w.why))}</button>`).join('')}</div>`;
 
   const fields = !placed ? (wpWay === 'place' ? placePickerHtml() : '') : `
       <p class="note" id="mineWhere">${mineWhereHtml()}</p>
-      <label class="fld-l" for="mineName">שם</label>
-      <input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי"
-             value="${html(p.name || '')}">
-      <label class="fld-l" for="mineDesc">תיאור</label>
+      <label class="fld-l" for="mineName">${t('שם')}</label>
+      ${t('<input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי" value="')}${html(p.name || '')}">
+      <label class="fld-l" for="mineDesc">${t('תיאור')}</label>
       <textarea id="mineDesc" rows="2"
-        placeholder="מה שחשוב לזכור על המקום הזה">${html(p.desc || '')}</textarea>
-      <label class="fld-l" for="minePhotoIn">תמונה</label>
+        placeholder="${t('מה שחשוב לזכור על המקום הזה')}">${html(p.desc || '')}</textarea>
+      <label class="fld-l" for="minePhotoIn">${t('תמונה')}</label>
       <div id="minePhotoBox"></div>
-      <div class="chips"><button class="chip" data-wpact="pick">בחירת מקום במפה</button></div>`;
+      <div class="chips"><button class="chip" data-wpact="pick">${t('בחירת מקום במפה')}</button></div>`;
 
   sheet.innerHTML = `
     <div class="sheet-h">
-      ${fresh ? ways : '<h2>עריכת מקום</h2>'}
+      ${fresh ? ways : t('<h2>עריכת מקום</h2>')}
       <div class="wp-acts">
-        ${placed ? '<button class="chip is-on" data-wpact="save">שמירה</button>' : ''}
+        ${placed ? t('<button class="chip is-on" data-wpact="save">שמירה</button>') : ''}
         ${fresh || !p ? '' : `<button class="chip${wpArmed === p.id ? ' wp-arm' : ''}"
           data-wpact="del" data-id="${html(p.id)}"
-          >${wpArmed === p.id ? 'למחוק? לחיצה נוספת' : 'מחיקה'}</button>`}
+          >${wpArmed === p.id ? t('למחוק? לחיצה נוספת') : t('מחיקה')}</button>`}
       </div>
     </div>
     <div class="sheet-b">
@@ -1829,8 +1884,8 @@ function wpThumbs() {
   const load = fig => {
     if (fig.dataset.done) return;
     fig.dataset.done = '1';
-    const gone = () => { fig.innerHTML = '<p class="note">התמונה אינה במכשיר הזה. ' +
-      'נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>'; };
+    const gone = () => { fig.innerHTML = t('<p class="note">התמונה אינה במכשיר הזה. ') +
+      t('נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>'); };
     getPhoto(fig.dataset.wpimg).then(b => {
       const img = fig.querySelector('img');
       if (b && img) img.src = wpUrl(b); else gone();
@@ -1877,7 +1932,7 @@ function autoName() {
     const m = /^נקודת ציון (\d+)$/.exec(String(p.name || '').trim());
     if (m) top = Math.max(top, Number(m[1]));
   });
-  return 'נקודת ציון ' + (top + 1);
+  return t('נקודת ציון ') + (top + 1);
 }
 
 /* חדש opens the screen with no way chosen and no record yet: a place has to
@@ -1947,7 +2002,7 @@ function openNewAt(ll, from) {
 function startWpAdd() {
   if (mineEditing) {
     harvestWp();
-    mapNote('יש כרטיסייה בעריכה — לשמור או לבטל אותה קודם.', true);
+    mapNote(t('יש כרטיסייה בעריכה — לשמור או לבטל אותה קודם.'), true);
     const el = $('#doc .wp.is-edit');
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     return;
@@ -2007,7 +2062,7 @@ function wpClick(e) {
     delete mineEditing.photo;
     const where = $('#mineWhere');
     if (where) where.innerHTML = mineWhereHtml();
-    renderPhotoBox('התמונה תוסר כשהנקודה תישמר.');
+    renderPhotoBox(t('התמונה תוסר כשהנקודה תישמר.'));
     return true;
   }
   const b = e.target.closest('[data-wpact]');
@@ -2086,7 +2141,7 @@ function commitMine() {
       // a point without its picture is still worth keeping — say what was lost
       // rather than dropping the whole thing
       delete rec.photo;
-      mapNote('הנקודה נשמרה, אבל התמונה לא: ' +
+      mapNote(t('הנקודה נשמרה, אבל התמונה לא: ') +
         html(String((err && err.message) || err)), true);
       finish();
     });
@@ -2112,10 +2167,10 @@ function deleteMine(id) {
    uninstall would take with it.  Both directions are plain text, so they
    survive a new phone, a reinstall, and a message to yourself. */
 function exportMine() {
-  if (!D.mine.length) { mapNote('אין עדיין נקודות לייצוא.'); return; }
+  if (!D.mine.length) { mapNote(t('אין עדיין נקודות לייצוא.')); return; }
   const text = JSON.stringify(D.mine, null, 1);
-  const done = () => mapNote(nf(D.mine.length) + ' נקודות הועתקו. אפשר להדביק אותן ' +
-    'בהודעה לעצמך, ולייבא בחזרה בכל מכשיר.');
+  const done = () => mapNote(nf(D.mine.length) + t(' נקודות הועתקו. אפשר להדביק אותן ') +
+    t('בהודעה לעצמך, ולייבא בחזרה בכל מכשיר.'));
   try {
     navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
   } catch (e) { fallbackCopy(text, done); }
@@ -2138,18 +2193,18 @@ function fallbackCopy(text, done) {
 }
 
 function openImport(prefill) {
-  openPanel('import', prefill ? 'העתקה ידנית' : 'ייבוא נקודות', `
+  openPanel('import', prefill ? t('העתקה ידנית') : t('ייבוא נקודות'), `
     <p class="note" id="impNote">${prefill
-      ? 'לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.'
-      : 'הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.'}</p>
+      ? t('לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.')
+      : t('הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.')}</p>
     <textarea id="impText" rows="7" dir="ltr" spellcheck="false">${html(prefill || '')}</textarea>
-    <div class="btns"><button class="cta" id="impSave">ייבוא</button></div>`);
+    <div class="btns"><button class="cta" id="impSave">${t('ייבוא')}</button></div>`);
 }
 function commitImport() {
   let rows;
   try { rows = JSON.parse($('#impText').value); }
-  catch (e) { $('#impNote').textContent = 'זה לא טקסט תקין של נקודות.'; return; }
-  if (!Array.isArray(rows)) { $('#impNote').textContent = 'ציפיתי לרשימה של נקודות.'; return; }
+  catch (e) { $('#impNote').textContent = t('זה לא טקסט תקין של נקודות.'); return; }
+  if (!Array.isArray(rows)) { $('#impNote').textContent = t('ציפיתי לרשימה של נקודות.'); return; }
   const have = new Set(D.mine.map(p => p.id));
   let added = 0, skipped = 0;
   rows.forEach(r => {
@@ -2167,9 +2222,9 @@ function commitImport() {
   closePanel();
   drawMine(); redrawText();
   mapNote(added
-    ? ((added === 1 ? 'נוספה נקודה אחת' : 'נוספו ' + nf(added) + ' נקודות') +
-       (skipped ? ', ' + (skipped === 1 ? 'אחת דולגה' : nf(skipped) + ' דולגו') : '') + '.')
-    : 'לא נוספה אף נקודה חדשה.', !added);
+    ? ((added === 1 ? t('נוספה נקודה אחת') : t('נוספו ') + nf(added) + t(' נקודות')) +
+       (skipped ? ', ' + (skipped === 1 ? t('אחת דולגה') : nf(skipped) + t(' דולגו')) : '') + '.')
+    : t('לא נוספה אף נקודה חדשה.'), !added);
 }
 
 let ghost = null;              // the crosshair being positioned
@@ -2314,9 +2369,9 @@ function renderZone(key) {
       <span class="pin pin-sq" style="--c:#cfe0f2">${html(b.letter)}</span>
       <span class="row-body">
         <span class="row-t">${b.he ? html(b.he) + ' ' : ''}<span class="lat">${b.he ? '(' : ''}${html(b.en)}${b.he ? ')' : ''}</span>
-          ${b.ll ? '' : '<span class="flag">אין נקודה במפה</span>'}</span>
-        ${b.desc ? `<span class="row-d">${html(b.desc)}</span>` : ''}
-        <span class="row-m">${html(b.kind_he || '')}${b.pop ? ' · ' + nf(b.pop) + ' תושבים' : ''}${
+          ${b.ll ? '' : t('<span class="flag">אין נקודה במפה</span>')}</span>
+        ${b.desc ? `<span class="row-d">${prose(b.desc)}</span>` : ''}
+        <span class="row-m">${html(b.kind_he || '')}${b.pop ? ' · ' + nf(b.pop) + t(' תושבים') : ''}${
           b.kind_he && b.note_src ? ' · ' : ''}${html(b.note_src || '')}</span>
       </span></button>`).join('');
 
@@ -2344,23 +2399,23 @@ function renderZone(key) {
     <div class="card">
       <div class="hdr">
         <span class="pin" style="--c:${html(f.colour || '#ddd')}">${freNum(f)}</span>
-        <div><h1>${html(f.he || f.pt)}</h1>
+        <div><h1>${html(nm(f))}</h1>
           <p class="sub lat">${html(f.en || f.pt)}</p></div>
       </div>
-      <p class="sub">${html(m.he)} · ${html(m.belt)}${f.dicofre
-        ? ' · קוד רשמי <span class="lat num">' + html(f.dicofre) + '</span>' : ''}</p>
+      <p class="sub">${html(nm(m))} · ${html(t(m.belt))}${f.dicofre
+        ? t(' · קוד רשמי <span class="lat num">') + html(f.dicofre) + '</span>' : ''}</p>
       ${f.split2025 ? `<p class="note">${splitNote(f)}. הקוד שלמעלה הוא הקוד שהחזיקה
         עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של
         היחידה הזו.</p>` : ''}
       <div class="stats">
-        ${stat('תושבים', f.pop2021, '', 0, 'freguesia.pop2021', 100)}
-        ${stat('שטח', f.area_km2, 'קמ״ר', 1, 'freguesia.area_km2')}
-        ${stat('צפיפות', f.density, 'לקמ״ר', 0, 'freguesia.density', 100)}
+        ${stat(t('תושבים'), f.pop2021, '', 0, 'freguesia.pop2021', 100)}
+        ${stat(t('שטח'), f.area_km2, t('קמ״ר'), 1, 'freguesia.area_km2')}
+        ${stat(t('צפיפות'), f.density, t('לקמ״ר'), 0, 'freguesia.density', 100)}
       </div>
       ${z.desc ? `<p class="lead">${html(z.desc)}</p>` : ''}
       ${f.note ? `<p class="${z.desc ? 'sub' : 'lead'}">${html(f.note)}</p>` : ''}
       ${f.note_origin === 'app'
-        ? '<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>' : ''}
+        ? t('<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>') : ''}
     </div>
 
     ${splitTable(f)}
@@ -2369,7 +2424,7 @@ function renderZone(key) {
     ${marketStats(f, 'freguesia')}
 
     ${z.bairros.length ? `
-      <div class="grp">${z.bairros.length} ${curated ? 'שכונות' : 'יישובים ושכונות'} — האותיות במפה</div>
+      <div class="grp">${z.bairros.length} ${curated ? t('שכונות') : t('יישובים ושכונות')} — האותיות במפה</div>
       <div class="rows">${bairros}</div>
       <p class="note" style="margin-block:8px 12px">${curated
         ? `לשכונות אין גבול רשמי. האות במפה מסומנת על נקודת השכונה כפי שהיא
@@ -2377,7 +2432,7 @@ function renderZone(key) {
         : `היישובים האלה אינם יחידה מנהלית ואין להם גבול. הם מגיעים מ-OpenStreetMap
            כנקודה אחת לכל יישוב, ולכן אין להם שם עברי ואין להם תיאור — לא נכתב
            כזה לאף אחד מהם.`}</p>`
-      : '<p class="note">אין ביישוב הזה נקודות place ב-OpenStreetMap.</p>'}
+      : t('<p class="note">אין ביישוב הזה נקודות place ב-OpenStreetMap.</p>')}
 
     ${z.pois.length ? `
       <div class="card">
@@ -2389,8 +2444,8 @@ function renderZone(key) {
         <p class="note">מקור: OpenStreetMap contributors, ODbL. המיפוי התנדבותי
           ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.</p>
       </div>
-      ${shown.length ? pois : '<p class="note">לא נבחרה שום קטגוריה.</p>'}`
-      : '<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>'}
+      ${shown.length ? pois : t('<p class="note">לא נבחרה שום קטגוריה.</p>')}`
+      : t('<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>')}
     ${mineList(p => {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && D.freKey(at) === key;
@@ -2409,15 +2464,15 @@ function mineList(within) {
   // Saving and importing live in the menu, and only there — three doorways to
   // the same two actions was three places to keep in step.
   return `<div class="card">
-      <h2>המקומות שלי</h2>
+      <h2>${t('המקומות שלי')}</h2>
     </div>
     <div class="rows">${rows.map(p => `<button class="row" data-mine="${html(p.id)}">
         <span class="dot mine" style="--c:${MINE_COLOUR}"></span>
         <span class="row-body">
           <span class="row-t">${html(p.name)}</span>
-          ${p.desc ? `<span class="row-d">${html(p.desc)}</span>` : ''}
+          ${p.desc ? `<span class="row-d">${prose(p.desc)}</span>` : ''}
           <span class="row-m num">${html(p.ll[0].toFixed(5))}, ${html(p.ll[1].toFixed(5))}
-            ${p.at ? ' · ' + html(p.at) : ''}${p.photo ? ' · תמונה' : ''}</span>
+            ${p.at ? ' · ' + html(p.at) : ''}${p.photo ? t(' · תמונה') : ''}</span>
         </span></button>`).join('')}</div>`;
 }
 
@@ -2425,7 +2480,7 @@ function mineList(within) {
 /* Three states, one button: both halves, the map alone, the text alone.  On a
    phone this is the difference between reading a paragraph through a letterbox
    and reading it. */
-const VIEW_HE = { split: 'חצי מפה, חצי טקסט', map: 'מפה על כל המסך', text: 'טקסט על כל המסך' };
+const VIEW_HE = { split: t('חצי מפה, חצי טקסט'), map: t('מפה על כל המסך'), text: t('טקסט על כל המסך') };
 
 function applyView() {
   document.body.dataset.view = S.view;
@@ -2494,7 +2549,7 @@ function applySwitches() {
 
 /* The rings read straight off the flags, so the button tells the truth whether
    the change came from itself or from a row in the layer panel. */
-const BOUNDS_HE = { d: 'המחוז', m: 'העיריות', f: 'הרובעים' };
+const BOUNDS_HE = { d: t('המחוז'), m: t('העיריות'), f: t('הרובעים') };
 /* Four states cannot be a tick, so the row says which one it is in. */
 function boundsOff() {
   return [['d', S.lnDistrict], ['m', S.lnMun], ['f', S.lnFre]]
@@ -2502,13 +2557,13 @@ function boundsOff() {
 }
 function boundsHe() {
   const off = boundsOff();
-  return off.length ? ' · בלי ' + off.map(k => BOUNDS_HE[k]).join(', ') : ' · הכל';
+  return off.length ? t(' · בלי ') + off.map(k => BOUNDS_HE[k]).join(', ') : t(' · הכל');
 }
 function paintBounds() {
   const b = $('#bordersBtn'); if (!b) return;
   const off = boundsOff();
   b.setAttribute('data-b', off.join(' '));
-  b.setAttribute('aria-label', 'גבולות' + boundsHe());
+  b.setAttribute('aria-label', t('גבולות') + boundsHe());
 }
 
 /* ------------------------------------------------------------------ menu --- */
@@ -2541,6 +2596,8 @@ const ICON = {
   /* half sun, half moon: the setting is "whichever the phone is on", so the
      icon is the two of them sharing one circle rather than a third symbol */
   auto: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
+  /* a globe: the one thing on the menu that is about the words themselves */
+  lang: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/>',
   tiles: '<path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/>',
   glass: '<path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z" fill="currentColor" fill-opacity=".28"/><path d="M4 5h16v15H4z"/>',
   borders: '<circle cx="12" cy="12" r="9.5" stroke-width="3"/><circle cx="12" cy="12" r="6" stroke-width="2"/><circle cx="12" cy="12" r="2.75" stroke-width="1"/>',
@@ -2681,7 +2738,7 @@ function cmpUnits() {
   return { kind: 'mun', all: false, rows: D.mun.slice() };
 }
 
-const cmpName = o => o.he || o.pt;
+const cmpName = o => nm(o);
 const cmpId = o => (o.mun_num === undefined ? 'm' + o.num : 'f' + D.freKey(o));
 
 /* Smallest first, so the ranking and the list run the same way and one number
@@ -2784,8 +2841,8 @@ function drawCmp() {
         goMun(o.num);
       });
       l.bindTooltip(`<b>${html(cmpName(o))}</b><br>${
-        field ? (p ? `${html(field.he)}: <b>${html(nf(p.v, field.dec))}</b> ${html(field.unit)}`
-                   : html(field.he) + ': ' + MISSING)
+        field ? (p ? `${html(t(field.he))}: <b>${html(nf(p.v, field.dec))}</b> ${html(t(field.unit))}`
+                   : html(t(field.he)) + ': ' + miss())
               : `<span class="lat">${html(o.pt)}</span>`}`,
         { sticky: true, className: 'tt' });
     },
@@ -2824,7 +2881,7 @@ function cmpFocus(id) {
 }
 
 /* ----------------------------------------------------------- the text --- */
-const cmpFmt = (v, f) => v === null || v === undefined ? MISSING : nf(v, f.dec);
+const cmpFmt = (v, f) => v === null || v === undefined ? miss() : nf(v, f.dec);
 
 function cmpRowHtml(r, field, lvl, rk) {
   const ink = inkOn(r.c);
@@ -2839,7 +2896,7 @@ function cmpRowHtml(r, field, lvl, rk) {
     </span>
     <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">
       <span class="num">${html(cmpFmt(r.v, field))}</span>${
-      field.unit ? ' <span class="cmp-u">' + html(field.unit) + '</span>' : ''}
+      field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}
     </button>${mun ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
   </div>`;
 }
@@ -2856,22 +2913,21 @@ function renderCmp() {
   if (S.cmpPick) {
     const fields = cmpFields();
     const groups = [...new Set(fields.map(f => f.g))].map(g => `
-      <div class="grp">${html(g)}</div>
+      <div class="grp">${html(t(g))}</div>
       <div class="cmp-fields">${fields.filter(f => f.g === g).map(f => {
         const rows = cmpUnits().rows;
         const n = rows.filter(o => cmpValue(o, f.k) !== null).length;
         return `<button class="cmp-f${n < rows.length ? ' part' : ''}" data-cmpf="${html(f.k)}">
-          <span class="cmp-f-t">${html(f.he)}</span>
-          <span class="cmp-f-u">${html(f.unit || '—')}</span>
+          <span class="cmp-f-t">${html(t(f.he))}</span>
+          <span class="cmp-f-u">${html(f.unit ? t(f.unit) : '—')}</span>
           <span class="cmp-f-c num">${n}/${rows.length}</span>
         </button>`;
       }).join('')}</div>`).join('');
     return `<div class="cmp-top">
-        <h1 class="cmp-h">החלפת נתון</h1>
-        <button class="cmp-swap" data-cmppick="0">חזרה</button>
+        <h1 class="cmp-h">${t('החלפת נתון')}</h1>
+        <button class="cmp-swap" data-cmppick="0">${t('חזרה')}</button>
       </div>
-      <p class="note cmp-note">המספר על הכרטיסייה הוא כמה יחידות יש להן ערך
-        בשדה הזה. ביתר יוצג ׳אין נתון׳, והן לא ידורגו.</p>
+      <p class="note cmp-note">${t('המספר על הכרטיסייה הוא כמה יחידות יש להן ערך בשדה הזה. ביתר יוצג ׳אין נתון׳, והן לא ידורגו.')}</p>
       ${groups}`;
   }
 
@@ -2879,11 +2935,11 @@ function renderCmp() {
   const sh = cmpShown(rk);
 
   const scope = atDistrict ? `
-    <div class="cmp-scope" role="group" aria-label="מה להשוות">
+    <div class="cmp-scope" role="group" aria-label="${t('מה להשוות')}">
       <button class="cmp-sc" data-cmpscope="mun"
-        aria-pressed="${S.cmpScope !== 'fre'}">עיריות</button>
+        aria-pressed="${S.cmpScope !== 'fre'}">${t('עיריות')}</button>
       <button class="cmp-sc" data-cmpscope="fre"
-        aria-pressed="${S.cmpScope === 'fre'}">רובעים</button>
+        aria-pressed="${S.cmpScope === 'fre'}">${t('רובעים')}</button>
     </div>` : '<div class="cmp-scope"></div>';
 
   /* The key: five colours, and the range of the field each of them covers.
@@ -2907,7 +2963,7 @@ function renderCmp() {
     .map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`;
 
   const none = rk.none.length ? `
-    <div class="grp">${nf(rk.none.length)} בלי נתון — לא מדורגים</div>
+    <div class="grp">${nf(rk.none.length)} ${t('בלי נתון — לא מדורגים')}</div>
     <div class="cmp-rows">${rk.none.map(r => {
       const mun = r.o.mun_num === undefined;
       return `<div class="cmp-row no" data-cmpu="${html(cmpId(r.o))}"${
@@ -2915,31 +2971,28 @@ function renderCmp() {
         <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munCode(r.o) : freNum(r.o)))}</span>
         <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}
           <span class="lat">${html(bare(r.o.pt))}</span></span></span>
-        <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${MISSING}</button>
+        <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${miss()}</button>
       </div>`;
     }).join('')}</div>
-    <p class="note">ערך חסר אינו מקום אחרון. היחידות האלה אינן מדורגות, אינן
-      צבועות ואינן נספרות — במפה הן מפוספסות.</p>` : '';
+    <p class="note">${t('ערך חסר אינו מקום אחרון. היחידות האלה אינן מדורגות, אינן צבועות ואינן נספרות — במפה הן מפוספסות.')}</p>` : '';
 
   return `<div class="cmp-top">
       ${scope}
-      <button class="cmp-swap" data-cmppick="1">החלפת נתון</button>
+      <button class="cmp-swap" data-cmppick="1">${t('החלפת נתון')}</button>
     </div>
-    <h1 class="cmp-h">${html(field.he)}${
-      field.unit ? ' <span class="cmp-u">' + html(field.unit) + '</span>' : ''}</h1>
+    <h1 class="cmp-h">${html(t(field.he))}${
+      field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}</h1>
     <p class="cmp-what">${atDistrict
       ? (S.cmpScope === 'fre'
          ? `243 רובעי המחוז`
          : `18 עיריות המחוז`)
-      : `${html((D.freByMun.get(S.mun) || []).length)} הרובעים של ${html(m.he)}`
-        + ' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים'}
-      · מהקטן לגדול</p>
+      : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`
+        + t(' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים')}
+      ${t('· מהקטן לגדול')}</p>
     ${key}
     ${list}
     ${none}
-    <p class="note">הצבע מייצג את החמישון ולא את גודל הערך, כדי שכל קבוצה תיקרא
-      במבט אחד; הערך המדויק בשורה. המספרים על המפה הם קודי DICOFRE, כמו בכל
-      מסך אחר. אין כאן צד ״טוב״ ואין צד ״רע״ — רק קטן וגדול.</p>`;
+    <p class="note">${t('הצבע מייצג את החמישון ולא את גודל הערך, כדי שכל קבוצה תיקרא במבט אחד; הערך המדויק בשורה. המספרים על המפה הם קודי DICOFRE, כמו בכל מסך אחר. אין כאן צד ״טוב״ ואין צד ״רע״ — רק קטן וגדול.')}</p>`;
 }
 
 /* The screen.  The street background comes off while it is open and goes back
@@ -3006,25 +3059,25 @@ function cmpClick(e) {
 }
 
 const menuRows = () => [
-  { k: 'search', he: 'חיפוש', icon: 'search', kind: 'act' },
-  { k: 'mine', he: 'המקומות שלי', icon: 'pin', kind: 'act' },
-  { k: 'locate', he: 'המיקום שלי', icon: 'locate', kind: 'act', mapOnly: true },
+  { k: 'search', he: t('חיפוש'), icon: 'search', kind: 'act' },
+  { k: 'mine', he: t('המקומות שלי'), icon: 'pin', kind: 'act' },
+  { k: 'locate', he: t('המיקום שלי'), icon: 'locate', kind: 'act', mapOnly: true },
   /* The eight categories under one heading that switches them together, with a
      chevron beside it that opens the list so each can be set on its own.  Eight
      rows at the top of the menu were eight-ninths of what you scrolled past to
      reach anything else. */
-  { k: 'cats', he: 'נקודות ציון', icon: 'dots', kind: 'tog', more: 'cats-open' },
+  { k: 'cats', he: t('נקודות ציון'), icon: 'dots', kind: 'tog', more: 'cats-open' },
   ...(S.catsOpen
     ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: D.poiLabel[c], icon: c, kind: 'tog', sub: true }))
     : []),
   // Below the eight, not between the heading and them: the expanded categories
   // have to follow their own heading with nothing in between or they stop
   // reading as belonging to it.
-  { k: 'cmp', he: 'השוואת נתונים', icon: 'cmp', kind: 'tog' },
-  { grp: 'תצוגה' },
-  { k: 'view:split', he: 'גרפיקה וטקסט', icon: 'split', kind: 'radio' },
-  { k: 'view:map', he: 'גרפיקה בלבד', icon: 'maponly', kind: 'radio' },
-  { k: 'view:text', he: 'טקסט בלבד', icon: 'textonly', kind: 'radio' },
+  { k: 'cmp', he: t('השוואת נתונים'), icon: 'cmp', kind: 'tog' },
+  { grp: t('תצוגה') },
+  { k: 'view:split', he: t('גרפיקה וטקסט'), icon: 'split', kind: 'radio' },
+  { k: 'view:map', he: t('גרפיקה בלבד'), icon: 'maponly', kind: 'radio' },
+  { k: 'view:text', he: t('טקסט בלבד'), icon: 'textonly', kind: 'radio' },
   /* Three, not two.  `auto` is the value the app opens on and the only one that
      follows the phone, but with only light and dark on the list there was no way
      back to it: the first choice was permanent.  A set of mutually exclusive
@@ -3034,28 +3087,35 @@ const menuRows = () => [
      rather than offering only the one you are not in: the label on a control
      must not change with its state, or a screen reader cannot tell whether the
      word it reads is what the control IS or what it WILL DO. */
-  { k: 'theme:auto', he: 'תצוגה לפי המכשיר', icon: 'auto', kind: 'radio' },
-  { k: 'theme:light', he: 'תצוגת יום', icon: 'day', kind: 'radio' },
-  { k: 'theme:dark', he: 'תצוגת לילה', icon: 'night', kind: 'radio' },
-  { grp: 'שכבות' },
-  { k: 'tiles', he: 'מפת רקע', icon: 'tiles', kind: 'tog' },
-  { k: 'glass', he: 'ויטרז׳ מפות', icon: 'glass', kind: 'tog' },
+  { k: 'theme:auto', he: t('תצוגה לפי המכשיר'), icon: 'auto', kind: 'radio' },
+  { k: 'theme:light', he: t('תצוגת יום'), icon: 'day', kind: 'radio' },
+  { k: 'theme:dark', he: t('תצוגת לילה'), icon: 'night', kind: 'radio' },
+  /* Its own heading, and both languages always named.  A control's label must
+     not change with its state — the same rule that keeps all three themes on
+     the list — so this is not a single row that says "English" while you are
+     reading Hebrew. */
+  { grp: t('שפה') },
+  { k: 'lang:he', he: t('עברית'), icon: 'lang', kind: 'radio' },
+  { k: 'lang:en', he: 'English', icon: 'lang', kind: 'radio' },
+  { grp: t('שכבות') },
+  { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
+  { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
   // Not on the list that was asked for, and kept anyway: the three-ring cycle
   // was designed row by row two versions ago, and the full panel is the only
   // way to נהרות, אותיות and one border kind at a time.  Dropping a control
   // because a later list did not repeat it is how a feature disappears.
-  { k: 'borders', he: 'גבולות' + boundsHe(), icon: 'borders', kind: 'act' },
-  { k: 'more', he: 'עוד שכבות', icon: 'more', kind: 'act' },
+  { k: 'borders', he: t('גבולות') + boundsHe(), icon: 'borders', kind: 'act' },
+  { k: 'more', he: t('עוד שכבות'), icon: 'more', kind: 'act' },
   { grp: '' },
-  { k: 'regions', he: 'אזורים', icon: 'regions', kind: 'tog' },
-  { grp: 'נתונים' },
+  { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
+  { grp: t('נתונים') },
   // The points the user marked, and only those — everything else in the app
   // ships with it and needs no saving.  Both were reachable only from inside
   // the נ.צ. screen before.
-  { k: 'save', he: 'שמירת נתונים', icon: 'save', kind: 'act' },
-  { k: 'load', he: 'ייבוא נתונים', icon: 'load', kind: 'act' },
+  { k: 'save', he: t('שמירת נתונים'), icon: 'save', kind: 'act' },
+  { k: 'load', he: t('ייבוא נתונים'), icon: 'load', kind: 'act' },
   { grp: '' },
-  { k: 'info', he: 'מידע', icon: 'info', kind: 'act' },
+  { k: 'info', he: t('מידע'), icon: 'info', kind: 'act' },
 ];
 
 // what a row's mark should read, or null when the row carries no state
@@ -3067,6 +3127,7 @@ function menuState(k) {
      to: "auto" is a choice of its own, and marking light while auto is set
      would say the user had picked light. */
   if (k.startsWith('theme:')) return (S.theme || 'auto') === k.slice(6);
+  if (k.startsWith('lang:')) return (S.lang || 'he') === k.slice(5);
   if (k === 'tiles') return S.tiles;
   if (k === 'glass') return S.muncol;
   if (k === 'regions') return S.lnRegion;
@@ -3088,19 +3149,19 @@ function renderMenu() {
     const row = `<button class="mrow${r.mapOnly ? ' map-only' : ''}${r.sub ? ' mrow-sub' : ''}"
         data-m="${html(r.k)}"${flag}>
         <svg viewBox="0 0 24 24" aria-hidden="true">${ICON[r.icon] || ''}</svg>
-        <span class="mrow-l">${html(r.he)}</span>
+        <span class="mrow-l">${html(t(r.he))}</span>
         <span class="mrow-k" aria-hidden="true">${r.kind === 'radio' ? '●' : '✓'}</span>
       </button>`;
     if (!r.more) return row;
     // the heading switches all eight; the chevron beside it opens the list
     return `<div class="mrow-pair">${row}
         <button class="mrow-more" data-m="${html(r.more)}"
-                aria-expanded="${!!S.catsOpen}" aria-label="פירוט נקודות הציון">
+                aria-expanded="${!!S.catsOpen}${t('" aria-label="פירוט נקודות הציון">')}
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
       </div>`;
   }).join('') + (S.level === 'zone' ? '' :
-    '<p class="mnote">הנקודות עצמן מצוירות ברמת הרובע; הבחירה כאן נשמרת וחלה שם.</p>');
+    t('<p class="mnote">הנקודות עצמן מצוירות ברמת הרובע; הבחירה כאן נשמרת וחלה שם.</p>'));
 }
 
 function openMenu(on) {
@@ -3154,6 +3215,20 @@ function menuPick(k) {
   }
   if (k.startsWith('theme:')) {
     S.theme = k.slice(6); applyTheme(); save(); renderMenu(); return;
+  }
+  if (k.startsWith('lang:')) {
+    S.lang = k.slice(5);
+    applyLang();
+    /* Everything on screen is written in the language, including the map's own
+       labels and the text half, so all of it is drawn again. The menu stays
+       open: the effect is visible on the menu itself. */
+    /* Everything already on screen was written in the old language, including
+       the trail, the notice above the text and the map's own labels. */
+    save(); afterNav(); redrawLevel(); drawMine(); redrawText(); renderMenu();
+    const n = lastNote;
+    hideNote();
+    if (n) mapNote(n.redraw(), n.bad, true, n.redraw);
+    return;
   }
   switch (k) {
     case 'search':  openMenu(false); openSearch(); break;
@@ -3211,43 +3286,43 @@ function renderLayers() {
        ${n === undefined ? '' : `<span class="lay-k">${n}</span>`}
      </button>`;
 
-  let h = '<h3>שכבות</h3>' +
-    row(S.tiles, 'tiles', 'רקע המפה (רחובות)', 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
-    row(S.muncol, 'muncol', 'צבעי 18 העיריות', 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
-    row(S.water, 'water', 'נהרות ומים', '#4a9ad4', true) +
-    row(S.mine, 'mine', 'המקומות שלי', MINE_COLOUR, true, D.mine.length) +
-    (S.wp ? '<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ' +
-            'חוזרת לפעול ביציאה ממנו.</p>' : '');
+  let h = t('<h3>שכבות</h3>') +
+    row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
+    row(S.muncol, 'muncol', t('צבעי 18 העיריות'), 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
+    row(S.water, 'water', t('נהרות ומים'), '#4a9ad4', true) +
+    row(S.mine, 'mine', t('המקומות שלי'), MINE_COLOUR, true, D.mine.length) +
+    (S.wp ? t('<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ') +
+            t('חוזרת לפעול ביציאה ממנו.</p>') : '');
 
   // Which of these are black and which are grey is the level's decision, not
   // the user's; the switch is only whether the line is there at all.
-  h += '<h3>קווי גבול</h3>' +
+  h += t('<h3>קווי גבול</h3>') +
     ['region', 'district', 'mun', 'fre'].map(k =>
-      row(S[LINE_ON[k]], 'ln:' + k, LINE_HE[k], lineColour(k), true)).join('') +
-    '<p class="note" style="margin-block-start:6px">הקווים ששייכים למה שעל ' +
-    'המסך מוצגים בשחור, והשאר באפור. קו האזורים ' +
-    'אפור תמיד.</p>';
+      row(S[LINE_ON[k]], 'ln:' + k, t(LINE_HE[k]), lineColour(k), true)).join('') +
+    t('<p class="note" style="margin-block-start:6px">הקווים ששייכים למה שעל ') +
+    t('המסך מוצגים בשחור, והשאר באפור. קו האזורים ') +
+    t('אפור תמיד.</p>');
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
   if (z) {
     h += row(S.letters, 'letters',
-      z.origin === 'pdf' ? 'אותיות השכונות' : 'אותיות היישובים',
+      z.origin === 'pdf' ? t('אותיות השכונות') : t('אותיות היישובים'),
       '#cfe0f2', true, z.bairros.filter(b => b.ll).length);
   }
   if (z && z.pois.length) {
-    h += '<h3>נקודות במפה</h3>' + D.poiOrder.filter(c => counts[c])
+    h += t('<h3>נקודות במפה</h3>') + D.poiOrder.filter(c => counts[c])
       .map(c => row(S.cats.has(c), 'cat:' + c, D.poiLabel[c] || c, CAT_COLOUR[c], false, counts[c]))
       .join('');
   } else {
-    h += '<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הרובע.</p>';
+    h += t('<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הרובע.</p>');
   }
   if (panelIs('layers')) $('#panelBody').innerHTML = h;
   return h;
 }
 function toggleLayers(force) {
   const show = force === undefined ? !panelIs('layers') : force;
-  if (show) openPanel('layers', 'שכבות המפה', renderLayers());
+  if (show) openPanel('layers', t('שכבות המפה'), renderLayers());
   else closePanel();
 }
 
@@ -3322,7 +3397,7 @@ function pick(hi, from) {
 function pickFre(f) {
   if (S.adding || S.wp) return;
   if (S.cmp) { cmpFocus('f' + D.freKey(f)); return; }
-  if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), f.he || f.pt); return; }
+  if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), nm(f)); return; }
   goZone(D.freKey(f));
 }
 
@@ -3409,16 +3484,16 @@ function afterNav() {
      went with the single line; a line break is the separator now. */
   const c = [];
   if (S.level === 'district') {
-    c.push('<span class="now">מחוז פורטו</span>');
+    c.push(t('<span class="now">מחוז פורטו</span>'));
   } else {
     const m = D.munByNum.get(S.mun);
     if (S.level === 'mun') {
-      c.push('<button data-go="district">מחוז פורטו</button>');
-      c.push('<span class="now">' + html(m.he) + '</span>');
+      c.push(t('<button data-go="district">מחוז פורטו</button>'));
+      c.push('<span class="now">' + html(nm(m)) + '</span>');
     } else {
-      c.push('<button data-go="mun">' + html(m.he) + '</button>');
+      c.push('<button data-go="mun">' + html(nm(m)) + '</button>');
       const f = D.freByKey.get(S.zone);
-      c.push('<span class="now">' + html(f.he || f.pt) + '</span>');
+      c.push('<span class="now">' + html(nm(f)) + '</span>');
     }
   }
   const crumb = $('#crumb');
@@ -3446,6 +3521,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
       letters: S.letters, mine: S.mine, water: S.water, rev: PREF_REV,
+      lang: S.lang,
       muncol: S.muncol, wpList: S.wpList,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
@@ -3471,6 +3547,7 @@ function restore() {
     ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
       if (typeof o[k] === 'boolean') S[k] = o[k];
     });
+    if (o.lang === 'he' || o.lang === 'en') S.lang = o.lang;
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
@@ -3486,9 +3563,9 @@ function restore() {
 
 /* ---------------------------------------------------------------- search --- */
 function openSearch() {
-  openPanel('search', 'חיפוש', `
+  openPanel('search', t('חיפוש'), `
     <input id="q" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
-           placeholder="עירייה, רובע, יישוב או אתר" aria-label="חיפוש">
+           placeholder="${t('עירייה, רובע, יישוב או אתר')}" aria-label="${t('חיפוש')}">
     <div id="qres"></div>`);
   const el = $('#q');
   if (el) { el.focus(); runSearch(''); }
@@ -3501,21 +3578,21 @@ function panelSearchClick(e) {
 function runSearch(term) {
   const t = term.trim().toLowerCase();
   if (t.length < 2) {
-    $('#qres').innerHTML = '<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>';
+    $('#qres').innerHTML = t('<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>');
     return;
   }
   const hit = s => String(s || '').toLowerCase().includes(t);
   const out = [];
   D.mun.forEach(m => {
     if (hit(m.he) || hit(m.pt) || hit(m.en) || hit(m.dicofre)) out.push({
-      t: munCode(m) + ' · ' + m.he, s: m.pt, k: 'עירייה', go: `data-jump="mun:${m.num}"` });
+      t: munCode(m) + ' · ' + m.he, s: m.pt, k: t('עירייה'), go: `data-jump="mun:${m.num}"` });
   });
   D.fre.forEach(f => {
     // the official code is searchable too: it is what appears on a form
     if (hit(f.he) || hit(f.pt) || hit(f.dicofre)) out.push({
       t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he
         + (f.dicofre ? ' · ' + f.dicofre : ''),
-      k: f.mun_num === 1 ? 'רובע בפורטו' : 'רובע',
+      k: f.mun_num === 1 ? t('רובע בפורטו') : t('רובע'),
       go: `data-jump="zone:${html(D.freKey(f))}"` });
   });
   // 1,773 localities and 1,530 dots across the district; stop once the list is
@@ -3525,17 +3602,17 @@ function runSearch(term) {
     if (out.length > CAP) break;
     const f = D.freByKey.get(key);
     if (!f) continue;
-    const where = (f.he || f.pt) + ' · ' + f.mun_he;
+    const where = nm(f) + ' · ' + f.mun_he;
     const z = D.zones[key];
     z.bairros.forEach(b => {
       if (hit(b.he) || hit(b.en)) out.push({
         t: b.letter + ' · ' + (b.he || b.en), s: b.en + ' · ' + where,
-        k: b.kind_he || 'שכונה', go: `data-jump="bairro:${html(key)}:${html(b.letter)}"` });
+        k: b.kind_he || t('שכונה'), go: `data-jump="bairro:${html(key)}:${html(b.letter)}"` });
     });
     z.pois.forEach((p, i) => {
       if (hit(p.name)) out.push({
         t: p.name, s: (D.poiLabel[p.cat] || p.cat) + ' · ' + where,
-        k: 'נקודה', go: `data-jump="poi:${html(key)}:${i}"` });
+        k: t('נקודה'), go: `data-jump="poi:${html(key)}:${i}"` });
     });
   }
 
@@ -3546,8 +3623,8 @@ function runSearch(term) {
         <span class="row-body"><span class="row-t">${html(r.t)}</span>
           <span class="row-m"><span class="lat">${html(r.s)}</span></span></span>
         <span class="note">${html(r.k)}</span></button>`).join('') + '</div>' +
-      (out.length > 60 ? `<p class="note" style="margin-block-start:8px">${out.length} תוצאות, מוצגות 60.</p>` : '')
-    : `<p class="note">אין תוצאות ל״${html(term)}״.</p>`;
+      (out.length > 60 ? `<p class="note" style="margin-block-start:8px">${out.length} ${t('תוצאות, מוצגות 60.')}</p>` : '')
+    : `<p class="note">${t('אין תוצאות ל״')}${html(term)}${t('״.')}</p>`;
 }
 
 function jump(spec) {
@@ -3579,7 +3656,7 @@ function showSource(key, exact) {
       <span class="note">— המספר במסך מעוגל כדי להיקרא, וזה מה שהמקור מפרסם.</span></p>` : ''}
     <p class="note"><code>${html(key)}</code></p>
     ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
-    <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
+    <p>${t('מקור:')} ${html(f.source || (f.derived_from || []).join(' / '))}</p>
     ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
     ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
     ${f.caveat_he ? `<div class="warn">${html(f.caveat_he)}</div>` : ''}
@@ -3592,7 +3669,7 @@ function renderInfo() {
       <h3>${html(f.label_he || k)}</h3>
       <p class="note"><code>${html(k)}</code></p>
       ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
-      <p>מקור: ${html(f.source || (f.derived_from || []).join(' / '))}</p>
+      <p>${t('מקור:')} ${html(f.source || (f.derived_from || []).join(' / '))}</p>
       ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
       ${f.definitions_he ? `<dl class="kv">${Object.entries(f.definitions_he).map(
         ([t, v]) => `<div><dt>${html(t)}</dt><dd class="note">${html(v)}</dd></div>`).join('')}</dl>` : ''}
@@ -3612,139 +3689,82 @@ function renderInfo() {
     </div>`).join('');
 
   $('#infoBody').innerHTML = `
-    <h2>איך קוראים את המספרים</h2>
-    <p>לכל יחידה מנהלית בפורטוגל יש קוד רשמי אחד, <b>DICOFRE</b>, והוא בנוי
-      בשכבות. מחוז פורטו הוא <span class="num">13</span>; שתי הספרות שאחריו הן
-      העירייה, ושתיים נוספות הן הרובע:</p>
-    <pre>13 12 02
-▔▔ ▔▔ ▔▔
-│  │  └── רובע  (Bonfim)
-│  └───── עירייה (פורטו)
-└──────── מחוז  (פורטו)</pre>
-    <p>המספר שמופיע על כל עירייה במפה הוא <b>שתי הספרות הרשמיות שלה</b> —
-      פורטו היא <span class="num">12</span>, אמרנטה <span class="num">01</span>,
-      טרופה <span class="num">18</span>. זה הקוד שמופיע בטפסים, במסמכי מקרקעין
-      ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.</p>
-    <p>המספר שעל כל רובע הוא באותו אופן <b>שתי הספרות הרשמיות שלו</b> בתוך
-      העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים
-      מגיעים מיחידות שמסומנות ב-OpenStreetMap עם <span class="lat">ref:ine</span>
-      ועם <span class="lat">source=DGT — CAOP</span>, כלומר הם הקוד שהמדינה
-      מפרסמת ולא מספור של האפליקציה.</p>
-    <p>הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר
-      האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא
-      מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף
-      הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.</p>
-    <p><b>רפורמת 2025.</b> חלק מהאיחודים של 2013 בוטלו, ורובעים שאוחדו חזרו
-      להיות יחידות נפרדות עם קודים חדשים. במחוז פורטו זה נוגע ל-25 מ-243
-      היחידות שהאפליקציה מציירת: הן פורקו ל-57 רובעים חדשים, והקוד של היחידה
-      המאוחדת בוטל. הגבולות והנתונים כאן הם CAOP 2020 — כלומר המפה של 2013 —
-      ולכן ל-25 האלה מוצג <span class="flag">פורק ב-2025</span> במקום קוד, ובכרטיס
-      של כל אחת מהן רשומים בשמם ובקודם הרובעים שהחליפו אותה. 218 הרובעים האחרים
-      לא נגעו ברפורמה והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.</p>
-    <p class="note">כדי שהאפליקציה תציג את 275 הרובעים של 2025 עצמם — ולא את
-      חלוקת 2020 עם הערה — צריך את שכבת הגבולות CAOP במהדורה 2024 או 2025.
-      אין לי אותה כאן, וכל נתוני האוכלוסייה שיש לי הם ממפקד 2021 שנספר לפי
-      חלוקת 2013, כך שפיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים.</p>
+    <h2>${t('איך קוראים את המספרים')}</h2>
+    <p>${t('לכל יחידה מנהלית בפורטוגל יש קוד רשמי אחד,')} <b>DICOFRE</b>${t(', והוא בנוי בשכבות. מחוז פורטו הוא')} <span class="num">13</span>${t('; שתי הספרות שאחריו הן העירייה, ושתיים נוספות הן הרובע:')}</p>
+    <pre>${t('13 12 02 ▔▔ ▔▔ ▔▔ │  │  └── רובע  (Bonfim) │  └───── עירייה (פורטו) └──────── מחוז  (פורטו)')}</pre>
+    <p>${t('המספר שמופיע על כל עירייה במפה הוא')} <b>${t('שתי הספרות הרשמיות שלה')}</b> ${t('— פורטו היא')} <span class="num">12</span>${t(', אמרנטה')} <span class="num">01</span>${t(', טרופה')} <span class="num">18</span>${t('. זה הקוד שמופיע בטפסים, במסמכי מקרקעין ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.')}</p>
+    <p>${t('המספר שעל כל רובע הוא באותו אופן')} <b>${t('שתי הספרות הרשמיות שלו')}</b> ${t('בתוך העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים מגיעים מיחידות שמסומנות ב-OpenStreetMap עם')} <span class="lat">ref:ine</span>
+      ${t('ועם')} <span class="lat">source=DGT — CAOP</span>${t(', כלומר הם הקוד שהמדינה מפרסמת ולא מספור של האפליקציה.')}</p>
+    <p>${t('הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.')}</p>
+    <p><b>${t('רפורמת 2025.')}</b> ${t('חלק מהאיחודים של 2013 בוטלו, ורובעים שאוחדו חזרו להיות יחידות נפרדות עם קודים חדשים. במחוז פורטו זה נוגע ל-25 מ-243 היחידות שהאפליקציה מציירת: הן פורקו ל-57 רובעים חדשים, והקוד של היחידה המאוחדת בוטל. הגבולות והנתונים כאן הם CAOP 2020 — כלומר המפה של 2013 — ולכן ל-25 האלה מוצג')} <span class="flag">${t('פורק ב-2025')}</span> ${t('במקום קוד, ובכרטיס של כל אחת מהן רשומים בשמם ובקודם הרובעים שהחליפו אותה. 218 הרובעים האחרים לא נגעו ברפורמה והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.')}</p>
+    <p class="note">${t('כדי שהאפליקציה תציג את 275 הרובעים של 2025 עצמם — ולא את חלוקת 2020 עם הערה — צריך את שכבת הגבולות CAOP במהדורה 2024 או 2025. אין לי אותה כאן, וכל נתוני האוכלוסייה שיש לי הם ממפקד 2021 שנספר לפי חלוקת 2013, כך שפיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים.')}</p>
 
-    <h2>מי מודד ומי סופר</h2>
-    <p>שני גופים שונים עומדים מאחורי כל מספר כאן, ותפקידם שונה לגמרי.</p>
+    <h2>${t('מי מודד ומי סופר')}</h2>
+    <p>${t('שני גופים שונים עומדים מאחורי כל מספר כאן, ותפקידם שונה לגמרי.')}</p>
     <div class="card">
       <h3>INE — <span class="lat">Instituto Nacional de Estatística</span></h3>
-      <p>הלשכה המרכזית לסטטיסטיקה של פורטוגל. אחראית על כל הסטטיסטיקה הרשמית,
-        והמוצר המרכזי שלה כאן הוא <b>Censos</b> — מפקד האוכלוסין שנערך כל עשר
-        שנים. <b>כל נתוני האוכלוסייה באפליקציה הם ממפקד 2021.</b></p>
-      <p class="note">INE נותן את <b>המספרים</b>.</p>
+      <p>${t('הלשכה המרכזית לסטטיסטיקה של פורטוגל. אחראית על כל הסטטיסטיקה הרשמית, והמוצר המרכזי שלה כאן הוא')} <b>Censos</b> ${t('— מפקד האוכלוסין שנערך כל עשר שנים.')} <b>${t('כל נתוני האוכלוסייה באפליקציה הם ממפקד 2021.')}</b></p>
+      <p class="note">${t('INE נותן את')} <b>${t('המספרים')}</b>.</p>
     </div>
     <div class="card">
       <h3>CAOP — <span class="lat">Carta Administrativa Oficial de Portugal</span></h3>
-      <p>מפת הגבולות המנהליים הרשמית, שמפרסמת <b>DGT</b>
-        (<span class="lat">Direção-Geral do Território</span>) — לא INE. היא
-        קובעת איפה בדיוק עובר כל גבול. ממנה מגיעות כל הצורות על המפה, וכל שטח
-        בקמ״ר שמוצג כאן חושב מהפוליגונים עצמם ולא נלקח מטבלה.</p>
-      <p class="note">CAOP נותן את <b>הצורות</b>. קוד DICOFRE הוא מה שמחבר
-        ביניהם — אותו מזהה בשני המקורות, ולכן אפשר לצרף מספר לגבול בלי לנחש.</p>
+      <p>${t('מפת הגבולות המנהליים הרשמית, שמפרסמת')} <b>DGT</b>
+        (<span class="lat">Direção-Geral do Território</span>${t(') — לא INE. היא קובעת איפה בדיוק עובר כל גבול. ממנה מגיעות כל הצורות על המפה, וכל שטח בקמ״ר שמוצג כאן חושב מהפוליגונים עצמם ולא נלקח מטבלה.')}</p>
+      <p class="note">${t('CAOP נותן את')} <b>${t('הצורות')}</b>${t('. קוד DICOFRE הוא מה שמחבר ביניהם — אותו מזהה בשני המקורות, ולכן אפשר לצרף מספר לגבול בלי לנחש.')}</p>
     </div>
 
-    <h2>NUTS III — החלוקה הרשמית של המחוז</h2>
-    <p><b>NUTS</b> הוא תקן אירופי לחלוקת שטח לצורך סטטיסטיקה והקצאת תקציבים.
-      בפורטוגל יש שלוש רמות; הרמה שבפועל משמשת היא <b>NUTS III</b>, ובה 25
-      יחידות. מה שמייחד אותה בפורטוגל: כל יחידה היא גם <b>גוף אמיתי</b> —
-      אזור מטרופוליני או התאגדות בין-עירונית עם מועצה ותקציב.</p>
-    <p><b>18 העיריות שבאפליקציה מתחלקות בין שתי יחידות כאלה:</b></p>
+    <h2>${t('NUTS III — החלוקה הרשמית של המחוז')}</h2>
+    <p><b>NUTS</b> ${t('הוא תקן אירופי לחלוקת שטח לצורך סטטיסטיקה והקצאת תקציבים. בפורטוגל יש שלוש רמות; הרמה שבפועל משמשת היא')} <b>NUTS III</b>${t(', ובה 25 יחידות. מה שמייחד אותה בפורטוגל: כל יחידה היא גם')} <b>${t('גוף אמיתי')}</b> ${t('— אזור מטרופוליני או התאגדות בין-עירונית עם מועצה ותקציב.')}</p>
+    <p><b>${t('18 העיריות שבאפליקציה מתחלקות בין שתי יחידות כאלה:')}</b></p>
     <div class="card">
       <h3><span class="lat">Área Metropolitana do Porto</span> (AMP)</h3>
-      <p>11 מהעיריות כאן: פורטו, וילה נובה דה גאיה, מטוזיניוש, מאיה, גונדומאר,
-        ולונגו, וילה דו קונדה, פובואה דה וארזים, סנטו טירסו, טרופה ופארדש.
-        (ל-AMP שייכות עוד שש עיריות ממחוז אָבֵיירו.)</p>
-      <p>זהו מטרופולין אחד לכל דבר: <b>רשות תחבורה משותפת</b> — המטרו, כרטיס
-        <span class="lat">Andante</span> ותעריפי האזורים — ושוק עבודה אחד.
-        כאן חיים כ-1.44 מיליון מתושבי המחוז.</p>
+      <p>${t('11 מהעיריות כאן: פורטו, וילה נובה דה גאיה, מטוזיניוש, מאיה, גונדומאר, ולונגו, וילה דו קונדה, פובואה דה וארזים, סנטו טירסו, טרופה ופארדש. (ל-AMP שייכות עוד שש עיריות ממחוז אָבֵיירו.)')}</p>
+      <p>${t('זהו מטרופולין אחד לכל דבר:')} <b>${t('רשות תחבורה משותפת')}</b> ${t('— המטרו, כרטיס')}
+        <span class="lat">Andante</span> ${t('ותעריפי האזורים — ושוק עבודה אחד. כאן חיים כ-1.44 מיליון מתושבי המחוז.')}</p>
     </div>
     <div class="card">
       <h3><span class="lat">Tâmega e Sousa</span></h3>
-      <p>7 מהעיריות כאן: פנאפיאל, פאסוש דה פריירה, לוזאדה, פלגיירש, אמרנטה,
-        מרקו דה קנבזש ובאיאו. (ליחידה שייכות עוד ארבע עיריות ממחוזות אחרים.)</p>
-      <p>כלכלה נפרדת — רהיטים, נעליים וטקסטיל — <b>מחוץ למערכת התחבורה
-        המטרופולינית</b>, עם מחירי נדל״ן נמוכים משמעותית ואוכלוסייה מתכווצת.
-        כאן חיים כ-348 אלף תושבים.</p>
+      <p>${t('7 מהעיריות כאן: פנאפיאל, פאסוש דה פריירה, לוזאדה, פלגיירש, אמרנטה, מרקו דה קנבזש ובאיאו. (ליחידה שייכות עוד ארבע עיריות ממחוזות אחרים.)')}</p>
+      <p>${t('כלכלה נפרדת — רהיטים, נעליים וטקסטיל —')} <b>${t('מחוץ למערכת התחבורה המטרופולינית')}</b>${t(', עם מחירי נדל״ן נמוכים משמעותית ואוכלוסייה מתכווצת. כאן חיים כ-348 אלף תושבים.')}</p>
     </div>
-    <p class="note">להבדל הזה יש משמעות מעשית: הוא קובע אם עירייה נמצאת בתוך
-      מערכת הכרטוס והמטרו של פורטו, לאן מגיעים כספי הפיתוח האירופיים, ובאיזו
-      יחידה INE מפרסם נתונים. זו גם החלוקה שמסך המחוז מצייר — עד גרסה 1.8 הוא
-      צייר שלוש חגורות לפי מרחק ואופי, שהיו קריאה של המסמך המקורי ולא חלוקה
-      רשמית.</p>
+    <p class="note">${t('להבדל הזה יש משמעות מעשית: הוא קובע אם עירייה נמצאת בתוך מערכת הכרטוס והמטרו של פורטו, לאן מגיעים כספי הפיתוח האירופיים, ובאיזו יחידה INE מפרסם נתונים. זו גם החלוקה שמסך המחוז מצייר — עד גרסה 1.8 הוא צייר שלוש חגורות לפי מרחק ואופי, שהיו קריאה של המסמך המקורי ולא חלוקה רשמית.')}</p>
 
-    <h2>מה יש כאן</h2>
-    <p>המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני.
-      הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.</p>
+    <h2>${t('מה יש כאן')}</h2>
+    <p>${t('המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני. הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.')}</p>
     <ul>
-      <li>18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·
-        <span class="num">${D.totPoi}</span> נקודות במפה</li>
-      <li>אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים</li>
-      <li>מפקד 2021 לכל יחידה: גיל חציוני, פילוח גיל, אזרחות זרה, ואחת-עשרה
-        שורות של דיור ובניינים — דירות ריקות, בעלות מול שכירות, חניה, מצב
-        הבניינים ותקופת הבנייה</li>
-      <li>נבנה: <span class="lat">${html(D.generated)}</span></li>
+      <li>${t('18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·')}
+        <span class="num">${D.totPoi}</span> ${t('נקודות במפה')}</li>
+      <li>${t('אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים')}</li>
+      <li>${t('מפקד 2021 לכל יחידה: גיל חציוני, פילוח גיל, אזרחות זרה, ואחת-עשרה שורות של דיור ובניינים — דירות ריקות, בעלות מול שכירות, חניה, מצב הבניינים ותקופת הבנייה')}</li>
+      <li>${t('נבנה:')} <span class="lat">${html(D.generated)}</span></li>
     </ul>
-    <p class="note">מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים.
-      האותיות של השכונות והיישובים הן של האפליקציה: הן נועדו לקשור בין המפה
-      לרשימה, ואין להן קיום מחוץ לאפליקציה.</p>
+    <p class="note">${t('מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים. האותיות של השכונות והיישובים הן של האפליקציה: הן נועדו לקשור בין המפה לרשימה, ואין להן קיום מחוץ לאפליקציה.')}</p>
     ${STANDALONE
       ? `<p class="note">זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת
          ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-<span class="lat">porto/data/raw/</span>.</p>`
       : `<p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">פתיחת המסמך המקורי (PDF, 19 עמודים)</a></p>`}
 
-    <h2>מה עוד חסר</h2>
+    <h2>${t('מה עוד חסר')}</h2>
     <p>${html(s.missing.note_he)}</p>
     ${miss}
 
-    <h2>מקור לכל שדה</h2>
+    <h2>${t('מקור לכל שדה')}</h2>
     ${fields}
 
-    <h2>גרסה</h2>
-    <p>פורטולנד <span class="lat num">${html(D.version)}</span> ·
-      הנתונים נבנו ב-<span class="lat">${html(D.generated)}</span></p>
+    <h2>${t('גרסה')}</h2>
+    <p>${t('פורטולנד')} <span class="lat num">${html(D.version)}</span> ${t('· הנתונים נבנו ב-')}<span class="lat">${html(D.generated)}</span></p>
 
-    <h2>רישוי וייחוס</h2>
+    <h2>${t('רישוי וייחוס')}</h2>
     ${s.license_notices.map(n => `<p>${html(n)}</p>`).join('')}
-    <p class="note">לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל —
-      קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש
-      של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.</p>
-    <p class="note">האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו,
-      המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.</p>
+    <p class="note">${t('לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.')}</p>
+    <p class="note">${t('האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.')}</p>
 
-    <h2>נקודות הציון שלכם</h2>
-    <p>הן נשמרות <b>במכשיר הזה בלבד</b>. לא נשלחות לשום מקום ולא מגובות.</p>
-    <p>לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה פותחת
-      את הכרטיסייה שלה. לחיצה כפולה על נקודה פותחת אותה במפות גוגל.</p>
-    <p>בבחירת תמונה אפשר לסמן כמה תמונות בבת אחת. הראשונה נכנסת לכרטיסייה
-      הפתוחה, וכל אחת מהשאר הופכת לנקודה משלה. תמונה שיש בה קואורדינטות נוחתת
-      עליהן; תמונה שאין בה נוחתת בפינה השמאלית העליונה של המפה — מקום שאפשר
-      לראות ולגרור ממנו, ולא טענה על היכן היא צולמה.</p>
-    <p>בסימון נ.צ. על המפה: גוררים את הסימון למקום, ולחיצה כפולה עליו קובעת
-      אותו.</p>
-    <p class="note">ההעתקה מוציאה את הנקודות כטקסט. התמונות עצמן נשארות במכשיר
-      ולא נכללות בה, ולכן נקודה שתיובא במכשיר אחר תגיע בלי התמונה שלה.</p>`;
+    <h2>${t('נקודות הציון שלכם')}</h2>
+    <p>${t('הן נשמרות')} <b>${t('במכשיר הזה בלבד')}</b>${t('. לא נשלחות לשום מקום ולא מגובות.')}</p>
+    <p>${t('לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה פותחת את הכרטיסייה שלה. לחיצה כפולה על נקודה פותחת אותה במפות גוגל.')}</p>
+    <p>${t('בבחירת תמונה אפשר לסמן כמה תמונות בבת אחת. הראשונה נכנסת לכרטיסייה הפתוחה, וכל אחת מהשאר הופכת לנקודה משלה. תמונה שיש בה קואורדינטות נוחתת עליהן; תמונה שאין בה נוחתת בפינה השמאלית העליונה של המפה — מקום שאפשר לראות ולגרור ממנו, ולא טענה על היכן היא צולמה.')}</p>
+    <p>${t('בסימון נ.צ. על המפה: גוררים את הסימון למקום, ולחיצה כפולה עליו קובעת אותו.')}</p>
+    <p class="note">${t('ההעתקה מוציאה את הנקודות כטקסט. התמונות עצמן נשארות במכשיר ולא נכללות בה, ולכן נקודה שתיובא במכשיר אחר תגיע בלי התמונה שלה.')}</p>`;
 }
 
 /* ------------------------------------------------------------------ wire --- */
@@ -3904,22 +3924,23 @@ function wire() {
   } catch (err) {
     const b = $('#boot');
     b.classList.add('err');
-    b.querySelector('p').textContent = 'טעינת הנתונים נכשלה: ' + err.message +
-      ' — יש להריץ את האפליקציה משרת (למשל python3 -m http.server), לא כקובץ מקומי.';
+    b.querySelector('p').textContent = t('טעינת הנתונים נכשלה: ') + err.message +
+      t(' — יש להריץ את האפליקציה משרת (למשל python3 -m http.server), לא כקובץ מקומי.');
     return;
   }
   // Category labels and their order come from build.py, which also decides
   // which POIs make it into the file at all.
   D.poiOrder = ['station', 'hospital', 'university', 'museum', 'culture', 'market', 'landmark', 'green'];
   D.poiLabel = {
-    station: 'תחנות מטרו ורכבת', hospital: 'בתי חולים', university: 'אוניברסיטה והשכלה',
-    museum: 'מוזיאונים וגלריות', culture: 'תיאטרון, ספריות ותרבות', market: 'שווקים',
-    landmark: 'אתרים ומונומנטים', green: 'פארקים, גנים וחופים',
+    station: t('תחנות מטרו ורכבת'), hospital: t('בתי חולים'), university: t('אוניברסיטה והשכלה'),
+    museum: t('מוזיאונים וגלריות'), culture: t('תיאטרון, ספריות ותרבות'), market: t('שווקים'),
+    landmark: t('אתרים ומונומנטים'), green: t('פארקים, גנים וחופים'),
   };
   S.cats = new Set(D.poiOrder);
 
   loadMine();
   applyView();
+  applyLang();
   themeAttr();
   applySwitches();
   initMap();
@@ -3946,3 +3967,768 @@ function wire() {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline unavailable */ });
   }
 })();
+
+/* ------------------------------------------------------------- the English ---
+   Keyed by the Hebrew, which is the source language: the code above reads as
+   Hebrew and this is the only place that knows there is a second language.
+
+   A key that is missing here falls back to its Hebrew, on purpose — see t().
+   scripts/checks.py compares this table against every t() call in the file, so
+   a new Hebrew string cannot quietly reach an English reader untranslated. */
+Object.assign(EN, {
+  'בחירה':
+    'Choose',
+  'ביטול':
+    'Cancel',
+  'מקורות, דיוק ומה שחסר':
+    'Sources, accuracy and what is missing',
+  'טוען את נתוני המחוז…':
+    'Loading the district data…',
+  'הרובעים של':
+    'The parishes of',
+  /* The two NUTS III regions, and the seven labels a municipality profile uses.
+     Both are small closed vocabularies that come from the data rather than from
+     this file, so they are translated here by value. */
+  'האזור המטרופוליטני של פורטו':
+    'Área Metropolitana do Porto',
+  'טאמגה אה סוזה':
+    'Tâmega e Sousa',
+  'אופי':
+    'Character',
+  'כלכלה':
+    'Economy',
+  'נדל״ן':
+    'Property',
+  'שכונות':
+    'Neighbourhoods',
+  'יתרון':
+    'Strength',
+  'חיסרון':
+    'Weakness',
+  'מגמה':
+    'Trend',
+  'ממפה':
+    'On the map',
+  'גוררים סימון על המפה ולוחצים בחירה.':
+    'Drag a marker on the map and tap Choose.',
+  'מתמונה':
+    'From a photo',
+  'הקואורדינטות של התמונה קובעות את המקום.':
+    "The photo's coordinates decide the place.",
+  'מכתובת':
+    'By name',
+  'חיפוש בעיריות, ברובעים וביישובים שבאפליקציה.':
+    'Search the municipalities, parishes and localities in the app.',
+  /* A language names itself in its own language — that is how a reader who does
+     not yet have the interface in their language finds their way back. */
+  'עברית':
+    'עברית',
+  ' <span class="flag">פורק ב-2025</span>':
+    ' <span class="flag">split in 2025</span>',
+  ' INE אינו מפרסם ברמת הרובע בעירייה הזאת, ולכן אין כאן ולו ערך אחד.':
+    ' INE does not publish parish-level figures in this municipality, so there is not one value here.',
+  ' · <span class="flag">מהתמונה</span>':
+    ' · <span class="flag">from the photo</span>',
+  ' · בלי ':
+    ' · without ',
+  ' · הכל':
+    ' · all',
+  ' · קוד רשמי <span class="lat num">':
+    ' · official code <span class="lat num">',
+  ' · תמונה':
+    ' · photo',
+  ' דולגו':
+    ' skipped',
+  ' נקודות':
+    ' points',
+  ' נקודות הועתקו. אפשר להדביק אותן ':
+    ' points copied. Paste them ',
+  ' רובעים נפרדים: ':
+    ' separate parishes: ',
+  ' תושבים':
+    ' residents',
+  ' — אין תיאור לרובע הזו</span>':
+    ' — no description for this parish</span>',
+  ' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים':
+    ' — at this level there is nothing to choose, so the two buttons are not here',
+  ' — יש להריץ את האפליקציה משרת (למשל python3 -m http.server), לא כקובץ מקומי.':
+    ' — run the app from a server (for example python3 -m http.server), not as a local file.',
+  '" aria-label="פירוט נקודות הציון">':
+    '" aria-label="List the landmark categories">',
+  ') — לא INE. היא קובעת איפה בדיוק עובר כל גבול. ממנה מגיעות כל הצורות על המפה, וכל שטח בקמ״ר שמוצג כאן חושב מהפוליגונים עצמם ולא נלקח מטבלה.':
+    ') — not INE. It settles exactly where every boundary runs. Every shape on the map comes from it, and every area in km² shown here was computed from the polygons themselves rather than taken from a table.',
+  ', אמרנטה':
+    ', Amarante',
+  ', ובה 25 יחידות. מה שמייחד אותה בפורטוגל: כל יחידה היא גם':
+    ', with 25 units. What is distinctive about it in Portugal: every unit is also',
+  ', והוא בנוי בשכבות. מחוז פורטו הוא':
+    ', and it is built in layers. Porto district is',
+  ', ולכן המיקום חסום. הקישור המקוון (https) יעבוד.':
+    ', so location is blocked. The online link (https) will work.',
+  ', טרופה':
+    ', Trofa',
+  ', כלומר הם הקוד שהמדינה מפרסמת ולא מספור של האפליקציה.':
+    ", so they are the code the state publishes and not a numbering of the app's own.",
+  ', עם מחירי נדל״ן נמוכים משמעותית ואוכלוסייה מתכווצת. כאן חיים כ-348 אלף תושבים.':
+    ', with markedly lower property prices and a shrinking population. About 348,000 residents live here.',
+  '. זה הקוד שמופיע בטפסים, במסמכי מקרקעין ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.':
+    '. This is the code that appears on forms, in property documents and in official tables, and it can be used with any body in Portugal.',
+  '. לא נשלחות לשום מקום ולא מגובות.':
+    '. They are sent nowhere and backed up nowhere.',
+  '. קוד DICOFRE הוא מה שמחבר ביניהם — אותו מזהה בשני המקורות, ולכן אפשר לצרף מספר לגבול בלי לנחש.':
+    '. The DICOFRE code is what joins them — the same identifier in both sources, so a number can be attached to a boundary without guessing.',
+  '11 מהעיריות כאן: פורטו, וילה נובה דה גאיה, מטוזיניוש, מאיה, גונדומאר, ולונגו, וילה דו קונדה, פובואה דה וארזים, סנטו טירסו, טרופה ופארדש. (ל-AMP שייכות עוד שש עיריות ממחוז אָבֵיירו.)':
+    '11 of the municipalities here: Porto, Vila Nova de Gaia, Matosinhos, Maia, Gondomar, Valongo, Vila do Conde, Póvoa de Varzim, Santo Tirso, Trofa and Paredes. (Six more municipalities from the Aveiro district also belong to the AMP.)',
+  '13 12 02 ▔▔ ▔▔ ▔▔ │  │  └── רובע  (Bonfim) │  └───── עירייה (פורטו) └──────── מחוז  (פורטו)':
+    '13 12 02 ▔▔ ▔▔ ▔▔ │  │  └── parish       (Bonfim) │  └───── municipality (Porto) └──────── district     (Porto)',
+  '18 העיריות שבאפליקציה מתחלקות בין שתי יחידות כאלה:':
+    'The 18 municipalities in the app are divided between two such units:',
+  '18 העיריות — לפי המספור במפה':
+    'The 18 municipalities — by the numbering on the map',
+  '18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·':
+    '18 municipalities · 243 parishes · 7 Porto quarters · 53 neighbourhoods ·',
+  '18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.':
+    '18 municipalities and 243 parishes in north-west Portugal, from the Atlantic in the west to the Marão mountains in the east. It is the most densely populated district in the country.',
+  '7 מהעיריות כאן: פנאפיאל, פאסוש דה פריירה, לוזאדה, פלגיירש, אמרנטה, מרקו דה קנבזש ובאיאו. (ליחידה שייכות עוד ארבע עיריות ממחוזות אחרים.)':
+    '7 of the municipalities here: Penafiel, Paços de Ferreira, Lousada, Felgueiras, Amarante, Marco de Canaveses and Baião. (Four more municipalities from other districts belong to the unit.)',
+  '; שתי הספרות שאחריו הן העירייה, ושתיים נוספות הן הרובע:':
+    '; the next two digits are the municipality, and two more are the parish:',
+  '</span> שכונות':
+    '</span> neighbourhoods',
+  '<button class="chip is-on" data-wpact="save">שמירה</button>':
+    '<button class="chip is-on" data-wpact="save">Save</button>',
+  '<button class="lb-x" type="button" aria-label="סגירה">✕</button>':
+    '<button class="lb-x" type="button" aria-label="Close">✕</button>',
+  '<button data-go="district">מחוז פורטו</button>':
+    '<button data-go="district">Porto District</button>',
+  '<h2>עריכת מקום</h2>':
+    '<h2>Edit place</h2>',
+  '<h3>נקודות במפה</h3>':
+    '<h3>Points on the map</h3>',
+  '<h3>קווי גבול</h3>':
+    '<h3>Boundary lines</h3>',
+  '<h3>שכבות</h3>':
+    '<h3>Layers</h3>',
+  '<input id="mineName" type="text" autocomplete="off" placeholder="למשל: דירה שראיתי" value="':
+    '<input id="mineName" type="text" autocomplete="off" placeholder="e.g. a flat I saw" value="',
+  '<p class="mnote">הנקודות עצמן מצוירות ברמת הרובע; הבחירה כאן נשמרת וחלה שם.</p>':
+    '<p class="mnote">The points themselves are drawn at parish level; the choice here is kept and applies there.</p>',
+  '<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>':
+    '<p class="note" style="margin-block-end:8px">Tapping a parish opens it: the neighbourhoods inside it as letters, and sites and institutions as black points.</p>',
+  '<p class="note" style="margin-block-start:6px">הקווים ששייכים למה שעל ':
+    '<p class="note" style="margin-block-start:6px">The lines that belong to what is ',
+  '<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הרובע.</p>':
+    '<p class="note" style="margin-block-start:8px">Point categories are chosen at parish level.</p>',
+  '<p class="note">אין ביישוב הזה נקודות place ב-OpenStreetMap.</p>':
+    '<p class="note">This locality has no place points in OpenStreetMap.</p>',
+  '<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ':
+    '<p class="note">While managing places they are all shown, and this layer ',
+  '<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>':
+    '<p class="note">The description was written for this app, not copied from an official source.</p>',
+  '<p class="note">התמונה אינה במכשיר הזה. ':
+    '<p class="note">The photo is not on this device. ',
+  '<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>':
+    '<p class="note">No sites or institutions are mapped here in OpenStreetMap.</p>',
+  '<p class="note">לא נבחרה שום קטגוריה.</p>':
+    '<p class="note">No category is selected.</p>',
+  '<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>':
+    '<p class="note">Two letters or more — in Hebrew, Portuguese or English.</p>',
+  '<p class="note">שתי אותיות ומעלה. האפליקציה אינה מחפשת ':
+    '<p class="note">Two letters or more. The app does not search ',
+  '<span class="flag">אין נקודה במפה</span>':
+    '<span class="flag">no point on the map</span>',
+  '<span class="flag">תיאור שנכתב לאפליקציה</span>':
+    '<span class="flag">description written for this app</span>',
+  '<span class="now">מחוז פורטו</span>':
+    '<span class="now">Porto District</span>',
+  'CAOP נותן את':
+    'CAOP supplies the',
+  'INE נותן את':
+    'INE supplies the',
+  'NUTS III — החלוקה הרשמית של המחוז':
+    "NUTS III — the district's official division",
+  '· דיוק':
+    '· accuracy',
+  '· הנתונים נבנו ב-':
+    '· data built on ',
+  '· מהקטן לגדול':
+    '· smallest to largest',
+  'אבטלה':
+    'Unemployment',
+  'אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים':
+    '2021 population, area and density for all 18 municipalities and all 243 parishes',
+  'אוניברסיטה והשכלה':
+    'University and education',
+  'אופי':
+    'Character',
+  'אותיות היישובים':
+    'Locality letters',
+  'אותיות השכונות':
+    'Neighbourhood letters',
+  'אזורים':
+    'Regions',
+  'אזרחות זרה':
+    'Foreign citizenship',
+  'אחת דולגה':
+    'one skipped',
+  'איך קוראים את המספרים':
+    'How to read the numbers',
+  'אין IndexedDB בדפדפן הזה':
+    'This browser has no IndexedDB',
+  'אין נתון':
+    'no data',
+  'אין עדיין נקודות לייצוא.':
+    'There are no points to export yet.',
+  'אין תוצאות ל״':
+    'No results for “',
+  'אנשים':
+    'People',
+  'אנשים — מפקד 2021':
+    'People — Census 2021',
+  'אפור תמיד.</p>':
+    'always grey.</p>',
+  'אתה ב':
+    'You are in ',
+  'אתר':
+    'Site',
+  'אתרים ומונומנטים':
+    'Sites and monuments',
+  'בבחירת תמונה אפשר לסמן כמה תמונות בבת אחת. הראשונה נכנסת לכרטיסייה הפתוחה, וכל אחת מהשאר הופכת לנקודה משלה. תמונה שיש בה קואורדינטות נוחתת עליהן; תמונה שאין בה נוחתת בפינה השמאלית העליונה של המפה — מקום שאפשר לראות ולגרור ממנו, ולא טענה על היכן היא צולמה.':
+    'When choosing photos you can select several at once. The first goes into the open card, and each of the rest becomes a point of its own. A photo carrying coordinates lands on them; one without lands in the top corner of the map — somewhere visible to drag from, not a claim about where it was taken.',
+  'בבעלות הדיירים':
+    'Owner-occupied',
+  'בהודעה לעצמך, ולייבא בחזרה בכל מכשיר.':
+    'into a message to yourself, and import them back on any device.',
+  'בחירת מקום במפה':
+    'Pick a place on the map',
+  'בחירת תמונות':
+    'Choose photos',
+  'ביטחון':
+    'Safety',
+  'בית שני':
+    'Second homes',
+  'בלי נתון — לא מדורגים':
+    'No value — not ranked',
+  'במכשיר הזה בלבד':
+    'on this device only',
+  'במקום קוד, ובכרטיס של כל אחת מהן רשומים בשמם ובקודם הרובעים שהחליפו אותה. 218 הרובעים האחרים לא נגעו ברפורמה והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.':
+    'instead of a code, and each of their cards lists by name and code the parishes that replaced it. The other 218 parishes were untouched by the reform and the code shown for them is the full, valid official one.',
+  'בני 0–14':
+    'Aged 0–14',
+  'בני 0–14 ':
+    'Aged 0–14 ',
+  'בני 65+':
+    'Aged 65+',
+  'בניינים':
+    'Buildings',
+  'בסימון נ.צ. על המפה: גוררים את הסימון למקום, ולחיצה כפולה עליו קובעת אותו.':
+    'When placing a point on the map: drag the marker to the spot, and a double tap fixes it.',
+  'בפינת המפה.':
+    'in the corner of the map.',
+  'ברפורמת 2025 חולק ל־':
+    'The 2025 reform split it into ',
+  'בשכירות':
+    'Rented',
+  'בתוך העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים מגיעים מיחידות שמסומנות ב-OpenStreetMap עם':
+    'within the municipality, and each parish card also shows the full six-digit code. The codes come from units tagged in OpenStreetMap with',
+  'בתי חולים':
+    'Hospitals',
+  'בתמונה אין מיקום שמיש. ייתכן שתיוג המיקום במצלמה כבוי — ':
+    'The photo has no usable location. Location tagging may be off in the camera — ',
+  'בתמונה אין מיקום — הנקודה נשארה איפה שסומנה.':
+    'The photo carries no location — the point stayed where it was placed.',
+  'גבול מחוז פורטו':
+    'Porto district boundary',
+  'גבולות':
+    'Boundaries',
+  'גבולות האזורים':
+    'Region boundaries',
+  'גבולות העיריות':
+    'Municipality boundaries',
+  'גבולות הרובעים':
+    'Parish boundaries',
+  'גוף אמיתי':
+    'a real body',
+  'גיל חציוני':
+    'Median age',
+  'גרסה':
+    'Version',
+  'גרפיקה בלבד':
+    'Graphics only',
+  'גרפיקה וטקסט':
+    'Graphics and text',
+  'דיור ובניינים':
+    'Housing and buildings',
+  'דיור ובניינים — מפקד 2021':
+    'Housing and buildings — Census 2021',
+  'דירות':
+    'Dwellings',
+  'דירות חדשות':
+    'New dwellings',
+  'דירות קיימות':
+    'Existing dwellings',
+  'דירות ריקות':
+    'Vacant dwellings',
+  'האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.':
+    'The app works without a network. With no connection the background tiles will not load, the map shows boundaries only, and all the data and text remain fully available.',
+  'הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14. השינוי מ-2011 הוא כפי ש-INE מפרסמת אותו על גאוגרפיית מפקד 2021 — לא חושב כאן, כי חלוקת הרובעים של 2011 אינה זו של 2021.':
+    'Median age is interpolated from five-year age bands — INE publishes no median in this file. The ageing index is people aged 65 and over per hundred aged 0–14. The change since 2011 is as INE publishes it, on the 2021 census geography: it is not computed here, because the 2011 parishes are not the 2021 parishes.',
+  'הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.':
+    'Paste points exported earlier. A point that already exists will not be duplicated.',
+  'הדפדפן הזה לא תומך באיתור מיקום.':
+    'This browser does not support geolocation.',
+  'הדפדפן נותן מיקום רק בחיבור מאובטח. הדף הזה נפתח מ־':
+    'Browsers give a location only over a secure connection. This page was opened from ',
+  'ההעתקה מוציאה את הנקודות כטקסט. התמונות עצמן נשארות במכשיר ולא נכללות בה, ולכן נקודה שתיובא במכשיר אחר תגיע בלי התמונה שלה.':
+    'Copying exports the points as text. The photos themselves stay on the device and are not included, so a point imported on another device arrives without its photo.',
+  'הוא תקן אירופי לחלוקת שטח לצורך סטטיסטיקה והקצאת תקציבים. בפורטוגל יש שלוש רמות; הרמה שבפועל משמשת היא':
+    'is a European standard for dividing territory for statistics and budget allocation. Portugal has three levels; the one actually used is',
+  'החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה מקיף את העיריות של כל אזור.':
+    "The district's official division, and the one INE publishes by. The orange line on the map encloses each region's municipalities.",
+  'החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.':
+    "The split comes from INE's conversion table between the 2021 census sub-sections and the 2025 boundaries, and it sums exactly to the population of the unit here. The boundaries themselves are not in the app yet — that needs CAOP 2025.",
+  'החלפת התמונה':
+    'Replace the photo',
+  'החלפת נתון':
+    'Change field',
+  'הטלפון לא הצליח לקבוע מיקום. כדאי לבדוק שה-GPS דלוק ולנסות שוב בחוץ.':
+    'The phone could not fix a position. Check that GPS is on and try again outdoors.',
+  'הכנסה מוצהרת (חציון)':
+    'Declared income (median)',
+  'הכנסה מוצהרת — INE':
+    'Declared income — INE',
+  'הכנסה שנתית ברוטו כפי שהוצהרה לרשות המסים, החציון על פני משקי הבית הפיסקאליים.':
+    'Annual gross income as declared to the tax authority, the median across fiscal households.',
+  'הלשכה המרכזית לסטטיסטיקה של פורטוגל. אחראית על כל הסטטיסטיקה הרשמית, והמוצר המרכזי שלה כאן הוא':
+    "Portugal's national statistics institute. It is responsible for all official statistics, and its central product here is",
+  'המחוז':
+    'The district',
+  'המיקום שלי':
+    'My location',
+  'המיקום שלך אינו בתוך מחוז פורטו — כ-':
+    'You are outside Porto district — about ',
+  'המסך מוצגים בשחור, והשאר באפור. קו האזורים ':
+    'on screen are black, the rest grey. The region line is ',
+  'המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני. הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.':
+    'The screen is split in two: a map in one half, and everything known about what is on it in the other. The map pans and zooms inside its own window, and the text scrolls without limit.',
+  'המספר על הכרטיסייה הוא כמה יחידות יש להן ערך בשדה הזה. ביתר יוצג ׳אין נתון׳, והן לא ידורגו.':
+    'The number on the card is how many units have a value for that field. The rest show “no data” and are not ranked.',
+  'המספר על כל רובע הוא הקוד הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן':
+    'The number on each parish is its official code within the municipality, and the list is ordered by it. A parish marked',
+  'המספר שמופיע על כל עירייה במפה הוא':
+    'The number on each municipality on the map is',
+  'המספר שעל כל רובע הוא באותו אופן':
+    'The number on each parish is likewise',
+  'המספרים':
+    'numbers',
+  'המקומות שלי':
+    'My places',
+  'הן נשמרות':
+    'are kept',
+  'הנקודה הועברה לקואורדינטות של התמונה.':
+    "Moved to the photo's coordinates.",
+  'הנקודה מוקמה לפי הקואורדינטות של התמונה.':
+    "Placed at the photo's coordinates.",
+  'הנקודה נשארה במקום שסימנת.':
+    'The point stayed where you placed it.',
+  'הנקודה נשמרה, אבל התמונה לא: ':
+    'The point was saved, but the photo was not: ',
+  'הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.':
+    "The digits do not run 01, 02, 03 without gaps, and that is correct: the list was set in Portuguese alphabetical order, and when a parish ceases to exist its code is not returned to use and not reassigned. A unit created by a merger or a split was given a new number added at the end of that municipality's list — which is why a municipality can show 02 next to 44.",
+  'הסרת התמונה':
+    'Remove the photo',
+  'העיריות':
+    'Municipalities',
+  'העתקה ידנית':
+    'Copy manually',
+  'הצבע מייצג את החמישון ולא את גודל הערך, כדי שכל קבוצה תיקרא במבט אחד; הערך המדויק בשורה. המספרים על המפה הם קודי DICOFRE, כמו בכל מסך אחר. אין כאן צד ״טוב״ ואין צד ״רע״ — רק קטן וגדול.':
+    'The colour stands for the fifth, not for the size of the value, so each group reads at a glance; the exact value is in the row. The numbers on the map are DICOFRE codes, as on every other screen. There is no “good” side and no “bad” side here — only smaller and larger.',
+  'הצורות':
+    'shapes',
+  'הרובעים':
+    'Parishes',
+  'השוואת נתונים':
+    'Compare data',
+  'השכלה גבוהה':
+    'Higher education',
+  'התמונה תוסר כשהנקודה תישמר.':
+    'The photo will be removed when the point is saved.',
+  'ויטרז׳ מפות':
+    'Stained-glass fills',
+  'ועם':
+    'and',
+  'ותעריפי האזורים — ושוק עבודה אחד. כאן חיים כ-1.44 מיליון מתושבי המחוז.':
+    "pass and the zone fares — and one labour market. About 1.44 million of the district's residents live here.",
+  'זה לא טקסט תקין של נקודות.':
+    'That is not valid point text.',
+  'זהו מטרופולין אחד לכל דבר:':
+    'This is a metropolis in every sense:',
+  'זו אינה ׳פשיעה חמורה׳':
+    'this is not “violent crime”',
+  'זקוקים לתיקון':
+    'Need repair',
+  'חדל להתקיים כיחידה ברפורמת 2025, והקוד שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.':
+    'ceased to exist as a unit in the 2025 reform, and its code is the one it held until then — its card lists the parishes that replaced it.',
+  'חדש':
+    'New',
+  'חוזרת לפעול ביציאה ממנו.</p>':
+    'takes effect again on leaving.</p>',
+  'חזרה':
+    'Back',
+  'חזרה למחוז':
+    'Back to the district',
+  'חזרה למפת המחוז':
+    'Back to the district map',
+  'חיפוש':
+    'Search',
+  'חיפוש מקום':
+    'Search for a place',
+  'חלק מהאיחודים של 2013 בוטלו, ורובעים שאוחדו חזרו להיות יחידות נפרדות עם קודים חדשים. במחוז פורטו זה נוגע ל-25 מ-243 היחידות שהאפליקציה מציירת: הן פורקו ל-57 רובעים חדשים, והקוד של היחידה המאוחדת בוטל. הגבולות והנתונים כאן הם CAOP 2020 — כלומר המפה של 2013 — ולכן ל-25 האלה מוצג':
+    "Some of the 2013 mergers were undone, and merged parishes became separate units again with new codes. In Porto district this touches 25 of the 243 units the app draws: they were split into 57 new parishes, and the merged unit's code was withdrawn. The boundaries and data here are CAOP 2020 — the 2013 map — so those 25 show",
+  'חצי מפה, חצי טקסט':
+    'Half map, half text',
+  'חציון למשק בית פיסקאלי':
+    'Median per fiscal household',
+  'טעינת הנתונים נכשלה: ':
+    'Loading the data failed: ',
+  'טקסט בלבד':
+    'Text only',
+  'טקסט על כל המסך':
+    'Text full screen',
+  'ייבוא':
+    'Import',
+  'ייבוא נקודות':
+    'Import points',
+  'ייבוא נתונים':
+    'Import data',
+  'יישוב':
+    'Locality',
+  'יישובים ושכונות':
+    'Localities and neighbourhoods',
+  'יש כרטיסייה בעריכה — לשמור או לבטל אותה קודם.':
+    'A card is open for editing — save or cancel it first.',
+  'כדי שהאפליקציה תציג את 275 הרובעים של 2025 עצמם — ולא את חלוקת 2020 עם הערה — צריך את שכבת הגבולות CAOP במהדורה 2024 או 2025. אין לי אותה כאן, וכל נתוני האוכלוסייה שיש לי הם ממפקד 2021 שנספר לפי חלוקת 2013, כך שפיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים.':
+    'For the app to show the 275 parishes of 2025 themselves — rather than the 2020 division with a note — the CAOP boundary layer in its 2024 or 2025 edition is needed. It is not here, and all the population data available was counted on the 2013 division in the 2021 census, so splitting the units today would leave 57 parishes with no population figure.',
+  'כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו. המספרים על המפה הם קודי DICOFRE הרשמיים.':
+    'Every number in the app is tappable and shows its source and reference year. The numbers on the map are the official DICOFRE codes.',
+  'כל נתוני האוכלוסייה באפליקציה הם ממפקד 2021.':
+    'All the population data in the app comes from the 2021 census.',
+  'כל ערך הוא החציון של שנים עשר החודשים שמסתיימים ב-':
+    'Every value is the median of the twelve months ending in ',
+  'כלכלה נפרדת — רהיטים, נעליים וטקסטיל —':
+    'a separate economy — furniture, footwear and textiles —',
+  'כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.</p>':
+    'street addresses — it holds no address database and has no network.</p>',
+  'לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו':
+    'not total household income and not net income',
+  'לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.':
+    'Could not copy to the clipboard. Select the text here and copy it manually.',
+  'לא הצלחתי לקבל מיקום.':
+    'Could not get a location.',
+  'לא הצלחתי לקרוא את התמונה. ייתכן שהיא בפורמט שהדפדפן ':
+    'Could not read the photo. It may be in a format the browser ',
+  'לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.':
+    'Could not save — the browser may be blocking local storage.',
+  'לא נוספה אף נקודה חדשה.':
+    'No new point was added.',
+  'לא ניתנה הרשאת מיקום. אפשר לאשר אותה מהאייקון שליד כתובת האתר בדפדפן.':
+    'Location permission was refused. You can allow it from the icon beside the address bar.',
+  'לא פותח, כמו HEIC — צילום ב-JPEG יעבוד.':
+    'does not open, such as HEIC — a JPEG will work.',
+  'לאלף':
+    'per 1,000',
+  'לאלף תושבים':
+    'per 1,000 residents',
+  'להבדל הזה יש משמעות מעשית: הוא קובע אם עירייה נמצאת בתוך מערכת הכרטוס והמטרו של פורטו, לאן מגיעים כספי הפיתוח האירופיים, ובאיזו יחידה INE מפרסם נתונים. זו גם החלוקה שמסך המחוז מצייר — עד גרסה 1.8 הוא צייר שלוש חגורות לפי מרחק ואופי, שהיו קריאה של המסמך המקורי ולא חלוקה רשמית.':
+    "The difference has practical weight: it settles whether a municipality is inside Porto's ticketing and metro system, where European development money goes, and which unit INE publishes its figures under. It is also the division the district screen draws — until version 1.8 it drew three belts by distance and character, which were a reading of the original document and not an official division.",
+  'לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.':
+    "Double-tapping anything that has a coordinate opens it in Google Maps — a link with the coordinate only, no key and nothing stored, and so without breaching Google's terms, which forbid storing or displaying their data outside their own map.",
+  'לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה פותחת את הכרטיסייה שלה. לחיצה כפולה על נקודה פותחת אותה במפות גוגל.':
+    'Tapping a card highlights its point on the map, and tapping a point on the map opens its card. Double-tapping a point opens it in Google Maps.',
+  'לכל יחידה מנהלית בפורטוגל יש קוד רשמי אחד,':
+    'Every administrative unit in Portugal has one official code,',
+  'למחוק? לחיצה נוספת':
+    'Delete? Tap again',
+  'לפי הקואורדינטות שבתמונה,':
+    'at the coordinates in the photo,',
+  'לקמ״ר':
+    'per km²',
+  'מדד הזדקנות':
+    'Ageing index',
+  'מה החליף אותו — 2025':
+    'What replaced it — 2025',
+  'מה יש כאן':
+    'What is here',
+  'מה להשוות':
+    'What to compare',
+  'מה עוד חסר':
+    'What is still missing',
+  'מה שחשוב לזכור על המקום הזה':
+    'What matters about this place',
+  'מהם תיקון עמוק':
+    'of those, major repair',
+  'מוזיאונים וגלריות':
+    'Museums and galleries',
+  'מורחב':
+    'Expanded',
+  'מחוז פורטו':
+    'Porto District',
+  'מחוץ למחוז פורטו':
+    'Outside Porto district',
+  'מחוץ למערכת התחבורה המטרופולינית':
+    'outside the metropolitan transport system',
+  'מחיקה':
+    'Delete',
+  'מחפש מיקום…':
+    'Locating…',
+  'מי מודד ומי סופר':
+    'Who measures and who counts',
+  'מידע':
+    'About',
+  'מכירות':
+    'Sales',
+  'מסלול ניווט':
+    'Breadcrumb',
+  'מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים. האותיות של השכונות והיישובים הן של האפליקציה: הן נועדו לקשור בין המפה לרשימה, ואין להן קיום מחוץ לאפליקציה.':
+    "The municipality and parish numbers are the official DICOFRE codes. The letters on neighbourhoods and localities are the app's own: they exist to tie the map to the list, and have no existence outside the app.",
+  'מפה':
+    'Map',
+  'מפה על כל המסך':
+    'Map full screen',
+  'מפורטו':
+    'From Porto',
+  'מפקד 2021 לכל יחידה: גיל חציוני, פילוח גיל, אזרחות זרה, ואחת-עשרה שורות של דיור ובניינים — דירות ריקות, בעלות מול שכירות, חניה, מצב הבניינים ותקופת הבנייה':
+    'Census 2021 for every unit: median age, age breakdown, foreign citizenship, and eleven rows of housing and buildings — vacant dwellings, ownership against renting, parking, the state of the buildings and the period they were built',
+  'מפת הגבולות המנהליים הרשמית, שמפרסמת':
+    'The official administrative boundary map, published by',
+  'מפת מחוז פורטו':
+    'Map of Porto District',
+  'מפת רקע':
+    'Base map',
+  'מקור':
+    'Source',
+  'מקור לכל שדה':
+    'A source for every field',
+  'מקור מקום חדש':
+    'Where a new place comes from',
+  'מקור:':
+    'Source:',
+  'מרחק אווירי מפורטו':
+    'Straight-line distance from Porto',
+  'מ׳ <button type="button" data-jump="fre:':
+    'm <button type="button" data-jump="fre:',
+  'מ׳.':
+    'm.',
+  'נבנה:':
+    'Built:',
+  'נבנו לפני 1946':
+    'Built before 1946',
+  'נבנו מ-2011':
+    'Built from 2011',
+  'נהרות ומים':
+    'Rivers and water',
+  'נוספה נקודה אחת':
+    'One point added',
+  'נוספו':
+    'Added',
+  'נוספו ':
+    'Added ',
+  'נפש':
+    'people',
+  'נפש/קמ״ר':
+    'people/km²',
+  'נקודה':
+    'Point',
+  'נקודות במפה':
+    'points on the map',
+  'נקודות הציון שלכם':
+    'Your own points',
+  'נקודות מהתמונות —':
+    'points from the photos —',
+  'נקודות ציון':
+    'Landmarks',
+  'נקודות שיובאו כטקסט מגיעות בלי התמונות שלהן.</p>':
+    'Points imported as text arrive without their photos.</p>',
+  'נקודת ציון ':
+    'Point ',
+  'נתונים':
+    'Data',
+  'סגירה':
+    'Close',
+  'סגירת ההודעה':
+    'Dismiss',
+  'סגירת התפריט':
+    'Close the menu',
+  'סך העבירות שנרשמו בידי רשויות האכיפה, חלקי האוכלוסייה המשוערת של אותה שנה.':
+    "Total offences recorded by the enforcement authorities, over that year's estimated population.",
+  'עבירות רשומות':
+    'Recorded offences',
+  'עבירות רשומות — INE':
+    'Recorded offences — INE',
+  'עוד שכבות':
+    'More layers',
+  'עיריות':
+    'Municipalities',
+  'עירייה':
+    'Municipality',
+  'עירייה, רובע, יישוב או אתר':
+    'Municipality, parish, locality or site',
+  'עם חניה':
+    'With parking',
+  'עריכה':
+    'Edit',
+  'ערך חסר אינו מקום אחרון. היחידות האלה אינן מדורגות, אינן צבועות ואינן נספרות — במפה הן מפוספסות.':
+    'A missing value is not last place. Those units are not ranked, not coloured and not counted — on the map they are hatched.',
+  'פארקים, גנים וחופים':
+    'Parks, gardens and beaches',
+  'פורטולנד':
+    'Portoland',
+  'פורק ב-2025':
+    'split in 2025',
+  'פירוט נקודות הציון':
+    'List the landmark categories',
+  'פתיחת הרובע':
+    'Open the parish',
+  'צבעי 18 העיריות':
+    'The 18 municipality colours',
+  'ציפיתי לרשימה של נקודות.':
+    'A list of points was expected.',
+  'צפיפות':
+    'Density',
+  'קביעת המיקום ארכה יותר מדי. נסה שוב.':
+    'Locating took too long. Try again.',
+  'קורא את התמונה…':
+    'Reading the photo…',
+  'קמ״ר':
+    'km²',
+  'קמ״ר ·':
+    'km² ·',
+  'ק״מ':
+    'km',
+  'ק״מ ממרכז פורטו. דיוק':
+    'km from central Porto. Accuracy',
+  'רבעון הייחוס':
+    'the reference quarter',
+  'רבעי העיר':
+    'City quarters',
+  'רובע':
+    'Parish',
+  'רובע בפורטו':
+    'Porto city parish',
+  'רובעים':
+    'parishes',
+  'רישוי וייחוס':
+    'Licensing and attribution',
+  'רפורמת 2025.':
+    'The 2025 reform.',
+  'רקע המפה (רחובות)':
+    'Base map (streets)',
+  'רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.':
+    'The base map did not load — boundaries only. All data and text are available.',
+  'רשות תחבורה משותפת':
+    'a shared transport authority',
+  'רשימה':
+    'List',
+  'שווקים':
+    'Markets',
+  'שוק הדיור':
+    'Housing market',
+  'שוק הדיור — INE':
+    'Housing market — INE',
+  'שטח':
+    'Area',
+  'שטח ומרחק':
+    'Area and distance',
+  'שינוי מ-2011':
+    'Change since 2011',
+  'שינוי מ-2011 ':
+    'Change since 2011 ',
+  'שכבות':
+    'Layers',
+  'שכבות המפה':
+    'Map layers',
+  'שכונה':
+    'Neighbourhood',
+  'שכונות':
+    'Neighbourhoods',
+  'שכירות':
+    'Rent',
+  'שם':
+    'Name',
+  'שמירת נתונים':
+    'Export data',
+  'שני גופים שונים עומדים מאחורי כל מספר כאן, ותפקידם שונה לגמרי.':
+    'Two different bodies stand behind every number here, and their roles are entirely different.',
+  'שני האזורים':
+    'The two regions',
+  'שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני 17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו. האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.':
+    'Both regions are larger than what is drawn here: the metropolitan area has 17 municipalities and Tâmega e Sousa 11, and the rest sit in the Aveiro and Viseu districts. The app shows only the part inside district 13.',
+  'שנים':
+    'years',
+  'שפה':
+    'Language',
+  'שתי אותיות ומעלה. האפליקציה אינה מחפשת כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.':
+    'Two letters or more. The app does not search street addresses — it holds no address database and has no network.',
+  'שתי הספרות הרשמיות שלה':
+    'its two official digits',
+  'שתי הספרות הרשמיות שלו':
+    'its two official digits',
+  'תוצאות, מוצגות 60.':
+    'results; 60 shown.',
+  'תושבים':
+    'Residents',
+  'תושבים (2021) ·':
+    'residents (2021) ·',
+  'תושבים ·':
+    'residents ·',
+  'תחבורה':
+    'Transport',
+  'תחנות מטרו ורכבת':
+    'Metro and rail stations',
+  'תיאור':
+    'Description',
+  'תיאטרון, ספריות ותרבות':
+    'Theatre, libraries and culture',
+  'תמונה':
+    'Photo',
+  'תמונה שצולמה במקום תמקם את הנקודה לפי הקואורדינטות שלה, במקום לפי הסימון על המפה.':
+    'A photo taken on the spot places the point at its own coordinates rather than at the mark on the map.',
+  'תמונת הנקודה':
+    'Point photo',
+  'תפריט':
+    'Menu',
+  'תצוגה':
+    'View',
+  'תצוגה לפי המכשיר':
+    'Follow the device',
+  'תצוגת יום':
+    'Day',
+  'תצוגת לילה':
+    'Night',
+  '׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה כמעט בכל מקום; השורה שמתחתיו — תיקון עמוק — היא זו שמעידה על מצב הבניין.':
+    'INE counts minor work under “need repair”, so the share is high almost everywhere; the line below it — major repair — is the one that says something about the state of the building.',
+  '״.':
+    '”.',
+  '— אזור מטרופוליני או התאגדות בין-עירונית עם מועצה ותקציב.':
+    '— a metropolitan area or an inter-municipal association with a council and a budget.',
+  '— המטרו, כרטיס':
+    '— the metro, the',
+  '— לא של הרבעון עצמו. השכירות היא של חוזים חדשים בלבד, לא של כלל מלאי השכירות.':
+    '— not of the quarter itself. Rent is for new contracts only, not the whole rented stock.',
+  '— לפי המספור במפה':
+    '— by the numbering on the map',
+  '— מי שאינו מגיש דוח אינו נספר. מ-2018 הערך מיוחס לעירייה של מען המס ואינו כולל תושבי חוץ.':
+    "— anyone who files no return is not counted. From 2018 the figure is attributed to the municipality of the taxpayer's fiscal address and excludes non-residents.",
+  '— מפקד האוכלוסין שנערך כל עשר שנים.':
+    '— the census, held every ten years.',
+  '— פורטו היא':
+    '— Porto is',
+  '— ‏criminalidade violenta e grave מתפרסמת לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.':
+    '— criminalidade violenta e grave is published by district and police command only, and has no municipal figure.',
+  '€ לשנה':
+    '€ per year',
+  '€/מ״ר':
+    '€/m²',
+  '€/מ״ר לחודש':
+    '€/m² per month',
+});

@@ -68,6 +68,7 @@
     --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
     --hi:#3a3312; --hi-line:#e0b040;
     --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
+    --crumb-halo-dark:rgba(10,16,26,.92);
   }
 }
 :root[data-theme="dark"]{
@@ -83,6 +84,7 @@
     --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
     --hi:#3a3312; --hi-line:#e0b040;
     --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
+    --crumb-halo-dark:rgba(10,16,26,.92);
 }
 
 *{box-sizing:border-box}
@@ -219,20 +221,30 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 
    The upper line is the only link, and it carries 24px of height on its own —
    the AA floor of SC 2.5.8 — while the line below it is text and needs none. */
+/* Text on the map, not a control on it.  The plate is gone: a trail is where
+   you are, not something to press, and the one pressable part of it — the level
+   above — says so by being underlined, the way a link does.  What replaces the
+   plate is the same halo the map labels use, so it stays readable over streets
+   and over terrain without putting an opaque card on either.
+
+   It keeps the band's height and the 10px inset, so the strip the map is asked
+   to leave clear is still one strip. */
 .crumb{position:absolute; z-index:710; inset-block-start:10px;
        inset-inline-end:10px; inline-size:max-content;
        max-inline-size:calc(100% - var(--mapx) - 2*var(--ctl-size) - 36px);
        display:flex; flex-direction:column; justify-content:center;
-       block-size:var(--ctl-size); padding-inline:10px;
-       border-radius:var(--r-ctl);
-       background:var(--btn-solid); border:1px solid var(--btn-line);
-       box-shadow:var(--shadow); text-align:start}
+       block-size:var(--ctl-size); text-align:start;
+       --crumb-halo:var(--crumb-halo-dark, rgba(255,255,255,.92))}
 .crumb button,.crumb span{display:block; max-width:100%; text-align:start;
-       overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.crumb button{font:400 12px/24px inherit; color:var(--ink-2); padding:0;
-       min-height:24px; text-decoration:underline; text-underline-offset:2px}
+       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+       text-shadow:0 0 3px var(--crumb-halo), 0 0 6px var(--crumb-halo),
+                   0 1px 2px var(--crumb-halo)}
+.crumb button{font:400 12.5px/24px inherit; color:var(--ink-2); padding:0;
+       min-height:24px; background:none; border:0; cursor:pointer;
+       text-decoration:underline; text-underline-offset:3px;
+       text-decoration-thickness:1px}
 .crumb button:active{color:var(--ink)}
-.crumb .now{font:700 13px/18px inherit; color:var(--ink)}
+.crumb .now{font:700 14px/18px inherit; color:var(--ink)}
 /* one level only — the district — and the block still holds the band's height */
 .crumb.one .now{line-height:inherit}
 

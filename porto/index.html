@@ -62,8 +62,8 @@
   <!-- Two buttons on the map while a place is being chosen there.  The map is
        on both halves then, so a note in the text half would be off screen. -->
   <div class="pick-bar" id="pickBar" hidden>
-    <button class="chip is-on" data-wpact="fix">בחירה</button>
-    <button class="chip" data-add="off">ביטול</button>
+    <button class="chip is-on" data-wpact="fix" data-t="בחירה">בחירה</button>
+    <button class="chip" data-add="off" data-t="ביטול">ביטול</button>
   </div>
 
   <section class="pane pane-text" id="paneText" aria-label="נתונים">
@@ -86,7 +86,7 @@
 <div class="drawer" id="infoDrawer" hidden role="dialog" aria-modal="true" aria-labelledby="infoTitle">
   <div class="drawer-in">
     <div class="drawer-head">
-      <h2 id="infoTitle">מקורות, דיוק ומה שחסר</h2>
+      <h2 id="infoTitle" data-t="מקורות, דיוק ומה שחסר">מקורות, דיוק ומה שחסר</h2>
       <button class="ico" id="infoClose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="drawer-body doc" id="infoBody"></div>

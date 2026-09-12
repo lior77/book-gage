@@ -233,7 +233,7 @@ const css = (page, sel, prop) =>
                 'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
   const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
     'view:split', 'view:map', 'view:text',
-    'theme:auto', 'theme:light', 'theme:dark',
+    'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
     'tiles', 'glass', 'borders', 'more', 'regions', 'save', 'load', 'info'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
@@ -256,6 +256,15 @@ const css = (page, sel, prop) =>
        const back = !document.documentElement.dataset.theme && S.theme === 'auto';
        return lit && back;
      }));
+  /* Hebrew is the default and the source. English flips the whole page: the
+     direction, the labels, the units, and the names — which become the official
+     Portuguese ones, because that is what an English reader wants and what is
+     on the road signs. Prose written for this app in Hebrew stays Hebrew and
+     says so, rather than being machine-translated in the app's own voice. */
+  ok('Hebrew is the language the app opens in',
+     await page.evaluate(() => S.lang) === 'he');
+  ok('and the page is right-to-left',
+     await page.evaluate(() => document.documentElement.dir) === 'rtl');
   ok('the menu carries exactly the rows asked for, in order',
      (await rowsNow()).join(' ') === WANT.join(' '), (await rowsNow()).join(' '));
   const folded = await rowsNow();
@@ -311,9 +320,10 @@ const css = (page, sel, prop) =>
        if (!svg || !svg.children.length) return false;
        return svg.getBoundingClientRect().right > lab.getBoundingClientRect().right;
      })));
-  ok('the three groups are titled',
+  ok('the four groups are titled',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean)))
-       .join('|') === 'תצוגה|שכבות|נתונים');
+       .join('|') === 'תצוגה|שפה|שכבות|נתונים',
+     (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean))).join('|'));
 
   /* 5. the switches: a tap flips the row and the state behind it */
   const flag = k => page.$eval(`[data-m="${k}"]`,
@@ -1224,6 +1234,39 @@ const css = (page, sel, prop) =>
   ok('landscape, map only: menu is still over the map',
      fMenu.right <= fMap.right + 1 && fMenu.right > fMap.right - 60,
      `menu right ${fMenu.right}, map right ${fMap.right}`);
+
+  /* 12. the language switch, driven the way a user drives it */
+  await page.setViewportSize({ width: 412, height: 900 });
+  await page.evaluate(() => { if (S.cmp) toggleCmp(); goMun(1); });
+  await page.waitForTimeout(600);
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
+  await page.click('[data-m="lang:en"]');
+  await page.waitForTimeout(900);
+  ok('choosing English flips the page to left-to-right',
+     await page.evaluate(() => document.documentElement.dir) === 'ltr'
+       && await page.evaluate(() => document.documentElement.lang) === 'en');
+  await page.click('#menuClose').catch(() => {});
+  await page.waitForTimeout(500);
+  const enText = await page.evaluate(() => document.getElementById('doc').innerText);
+  ok('the card labels are English', enText.includes('Residents') && enText.includes('Density'));
+  ok('the units are English', enText.includes('km²'));
+  ok('a place is named in Portuguese, not transliterated Hebrew',
+     enText.includes('Porto') && !/פורטו/.test(enText.split('\n').slice(0, 6).join(' ')));
+  ok('the trail is English too',
+     (await page.$eval('#crumb', e => e.innerText)).includes('Porto District'));
+  ok('Hebrew prose that has no English is marked, not hidden and not invented',
+     await page.evaluate(() => {
+       const f = [...document.querySelectorAll('#doc .flag')]
+         .filter(e => e.textContent.trim() === 'Hebrew only');
+       if (!f.length) return false;
+       // and it carries its own direction, or the full stop lands at the wrong end
+       return [...document.querySelectorAll('#doc [dir="rtl"]')].length > 0;
+     }));
+  await page.click('#menuBtn'); await page.waitForTimeout(300);
+  await page.click('[data-m="lang:he"]'); await page.waitForTimeout(800);
+  ok('and choosing Hebrew puts it all back',
+     await page.evaluate(() => document.documentElement.dir) === 'rtl'
+       && (await page.evaluate(() => document.getElementById('doc').innerText)).includes('תושבים'));
 
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
