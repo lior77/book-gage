@@ -108,9 +108,27 @@ def read_lines(js):
 
 
 def read_icons(js):
+    """Every icon in the app, name and drawing, straight out of the ICON table."""
     block = js[js.index("const ICON = {"):]
     block = block[:block.index("\n};")]
-    return re.findall(r"\n  ([a-z0-9]+):\s*'", block)
+    # The pattern must not consume the newline that ends an entry: it is also
+    # the newline that starts the next one, and a consuming match skipped every
+    # second icon — 13 of 27 reached the document and the loss was silent.
+    out = {}
+    for m in re.finditer(r"\n  ([a-z0-9]+): *'((?:[^'\\\\]|\\\\.)*)'", block):
+        out[m.group(1)] = m.group(2).replace("\\'", "'")
+    named = re.findall(r"\n  ([a-z0-9]+):\s*'", block)
+    if len(out) != len(named):
+        raise SystemExit(
+            "ICON has %d entries and only %d were parsed — missing %s"
+            % (len(named), len(out), [n for n in named if n not in out]))
+    return out
+
+
+def read_classes(css):
+    """Every class the stylesheet gives a rule to."""
+    bare = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    return set(re.findall(r"\.([A-Za-z][\w-]*)", bare))
 
 
 def read_motion(css):
@@ -204,6 +222,169 @@ ROLES = {
 BLUES = ["#a1bbd9", "#82a8d3", "#4380c7", "#265b97", "#13365d"]
 HATCH = {"light": "#9aa6b4", "dark": "#6d7b90", "w": "1.2px", "gap": "4px", "angle": "45°"}
 
+# ----------------------------------------------------------------- regions --
+# The named parts of the screen.  Naming them is half the point: "the visual
+# area" and "the textual area" are what a change is described against, and a
+# change that cannot be described against one of these is a change to the
+# layout itself.
+REGIONS = [
+    ("האזור הוויזואלי", "#paneMap", ".pane-map",
+     "המפה, ורק היא. חצי המסך העליון לאורך, וחצי ההתחלה לרוחב."),
+    ("האזור הטקסטואלי", "#paneText", ".pane-text",
+     "מסמך הרמה: כרטיסים, שורות מפתח-ערך, וכל מספר עם מקור ושנה."),
+    ("רצועת הפקדים", "—", ".mt · .crumb",
+     "רצועה בראש האזור הוויזואלי: כפתור תפריט, כפתור בית, ומסלול הניווט בקצה "
+     "הנגדי. גובהה --ctl-size, והמפה שומרת אותה פנויה."),
+    ("התפר", "—", ".seam",
+     "קו של פיקסל בין שני האזורים. אינו ידית ואי אפשר לגרור אותו."),
+    ("מסך התפריט", "#menu", ".menu",
+     "מכסה את האזור הוויזואלי על משטח אטום. אינו רצועה ואינו מגירה."),
+    ("יריעת המקום", "#wpSheet", ".sheet",
+     "טופס מלא-מסך לנקודה שהמשתמש מוסיף, בגובה שנשאר מעל המקלדת."),
+    ("חלון המקורות", "#infoDrawer", ".drawer",
+     "מקורות, דיוק ומה שחסר — החלון המלא היחיד."),
+]
+
+# The three that the layout button switches between, plus what the orientation
+# does to each.  --f is fixed at 50%: the split is not draggable.
+VIEWS = [
+    ("גרפיקה וטקסט", "split", "לאורך: מפה למעלה, טקסט למטה. לרוחב: מפה בחצי "
+     "ההתחלה, טקסט לצדה.", "ברירת המחדל"),
+    ("גרפיקה בלבד", "map", "האזור הוויזואלי תופס את המסך; הרצועה נשארת עליו.",
+     ""),
+    ("טקסט בלבד", "text", "האזור הטקסטואלי תופס את המסך; כפתורי הרצועה נשארים "
+     "כדי שיהיה איך לצאת.", ""),
+]
+
+# ------------------------------------------------------------------ logics --
+# Decisions about behaviour rather than about a value, each with the source that
+# settles it.  They are here and not only in the code because the next change to
+# the menu has to know why the menu looks like this.
+LOGICS = [
+    ("שלוש אפשרויות תצוגה, לא ״ההפוכה מהנוכחית״",
+     "בחירה בין אפשרויות שוללות זו את זו מוצגת בשלמותה, עם סימון על זו שבתוקף. "
+     "התווית על פקד לא משתנה עם מצבו.",
+     "‏WAI-ARIA APG, Switch: ״it is critical the label on a switch does not "
+     "change when its state changes״ · Material 3, Switch: ״switches control "
+     "binary options, not opposing ones… use a connected button group instead״",
+     "https://www.w3.org/WAI/ARIA/apg/patterns/switch/"),
+    ("״לפי המכשיר״ הוא אפשרות ולא היעדר אפשרות",
+     "עד 1.30.0 התפריט הציע יום ולילה בלבד, ולכן הבחירה הראשונה הייתה סופית — "
+     "לא הייתה דרך חזרה למעקב אחרי המכשיר. שלוש שורות סוגרות את הקבוצה.",
+     "‏Apple HIG, Segmented controls: ״offers a single choice from among a set "
+     "of options… use nouns or noun phrases for segment labels״",
+     "https://developer.apple.com/design/human-interface-guidelines/segmented-controls"),
+    ("מתגי השכבות הם switch ולא checkbox",
+     "הם משנים מיד את מה שעל המסך ואין כפתור אישור. ה-APG מביא בדיוק את המקרה "
+     "הזה כדוגמה — מתג ״אורות״ — מול רשימת checkbox שנבדקת לפני שליחה.",
+     "‏WAI-ARIA APG, Switch Pattern",
+     "https://www.w3.org/WAI/ARIA/apg/patterns/switch/"),
+    ("מסלול הניווט מקוצר לשתי רמות",
+     "‏NN/g: ״Consider shortening the breadcrumb trail to include only the last "
+     "level(s)״ — וגם ״Don't use breadcrumbs that wrap to multiple lines״. "
+     "**שתי השורות כאן נוגדות את הכלל השני**: הן אינן גלישה אלא שתי רמות "
+     "מוערמות בכוונה, והנימוק שהכלל נותן — שבר גולש אוכל רוחב במסך צפוף — "
+     "מתקיים כאן הפוך, כי הרצועה התחתונה בוטלה והשטח חזר למפה.",
+     "‏Nielsen Norman Group, Breadcrumbs: 11 Design Guidelines",
+     "https://www.nngroup.com/articles/breadcrumbs/"),
+    ("תווית המפה היא הילה ולא לוחית",
+     "‏SC 1.4.11 קובע במפורש: ״a wide border around the letter that fills in the "
+     "inner details of the letters acts as a halo and would be considered "
+     "background״. לכן הניגודיות נמדדת בין הדיו להילה — 4.5:1 לפי SC 1.4.3 — "
+     "ולא בין הדיו לכל פיקסל של המפה מתחת.",
+     "‏W3C, Understanding SC 1.4.11 · MapLibre: ״Max text halo width is 1/4 of "
+     "the font-size״",
+     "https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html"),
+    ("פקד צף הוא 44 ולא 38",
+     "הרצפה של WCAG 2.2 SC 2.5.8 ברמת AA היא 24×24, אבל אפל מפרסמת 44 ומטריאל "
+     "48 כגודל הנוח. שלושת הפקדים הצפים עלו ל-44, ואסימון אחד (--ctl-size) "
+     "מחזיק את הגודל, את רצועת הפקדים ואת שולי המפה בסנכרון.",
+     "‏Apple HIG · Material 3, Switch accessibility: ״keep all targets… a "
+     "minimum 48×48 CSS pixels each״",
+     "https://m3.material.io/components/switch/accessibility"),
+]
+
+# ---------------------------------------------------------------- patterns --
+# Every visible class in app.css belongs to exactly one of these.  The point is
+# not the list: it is that build_design.py REFUSES to produce the document when a
+# class is not on it.  A new element either joins a pattern or makes a new one,
+# and either way it cannot quietly become a hundred-and-fifty-sixth thing with a
+# look of its own.  Entries are exact names or "prefix-" for a family.
+PATTERNS = [
+    ("layout", "אזורי המסך",
+     "החלוקה הקבועה: אזור ויזואלי ואזור טקסטואלי, והתפר ביניהם.",
+     ["split", "pane", "pane-map", "pane-text", "seam", "map-only", "doc"]),
+    ("mapctl", "פקד צף על המפה",
+     "מה שיושב על הגרפיקה ולא בתוכה — אותו גודל, אותו משטח, אותה רצועה עליונה.",
+     ["mt", "menu-btn", "reset-btn", "menu-x", "crumb", "now", "one",
+      "pick-bar"]),
+    ("maplbl", "תווית מפה",
+     "מספר או אות על הגרפיקה, בלי משטח מתחתיה — הילה במקום לוחית.",
+     ["lbl", "lbl-ltr", "cmp-lbl", "wide"]),
+    ("menu", "מסך התפריט",
+     "רשימה אחת שכל שורה בה אומרת את מצבה.",
+     ["menu", "menu-in", "mrow-", "mrow", "mgrp", "mnote"]),
+    ("card", "כרטיס נתונים",
+     "הכרטיס בחצי הטקסט: כותרת, שורות מפתח-ערך, וכל מספר עם מקור ושנה.",
+     ["card", "hdr", "stats", "stat", "stat-", "kv", "rows", "row", "row-",
+      "sub", "lead", "note", "muted", "num", "way-", "grp"]),
+    ("action", "כפתורים וצ׳יפים",
+     "כל מה שנלחץ בחצי הטקסט: פעולה ראשית, פעולה משנית, וצ׳יפ מסנן.",
+     ["chip", "chip-", "chips", "cta", "cta-", "ghost", "btns", "ico", "chev"]),
+    ("compare", "מסך השוואת נתונים",
+     "שדה אחד על כל יחידות הרמה: מפתח צבעים, רשימה מדורגת, ומחליף שדה.",
+     ["cmp-"]),
+    ("layers", "לוח השכבות",
+     "הלוח הנפתח מתוך התפריט, ובתוכו מתגי השכבות והחגורות.",
+     ["panel", "panel-h", "lay", "lay-", "belt", "belt-sw"]),
+    ("places", "המקומות שלי",
+     "הנקודות שהמשתמש מוסיף: הסימון במפה, היריעה שנפתחת, והטופס שבתוכה.",
+     ["wp", "wp-", "mine", "me", "pin", "pin-sq", "sheet", "sheet-", "fld-l",
+      "ghost-dot", "ghost-ring"]),
+    ("photo", "תמונות",
+     "תצלום שהמשתמש צירף, והתצוגה המלאה שלו.",
+     ["ph-", "lb", "lb-"]),
+    ("tell", "הודעות וחלונות",
+     "מה שהאפליקציה אומרת מיוזמתה: הודעה, חלון מקורות, מסך טעינה, טולטיפ.",
+     ["msg", "msg-", "msgs", "drawer", "drawer-", "boot", "spin", "tt"]),
+    ("state", "מצבים",
+     "אינם אלמנטים אלא סימוני מצב שנתלים על אלמנט קיים.",
+     ["is-hi", "is-on", "part", "bad", "warn", "err", "no", "flag", "on",
+      "r1", "r2", "r3"]),
+    ("text", "סימוני טקסט",
+     "רצף לטיני, מספר, נקודה, ריבוע — הדברים הקטנים בתוך שורת טקסט.",
+     ["en", "lat", "dot", "sq"]),
+    ("vendor", "לא שלנו",
+     "מחלקות שלי Leaflet מייצרת ואנחנו רק דורסים.",
+     ["leaflet-container"]),
+]
+
+
+def assign_patterns(classes):
+    """Put every class in exactly one pattern, or refuse to build."""
+    out = {key: [] for key, _, _, _ in PATTERNS}
+    for name in sorted(classes):
+        hit = None
+        for key, _, _, members in PATTERNS:
+            exact = name in members
+            pref = any(m.endswith("-") and name.startswith(m) for m in members)
+            if exact or pref:
+                if hit and not exact:
+                    continue
+                if hit and exact:
+                    hit = key
+                    continue
+                hit = key
+        if hit is None:
+            raise SystemExit(
+                "app.css styles .%s and no pattern claims it.\n"
+                "Add it to a pattern in PATTERNS (scripts/build_design.py), or "
+                "start a new one. A visible element without a pattern is how a "
+                "design language stops being one." % name)
+        out[hit].append(name)
+    return out
+
+
 # Which icons must not flip in RTL, and why.  Apple and Material both publish
 # the rule; the reasons are per-icon and belong with the icon.
 NO_MIRROR = {
@@ -249,6 +430,25 @@ def esc(s):
             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
+def ltr_runs(t):
+    """Isolate a run of Latin text sitting inside a Hebrew line.
+
+    The bidi algorithm reorders a quoted English sentence inside an RTL
+    paragraph: the closing quote and the punctuation migrate to the wrong end,
+    and a citation stops being readable as one. Section 11 of the architecture
+    document has the rule — every Latin run inside Hebrew needs dir="ltr" — and
+    this applies it to the prose the generator writes rather than hoping whoever
+    adds the next entry remembers.
+    """
+    return re.sub(r"[A-Za-z][A-Za-z0-9 ,.:;()/\u2018\u2019\u201c\u201d\u05f4'\-\u2013\u2014]{10,}[A-Za-z0-9.\u05f4\u201d)]",
+                  lambda m: '<span dir="ltr">%s</span>' % m.group(0), t)
+
+
+def bold(t):
+    """**…** in a logic's prose, so a conflict with the source can be marked."""
+    return re.sub(r"\*\*(.+?)\*\*", r"<b>\\1</b>", t)
+
+
 def verdict(v, need):
     if need == 0:
         return '<span class="na">—</span>'
@@ -256,7 +456,8 @@ def verdict(v, need):
     return '<span class="%s">%.2f:1</span>' % (cls, v)
 
 
-def page(light, dark, dark_keys, ty, icons, motion, lines):
+def page(light, dark, dark_keys, ty, icons, motion, lines, classes):
+    buckets = assign_patterns(classes)
     def table(pal, mode):
         bg, card = pal["--bg"], pal["--card"]
         out = []
@@ -395,6 +596,21 @@ td.n{font-family:var(--mo); font-variant-numeric:tabular-nums; white-space:nowra
 .spec .n{font-size:11.5px; color:var(--tx2)}
 .tg{display:flex; align-items:center; gap:11px; padding:5px 0; font-size:13px}
 .tg-b{border:2px dashed var(--ac); border-radius:3px; flex:0 0 auto}
+.logics{display:flex; flex-direction:column; gap:14px; margin-block-start:14px}
+.lg{background:var(--sf); border:1px solid var(--ln); border-radius:3px;
+  padding:14px 16px}
+.lg h3{margin:0 0 6px; font-size:15px; color:var(--tx)}
+.lg p{margin:0; max-width:none; line-height:1.6}
+.lg .src{margin-block-start:10px; font-size:12.5px}
+.icons{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr));
+  gap:8px; margin-block-start:14px}
+.ic{display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:10px 4px; background:var(--sf); border:1px solid var(--ln);
+  border-radius:3px}
+.ic svg{width:26px; height:26px; fill:none; stroke:var(--tx); stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round}
+.ic span{font:400 10.5px/1.2 var(--mo); color:var(--tx2); text-align:center;
+  word-break:break-all}
 .note{border-inline-start:3px solid var(--ac); padding-inline-start:12px;
   margin-block-start:16px; font-size:14px; color:var(--tx); line-height:1.65}
 .note b{font-weight:700}
@@ -477,6 +693,40 @@ footer{margin-block-start:52px; padding-block-start:18px;
   שהוא צבע ולא דיו — הוא אינו הנושא של שום רמה ואינו חלק מהיררכיית המחוז —
   וליבה כהה בתוכו הייתה דבר שני לקרוא, לא ציפוי.</div>
 
+<h2>אזורי המסך</h2>
+<p>לכל חלק במסך יש שם, וזה חצי מהעניין: ״האזור הוויזואלי״ ו״האזור הטקסטואלי״ הם
+  מה שמולו מתארים שינוי, ושינוי שאי אפשר לתאר מול אחד מאלה הוא שינוי במבנה
+  עצמו.</p>
+<div class="scroll"><table>
+<thead><tr><th>האזור</th><th>האלמנט</th><th>המחלקה</th><th>מה הוא</th></tr></thead>
+<tbody>%(regions)s</tbody></table></div>
+
+<h3>שלוש תבניות תצוגה</h3>
+<p>כפתור הפריסה בתפריט מחליף ביניהן, ואין דרך אחרת. היחס קבוע על 50%%
+  (<code dir="ltr">--f</code>) — התפר אינו ידית.</p>
+<div class="scroll"><table>
+<thead><tr><th>התבנית</th><th dir="ltr">data-view</th><th>לאורך ולרוחב</th></tr></thead>
+<tbody>%(views)s</tbody></table></div>
+<div class="note"><b>שולי האזור הוויזואלי.</b> ‏10 פיקסלים מכל צד ומלמטה, ובראש
+  ‏10 מתחת לרצועת הפקדים — כלומר 10 + <code dir="ltr">--ctl-size</code> + 10.
+  ‏<code dir="ltr">zoomSnap</code> הוא 0 ולא 0.25, אחרת ההתאמה מעגלת את הזום
+  כלפי מטה ומחזירה עד 18%% משטח המפה.</div>
+
+<h2>מצאי התבניות</h2>
+<p>‏%(nclasses)s מחלקות ב-<code dir="ltr">app.css</code>, כולן שייכות לאחת
+  מ-%(npatterns)s התבניות שלמטה. הרשימה אינה העיקר — העיקר שהמחולל
+  <b>מסרב לייצר את המסמך</b> כשמחלקה אינה שייכת לאף תבנית. אלמנט חדש מצטרף
+  לתבנית או פותח תבנית חדשה, ובשני המקרים אינו יכול להפוך בשקט לדבר
+  ה-%(nclasses1)s עם מראה משלו.</p>
+<div class="scroll"><table>
+<thead><tr><th>התבנית</th><th>מה היא</th><th>המחלקות</th></tr></thead>
+<tbody>%(patterns)s</tbody></table></div>
+
+<h2>לוגיקות עיצוביות</h2>
+<p>החלטות על התנהגות ולא על ערך, וכל אחת עם המקור שמכריע אותה. הן כאן ולא רק
+  בקוד כי השינוי הבא בתפריט צריך לדעת למה התפריט נראה כך.</p>
+<div class="logics">%(logics)s</div>
+
 <h2>טיפוגרפיה</h2>
 <p>גוף הטקסט: <code dir="ltr">%(tfam)s</code> · %(tsize)spx · משקל %(tw)s · גובה שורה
   %(tline)s. גובה השורה עומד בדרישת SC 1.4.12, שמחייבת שהטקסט ישרוד 1.5×.
@@ -509,8 +759,11 @@ footer{margin-block-start:52px; padding-block-start:18px;
   ואנימציות ומשאיר את שינויי הצבע והאטימות.</p>
 
 <h2>אייקונים</h2>
-<p>%(icons)s — כולם SVG בשורה, ללא קובצי תמונה. באפליקציה אין תמונות רסטר
-  כלל; התמונה היחידה שיכולה להופיע היא זו שהמשתמש צירף לנקודה שסימן.</p>
+<p>‏%(nicons)s אייקונים, כולם SVG בשורה על קו אחד ב-<code dir="ltr">currentColor</code>
+  — ללא קובצי תמונה וללא משפחת אייקונים חיצונית. באפליקציה אין תמונות רסטר כלל;
+  התמונה היחידה שיכולה להופיע היא זו שהמשתמש צירף לנקודה שסימן. אלה כולם,
+  מצוירים מתוך <code dir="ltr">ICON</code> שב-<code dir="ltr">app.js</code>:</p>
+<div class="icons">%(icongrid)s</div>
 <h3>מה אסור להפוך ב-RTL</h3>
 <div class="scroll"><table>
 <thead><tr><th>האייקון</th><th>הסיבה</th></tr></thead>
@@ -526,6 +779,38 @@ footer{margin-block-start:52px; padding-block-start:18px;
         "rules": rules, "light": table(light, "day"), "dark": table(dark, "night"),
         "blues": blues, "gaps": "".join(blue_gaps),
         "darktokens": DARK_TOKENS,
+        "nicons": len(icons),
+        "icongrid": "".join(
+            '<div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">%s</svg>'
+            '<span dir="ltr">%s</span></div>' % (svg, esc(name))
+            for name, svg in sorted(icons.items())),
+        "regions": "".join(
+            '<tr><td><b>%s</b></td><td><code dir="ltr">%s</code></td>'
+            '<td><code dir="ltr">%s</code></td><td>%s</td></tr>'
+            % (esc(he), esc(el), esc(cls), esc(what))
+            for he, el, cls, what in REGIONS),
+        "views": "".join(
+            '<tr><td><b>%s</b>%s</td><td><code dir="ltr">%s</code></td>'
+            '<td>%s</td></tr>'
+            % (esc(he), (' <span class="role">· %s</span>' % esc(tag)) if tag else "",
+               esc(key), esc(what))
+            for he, key, what, tag in VIEWS),
+        "nclasses": len(classes),
+        "nclasses1": len(classes) + 1,
+        "npatterns": len(PATTERNS),
+        "patterns": "".join(
+            '<tr><td><b>%s</b></td><td>%s</td>'
+            '<td class="cls">%s</td></tr>'
+            % (esc(he), esc(what),
+               " ".join('<code dir="ltr">.%s</code>' % esc(c) for c in buckets[key]))
+            for key, he, what, _ in PATTERNS),
+        "logics": "".join(
+            '<section class="lg"><h3>%s</h3><p>%s</p>'
+            '<p class="src"><a href="%s" target="_blank" rel="noopener">%s</a></p>'
+            '</section>'
+            % (esc(he), bold(ltr_runs(bidi_math(esc(why)))), esc(url),
+               ltr_runs(esc(src)))
+            for he, why, src, url in LOGICS),
         "lnw": "".join(
             '<tr><td>%s</td><td class="n" dir="ltr">%s</td><td>%s</td></tr>'
             % (esc(he), esc(lines["w"][k]), role)
@@ -561,7 +846,7 @@ def build():
     js = open(JS, encoding="utf-8").read()
     light, dark, dark_keys = read_palettes(css)
     return page(light, dark, dark_keys, read_type(css), read_icons(js),
-                read_motion(css), read_lines(js))
+                read_motion(css), read_lines(js), read_classes(css))
 
 
 def main():

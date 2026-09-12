@@ -79,19 +79,83 @@ const css = (page, sel, prop) =>
        return after === false;
      }));
 
-  /* 1. the trail sits below the map, and is only as tall as its own line */
+  /* 1. the trail is on the map, in the same band as the two buttons.  It used to
+        be a bar of its own under the whole screen; that bar is gone and its
+        height went back to the map. */
   const map = await box(page, '#paneMap');
-  const top = await box(page, 'header.top');
   const crumb = await box(page, '#crumb');
-  ok('trail is below the map', top.y >= map.bottom - 1, `map bottom ${map.bottom}, trail y ${top.y}`);
+  const menuBtnH = (await box(page, '#menuBtn')).h;
+  ok('there is no trail bar under the screen any more',
+     await page.$('header.top') === null);
   ok('map reaches the top of the screen', map.y <= 1, `map y ${map.y}`);
-  ok('trail is the last thing on screen', top.bottom >= 899 - 1, `trail bottom ${top.bottom}`);
-  ok('trail is the text plus 4px above and below',
-     Math.abs(top.h - (crumb.h + 8)) <= 1.5, `bar ${top.h.toFixed(1)}, text ${crumb.h.toFixed(1)}`);
-  ok('trail padding is 4px top and bottom',
-     (await css(page, 'header.top', 'padding-top')) === '4px' &&
-     (await css(page, 'header.top', 'padding-bottom')) === '4px',
-     `${await css(page, 'header.top', 'padding-top')} / ${await css(page, 'header.top', 'padding-bottom')}`);
+  ok('map reaches the bottom of its half', map.bottom >= 440, `map bottom ${map.bottom}`);
+  ok('the trail is inside the map', crumb.y >= map.y && crumb.bottom <= map.bottom,
+     `crumb ${crumb.y}..${crumb.bottom}, map ${map.y}..${map.bottom}`);
+  ok('the trail is 10px down from the map\'s top, like the buttons',
+     Math.abs(crumb.y - map.y - 10) <= 1, `${(crumb.y - map.y).toFixed(1)}`);
+  ok('and the same size as the buttons, so the band is one strip',
+     Math.abs(crumb.h - 44) <= 1 && Math.abs(menuBtnH - 44) <= 1,
+     `crumb ${crumb.h.toFixed(1)}, button ${menuBtnH.toFixed(1)}`);
+  ok('the trail is at the END edge, opposite the buttons',
+     Math.abs(crumb.x - map.x - 10) <= 1, `${(crumb.x - map.x).toFixed(1)} from the map's left`);
+
+  /* 1b. the map uses the room it has.  fitBounds snapped the zoom DOWN to a
+        quarter step, so a district that wanted 9.235 was drawn at 9 — 18% of the
+        map given back on every level.  The margins are the ones asked for: 10px
+        at the sides and the foot, and 10px below the band at the head. */
+  const fitted = async () => page.evaluate(() => {
+    const pane = document.getElementById('paneMap').getBoundingClientRect();
+    let a = 1e9, b = 1e9, c = -1e9, d = -1e9;
+    document.querySelectorAll('#map .leaflet-overlay-pane path').forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (!r.width) return;
+      a = Math.min(a, r.left); c = Math.max(c, r.right);
+      b = Math.min(b, r.top);  d = Math.max(d, r.bottom);
+    });
+    const band = parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue('--ctl-size'));
+    return { left: a - pane.left, right: pane.right - c,
+             top: b - pane.top, bottom: pane.bottom - d,
+             w: c - a, h: d - b, pane: [pane.width, pane.height],
+             head: 10 + band + 10, zoom: map.getZoom() };
+  });
+  const f1 = await fitted();
+  ok('the map is drawn to 10px of the side edges, or centred between them',
+     Math.min(f1.left, f1.right) >= 9 && Math.abs(f1.left - f1.right) <= 2,
+     `left ${f1.left.toFixed(1)}, right ${f1.right.toFixed(1)}`);
+  ok('it never rides up under the button band',
+     f1.top >= f1.head - 1, `top ${f1.top.toFixed(1)}, band ends ${f1.head}`);
+  ok('and one of the two axes is actually full — nothing is left on the table',
+     Math.abs(f1.w - (f1.pane[0] - 20)) <= 2
+       || Math.abs(f1.h - (f1.pane[1] - f1.head - 10)) <= 2,
+     `shape ${f1.w.toFixed(1)}x${f1.h.toFixed(1)} in ${f1.pane[0]}x${f1.pane[1]}`);
+  ok('the zoom is not forced to a round step',
+     map !== null && String(await page.evaluate(() => map.options.zoomSnap)) === '0');
+
+  /* 1c. the map label carries no plate — a halo instead, per SC 1.4.11's own
+        wording that a wide border "acts as a halo and would be considered
+        background".  Measured ink-against-halo it is 17.9:1 on every level-1
+        fill; what this checks is that the plate is really gone. */
+  const lbl = await page.evaluate(() => {
+    const i = document.querySelector('#map .lbl > i');
+    if (!i) return null;
+    const cs = getComputedStyle(i);
+    const box = document.querySelector('#map .lbl').getBoundingClientRect();
+    return { bg: cs.backgroundColor, border: cs.borderTopWidth,
+             stroke: cs.webkitTextStrokeWidth, order: cs.paintOrder,
+             size: parseFloat(cs.fontSize), hit: Math.round(box.height) };
+  });
+  ok('the number on the map has no disc behind it',
+     lbl && /rgba\(0, 0, 0, 0\)|transparent/.test(lbl.bg) && parseFloat(lbl.border) === 0,
+     JSON.stringify(lbl));
+  ok('it is a haloed glyph — the stroke is painted under the fill',
+     lbl && parseFloat(lbl.stroke) > 0 && /stroke/.test(lbl.order),
+     `${lbl && lbl.stroke} / ${lbl && lbl.order}`);
+  ok('and the halo stays inside MapLibre\'s quarter-of-the-font cap',
+     lbl && parseFloat(lbl.stroke) / lbl.size <= 0.25,
+     `${lbl && (parseFloat(lbl.stroke) / lbl.size).toFixed(3)}`);
+  ok('the label is still a 24px target',
+     lbl && lbl.hit >= 24, String(lbl && lbl.hit));
 
 
   /* 2. the two on the map itself.  Every distance is measured against the MAP's
@@ -168,8 +232,30 @@ const css = (page, sel, prop) =>
   const CATS = ['cat:station', 'cat:hospital', 'cat:university', 'cat:museum',
                 'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
   const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
-    'view:split', 'view:map', 'view:text', 'theme:light', 'theme:dark',
+    'view:split', 'view:map', 'view:text',
+    'theme:auto', 'theme:light', 'theme:dark',
     'tiles', 'glass', 'borders', 'more', 'regions', 'save', 'load', 'info'];
+  /* Three theme rows, not two.  With only light and dark on the list the first
+     choice was permanent — nothing offered the way back to following the phone.
+     And all three stay named: a control whose label changes with its state
+     leaves a screen reader unable to say whether the word is what the control
+     IS or what it WILL DO (WAI-ARIA APG, Switch pattern). */
+  ok('the theme is a set of three, and the one in force is the marked one',
+     await page.evaluate(() => {
+       const of = k => document.querySelector(`[data-m="theme:${k}"]`);
+       const cur = k => of(k) && of(k).getAttribute('aria-current') === 'true';
+       return !!of('auto') && !!of('light') && !!of('dark')
+         && [cur('auto'), cur('light'), cur('dark')].filter(Boolean).length === 1;
+     }));
+  ok('choosing a theme and going back to following the phone both work',
+     await page.evaluate(async () => {
+       const tap = k => document.querySelector(`[data-m="theme:${k}"]`).click();
+       tap('light');
+       const lit = document.documentElement.dataset.theme === 'light';
+       tap('auto');
+       const back = !document.documentElement.dataset.theme && S.theme === 'auto';
+       return lit && back;
+     }));
   ok('the menu carries exactly the rows asked for, in order',
      (await rowsNow()).join(' ') === WANT.join(' '), (await rowsNow()).join(' '));
   const folded = await rowsNow();

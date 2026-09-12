@@ -41,6 +41,14 @@
      and Material all step 16 → 24.  22 is a type size in Material, not a
      spacing value. */
   --s1:4px; --s2:6px; --s3:8px; --s4:12px; --s5:16px; --s6:24px;
+  /* A floating control on the map — the menu button, the home button, the trail.
+     All three are this size, all three sit 10px down from the map's top, and the
+     strip they share is what the map keeps clear.  It was written as a bare 38
+     in five places before, one of them in app.js; a token is what keeps the
+     map's fit padding and the panels that start below the band in step.
+     44 rather than 38: Apple publishes 44pt as the comfortable target and
+     Material 48dp, against the 24px floor WCAG 2.2 SC 2.5.8 sets at AA. */
+  --ctl-size:44px;
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
 }
@@ -123,27 +131,10 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 /* It sits under the map rather than over it, so the map reaches the top edge
    of the screen and the phone's own status bar is the only thing above it.
    The safe-area inset moves with it, from the notch to the home indicator. */
-/* As tall as the line it holds and no taller: 4px over the text and 4px under
-   it.  The home-indicator inset is added below that rather than instead of it,
-   or on a phone with a gesture bar the trail would sit under the bar. */
-.top{flex:0 0 auto; display:flex; align-items:center; gap:var(--s1); z-index:30;
-     padding:4px var(--s2) calc(var(--safe-b) + 4px);
-     background:var(--card); border-block-start:1px solid var(--line)}
-/* the crumb's own padding is what made the bar tall; the bar sets the height now */
-.top .crumb button,.top .crumb span{padding-block:0}
 .ico{display:grid; place-items:center; width:40px; height:40px;
      border-radius:var(--r-ctl); color:var(--ink-2); position:relative}
 .ico:active{background:var(--bg); color:var(--ink)}
 #upBtn svg{transform:scaleX(1)}         /* the RTL "back" arrow points right */
-.crumb{flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px;
-       overflow-x:auto; scrollbar-width:none; white-space:nowrap}
-.crumb::-webkit-scrollbar{display:none}
-.crumb button,.crumb span{font-size:.8rem; font-weight:400; color:var(--ink-2);
-    padding:var(--s1) 2px}
-.crumb button{text-decoration:underline; text-underline-offset:3px}
-.crumb button:active{color:var(--ink)}
-.crumb .sep{color:var(--miss); unicode-bidi:isolate; padding-inline:2px}
-.crumb .now{color:var(--ink)}
 
 /* ---------- the split ---------- */
 .split{flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
@@ -169,7 +160,11 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    below this half, so the foot needs no allowance of its own. */
 .pane-text{flex:1 1 0; overflow-y:auto; overscroll-behavior:contain;
            -webkit-overflow-scrolling:touch; background:var(--card)}
-.doc{padding:10px; display:flex; flex-direction:column; gap:var(--s5)}
+/* The trail bar used to sit under the whole screen and carry the home-indicator
+   inset with it.  It is on the map now, so the last thing above the gesture bar
+   is this column and the inset belongs here. */
+.doc{padding:10px 10px calc(10px + var(--safe-b));
+     display:flex; flex-direction:column; gap:var(--s5)}
 
 /* The seam between the halves is a line, not a handle.  Dragging it is gone:
    the split is half and half, and the layout button is the only thing that
@@ -209,8 +204,37 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
           inset-block-start:10px; touch-action:manipulation;
           background:var(--btn-solid); border-color:var(--btn-line)}
 .mt.menu-btn{inset-inline-start:calc(var(--mapx) + 10px)}
-.mt.reset-btn{inset-inline-start:calc(var(--mapx) + 10px + 38px + var(--s2))}
+.mt.reset-btn{inset-inline-start:calc(var(--mapx) + 10px + var(--ctl-size) + var(--s2))}
 .mt.menu-btn:active,.mt.reset-btn:active{background:var(--btn-solid-2)}
+
+/* The trail shares the buttons' band and their surface: same 10px inset, same
+   size, same plate and edge.  It used to be a bar of its own under the whole
+   screen — a strip the map paid for on every level to say two words.  It is
+   anchored to the map's END edge only, so the box is as wide as its text and
+   never runs into the buttons at the START edge.
+
+   Two lines, because it shows two levels: the one above and the one being
+   looked at.  Deeper than that the head of the trail is dropped — at level 3
+   the district is not what tells you where you are, the municipality is.
+
+   The upper line is the only link, and it carries 24px of height on its own —
+   the AA floor of SC 2.5.8 — while the line below it is text and needs none. */
+.crumb{position:absolute; z-index:710; inset-block-start:10px;
+       inset-inline-end:10px; inline-size:max-content;
+       max-inline-size:calc(100% - var(--mapx) - 2*var(--ctl-size) - 36px);
+       display:flex; flex-direction:column; justify-content:center;
+       block-size:var(--ctl-size); padding-inline:10px;
+       border-radius:var(--r-ctl);
+       background:var(--btn-solid); border:1px solid var(--btn-line);
+       box-shadow:var(--shadow); text-align:start}
+.crumb button,.crumb span{display:block; max-width:100%; text-align:start;
+       overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.crumb button{font:400 12px/24px inherit; color:var(--ink-2); padding:0;
+       min-height:24px; text-decoration:underline; text-underline-offset:2px}
+.crumb button:active{color:var(--ink)}
+.crumb .now{font:700 13px/18px inherit; color:var(--ink)}
+/* one level only — the district — and the block still holds the band's height */
+.crumb.one .now{line-height:inherit}
 
 /* The menu is a screen over the map area — opaque, so the list is read against
    a surface and not against terrain — and it scrolls, because the list is
@@ -228,7 +252,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    screen; the list stays against the start edge, where the rows are read from. */
 .menu-in{height:100%; overflow-y:auto; overscroll-behavior:contain;
       display:flex; flex-direction:column;
-      padding:calc(20px + 38px + var(--s4)) 10px calc(10px + var(--safe-b))}
+      padding:calc(20px + var(--ctl-size) + var(--s4)) 10px calc(10px + var(--safe-b))}
 .mrow,.mgrp,.mnote,.mrow-pair{max-width:520px; width:100%}
 /* The heading switches all eight; the chevron beside it opens the list.  Two
    buttons, not one with two targets: a row that does one thing when tapped in
@@ -309,7 +333,7 @@ body[data-view="text"] .map-only{display:none}
 }
 /* the נ.צ. button is a pin, drawn like the rest of the column: one stroke in
    currentColor, so it inverts with the button when the mode is on */
-.mt{display:grid; place-items:center; width:38px; height:38px;
+.mt{display:grid; place-items:center; width:var(--ctl-size); height:var(--ctl-size);
     border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
     border:1px solid var(--line); box-shadow:var(--shadow)}
 .mt:active{background:var(--bg)}
@@ -385,22 +409,34 @@ body[data-view="text"] .map-only{display:none}
     box-shadow:var(--shadow); font-size:.8rem; direction:rtl}
 .tt::before{border-top-color:var(--line)!important}
 
-/* number badge on the map, and its twin in the list */
-/* The element IS the target, so it is 24×24 — the floor WCAG 2.2 SC 2.5.8 sets
-   at AA — and the pill inside it stays 20px of ink.  The hit area grows, the
-   ink does not, which is the pattern Android publishes for exactly this case.
-   It has to be the element's own box: an overlay pseudo-element does not change
-   what the browser hit-tests or what a measurement reads. */
-.lbl{display:grid; place-items:center; width:24px; height:24px;
+/* ---------- the map label ----------
+   One pattern, three inks.  A number on a municipality or a parish, a letter on
+   a locality, and the comparison screen's own number — they had three different
+   shapes before (a white pill with a black ring, a blue rounded square, and
+   bare white text), which is three things to keep in step for one job.
+
+   The plate is gone.  A pill guarantees its own contrast but it also puts an
+   opaque disc over the map at every unit, and eighteen of them read as a layer
+   of their own.  What replaces it is a halo: the glyph is stroked in the
+   opposite value underneath itself (`paint-order:stroke fill`), which is how
+   every map library sets type over terrain it does not control.  The ink and
+   the halo are the only two things that change between the three.
+
+   The element IS the target, so it is 24×24 — the floor WCAG 2.2 SC 2.5.8 sets
+   at AA.  It has to be the element's own box: an overlay pseudo-element does
+   not change what the browser hit-tests or what a measurement reads. */
+.lbl{--lbl-ink:#101010; --lbl-halo:rgba(255,255,255,.92);
+     --lbl-glow:rgba(255,255,255,.95);
+     display:grid; place-items:center; width:24px; height:24px;
      background:none; border:0; box-shadow:none; direction:ltr; cursor:pointer}
 .lbl > i{display:grid; place-items:center; width:20px; height:20px;
-     border-radius:var(--r-pill); font:700 10px/1 system-ui,sans-serif;
-     font-style:normal; color:#101010; background:#fff; border:2px solid #101010;
-     box-shadow:0 1px 4px rgba(0,0,0,.35)}
+     font:700 12px/1 system-ui,sans-serif; font-style:normal;
+     color:var(--lbl-ink); background:none; border:0; box-shadow:none;
+     text-shadow:0 0 3px var(--lbl-glow), 0 1px 2px var(--lbl-glow);
+     -webkit-text-stroke:2.5px var(--lbl-halo); paint-order:stroke fill}
 .lbl.wide,.lbl.wide > i{width:28px}
-.lbl.is-hi > i{background:var(--hi-line); color:#fff}
-.lbl-ltr > i{border-radius:7px; border-color:#15568f; color:#15568f}
-.lbl-ltr.is-hi > i{background:#15568f; color:#fff}
+/* the locality letters at level 3 — the same label, in the link blue */
+.lbl-ltr{--lbl-ink:#15568f}
 
 /* ---------- text half ---------- */
 /* A section of the page, not a card on it: no surface of its own, no border, no
@@ -497,10 +533,10 @@ body[data-view="text"] .map-only{display:none}
       z-index:705; display:flex; flex-direction:column;
       background:var(--card); border-block-end:1px solid var(--line)}
 /* The home and menu buttons stay above the sheet and keep working, so its head
-   starts below them: 10px of inset plus a 38px button plus a gap. */
+   starts below them: 10px of inset plus the control's own size plus a gap. */
 .sheet-h{flex:0 0 auto; display:flex; align-items:flex-start; gap:var(--s3);
       flex-wrap:wrap;
-      padding:calc(10px + 38px + var(--s3)) 10px var(--s3);
+      padding:calc(10px + var(--ctl-size) + var(--s3)) 10px var(--s3);
       border-block-end:1px solid var(--line); background:var(--card)}
 .sheet-h h2{flex:1 1 auto; min-width:0}
 .sheet-b{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
@@ -683,10 +719,11 @@ body[data-view="text"] .map-only{display:none}
 /* The comparison's own map label: white, no pill, and a dark halo so it stays
    legible over the two lightest bands — white on #a1bbd9 is under 2:1 on its
    own. paint-order puts the stroke behind the glyph rather than over it. */
-.lbl.cmp-lbl > i{background:none; border:0; box-shadow:none; color:#ffffff;
-  width:auto; height:auto; font:700 12px/1 system-ui,sans-serif;
-  text-shadow:0 0 3px rgba(8,16,28,.95), 0 1px 2px rgba(8,16,28,.8);
-  -webkit-text-stroke:2.5px rgba(8,16,28,.55); paint-order:stroke fill}
+/* the same label with the two inks swapped: white glyph, dark halo, because
+   what is under it here is a fill from the scale and not a street map */
+.lbl.cmp-lbl{--lbl-ink:#ffffff; --lbl-halo:rgba(8,16,28,.55);
+  --lbl-glow:rgba(8,16,28,.92)}
+.lbl.cmp-lbl > i{width:auto; height:auto}
 
 /* the field picker */
 .cmp-note{line-height:1.55; margin-block-end:var(--s3)}

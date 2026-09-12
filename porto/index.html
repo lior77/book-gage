@@ -31,10 +31,11 @@
 
   <div class="seam" aria-hidden="true"></div>
 
-  <!-- The two that live on the map itself: the way into the menu, and beside it
-       the home button that goes back to the district, whole.  Both are
-       20px in from the map's top and start corner, fully opaque, and they do
-       not move — everything else is inside the menu. -->
+  <!-- The three that live on the map itself: the way into the menu, beside it
+       the home button that goes back to the district, and at the far end of the
+       same band the trail of where you are.  All are 10px in from the map's top
+       edge and 38px tall, so the band they share is one strip the map keeps
+       clear — everything else is inside the menu. -->
   <button class="mt menu-btn" id="menuBtn" aria-label="תפריט"
           aria-expanded="false" aria-controls="menu">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -42,6 +43,10 @@
   <button class="mt reset-btn" id="homeBtn" aria-label="חזרה למחוז">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M5.5 10.2V20h13v-9.8"/><path d="M9.8 20v-5.6h4.4V20"/></svg>
   </button>
+
+  <!-- The trail, at the end of the button band rather than in a bar under the
+       screen: two lines, the level above and the one being looked at. -->
+  <nav class="crumb" id="crumb" aria-label="מסלול ניווט"></nav>
 
   <!-- The menu is a screen, not a strip: it covers the map area on an opaque
        bluish grey, and its close button sits exactly where the menu button was,
@@ -73,13 +78,6 @@
     <div class="doc" id="doc"></div>
   </section>
 </main>
-
-<!-- Below the map, not above it: the map now starts at the top of the screen,
-     and the trail of where you are reads as a caption under it rather than a
-     title bar over it. -->
-<header class="top">
-  <nav class="crumb" id="crumb" aria-label="מסלול ניווט"></nav>
-</header>
 
 <!-- The place form: from the top of the display down to whatever the keyboard
      leaves.  app.js measures that with visualViewport and sets the height. -->

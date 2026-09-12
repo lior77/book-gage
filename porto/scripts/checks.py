@@ -437,6 +437,20 @@ def main():
         fail("docs/DESIGN.html has drifted from app.css — "
              "run python3 scripts/build_design.py  (%s)" % r.stdout.strip())
 
+    # ---- 7i. the design document shows every icon and claims every class ---
+    # Two ways docs/DESIGN.html can be quietly incomplete rather than wrong: an
+    # icon the generator's regex dropped (it skipped every second one and 13 of
+    # 27 reached the page), and a class in app.css that belongs to no pattern.
+    # The second is a build error inside build_design.py; this is the first.
+    appjs = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    icons = re.findall(r"\n  ([a-z0-9]+):\s*'", appjs[appjs.index("const ICON = {"):])
+    doc_i = io.open(os.path.join(ROOT, "docs", "DESIGN.html"), encoding="utf-8").read()
+    shown = set(re.findall(r'<span dir="ltr">([a-z0-9]+)</span></div>', doc_i))
+    gone = [i for i in icons if i not in shown]
+    if gone:
+        fail("docs/DESIGN.html draws %d of the %d icons in ICON — missing %s"
+             % (len(icons) - len(gone), len(icons), gone[:5]))
+
     # ---- 7h. a label sits where a label can be read ------------------------
     # The number on a municipality used to come from representative_point(),
     # which only promises to land inside the shape: GEOS takes a horizontal line

@@ -471,9 +471,13 @@ function initMap() {
     dragging: true, touchZoom: true, scrollWheelZoom: true, doubleClickZoom: true,
     boxZoom: false, keyboard: true, tap: true,
     minZoom: 7, maxZoom: 19,
-    // the district and the city are both wide and short; with whole-number
-    // zoom only, fitBounds lands a level short and leaves them half-size
-    zoomSnap: 0.25, zoomDelta: 0.5,
+    /* The district and the city are both wide and short, so fitBounds is always
+       width-bound and the zoom it wants is rarely a round number.  At quarter
+       steps it still had to round DOWN: the district wanted 9.235 and got 9,
+       which is 2^0.235 = 18% of the map's size given away on every level.  With
+       no snap at all the fit is exact — measured 333px wide in a 412px pane
+       before, 392px after. */
+    zoomSnap: 0, zoomDelta: 0.5,
   });
   map.setView([41.22, -8.35], 9);
 
@@ -573,12 +577,24 @@ function numIcon(text, cls) {
   });
 }
 
+/* What the map keeps clear, in CSS pixels.  MAP_EDGE is the margin on every
+   side; the band along the top is the strip the menu button, the home button
+   and the trail share.  Its height is --ctl-size in the stylesheet and is read
+   from there rather than repeated here — a second copy of that number is how
+   the map's padding and the band drift apart. */
+const MAP_EDGE = 10;
+const bandSize = () => parseFloat(
+  getComputedStyle(document.documentElement).getPropertyValue('--ctl-size')) || 44;
+const mapTop = () => MAP_EDGE + bandSize() + MAP_EDGE;
+const fitPad = () => ({ paddingTopLeft: [MAP_EDGE, mapTop()],
+                        paddingBottomRight: [MAP_EDGE, MAP_EDGE] });
+
 function fit(b, pad) {
   if (!b || !b.isValid()) return;
   fitBounds = b;
-  map.fitBounds(b, { padding: pad || [16, 16] });
+  map.fitBounds(b, pad ? { padding: pad } : fitPad());
 }
-function refit() { if (fitBounds) map.fitBounds(fitBounds, { padding: [16, 16] }); }
+function refit() { if (fitBounds) map.fitBounds(fitBounds, fitPad()); }
 
 /* ------------------------------------------------------------- where am I --- */
 /* The device position, from the browser's own geolocation API.  It is read on
@@ -2465,6 +2481,9 @@ const ICON = {
   textonly: '<path d="M4 6h16M4 10h16M4 14h12M4 18h8"/>',
   day: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>',
   night: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
+  /* half sun, half moon: the setting is "whichever the phone is on", so the
+     icon is the two of them sharing one circle rather than a third symbol */
+  auto: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>',
   tiles: '<path d="M12 3 3 7.5 12 12l9-4.5L12 3zM3 12l9 4.5L21 12M3 16.5 12 21l9-4.5"/>',
   glass: '<path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z" fill="currentColor" fill-opacity=".28"/><path d="M4 5h16v15H4z"/>',
   borders: '<circle cx="12" cy="12" r="9.5" stroke-width="3"/><circle cx="12" cy="12" r="6" stroke-width="2"/><circle cx="12" cy="12" r="2.75" stroke-width="1"/>',
@@ -2938,6 +2957,16 @@ const menuRows = () => [
   { k: 'view:split', he: 'גרפיקה וטקסט', icon: 'split', kind: 'radio' },
   { k: 'view:map', he: 'גרפיקה בלבד', icon: 'maponly', kind: 'radio' },
   { k: 'view:text', he: 'טקסט בלבד', icon: 'textonly', kind: 'radio' },
+  /* Three, not two.  `auto` is the value the app opens on and the only one that
+     follows the phone, but with only light and dark on the list there was no way
+     back to it: the first choice was permanent.  A set of mutually exclusive
+     options is shown whole with the one in force marked — Material 3 puts this
+     as a Do/Don't ("switches control binary options, not opposing ones") and
+     Apple's segmented control says the same.  So the menu keeps naming all three
+     rather than offering only the one you are not in: the label on a control
+     must not change with its state, or a screen reader cannot tell whether the
+     word it reads is what the control IS or what it WILL DO. */
+  { k: 'theme:auto', he: 'תצוגה לפי המכשיר', icon: 'auto', kind: 'radio' },
   { k: 'theme:light', he: 'תצוגת יום', icon: 'day', kind: 'radio' },
   { k: 'theme:dark', he: 'תצוגת לילה', icon: 'night', kind: 'radio' },
   { grp: 'שכבות' },
@@ -2966,7 +2995,10 @@ function menuState(k) {
   if (k === 'cats') return S.cats.size > 0;
   if (k.startsWith('cat:')) return S.cats.has(k.slice(4));
   if (k.startsWith('view:')) return S.view === k.slice(5);
-  if (k.startsWith('theme:')) return (isDark() ? 'dark' : 'light') === k.slice(6);
+  /* The mark is on the setting that is in force, not on the theme it resolves
+     to: "auto" is a choice of its own, and marking light while auto is set
+     would say the user had picked light. */
+  if (k.startsWith('theme:')) return (S.theme || 'auto') === k.slice(6);
   if (k === 'tiles') return S.tiles;
   if (k === 'glass') return S.muncol;
   if (k === 'regions') return S.lnRegion;
@@ -3013,9 +3045,8 @@ function openMenu(on) {
 function menuTap() { openMenu(!S.menu); }
 
 /* Day and night are a choice the user makes, not only what the phone is set to.
-   'auto' is the state before any choice: the row that matches what the system
-   resolves to is the one marked, so the menu never lies about what is on
-   screen. */
+   'auto' follows the phone, and it is a row of its own on the menu — without it
+   the first choice was final, because nothing offered the way back. */
 function themeAttr() {
   const r = document.documentElement;
   if (S.theme === 'auto') delete r.dataset.theme; else r.dataset.theme = S.theme;
@@ -3304,19 +3335,27 @@ function goUp() {
 function afterNav() {
   drawMine();
   if (panelIs('layers')) renderLayers();
+  /* Two levels, one to a line: the one above and the one being looked at.  At
+     level 3 the district falls off the head of the trail — what says where you
+     are is the municipality, not the district every parish shares.  The arrows
+     went with the single line; a line break is the separator now. */
   const c = [];
-  if (S.level === 'district') c.push('<span class="now">מחוז פורטו</span>');
-  else {
-    c.push('<button data-go="district">מחוז פורטו</button>');
+  if (S.level === 'district') {
+    c.push('<span class="now">מחוז פורטו</span>');
+  } else {
     const m = D.munByNum.get(S.mun);
-    if (S.level === 'mun') c.push('<span class="sep" dir="ltr">‹</span><span class="now">' + html(m.he) + '</span>');
-    else {
-      c.push('<span class="sep" dir="ltr">‹</span><button data-go="mun">' + html(m.he) + '</button>');
+    if (S.level === 'mun') {
+      c.push('<button data-go="district">מחוז פורטו</button>');
+      c.push('<span class="now">' + html(m.he) + '</span>');
+    } else {
+      c.push('<button data-go="mun">' + html(m.he) + '</button>');
       const f = D.freByKey.get(S.zone);
-      c.push('<span class="sep" dir="ltr">‹</span><span class="now">' + html(f.he || f.pt) + '</span>');
+      c.push('<span class="now">' + html(f.he || f.pt) + '</span>');
     }
   }
-  $('#crumb').innerHTML = c.join('');
+  const crumb = $('#crumb');
+  crumb.innerHTML = c.join('');
+  crumb.classList.toggle('one', c.length === 1);
   save();
 }
 
