@@ -96,8 +96,18 @@ const css = (page, sel, prop) =>
   ok('and the same size as the buttons, so the band is one strip',
      Math.abs(crumb.h - 44) <= 1 && Math.abs(menuBtnH - 44) <= 1,
      `crumb ${crumb.h.toFixed(1)}, button ${menuBtnH.toFixed(1)}`);
-  ok('the trail is at the END edge, opposite the buttons',
-     Math.abs(crumb.x - map.x - 10) <= 1, `${(crumb.x - map.x).toFixed(1)} from the map's left`);
+  /* The trail reads AWAY from the home button, which is the thing it undoes:
+     leftward from it in Hebrew, rightward in English — one logical rule, both
+     directions. It used to sit across the map from the buttons, in the far
+     corner, which put the trail and the control it belongs to as far apart as
+     the screen allows. The gap is measured against the home button and not
+     against the map's edge, so the same line holds under either direction. */
+  const homeBox = await box(page, '#homeBtn');
+  const rtl = await page.evaluate(() => document.documentElement.dir === 'rtl');
+  const gap = rtl ? homeBox.x - crumb.right : crumb.x - homeBox.right;
+  ok('the trail sits beside the home button, not across the map from it',
+     gap >= 8 && gap <= 20, `${gap.toFixed(1)}px from the home button`);
+
 
   /* 1b. the map uses the room it has.  fitBounds snapped the zoom DOWN to a
         quarter step, so a district that wanted 9.235 was drawn at 9 — 18% of the
@@ -1254,14 +1264,129 @@ const css = (page, sel, prop) =>
      enText.includes('Porto') && !/פורטו/.test(enText.split('\n').slice(0, 6).join(' ')));
   ok('the trail is English too',
      (await page.$eval('#crumb', e => e.innerText)).includes('Porto District'));
-  ok('Hebrew prose that has no English is marked, not hidden and not invented',
+  ok('and it still shows the last two levels, one per line',
+     (await page.$eval('#crumb', e => e.innerText)).split('\n')
+       .filter(x => x.trim()).length === 2,
+     await page.$eval('#crumb', e => JSON.stringify(e.innerText)));
+  /* the same logical rule, now pointing the other way: in English the trail
+     reads rightward from the home button. A rule that only held in Hebrew
+     would be a physical left, not a logical start. */
+  const enCrumb = await box(page, '#crumb');
+  const enHome = await box(page, '#homeBtn');
+  ok('and it has crossed to the other side of the home button',
+     enCrumb.x - enHome.right >= 8 && enCrumb.x - enHome.right <= 20,
+     `${(enCrumb.x - enHome.right).toFixed(1)}px right of home`);
+  /* Until 1.33.0 the app's own prose stayed in Hebrew on an English screen,
+     flagged 'Hebrew only'. It is translated now — by the same hand that wrote
+     the Hebrew, which is the only English the app will speak in its own voice.
+     So the claim to test reversed: no Hebrew reaches an English reading panel
+     at all. heOnly() stays as the backstop for a string that slips past check
+     7o, and the second case is what proves the backstop still works. */
+  ok('no Hebrew survives anywhere in the English reading panel',
+     await page.evaluate(() => !/[\u0590-\u05ff]/.test(
+       document.getElementById('doc').innerText)),
+     await page.evaluate(() => (document.getElementById('doc').innerText
+       .match(/[\u0590-\u05ff][^\n]*/) || ['—'])[0].slice(0, 60)));
+  ok('and an untranslated string would still be marked, not passed off as English',
      await page.evaluate(() => {
-       const f = [...document.querySelectorAll('#doc .flag')]
-         .filter(e => e.textContent.trim() === 'Hebrew only');
-       if (!f.length) return false;
-       // and it carries its own direction, or the full stop lands at the wrong end
-       return [...document.querySelectorAll('#doc [dir="rtl"]')].length > 0;
+       // prose() is what renders every data string; ask it about one that has
+       // no entry, exactly as a newly written Hebrew note would arrive
+       const out = prose('משפט שאין לו אנגלית.');
+       return /dir="rtl"/.test(out) && /Hebrew only/.test(out);
      }));
+  /* The screenshot that started this: some of the text had not been translated
+     and had not turned round.  One panel proves nothing — the strings that
+     survived were in the places the earlier test never opened: a bairro's name
+     on a Porto parish, the licence notices at the foot of the info panel, and
+     the point categories, whose table held a t() evaluated once at load and so
+     froze to whatever language the app had opened in.  This walks every level
+     of every municipality, plus the panels, and asks one question of each. */
+  /* Two kinds of Hebrew belong on an English screen and are not findings.  A
+     point the user saved is THEIR text and is never touched — translating it
+     would put words in their mouth.  And a language names itself in its own
+     language, which is the same exemption checks.py 7n carries. */
+  const hebrewIn = async sel => page.evaluate(s2 => {
+    const el = document.querySelector(s2);
+    if (!el || !el.innerText) return null;
+    const mine = new Set([...el.querySelectorAll('[data-mine], [data-m^="lang:"]')]
+      .flatMap(e => e.innerText.split('\n')));
+    const line = el.innerText.split('\n').find(l =>
+      /[\u0590-\u05ff]/.test(l) && !/Hebrew only/.test(l) && !mine.has(l)
+      && l.trim() !== 'עברית');
+    return line ? line.trim().slice(0, 70) : null;
+  }, sel);
+  /* The other half of that rule, stated as a test rather than left implied:
+     the user's own words survive the switch exactly as they typed them. */
+  await page.evaluate(() => {
+    D.mine = [{ id: 'lang1', name: 'נקודה שלי', desc: 'מה שכתבתי',
+                ll: [41.2, -8.5], at: '2026-09-12' }];
+  });
+  await page.evaluate(() => goHome()); await page.waitForTimeout(400);
+  await page.evaluate(() => openMenu(true)); await page.waitForTimeout(300);
+  await page.click('[data-m="mine"]').catch(() => {});
+  await page.waitForTimeout(600);
+  ok("a point the user saved keeps their own words, in English too",
+     await page.evaluate(() => /נקודה שלי/.test(document.getElementById('doc').innerText)),
+     await page.evaluate(() => document.getElementById('doc').innerText.slice(0, 80)));
+  await page.evaluate(() => { D.mine = []; if (S.wp) toggleWp(); });
+  await page.evaluate(() => openMenu(false)); await page.waitForTimeout(300);
+  /* The reading panel has to be on screen for any of this to mean anything.
+     The landscape section left the view on 'map', and the first version of
+     this sweep then found no parish row to open, opened nothing, and passed —
+     eighteen levels skipped in silence, which is the §11 failure this project
+     keeps meeting. The counters below are what make the skip impossible. */
+  await page.evaluate(() => { S.view = 'split'; applyView(); });
+  await page.waitForTimeout(300);
+  const sweep = [];
+  let munSeen = 0, freSeen = 0;
+  for (const num of await page.evaluate(() => D.mun.map(m => m.num))) {
+    await page.evaluate(n => goMun(n), num);
+    await page.waitForTimeout(260);
+    munSeen++;
+    const bad = await hebrewIn('#doc');
+    if (bad) sweep.push('municipality ' + num + ': ' + bad);
+    /* Three parishes, not one: a note that only shows on the twelfth parish of
+       a municipality is exactly the string that escapes. The whole 243 is
+       checks.py 7o's job — it reads the data rather than the screen, and it is
+       the one that proves every string has an English form. What THIS proves
+       is the other half: that the render path puts that English on the page
+       instead of walking round the translator. */
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('#doc [data-fre]')].map(e => e.dataset.fre));
+
+    for (const key of rows.slice(0, 3)) {
+      await page.evaluate(k => {
+        const row = document.querySelector(`#doc [data-fre="${k.replace(/"/g, '\\"')}"]`);
+        if (row) row.click();
+      }, key);
+      await page.waitForTimeout(320);
+      freSeen++;
+      const b2 = await hebrewIn('#doc');
+      if (b2) sweep.push('parish ' + key + ': ' + b2);
+      await page.evaluate(n => goMun(n), num);
+      await page.waitForTimeout(220);
+    }
+  }
+  ok('the sweep actually walked the levels it claims to have walked',
+     munSeen === 18 && freSeen >= 40, `${munSeen} municipalities, ${freSeen} parishes`);
+  ok('no Hebrew on any English screen, at any level of any municipality',
+     sweep.length === 0, sweep.slice(0, 3).join(' | '));
+
+  await page.evaluate(() => goHome()); await page.waitForTimeout(400);
+  await page.evaluate(() => openInfo()); await page.waitForTimeout(600);
+  ok('and none in the sources panel, where every record and licence is listed',
+     (await hebrewIn('#infoBody')) === null, await hebrewIn('#infoBody'));
+  await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => openMenu(true)); await page.waitForTimeout(450);
+  ok('and none in the menu itself', (await hebrewIn('#menu')) === null,
+     await hebrewIn('#menu'));
+  await page.evaluate(() => openMenu(false)); await page.waitForTimeout(300);
+  await page.evaluate(() => { if (!S.cmp) toggleCmp(); }); await page.waitForTimeout(900);
+  ok('and none in the comparison view', (await hebrewIn('#doc')) === null,
+     await hebrewIn('#doc'));
+  await page.evaluate(() => { if (S.cmp) toggleCmp(); }); await page.waitForTimeout(500);
+
   await page.click('#menuBtn'); await page.waitForTimeout(300);
   await page.click('[data-m="lang:he"]'); await page.waitForTimeout(800);
   ok('and choosing Hebrew puts it all back',

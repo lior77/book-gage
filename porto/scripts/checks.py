@@ -23,6 +23,7 @@ Rules enforced (from BRIEF.md):
 
 Exit code 0 = all green, 1 = at least one hard failure.
 """
+import glob
 import json
 import io
 import os
@@ -665,6 +666,65 @@ def main():
     if untranslated:
         fail("%d entries in EN are still Hebrew: %s"
              % (len(untranslated), untranslated[:3]))
+
+    # ---- 7o. every Hebrew string in the data has an English one ------------
+    # 7n guards app.js. The data is the other half and the larger one: the
+    # parish notes, the municipality profiles, the source records and their
+    # caveats all live in JSON, and t() falls back to the Hebrew for any of
+    # them that prose_en.json does not answer. That fallback is right at
+    # runtime and invisible in a diff — a parish note added in Hebrew would
+    # simply appear, in Hebrew, in the middle of an English screen, with no
+    # error anywhere. This walks the built data and this file's own records and
+    # requires an answer for every string that reaches a reader.
+    #
+    # The `he` key is the one exclusion, and it is not a hole: those are place
+    # names, and nm() shows the official Portuguese name in English rather than
+    # a transliteration of a transliteration.
+    HEBREW = re.compile(u"[\u0590-\u05ff]")
+    prose_en = json.load(io.open(os.path.join(ROOT, "data", "prose_en.json"),
+                                 encoding="utf-8"))["text"]
+
+    def hebrew_strings(node, path=()):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                # a definitions_he key is a label on screen, so it counts
+                if HEBREW.search(k):
+                    yield path + ("<key>",), k
+                for item in hebrew_strings(v, path + (k,)):
+                    yield item
+        elif isinstance(node, list):
+            for v in node:
+                for item in hebrew_strings(v, path + ("[]",)):
+                    yield item
+        elif isinstance(node, str) and HEBREW.search(node):
+            yield path, node
+
+    seen, absent, still_he = set(), [], []
+    files = sorted(glob.glob(os.path.join(ROOT, "data", "processed", "*.json")))
+    files.append(os.path.join(ROOT, "data", "sources.json"))
+    for path_ in files:
+        doc = json.load(io.open(path_, encoding="utf-8"))
+        for keys, value in hebrew_strings(doc):
+            if keys and keys[-1] == "he":
+                continue
+            if value in seen:
+                continue
+            seen.add(value)
+            where = os.path.basename(path_) + ":" + "/".join(keys)
+            english = prose_en.get(value)
+            if english is None:
+                # app.js may already answer it; that table is checked by 7n
+                if value not in have:
+                    absent.append((where, value[:50]))
+            elif not english.strip() or HEBREW.search(english):
+                still_he.append((where, value[:50]))
+    if absent:
+        fail("%d Hebrew strings in the data reach the screen with no English "
+             "(add them to data/prose_en.json): %s" % (len(absent), absent[:3]))
+    if still_he:
+        fail("%d entries in prose_en.json are empty or still Hebrew: %s"
+             % (len(still_he), still_he[:3]))
+    print("data prose translated %d/%d strings" % (len(seen) - len(absent), len(seen)))
 
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.

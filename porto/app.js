@@ -45,6 +45,13 @@ function nm(o) {
 /* The name, with the official Portuguese one beside it.  In Hebrew the Latin
    original is context worth showing; in English it IS the name, so there is
    nothing to put in the brackets and the brackets go. */
+/* A point's category, translated on the way to the screen and not when the
+   table was built — see section 11: a t() evaluated once at load freezes the
+   language it happened to open in. */
+function poiLabel(cat) {
+  return t((D.poiLabel || {})[cat] || cat);
+}
+
 function nmPair(o, latin) {
   const main = nm(o);
   const lat = latin === undefined ? (o.pt || o.en || '') : latin;
@@ -52,12 +59,15 @@ function nmPair(o, latin) {
   return html(main) + ' <span class="lat">(' + html(lat) + ')</span>';
 }
 
-/* Prose that was written for this app exists in Hebrew and has not been
-   translated: the municipality profiles, the parish notes, the locality
-   descriptions.  An English reader gets the Hebrew with a mark saying so,
-   rather than a machine translation in the app's own voice — the app would then
-   be asserting something nobody wrote.  What is translated is every label,
-   every caveat and every unit; what is not is marked. */
+/* The prose written for this app — the municipality profiles, the parish
+   notes, the locality descriptions, the source caveats — is translated in
+   data/prose_en.json, by the same hand that wrote the Hebrew.  That is the only
+   kind of English the app will speak in its own voice: a machine translation
+   would have the app asserting something nobody wrote.  heOnly() is what
+   remains of the older decision, and it is now a backstop rather than a
+   policy: if a Hebrew string ever reaches an English screen untranslated, the
+   reader is told so instead of being shown a sentence the app cannot stand
+   behind.  Check 7o is what keeps it from ever firing. */
 function heOnly(text) {
   if (S.lang !== 'en' || !text || !/[\u0590-\u05ff]/.test(String(text))) return '';
   return ' <span class="flag" dir="ltr">Hebrew only</span>';
@@ -69,10 +79,11 @@ function heOnly(text) {
    direction. */
 function prose(text) {
   if (!text) return '';
-  const heb = /[\u0590-\u05ff]/.test(String(text));
-  const body = html(text);
+  const en = t(text);
+  const heb = /[\u0590-\u05ff]/.test(String(en));
+  const body = html(en);
   if (S.lang !== 'en' || !heb) return body;
-  return '<span dir="rtl" lang="he">' + body + '</span>' + heOnly(text);
+  return '<span dir="rtl" lang="he">' + body + '</span>' + heOnly(en);
 }
 
 function applyLang() {
@@ -507,7 +518,7 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, zones, bW, sources, bM, bB, bF, bC] = await Promise.all([
+  const [ind, mun, fre, city, zones, bW, sources, bM, bB, bF, bC, proseEn] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
@@ -519,7 +530,12 @@ async function load() {
     j('data/processed/boundaries_belts.geojson'),
     j('data/processed/boundaries_freguesias.geojson'),
     j('data/processed/boundaries_porto_city.geojson'),
+    /* The prose this app wrote about the places, in English.  It is a file of
+       its own and not part of app.js: five thousand words of editorial text
+       belong beside the data they describe, where a diff can be read. */
+    j('data/prose_en.json'),
   ]);
+  Object.assign(EN, proseEn.text || {});
   D.belts = mun.belts;
   D.mun = mun.items;
   D.fre = fre.items;
@@ -903,7 +919,7 @@ function regionsDoc() {
       <span class="belt-sw" style="--c:${html(b.colour)}"></span>
       <span class="row-body">
         <span class="row-t">${nmPair(b, b.en)}</span>
-        <span class="row-d">${html(S.lang === 'en' && b.sub_en ? b.sub_en : b.sub_he)}</span>
+        <span class="row-d">${prose(b.sub_he)}</span>
         <span class="row-m num">${html(b.nums.map(n => munCode(D.munByNum.get(n))).sort().join(' · '))}</span>
       </span></div>`).join('');
   return `<div class="card" id="regionsDoc">
@@ -992,9 +1008,9 @@ function splitTable(f) {
       <span class="pin pin-sq" style="--c:#dfe6ef">${html(s.code)}</span>
       <span class="row-body">
         <span class="row-t lat" dir="ltr">${html(s.pt)}</span>
-        <span class="row-m"><span class="num">${nf(s.pop2021)}</span> תושבים (2021) ·
-          <span class="num">${nf(100 * s.pop2021 / f.pop2021, 1)}</span>% מהיחידה ·
-          קוד <span class="lat num">${html(s.dicofre)}</span></span>
+        <span class="row-m"><span class="num">${nf(s.pop2021)}</span> ${t('תושבים (2021) ·')}
+          <span class="num">${nf(100 * s.pop2021 / f.pop2021, 1)}</span>${t('% מהיחידה ·')}
+          ${t('קוד')} <span class="lat num">${html(s.dicofre)}</span></span>
       </span></div>`).join('')}</div>
     <p class="note">${t('החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.')}</p>
   </div>`;
@@ -1055,7 +1071,7 @@ function renderMun(num) {
       <span class="pin" style="--c:${html(f.colour)}">${n}</span>
       <span class="row-body">
         <span class="row-t">${nmPair(f, bare(f.pt))}${flag}</span>
-        <span class="row-d">${desc ? html(desc) + heOnly(desc) : '<span class="muted">' + miss() + t(' — אין תיאור לרובע הזו</span>')}</span>
+        <span class="row-d">${desc ? prose(desc) : '<span class="muted">' + miss() + t(' — אין תיאור לרובע הזו</span>')}</span>
         <span class="row-m"><span class="num">${shown(f.pop2021, 0, 100)}</span> ${t('תושבים (2021) ·')}
           <span class="num">${nf(f.area_km2, 2)}</span> ${t('קמ״ר ·')}
           <span class="num">${nf(f.density)}</span> ${t('לקמ״ר')}${q ? ' · <span class="num">' + q.bairros.length + t('</span> שכונות') : ''}
@@ -1726,11 +1742,11 @@ function placeHits(term) {
     const where = nm(f) + ' · ' + f.mun_he;
     D.zones[key].bairros.forEach(b => {
       if (b.ll && (hit(b.he) || hit(b.en))) out.push(
-        { t: b.he || b.en, s: b.en + ' · ' + where, k: b.kind_he || t('יישוב'), ll: b.ll });
+        { t: b.he || b.en, s: b.en + ' · ' + where, k: t(b.kind_he || 'יישוב'), ll: b.ll });
     });
     D.zones[key].pois.forEach(pp => {
       if (hit(pp.name)) out.push(
-        { t: pp.name, s: (D.poiLabel[pp.cat] || pp.cat) + ' · ' + where, k: t('אתר'), ll: pp.ll });
+        { t: pp.name, s: poiLabel(pp.cat) + ' · ' + where, k: t('אתר'), ll: pp.ll });
     });
   }
   return out.filter(r => r.ll);
@@ -2344,7 +2360,7 @@ function drawZone(key) {
     const mk = L.circleMarker(p.ll, poiStyle(false, p.cat));
     mk.__hi = { kind: 'poi', id: i };
     mk.__cat = p.cat;
-    mk.bindTooltip(`${html(p.name)}<br><span class="note">${html(D.poiLabel[p.cat] || p.cat)}</span>`,
+    mk.bindTooltip(`${html(p.name)}<br><span class="note">${html(poiLabel(p.cat))}</span>`,
       { direction: 'top', className: 'tt' });
     mk.on('click', () => pick({ kind: 'poi', id: i }, 'map'));
     return mk;
@@ -2368,11 +2384,11 @@ function renderZone(key) {
   const bairros = z.bairros.map(b => `<button class="row row-full" data-hi="bairro:${html(b.letter)}">
       <span class="pin pin-sq" style="--c:#cfe0f2">${html(b.letter)}</span>
       <span class="row-body">
-        <span class="row-t">${b.he ? html(b.he) + ' ' : ''}<span class="lat">${b.he ? '(' : ''}${html(b.en)}${b.he ? ')' : ''}</span>
+        <span class="row-t">${nmPair(b, b.en)}
           ${b.ll ? '' : t('<span class="flag">אין נקודה במפה</span>')}</span>
         ${b.desc ? `<span class="row-d">${prose(b.desc)}</span>` : ''}
-        <span class="row-m">${html(b.kind_he || '')}${b.pop ? ' · ' + nf(b.pop) + t(' תושבים') : ''}${
-          b.kind_he && b.note_src ? ' · ' : ''}${html(b.note_src || '')}</span>
+        <span class="row-m">${html(t(b.kind_he || ''))}${b.pop ? ' · ' + nf(b.pop) + t(' תושבים') : ''}${
+          b.kind_he && b.note_src ? ' · ' : ''}${prose(b.note_src || '')}</span>
       </span></button>`).join('');
 
   const shown = z.pois.map((p, i) => ({ p, i })).filter(x => S.cats.has(x.p.cat));
@@ -2381,18 +2397,18 @@ function renderZone(key) {
     if (!byCat.has(x.p.cat)) byCat.set(x.p.cat, []);
     byCat.get(x.p.cat).push(x);
   });
-  const pois = D.poiOrder.filter(c => byCat.has(c)).map(c => `<div class="grp">${html(D.poiLabel[c] || c)}
+  const pois = D.poiOrder.filter(c => byCat.has(c)).map(c => `<div class="grp">${html(poiLabel(c))}
       <span class="note num">${byCat.get(c).length}</span></div>
     <div class="rows">${byCat.get(c).map(x => `<button class="row" data-hi="poi:${x.i}">
         <span class="dot" style="--c:${html(CAT_COLOUR[x.p.cat] || '#101010')}"></span>
         <span class="row-body"><span class="row-t lat">${html(x.p.name)}</span>
-          <span class="row-m">${html(D.poiLabel[x.p.cat] || x.p.cat)} ·
+          <span class="row-m">${html(poiLabel(x.p.cat))} ·
             <span class="lat">${html(x.p.osm)}</span></span></span>
       </button>`).join('')}</div>`).join('');
 
   const chips = D.poiOrder.filter(c => z.pois.some(p => p.cat === c)).map(c =>
     `<button class="chip${S.cats.has(c) ? ' is-on' : ''}" data-cat="${html(c)}">
-      <span class="chip-c" style="background:${html(CAT_COLOUR[c] || '#101010')}"></span>${html(D.poiLabel[c] || c)}
+      <span class="chip-c" style="background:${html(CAT_COLOUR[c] || '#101010')}"></span>${html(poiLabel(c))}
       <span class="num">${z.pois.filter(p => p.cat === c).length}</span></button>`).join('');
 
   $('#doc').innerHTML = `
@@ -2404,16 +2420,14 @@ function renderZone(key) {
       </div>
       <p class="sub">${html(nm(m))} · ${html(t(m.belt))}${f.dicofre
         ? t(' · קוד רשמי <span class="lat num">') + html(f.dicofre) + '</span>' : ''}</p>
-      ${f.split2025 ? `<p class="note">${splitNote(f)}. הקוד שלמעלה הוא הקוד שהחזיקה
-        עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של
-        היחידה הזו.</p>` : ''}
+      ${f.split2025 ? `<p class="note">${splitNote(f)}${t('. הקוד שלמעלה הוא הקוד שהחזיקה עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של היחידה הזו.')}</p>` : ''}
       <div class="stats">
         ${stat(t('תושבים'), f.pop2021, '', 0, 'freguesia.pop2021', 100)}
         ${stat(t('שטח'), f.area_km2, t('קמ״ר'), 1, 'freguesia.area_km2')}
         ${stat(t('צפיפות'), f.density, t('לקמ״ר'), 0, 'freguesia.density', 100)}
       </div>
-      ${z.desc ? `<p class="lead">${html(z.desc)}</p>` : ''}
-      ${f.note ? `<p class="${z.desc ? 'sub' : 'lead'}">${html(f.note)}</p>` : ''}
+      ${z.desc ? `<p class="lead">${prose(z.desc)}</p>` : ''}
+      ${f.note ? `<p class="${z.desc ? 'sub' : 'lead'}">${prose(f.note)}</p>` : ''}
       ${f.note_origin === 'app'
         ? t('<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>') : ''}
     </div>
@@ -2424,25 +2438,20 @@ function renderZone(key) {
     ${marketStats(f, 'freguesia')}
 
     ${z.bairros.length ? `
-      <div class="grp">${z.bairros.length} ${curated ? t('שכונות') : t('יישובים ושכונות')} — האותיות במפה</div>
+      <div class="grp">${z.bairros.length} ${curated ? t('שכונות') : t('יישובים ושכונות')} ${t('— האותיות במפה')}</div>
       <div class="rows">${bairros}</div>
       <p class="note" style="margin-block:8px 12px">${curated
-        ? `לשכונות אין גבול רשמי. האות במפה מסומנת על נקודת השכונה כפי שהיא
-           ב-OpenStreetMap, במרכזה בקירוב.`
-        : `היישובים האלה אינם יחידה מנהלית ואין להם גבול. הם מגיעים מ-OpenStreetMap
-           כנקודה אחת לכל יישוב, ולכן אין להם שם עברי ואין להם תיאור — לא נכתב
-           כזה לאף אחד מהם.`}</p>`
+        ? t('לשכונות אין גבול רשמי. האות במפה מסומנת על נקודת השכונה כפי שהיא ב-OpenStreetMap, במרכזה בקירוב.')
+        : t('היישובים האלה אינם יחידה מנהלית ואין להם גבול. הם מגיעים מ-OpenStreetMap כנקודה אחת לכל יישוב, ולכן אין להם שם עברי ואין להם תיאור — לא נכתב כזה לאף אחד מהם.')}</p>`
       : t('<p class="note">אין ביישוב הזה נקודות place ב-OpenStreetMap.</p>')}
 
     ${z.pois.length ? `
       <div class="card">
-        <h2>נקודות במפה</h2>
-        <p class="sub">כל נקודה במפה היא אתר או מוסד, בצבע הקטגוריה שלה. לחיצה על
-          נקודה מבליטה את הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.
-          <b>לחיצה כפולה</b> — על הנקודה או על הרישום — פותחת אותה במפות גוגל.</p>
+        <h2>${t('נקודות במפה')}</h2>
+        <p class="sub">${t('כל נקודה במפה היא אתר או מוסד, בצבע הקטגוריה שלה. לחיצה על נקודה מבליטה את הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.')}
+          ${t('<b>לחיצה כפולה</b> — על הנקודה או על הרישום — פותחת אותה במפות גוגל.')}</p>
         <div class="chips">${chips}</div>
-        <p class="note">מקור: OpenStreetMap contributors, ODbL. המיפוי התנדבותי
-          ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.</p>
+        <p class="note">${t('מקור: OpenStreetMap contributors, ODbL. המיפוי התנדבותי ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.')}</p>
       </div>
       ${shown.length ? pois : t('<p class="note">לא נבחרה שום קטגוריה.</p>')}`
       : t('<p class="note">לא מופו כאן אתרים או מוסדות ב-OpenStreetMap.</p>')}
@@ -2954,7 +2963,7 @@ function renderCmp() {
       </div>` : '').join('')}
     ${rk.none.length ? `<div class="cmp-k">
         <span class="cmp-k-sw cmp-k-nd"></span>
-        <span class="cmp-k-r">אין נתון</span>
+        <span class="cmp-k-r">${miss()}</span>
         <span class="cmp-k-n">${rk.none.length}</span>
       </div>` : ''}
     </div>`;
@@ -2984,8 +2993,8 @@ function renderCmp() {
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}</h1>
     <p class="cmp-what">${atDistrict
       ? (S.cmpScope === 'fre'
-         ? `243 רובעי המחוז`
-         : `18 עיריות המחוז`)
+         ? t('243 רובעי המחוז')
+         : t('18 עיריות המחוז'))
       : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`
         + t(' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים')}
       ${t('· מהקטן לגדול')}</p>
@@ -3068,7 +3077,7 @@ const menuRows = () => [
      reach anything else. */
   { k: 'cats', he: t('נקודות ציון'), icon: 'dots', kind: 'tog', more: 'cats-open' },
   ...(S.catsOpen
-    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: D.poiLabel[c], icon: c, kind: 'tog', sub: true }))
+    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: poiLabel(c), icon: c, kind: 'tog', sub: true }))
     : []),
   // Below the eight, not between the heading and them: the expanded categories
   // have to follow their own heading with nothing in between or they stop
@@ -3312,7 +3321,7 @@ function renderLayers() {
   }
   if (z && z.pois.length) {
     h += t('<h3>נקודות במפה</h3>') + D.poiOrder.filter(c => counts[c])
-      .map(c => row(S.cats.has(c), 'cat:' + c, D.poiLabel[c] || c, CAT_COLOUR[c], false, counts[c]))
+      .map(c => row(S.cats.has(c), 'cat:' + c, poiLabel(c), CAT_COLOUR[c], false, counts[c]))
       .join('');
   } else {
     h += t('<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הרובע.</p>');
@@ -3607,11 +3616,11 @@ function runSearch(term) {
     z.bairros.forEach(b => {
       if (hit(b.he) || hit(b.en)) out.push({
         t: b.letter + ' · ' + (b.he || b.en), s: b.en + ' · ' + where,
-        k: b.kind_he || t('שכונה'), go: `data-jump="bairro:${html(key)}:${html(b.letter)}"` });
+        k: t(b.kind_he || 'שכונה'), go: `data-jump="bairro:${html(key)}:${html(b.letter)}"` });
     });
     z.pois.forEach((p, i) => {
       if (hit(p.name)) out.push({
-        t: p.name, s: (D.poiLabel[p.cat] || p.cat) + ' · ' + where,
+        t: p.name, s: poiLabel(p.cat) + ' · ' + where,
         k: t('נקודה'), go: `data-jump="poi:${html(key)}:${i}"` });
     });
   }
@@ -3651,39 +3660,39 @@ function jump(spec) {
 function showSource(key, exact) {
   const f = D.sources.fields[key];
   if (!f) return;
-  openPanel('source', f.label_he || key, `
-    ${exact ? `<p>הערך המדויק: <b class="num">${html(exact)}</b>
-      <span class="note">— המספר במסך מעוגל כדי להיקרא, וזה מה שהמקור מפרסם.</span></p>` : ''}
+  openPanel('source', t(f.label_he || key), `
+    ${exact ? `<p>${t('הערך המדויק:')} <b class="num">${html(exact)}</b>
+      <span class="note">${t('— המספר במסך מעוגל כדי להיקרא, וזה מה שהמקור מפרסם.')}</span></p>` : ''}
     <p class="note"><code>${html(key)}</code></p>
-    ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
-    <p>${t('מקור:')} ${html(f.source || (f.derived_from || []).join(' / '))}</p>
-    ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
-    ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
-    ${f.caveat_he ? `<div class="warn">${html(f.caveat_he)}</div>` : ''}
+    ${f.reference_year ? `<p>${t('שנת ייחוס:')} <b class="num">${html(f.reference_year)}</b></p>` : ''}
+    <p>${t('מקור:')} ${prose(f.source || (f.derived_from || []).join(' / '))}</p>
+    ${f.coverage ? `<p class="note">${t('כיסוי:')} ${prose(f.coverage)}</p>` : ''}
+    ${f.validation_he ? `<p class="note">${t('בדיקה:')} ${prose(f.validation_he)}</p>` : ''}
+    ${f.caveat_he ? `<div class="warn">${prose(f.caveat_he)}</div>` : ''}
     ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`);
 }
 
 function renderInfo() {
   const s = D.sources;
   const fields = Object.entries(s.fields).map(([k, f]) => `<div class="card">
-      <h3>${html(f.label_he || k)}</h3>
+      <h3>${html(t(f.label_he || k))}</h3>
       <p class="note"><code>${html(k)}</code></p>
-      ${f.reference_year ? `<p>שנת ייחוס: <b class="num">${html(f.reference_year)}</b></p>` : ''}
-      <p>${t('מקור:')} ${html(f.source || (f.derived_from || []).join(' / '))}</p>
-      ${f.coverage ? `<p class="note">כיסוי: ${html(f.coverage)}</p>` : ''}
+      ${f.reference_year ? `<p>${t('שנת ייחוס:')} <b class="num">${html(f.reference_year)}</b></p>` : ''}
+      <p>${t('מקור:')} ${prose(f.source || (f.derived_from || []).join(' / '))}</p>
+      ${f.coverage ? `<p class="note">${t('כיסוי:')} ${prose(f.coverage)}</p>` : ''}
       ${f.definitions_he ? `<dl class="kv">${Object.entries(f.definitions_he).map(
-        ([t, v]) => `<div><dt>${html(t)}</dt><dd class="note">${html(v)}</dd></div>`).join('')}</dl>` : ''}
-      ${f.validation_he ? `<p class="note">בדיקה: ${html(f.validation_he)}</p>` : ''}
-      ${f.caveat_he ? `<div class="warn">${html(f.caveat_he)}</div>` : ''}
+        ([term, v]) => `<div><dt>${html(t(term))}</dt><dd class="note">${prose(v)}</dd></div>`).join('')}</dl>` : ''}
+      ${f.validation_he ? `<p class="note">${t('בדיקה:')} ${prose(f.validation_he)}</p>` : ''}
+      ${f.caveat_he ? `<div class="warn">${prose(f.caveat_he)}</div>` : ''}
       ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}
     </div>`).join('');
 
   const miss = s.missing.items.map(m => `<div class="card">
-      <h3>${html(m.label_he)}</h3>
-      <p class="note"><code>${html(m.field)}</code></p>
-      <p>${html(m.why_he)}</p>
-      ${m.important_he ? `<div class="warn">${html(m.important_he)}</div>` : ''}
-      ${m.decision_he ? `<p>${html(m.decision_he)}</p>` : ''}
+      <h3>${html(t(m.label_he))}</h3>
+      <p class="note"><code>${prose(m.field)}</code></p>
+      <p>${prose(m.why_he)}</p>
+      ${m.important_he ? `<div class="warn">${prose(m.important_he)}</div>` : ''}
+      ${m.decision_he ? `<p>${prose(m.decision_he)}</p>` : ''}
       ${(m.candidate_sources || []).map(u =>
         `<p class="note"><a href="${html(u)}" target="_blank" rel="noopener">${html(u)}</a></p>`).join('')}
     </div>`).join('');
@@ -3740,12 +3749,11 @@ function renderInfo() {
     </ul>
     <p class="note">${t('מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים. האותיות של השכונות והיישובים הן של האפליקציה: הן נועדו לקשור בין המפה לרשימה, ואין להן קיום מחוץ לאפליקציה.')}</p>
     ${STANDALONE
-      ? `<p class="note">זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת
-         ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-<span class="lat">porto/data/raw/</span>.</p>`
-      : `<p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">פתיחת המסמך המקורי (PDF, 19 עמודים)</a></p>`}
+      ? `<p class="note">${t('זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-')}<span class="lat">porto/data/raw/</span>.</p>`
+      : `<p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">${t('פתיחת המסמך המקורי (PDF, 19 עמודים)')}</a></p>`}
 
     <h2>${t('מה עוד חסר')}</h2>
-    <p>${html(s.missing.note_he)}</p>
+    <p>${prose(s.missing.note_he)}</p>
     ${miss}
 
     <h2>${t('מקור לכל שדה')}</h2>
@@ -3755,7 +3763,7 @@ function renderInfo() {
     <p>${t('פורטולנד')} <span class="lat num">${html(D.version)}</span> ${t('· הנתונים נבנו ב-')}<span class="lat">${html(D.generated)}</span></p>
 
     <h2>${t('רישוי וייחוס')}</h2>
-    ${s.license_notices.map(n => `<p>${html(n)}</p>`).join('')}
+    ${s.license_notices.map(n => `<p>${prose(n)}</p>`).join('')}
     <p class="note">${t('לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.')}</p>
     <p class="note">${t('האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.')}</p>
 
@@ -3932,9 +3940,9 @@ function wire() {
   // which POIs make it into the file at all.
   D.poiOrder = ['station', 'hospital', 'university', 'museum', 'culture', 'market', 'landmark', 'green'];
   D.poiLabel = {
-    station: t('תחנות מטרו ורכבת'), hospital: t('בתי חולים'), university: t('אוניברסיטה והשכלה'),
-    museum: t('מוזיאונים וגלריות'), culture: t('תיאטרון, ספריות ותרבות'), market: t('שווקים'),
-    landmark: t('אתרים ומונומנטים'), green: t('פארקים, גנים וחופים'),
+    station: 'תחנות מטרו ורכבת', hospital: 'בתי חולים', university: 'אוניברסיטה והשכלה',
+    museum: 'מוזיאונים וגלריות', culture: 'תיאטרון, ספריות ותרבות', market: 'שווקים',
+    landmark: 'אתרים ומונומנטים', green: 'פארקים, גנים וחופים',
   };
   S.cats = new Set(D.poiOrder);
 
@@ -3976,6 +3984,24 @@ function wire() {
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
 Object.assign(EN, {
+  '% מהיחידה ·': '% of the unit ·',
+  '. הקוד שלמעלה הוא הקוד שהחזיקה עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של היחידה הזו.': '. The code above is the one it held until then, and it is also the code INE counted it under in 2021 — the boundary and the data here are that unit’s.',
+  '18 עיריות המחוז': 'the district\'s 18 municipalities',
+  '243 רובעי המחוז': 'the district\'s 243 parishes',
+  '<b>לחיצה כפולה</b> — על הנקודה או על הרישום — פותחת אותה במפות גוגל.': '<b>A double tap</b> — on the point or on the entry — opens it in Google Maps.',
+  'בדיקה:': 'Validation:',
+  'היישובים האלה אינם יחידה מנהלית ואין להם גבול. הם מגיעים מ-OpenStreetMap כנקודה אחת לכל יישוב, ולכן אין להם שם עברי ואין להם תיאור — לא נכתב כזה לאף אחד מהם.': 'These settlements are not an administrative unit and have no boundary. They come from OpenStreetMap as one point each, and so they carry neither a Hebrew name nor a description — none was ever written for any of them.',
+  'הערך המדויק:': 'The exact value:',
+  'זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-': 'This is a single, self-contained file — all the data is inside it and it works with no network and no server. The source document ‎(PDF)‎ is in the repository, under ',
+  'כיסוי:': 'Coverage:',
+  'כל נקודה במפה היא אתר או מוסד, בצבע הקטגוריה שלה. לחיצה על נקודה מבליטה את הרישום שלה כאן, ולחיצה על רישום מבליטה את הנקודה במפה.': 'Every point on the map is a site or an institution, in the colour of its category. Tapping a point highlights its entry here, and tapping an entry highlights the point on the map.',
+  'לשכונות אין גבול רשמי. האות במפה מסומנת על נקודת השכונה כפי שהיא ב-OpenStreetMap, במרכזה בקירוב.': 'Neighbourhoods have no official boundary. The letter on the map is placed on the neighbourhood point as OpenStreetMap holds it, roughly at its centre.',
+  'מקור: OpenStreetMap contributors, ODbL. המיפוי התנדבותי ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.': 'Source: OpenStreetMap contributors, ODbL. The mapping is volunteer work and is uneven: a missing point is not evidence that there is nothing there.',
+  'פתיחת המסמך המקורי (PDF, 19 עמודים)': 'Open the source document (PDF, 19 pages)',
+  'קוד': 'code',
+  'שנת ייחוס:': 'Reference year:',
+  '— האותיות במפה': '— the letters on the map',
+  '— המספר במסך מעוגל כדי להיקרא, וזה מה שהמקור מפרסם.': '— the figure on screen is rounded to be read, and this is what the source publishes.',
   'בחירה':
     'Choose',
   'ביטול':

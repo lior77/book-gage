@@ -230,8 +230,16 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    It keeps the band's height and the 10px inset, so the strip the map is asked
    to leave clear is still one strip. */
 .crumb{position:absolute; z-index:710; inset-block-start:10px;
-       inset-inline-end:10px; inline-size:max-content;
-       max-inline-size:calc(100% - var(--mapx) - 2*var(--ctl-size) - 36px);
+       /* Beside the buttons, not across the map from them: the trail reads
+          away from the home button, which is the thing it undoes.  In Hebrew
+          that is leftward from it, in English rightward — one logical rule,
+          both directions.  The box is as wide as its text and stops 10px
+          short of the map's far edge. */
+       inset-inline-start:calc(var(--mapx) + 10px + 2*var(--ctl-size)
+                               + var(--s2) + var(--s4));
+       inline-size:max-content;
+       max-inline-size:calc(100% - var(--mapx) - 2*var(--ctl-size)
+                            - var(--s2) - var(--s4) - 20px);
        display:flex; flex-direction:column; justify-content:center;
        block-size:var(--ctl-size); text-align:start;
        --crumb-halo:var(--crumb-halo-dark, rgba(255,255,255,.92))}
