@@ -56,7 +56,8 @@ android {
 tasks.register('copyWebApp', Copy) {
     from(rootProject.file('../')) {
         include 'index.html', 'app.css', 'app.js', 'manifest.webmanifest'
-        include 'vendor/**', 'icons/**', 'data/processed/**', 'data/sources.json'
+        include 'vendor/**', 'icons/**', 'data/processed/**'
+        include 'data/sources.json', 'data/prose_en.json'
     }
     into "$buildDir/web/site"
 }

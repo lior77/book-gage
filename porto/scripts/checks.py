@@ -726,6 +726,49 @@ def main():
              % (len(still_he), still_he[:3]))
     print("data prose translated %d/%d strings" % (len(seen) - len(absent), len(seen)))
 
+    # ---- 7p. every file the app loads is in every list that ships it -------
+    # data/prose_en.json was added to the loader and to the standalone bundle,
+    # and the Android copy task — a third hand-kept copy of the same list, in
+    # another language, in another directory — went on shipping the old set.
+    # The APK built, published, and would have opened to a white screen: the
+    # loader's Promise.all rejects on a 404. Nothing compared the lists,
+    # exactly as nothing compared the two municipality-code tables before 7m.
+    # The loader is the authority here; the other two answer to it.
+    wanted = set(re.findall(r"j\('([^']+\.(?:json|geojson))'\)", appjs2))
+    if len(wanted) < 8:
+        fail("7p read only %d data files out of app.js — the loader's shape "
+             "changed and this check is now looking at the wrong thing" % len(wanted))
+
+    bundle = io.open(os.path.join(ROOT, "scripts", "bundle_standalone.py"),
+                     encoding="utf-8").read()
+    listed = set(re.findall(r'"([^"]+\.(?:json|geojson))"', bundle))
+    missing_bundle = sorted(w for w in wanted if w not in listed)
+    if missing_bundle:
+        fail("%d files the app loads are not in bundle_standalone.py's "
+             "DATA_FILES, so the single-file build would 404: %s"
+             % (len(missing_bundle), missing_bundle))
+
+    gradle = io.open(os.path.join(ROOT, "android", "app", "build.gradle"),
+                     encoding="utf-8").read()
+    includes = re.findall(r"include\s+(.+)", gradle)
+    patterns = set()
+    for line in includes:
+        patterns.update(re.findall(r"'([^']+)'", line))
+    def shipped(rel):
+        for pat in patterns:
+            if pat == rel:
+                return True
+            if pat.endswith("/**") and rel.startswith(pat[:-2]):
+                return True
+        return False
+    missing_apk = sorted(w for w in wanted if not shipped(w))
+    if missing_apk:
+        fail("%d files the app loads are not copied into the APK by "
+             "android/app/build.gradle, so the phone build opens to nothing: %s"
+             % (len(missing_apk), missing_apk))
+    print("data files shipped %d/%d by both the bundle and the APK"
+          % (len(wanted), len(wanted)))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a

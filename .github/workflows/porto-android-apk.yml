@@ -19,6 +19,8 @@ on:
       - 'porto/app.js'
       - 'porto/app.css'
       - 'porto/data/processed/**'
+      - 'porto/data/sources.json'
+      - 'porto/data/prose_en.json'
       - '.github/workflows/porto-android-apk.yml'
 
 # write: the built APK is published as a release asset, so it has a direct
