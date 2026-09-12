@@ -12,13 +12,19 @@
   --bg:#eef1f5; --card:#ffffff; --ink:#141b26; --ink-2:#5b6779; --line:#dde3ec;
   --accent:#15568f; --accent-ink:#ffffff;
   --warn:#8a5000; --warn-bg:#fdf3e3; --good:#1c7a4a; --bad:#b3261e;
-  --miss:#8b95a4;
+  /* ׳אין נתון׳ is text a reader has to read, so it owes 4.5:1 (WCAG 2.2
+     SC 1.4.3) — the old #8b95a4 measured 3.03:1 on the card and failed it */
+  --miss:#666e7e;
+  /* A divider is decoration and owes nothing; the edge of a control is what
+     identifies the control, and owes 3:1 (SC 1.4.11).  They were one token, and
+     a token at 1.29:1 cannot be both. */
+  --ctl-line:#67758b;
   /* the tint the map's controls sit on: the neutrals' cool bias, taken far
      enough from --card that the strip reads as its own surface */
   --tool-bg:#c9d3e0; --tool-solid:#c9d3e0; --tool-solid-2:#b7c4d6;
   --tool-line:#aab8cb; --ring-off:#000000;
   /* the two on the map are darker than the menu they open */
-  --btn-solid:#9fb0c8; --btn-solid-2:#8b9eb9; --btn-line:#7d90ac;
+  --btn-solid:#9fb0c8; --btn-solid-2:#8b9eb9; --btn-line:#6b7f9c;
   /* the strip floats over the map, and each button floats over the strip */
   --float:0 2px 6px rgba(16,24,40,.10),0 10px 28px rgba(16,24,40,.16);
   --float-sm:0 1px 2px rgba(16,24,40,.10),0 3px 8px rgba(16,24,40,.14);
@@ -30,7 +36,11 @@
   /* radii by role, not one stamped on everything */
   --r-card:14px; --r-ctl:10px; --r-pill:999px;
   /* a spacing scale, so gaps repeat instead of being invented per block */
-  --s1:4px; --s2:6px; --s3:8px; --s4:12px; --s5:16px; --s6:22px;
+  /* 4, 6, 8, 12, 16 are the low end of Shopify Polaris's published scale;
+     the sixth step was 22, which no published system ships — Carbon, Polaris
+     and Material all step 16 → 24.  22 is a type size in Material, not a
+     spacing value. */
+  --s1:4px; --s2:6px; --s3:8px; --s4:12px; --s5:16px; --s6:24px;
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
 }
@@ -41,10 +51,10 @@
     --bg:#0e1420; --card:#18202e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
     --accent:#6ea8dd; --accent-ink:#0e1420;
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
-    --miss:#7b8698;
+    --miss:#95a0b2; --ctl-line:#7d8aa2;
     --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
-    --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#33425c;
+    --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#576c90;
     --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
     --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
     --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
@@ -56,10 +66,10 @@
     --bg:#0e1420; --card:#18202e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
     --accent:#6ea8dd; --accent-ink:#0e1420;
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
-    --miss:#7b8698;
+    --miss:#95a0b2; --ctl-line:#7d8aa2;
     --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
-    --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#33425c;
+    --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#576c90;
     --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
     --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
     --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
@@ -243,7 +253,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    corner, because that is the corner of the thing being closed. */
 .mt.menu-x{position:absolute; z-index:1;
       inset-block-start:20px; inset-inline-start:20px;
-      background:var(--tool-solid); border-color:var(--tool-line)}
+      background:var(--tool-solid); border-color:var(--ctl-line)}
 .mt.menu-x:active{background:var(--tool-solid-2)}
 
 /* One row per thing the menu can do: the icon on the start edge — the right —
@@ -343,7 +353,7 @@ body[data-view="text"] .map-only{display:none}
 .panel-h h2{flex:1 1 auto}
 .panel input[type=search],.panel input[type=text],.panel textarea{
        width:100%; padding:var(--s3) var(--s4); border-radius:var(--r-ctl);
-       border:1px solid var(--line); background:var(--bg); color:var(--ink);
+       border:1px solid var(--ctl-line); background:var(--bg); color:var(--ink);
        font:inherit; resize:vertical}
 .panel .rows{margin-block-start:var(--s2)}
 .btns{display:flex; flex-direction:column; gap:var(--s2); margin-block-start:var(--s2)}
@@ -367,7 +377,7 @@ body[data-view="text"] .map-only{display:none}
 
 .fld-l{display:block; font-size:.8rem; font-weight:700; color:var(--ink-2);
        margin-block:8px 3px}
-.cta-2{background:var(--bg); color:var(--ink); border:1px solid var(--line)}
+.cta-2{background:var(--bg); color:var(--ink); border:1px solid var(--ctl-line)}
 .cta-danger{background:var(--bg); color:var(--bad); border:1px solid var(--bad)}
 
 .leaflet-container{font:inherit; background:var(--bg)}
@@ -376,13 +386,21 @@ body[data-view="text"] .map-only{display:none}
 .tt::before{border-top-color:var(--line)!important}
 
 /* number badge on the map, and its twin in the list */
-.lbl{display:grid; place-items:center; width:20px; height:20px;
+/* The element IS the target, so it is 24×24 — the floor WCAG 2.2 SC 2.5.8 sets
+   at AA — and the pill inside it stays 20px of ink.  The hit area grows, the
+   ink does not, which is the pattern Android publishes for exactly this case.
+   It has to be the element's own box: an overlay pseudo-element does not change
+   what the browser hit-tests or what a measurement reads. */
+.lbl{display:grid; place-items:center; width:24px; height:24px;
+     background:none; border:0; box-shadow:none; direction:ltr; cursor:pointer}
+.lbl > i{display:grid; place-items:center; width:20px; height:20px;
      border-radius:var(--r-pill); font:700 10px/1 system-ui,sans-serif;
-     color:#101010; background:#fff; border:2px solid #101010;
-     box-shadow:0 1px 4px rgba(0,0,0,.35); direction:ltr; cursor:pointer}
-.lbl.is-hi{background:var(--hi-line); color:#fff}
-.lbl-ltr{border-radius:7px; border-color:#15568f; color:#15568f}
-.lbl-ltr.is-hi{background:#15568f; color:#fff}
+     font-style:normal; color:#101010; background:#fff; border:2px solid #101010;
+     box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.lbl.wide,.lbl.wide > i{width:28px}
+.lbl.is-hi > i{background:var(--hi-line); color:#fff}
+.lbl-ltr > i{border-radius:7px; border-color:#15568f; color:#15568f}
+.lbl-ltr.is-hi > i{background:#15568f; color:#fff}
 
 /* ---------- text half ---------- */
 /* A section of the page, not a card on it: no surface of its own, no border, no
@@ -565,7 +583,7 @@ body[data-view="text"] .map-only{display:none}
              background:var(--card); border-block-end:1px solid var(--line)}
 .drawer-head h2{flex:1 1 auto; margin:0}
 .drawer-head input{flex:1 1 auto; min-width:0; padding:var(--s3) var(--s4);
-                   border-radius:var(--r-ctl); border:1px solid var(--line);
+                   border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
                    background:var(--bg)}
 .drawer-body{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch;
              padding:var(--s4) var(--s4) calc(var(--safe-b) + 28px);
@@ -609,12 +627,12 @@ body[data-view="text"] .map-only{display:none}
 /* עיריות and רובעים at the start edge — the right, in this document */
 .cmp-scope{display:flex; justify-content:flex-start; gap:var(--s2)}
 .cmp-sc{font:inherit; font-size:.9rem; font-weight:700; padding:7px 18px;
-  border-radius:var(--r-ctl); border:1px solid var(--line);
+  border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
   background:var(--bg); color:var(--ink-2); cursor:pointer}
 .cmp-sc[aria-pressed="true"]{background:var(--hi-line); border-color:var(--hi-line); color:#fff}
 /* and the field switch at the end edge — the left */
 .cmp-swap{margin-inline-start:auto; font:inherit; font-size:.85rem; font-weight:700;
-  padding:7px 15px; border-radius:var(--r-ctl); border:1px solid var(--line);
+  padding:7px 15px; border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
   background:var(--bg); color:var(--ink); cursor:pointer; white-space:nowrap}
 .cmp-h{font-size:1.28rem; font-weight:700; line-height:1.25; margin:0}
 .cmp-u{font-weight:400; font-size:.8rem; color:var(--ink-2)}
@@ -662,12 +680,20 @@ body[data-view="text"] .map-only{display:none}
 .cmp-cut::before,.cmp-cut::after{content:""; flex:1 1 auto; height:0;
   border-block-start:1px dashed var(--line)}
 
+/* The comparison's own map label: white, no pill, and a dark halo so it stays
+   legible over the two lightest bands — white on #a1bbd9 is under 2:1 on its
+   own. paint-order puts the stroke behind the glyph rather than over it. */
+.lbl.cmp-lbl > i{background:none; border:0; box-shadow:none; color:#ffffff;
+  width:auto; height:auto; font:700 12px/1 system-ui,sans-serif;
+  text-shadow:0 0 3px rgba(8,16,28,.95), 0 1px 2px rgba(8,16,28,.8);
+  -webkit-text-stroke:2.5px rgba(8,16,28,.55); paint-order:stroke fill}
+
 /* the field picker */
 .cmp-note{line-height:1.55; margin-block-end:var(--s3)}
 .cmp-fields{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
   gap:var(--s2)}
 .cmp-f{display:grid; gap:2px; text-align:start; padding:10px 12px;
-  border:1px solid var(--line); border-radius:var(--r-ctl);
+  border:1px solid var(--ctl-line); border-radius:var(--r-ctl);
   background:var(--card); color:var(--ink); font:inherit; cursor:pointer}
 .cmp-f:active{background:var(--bg)}
 .cmp-f-t{font-weight:700; font-size:.9rem; line-height:1.3}

@@ -881,8 +881,10 @@ const css = (page, sel, prop) =>
      (() => { const v = mun.map(r => parseFloat(r.val.replace(/[^\d.]/g, '')));
               return v.every((x, i) => i === 0 || x >= v[i - 1]); })(),
      mun.map(r => r.val).join(' '));
-  ok('each row carries the unit\'s own DICOFRE code, as everywhere else',
-     mun.every(r => /^\d{2}$/.test(r.code)), mun.map(r => r.code).join(' '));
+  /* the DICOFRE code, with the leading zero dropped under ten: one digit reads
+     faster as a label on a shape, and the map and the list have to agree */
+  ok('each row carries the unit\'s own DICOFRE code, single-digit under ten',
+     mun.every(r => /^([1-9]|[1-9]\d)$/.test(r.code)), mun.map(r => r.code).join(' '));
   ok('and its value opens the municipality source record',
      mun.every(r => r.src === 'municipio.area_km2'));
   /* five distinct fills and no more: the whole point of five classes */
@@ -895,8 +897,57 @@ const css = (page, sel, prop) =>
     els => els.map(e => e.getAttribute('fill')).filter(f => f && f.startsWith('#')));
   ok('the map paints the same five colours', new Set(mapFills).size === 5,
      String(new Set(mapFills).size));
-  ok('and the labels on it are the DICOFRE codes',
-     await page.$$eval('#map .lbl', els => els.every(e => /^\d{2}$/.test(e.textContent.trim()))));
+  ok('and the labels on it are the same codes, the map agreeing with the list',
+     await page.$$eval('#map .lbl', els => els.every(e => /^([1-9]|[1-9]\d)$/.test(e.textContent.trim())))
+       && (await page.$$eval('#map .lbl', els => els.map(e => e.textContent.trim()).sort().join(' ')))
+          === mun.map(r => r.code).sort().join(' '),
+     await page.$$eval('#map .lbl', els => els.map(e => e.textContent.trim()).join(' ')));
+  /* the label carries no pill of its own here: white on the fill, nothing behind */
+  const lblStyle = await page.$eval('#map .lbl.cmp-lbl > i', el => {
+    const c = getComputedStyle(el);
+    const box = el.parentElement.getBoundingClientRect();
+    return { colour: c.color, bg: c.backgroundColor, border: c.borderTopWidth,
+             hit: Math.min(box.width, box.height) };
+  });
+  ok('the labels are white with nothing behind them',
+     lblStyle.colour === 'rgb(255, 255, 255)'
+       && /rgba\(0, 0, 0, 0\)|transparent/.test(lblStyle.bg)
+       && parseFloat(lblStyle.border) === 0, JSON.stringify(lblStyle));
+  /* the ink is 12px of glyph; the box around it is the target, and WCAG 2.2
+     SC 2.5.8 puts the floor at 24 CSS px */
+  ok('and the label\'s own box is a 24px target, as 2.5.8 requires',
+     lblStyle.hit >= 24, String(lblStyle.hit));
+  /* and the boundaries are white, not the black the map normally draws */
+  // Leaflet names the pane element leaflet-<name>-pane, not <name>
+  const lines = await page.evaluate(() => [...new Set(
+    ['ln-mun', 'ln-district', 'ln-fre'].flatMap(p =>
+      [...document.querySelectorAll(`.leaflet-${p}-pane path`)]
+        .map(x => x.getAttribute('stroke')).filter(Boolean)))]);
+  ok('the boundaries are white while comparing, never black',
+     lines.length > 0 && lines.every(c => /255/.test(c) || c === '#ffffff'),
+     lines.join(' | '));
+
+  /* רובעים at level 1 must draw ALL 243, not a sample.  An earlier cut drew the
+     twenty ends and hatched the eighteen municipalities underneath them, which
+     put the whole district in the "no value" pattern — the screen said nothing
+     at all, and no check here noticed, because they all counted rows in the
+     list rather than shapes on the map. */
+  await page.click('[data-cmpscope="fre"]');
+  await page.waitForTimeout(1100);
+  const freRows = await cmpRows();
+  const freShapes = await page.$$eval('#map .leaflet-overlay-pane path[fill^="#"]',
+    els => els.length);
+  ok('choosing רובעים lists all 243 parishes', freRows.length === 243, String(freRows.length));
+  ok('and draws every one of them on the map, not a sample',
+     freShapes === freRows.length, `${freShapes} shapes, ${freRows.length} rows`);
+  ok('nothing is left in the no-value pattern that has a value',
+     await page.$$eval('#map .leaflet-overlay-pane path',
+       els => els.filter(e => (e.getAttribute('fill') || '').includes('cmp-nodata')).length) === 0);
+  ok('and they still take only the five colours',
+     new Set(freRows.map(r => r.fill)).size === 5,
+     String(new Set(freRows.map(r => r.fill)).size));
+  await page.click('[data-cmpscope="mun"]');
+  await page.waitForTimeout(900);
 
   /* a municipality opens level 2, from the list and from the map alike */
   await page.click('#doc .cmp-row[data-mun]');

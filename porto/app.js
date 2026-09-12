@@ -141,6 +141,11 @@ const lineColour = (kind, props) => {
   const own = kind !== 'region'
     && (LINE_BLACK[S.level] || []).indexOf(kind) >= 0
     && (!props || ownFeature(kind, props));
+  /* While comparing, every unit is a filled colour and the black lines the map
+     normally uses read as a second, competing layer over them.  White separates
+     the shapes without adding a value of its own — and it works over all five
+     blues, which black does not. */
+  if (S.cmp) return own ? '#ffffff' : 'rgba(255,255,255,.65)';
   return isDark()
     ? (own ? '#ffffff' : 'rgba(255,255,255,.5)')
     : (own ? '#000000' : 'rgba(0,0,0,.5)');
@@ -485,14 +490,31 @@ function clearMap() {
   Object.keys(LG).forEach(k => { if (LG[k]) { map.removeLayer(LG[k]); delete LG[k]; } });
 }
 
+/* The comparison screen's own label.  White on the fill, no pill behind it:
+   the pill is what the app uses over a photographic background, and there is
+   none here.  A dark halo keeps the white readable over the two lightest bands,
+   where white alone measures under 2:1 — the halo is what makes "white, no
+   background" actually legible rather than only nominally so.
+   Codes under ten lose the leading zero: the app prints the official two-digit
+   DICOFRE everywhere else, but here the number is a label on a shape and one
+   digit reads faster. */
+const cmpCode = c => String(c).replace(/^0(?=\d$)/, '');
+function cmpIcon(text) {
+  const t = cmpCode(text);
+  return L.divIcon({ className: 'lbl cmp-lbl' + (t.length > 2 ? ' wide' : ''),
+    iconSize: [t.length > 2 ? 28 : 24, 24], iconAnchor: [t.length > 2 ? 14 : 12, 12],
+    html: '<i>' + html(t) + '</i>' });
+}
+
 function numIcon(text, cls) {
   // Official codes are two digits, and a unit the 2025 reform split shows its
   // first successor with a plus — three characters, which need a wider pill or
   // they spill out of the circle Leaflet sizes from iconSize.
-  const w = String(text).length > 2 ? 28 : 20;
+  const wide = String(text).length > 2, w = wide ? 28 : 24;
   return L.divIcon({
-    className: 'lbl' + (cls ? ' ' + cls : ''), html: html(text),
-    iconSize: [w, 20], iconAnchor: [w / 2, 10],
+    className: 'lbl' + (wide ? ' wide' : '') + (cls ? ' ' + cls : ''),
+    html: '<i>' + html(text) + '</i>',
+    iconSize: [w, 24], iconAnchor: [w / 2, 12],
   });
 }
 
@@ -2547,15 +2569,11 @@ function cmpRank(field) {
   return { have, none, bands, n, total: u.rows.length, kind: u.kind, all: u.all };
 }
 
-/* At level 1 the parishes are 243 and the map is the whole district: drawing
-   all of them there is not a comparison.  The ten smallest and the ten largest
-   are drawn and listed; the rest are named rather than silently dropped. */
-const CMP_ENDS = 10;
-function cmpShown(rk) {
-  if (!rk.all || rk.n <= CMP_ENDS * 2) return { list: rk.have, cut: 0 };
-  return { list: rk.have.slice(0, CMP_ENDS).concat(rk.have.slice(-CMP_ENDS)),
-           cut: rk.n - CMP_ENDS * 2 };
-}
+/* All of them.  An earlier cut drew the ten smallest and the ten largest at
+   level 1, because 243 shades of one hue is not a map anyone can read — but
+   that was the continuous ramp's problem, and five classes do not have it.
+   243 shapes in five colours is exactly the picture the screen is for. */
+function cmpShown(rk) { return { list: rk.have, cut: 0 }; }
 
 /* ------------------------------------------------------------ the map --- */
 function cmpGeo(o) {
@@ -2597,10 +2615,14 @@ function drawCmp() {
   if (rk) cmpShown(rk).list.forEach(r =>
     paint.set(cmpId(r.o), { c: r.c, rank: r.rank, v: r.v, band: r.band }));
 
-  const base = S.level === 'mun' ? freFeatures(S.mun) : D.bM;
+  const parishes = S.level === 'mun' || S.cmpScope === 'fre';
+  const base = S.level === 'mun' ? freFeatures(S.mun)
+             : S.cmpScope === 'fre' ? D.bF : D.bM;
   const unitOf = ft => S.level === 'mun'
     ? freOfFeature(S.mun, ft.properties)
-    : D.munByNum.get(ft.properties.num);
+    : S.cmpScope === 'fre'
+      ? D.freByKey.get(ft.properties.mun_num + '|' + ft.properties.name)
+      : D.munByNum.get(ft.properties.num);
   // a unit with no value is hatched, never given an end of the scale
   const fillOf = o => {
     const p = o && paint.get(cmpId(o));
@@ -2616,7 +2638,7 @@ function drawCmp() {
       l.on('click', () => {
         // a municipality opens — that is how level 2 is reached from here; a
         // parish does not descend, because level 3 is not part of this screen
-        if (S.level === 'mun' || S.cmpScope === 'fre') { cmpFocus(cmpId(o)); return; }
+        if (parishes) { cmpFocus(cmpId(o)); return; }
         goMun(o.num);
       });
       l.bindTooltip(`<b>${html(cmpName(o))}</b><br>${
@@ -2627,32 +2649,20 @@ function drawCmp() {
     },
   }).addTo(map);
 
-  // level 1 with parishes chosen: the twenty sit over the eighteen
-  if (rk && rk.all) {
-    const fc = { type: 'FeatureCollection', features: [] };
-    cmpShown(rk).list.forEach(r => {
-      const g = cmpGeo(r.o);
-      if (g) fc.features.push({ type: 'Feature',
-        properties: { id: cmpId(r.o) }, geometry: g.geometry });
-    });
-    LG.fre = L.geoJSON(fc, {
-      style: ft => ({ weight: 1, color: isDark() ? '#0b1118' : '#ffffff', opacity: .9,
-        fillColor: paint.get(ft.properties.id).c, fillOpacity: 1 }),
-      onEachFeature: (ft, l) => l.on('click', () => cmpFocus(ft.properties.id)),
-    }).addTo(map);
-  }
-
   drawLines();
   cmpPattern();
 
   /* The labels are the app's own: the official DICOFRE code, as on every other
      map here.  The colour says which fifth the unit is in and the list says the
      number — the label has no third job to do. */
+  /* At level 1 with the parishes chosen there are 243 shapes: a number on each
+     is not a map.  The labels there name the eighteen municipalities that hold
+     them, which is what tells you where you are looking. */
   const rows = S.level === 'mun' ? (D.freByMun.get(S.mun) || []) : D.mun;
   LG.labels = L.layerGroup(rows.map(o => {
     const code = o.mun_num === undefined ? munCode(o) : freNum(o);
-    const mk = L.marker(latlng(o.center), { icon: numIcon(code), keyboard: false,
-      title: code + ' · ' + cmpName(o), riseOnHover: true });
+    const mk = L.marker(latlng(o.center), { icon: cmpIcon(code), keyboard: false,
+      title: cmpCode(code) + ' · ' + cmpName(o), riseOnHover: true });
     mk.on('click', () => {
       if (S.level === 'mun') { cmpFocus(cmpId(o)); return; }
       goMun(o.num);
@@ -2680,7 +2690,7 @@ function cmpRowHtml(r, field, lvl, rk) {
   const code = mun ? munCode(r.o) : freNum(r.o);
   return `<div class="cmp-row" data-cmpu="${html(cmpId(r.o))}"${
       mun ? ` data-mun="${r.o.num}"` : ''}>
-    <span class="cmp-sw" style="background:${r.c};color:${ink}">${html(code)}</span>
+    <span class="cmp-sw" style="background:${r.c};color:${ink}">${html(cmpCode(code))}</span>
     <span class="cmp-body">
       <span class="cmp-n">${html(cmpName(r.o))}
         <span class="lat">${html(bare(r.o.pt))}</span></span>
@@ -2751,16 +2761,8 @@ function renderCmp() {
       </div>` : ''}
     </div>`;
 
-  const list = sh.cut
-    ? `<div class="grp">עשרת הקטנים</div>
-       <div class="cmp-rows">${sh.list.slice(0, CMP_ENDS)
-         .map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>
-       <div class="cmp-cut"><span>${nf(sh.cut)} רובעים באמצע אינם מוצגים</span></div>
-       <div class="grp">עשרת הגדולים</div>
-       <div class="cmp-rows">${sh.list.slice(CMP_ENDS)
-         .map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`
-    : `<div class="cmp-rows">${sh.list
-         .map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`;
+  const list = `<div class="cmp-rows">${sh.list
+    .map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`;
 
   const none = rk.none.length ? `
     <div class="grp">${nf(rk.none.length)} בלי נתון — לא מדורגים</div>
@@ -2768,7 +2770,7 @@ function renderCmp() {
       const mun = r.o.mun_num === undefined;
       return `<div class="cmp-row no" data-cmpu="${html(cmpId(r.o))}"${
           mun ? ` data-mun="${r.o.num}"` : ''}>
-        <span class="cmp-sw cmp-sw-nd">${html(mun ? munCode(r.o) : freNum(r.o))}</span>
+        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munCode(r.o) : freNum(r.o)))}</span>
         <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}
           <span class="lat">${html(bare(r.o.pt))}</span></span></span>
         <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${MISSING}</button>
@@ -2785,7 +2787,7 @@ function renderCmp() {
       field.unit ? ' <span class="cmp-u">' + html(field.unit) + '</span>' : ''}</h1>
     <p class="cmp-what">${atDistrict
       ? (S.cmpScope === 'fre'
-         ? `243 רובעי המחוז — עשרת הקטנים ועשרת הגדולים`
+         ? `243 רובעי המחוז`
          : `18 עיריות המחוז`)
       : `${html((D.freByMun.get(S.mun) || []).length)} הרובעים של ${html(m.he)}`
         + ' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים'}

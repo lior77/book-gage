@@ -423,6 +423,19 @@ def main():
         if n_cmp < 40:
             fail("only %d comparable fields were read out of CMP_ALL" % n_cmp)
 
+    # ---- 7f. the design document is generated, not written -----------------
+    # docs/DESIGN.html states the app's own colours, spacing and type. A hand-
+    # kept copy of those values drifts the moment app.css changes, and a design
+    # document that disagrees with the code is worse than none: it is a second
+    # source that looks authoritative. The generator is re-run here and the file
+    # on disk has to be exactly what it produces.
+    import subprocess
+    r = subprocess.run([sys.executable, os.path.join(HERE, "build_design.py"), "--check"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        fail("docs/DESIGN.html has drifted from app.css — "
+             "run python3 scripts/build_design.py  (%s)" % r.stdout.strip())
+
     # ---- level 3 covers every parish, not only Porto's seven ---------------
     zones = load("zones.json")["zones"]
     missing_z = [f["pt"] for f in fre if "%d|%s" % (f["mun_num"], f["pt"]) not in zones]

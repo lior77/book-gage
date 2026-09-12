@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>פורטולנד — השפה העיצובית</title>
+<style>
+:root{
+  --pg:#f4f6f9; --sf:#ffffff; --sk:#eef2f6; --tx:#16212e; --tx2:#5b6a7d;
+  --ln:#dbe2ea; --ac:#15568f; --ok:#1c7a4a; --no:#b3261e;
+  --mo:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --pg:#0d141c; --sf:#161f2a; --sk:#111925; --tx:#e3eaf2; --tx2:#93a2b4;
+  --ln:#243040; --ac:#79ade6; --ok:#5fd39a; --no:#ff8a80;
+}}
+*{box-sizing:border-box}
+body{margin:0; background:var(--pg); color:var(--tx); direction:rtl;
+  font:400 16px/1.6 system-ui,"Noto Sans Hebrew","Heebo",Arial,sans-serif;
+  -webkit-text-size-adjust:100%}
+.w{max-width:1000px; margin:0 auto; padding:0 20px 72px}
+h1,h2,h3{margin:0; line-height:1.25; text-wrap:balance}
+h1{font-size:clamp(26px,5vw,36px)}
+h2{font-size:21px; margin-block-start:48px}
+h3{font-size:15px; margin-block-start:26px; color:var(--tx2)}
+header{padding-block:44px 20px; border-block-end:2px solid var(--tx)}
+.sub{color:var(--tx2); font-size:15px; margin-block-start:10px; max-width:64ch}
+p{margin:8px 0 0; color:var(--tx2); font-size:14px; max-width:70ch}
+code,.n{font-family:var(--mo); font-variant-numeric:tabular-nums}
+code{font-size:12.5px; background:var(--sk); padding:1px 5px; border-radius:2px}
+code[dir=ltr],.n[dir=ltr]{unicode-bidi:isolate}
+a{color:var(--ac)}
+.scroll{overflow-x:auto; margin-block-start:14px; border:1px solid var(--ln);
+  border-radius:3px}
+table{border-collapse:collapse; width:100%; min-width:640px; background:var(--sf)}
+th,td{text-align:start; padding:8px 11px; font-size:13px;
+  border-block-end:1px solid var(--ln)}
+thead th{background:var(--sk); font-size:10.5px; letter-spacing:.08em;
+  color:var(--tx2); font-weight:500; white-space:nowrap}
+tbody tr:last-child td{border-block-end:0}
+td.n{font-family:var(--mo); font-variant-numeric:tabular-nums; white-space:nowrap}
+.sw{display:inline-grid; place-items:center; width:62px; height:26px;
+  border-radius:3px; font:700 10px/1 var(--mo); border:1px solid rgba(0,0,0,.14)}
+.pass{color:var(--ok); font-weight:700}
+.fail{color:var(--no); font-weight:700}
+.na{color:var(--tx2)}
+.lvl{font-size:10.5px; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.lvl.req{background:var(--ac); color:#fff}
+.lvl.rec{background:var(--sk); color:var(--tx2); border:1px solid var(--ln)}
+.bands{display:flex; margin-block-start:14px; border-radius:3px; overflow:hidden;
+  border:1px solid var(--ln)}
+.band{flex:1 1 0; min-height:78px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px}
+.band b{font:700 17px/1 var(--mo)}
+.band span{font:400 10px/1 var(--mo); opacity:.9}
+.hatch{height:44px; border:1px solid var(--ln); border-radius:3px;
+  margin-block-start:8px}
+.sp{display:flex; align-items:center; gap:11px; padding:5px 0; font-size:13px}
+.sp-b{height:16px; background:var(--ac); border-radius:2px; flex:0 0 auto}
+.rad{display:flex; align-items:center; gap:11px; padding:5px 0; font-size:13px}
+.rad-b{width:52px; height:34px; background:var(--sk); border:2px solid var(--ac);
+  flex:0 0 auto}
+.role{color:var(--tx2); font-size:12.5px}
+.spec{display:flex; flex-direction:column; gap:3px; padding:9px 0;
+  border-block-end:1px solid var(--ln)}
+.spec .n{font-size:11.5px; color:var(--tx2)}
+.tg{display:flex; align-items:center; gap:11px; padding:5px 0; font-size:13px}
+.tg-b{border:2px dashed var(--ac); border-radius:3px; flex:0 0 auto}
+.note{border-inline-start:3px solid var(--ac); padding-inline-start:12px;
+  margin-block-start:16px; font-size:14px; color:var(--tx); line-height:1.65}
+.note b{font-weight:700}
+footer{margin-block-start:52px; padding-block-start:18px;
+  border-block-start:1px solid var(--ln); font-size:12px; color:var(--tx2)}
+</style>
+<div class="w">
+<header>
+  <h1>פורטולנד — השפה העיצובית</h1>
+  <p class="sub">כל ערך בעמוד הזה נקרא מ-<code dir="ltr">app.css</code> ומ-<code dir="ltr">app.js</code>
+    בזמן הבנייה, לא הוקלד כאן. ‏<code dir="ltr">scripts/checks.py</code> מריץ את המחולל
+    מחדש ונכשל אם הקובץ על הדיסק אינו מה שהוא מייצר — כך שהמסמך אינו יכול
+    להתרחק מהקוד. יחסי הניגודיות חושבו לפי הנוסחה של WCAG 2.2.</p>
+</header>
+
+<h2>הכללים שנמדדים מולם</h2>
+<p>דרישה היא מה שתקן מחייב; המלצה היא מה שפלטפורמה מפרסמת. ההבדל חשוב,
+  ולכן הוא בטבלה.</p>
+<div class="scroll"><table>
+<thead><tr><th>כלל</th><th>מה הוא דורש</th><th>מעמד</th><th>מקור</th></tr></thead>
+<tbody><tr><td>SC 1.4.3 Contrast (Minimum)</td><td>טקסט ≥ 4.5:1 · טקסט גדול ≥ 3:1</td><td><span class="lvl req">WCAG 2.2 · AA</span></td><td><a href="https://www.w3.org/TR/WCAG22/#contrast-minimum" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 1.4.11 Non-text Contrast</td><td>רכיבי ממשק ואובייקטים גרפיים הדרושים להבנה ≥ 3:1 מול הצבע שלצדם</td><td><span class="lvl req">WCAG 2.2 · AA</span></td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 1.4.12 Text Spacing</td><td>הטקסט שורד גובה שורה 1.5×, ריווח פסקה 2×</td><td><span class="lvl req">WCAG 2.2 · AA</span></td><td><a href="https://www.w3.org/TR/WCAG22/#text-spacing" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 2.5.8 Target Size (Minimum)</td><td>יעד מגע ≥ 24 × 24 פיקסלי CSS</td><td><span class="lvl req">WCAG 2.2 · AA</span></td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 2.5.5 Target Size (Enhanced)</td><td>יעד מגע ≥ 44 × 44</td><td><span class="lvl req">WCAG 2.2 · AAA</span></td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced.html" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 2.4.7 Focus Visible</td><td>לפוקוס המקלדת יש סימון נראה</td><td><span class="lvl req">WCAG 2.2 · AA</span></td><td><a href="https://www.w3.org/TR/WCAG22/#focus-visible" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 2.4.11 Focus Not Obscured</td><td>רכיב שקיבל פוקוס אינו מוסתר לגמרי בידי תוכן האתר</td><td><span class="lvl req">WCAG 2.2 · AA</span></td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 2.4.13 Focus Appearance</td><td>היקף 2 פיקסל, ויחס 3:1 בין מצב הפוקוס למצב שבלעדיו</td><td><span class="lvl req">WCAG 2.2 · AAA</span></td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>SC 2.3.3 Animation from Interactions</td><td>אפשר לכבות אנימציה שהאינטראקציה מפעילה</td><td><span class="lvl req">WCAG 2.2 · AAA</span></td><td><a href="https://www.w3.org/TR/WCAG22/#animation-from-interactions" target="_blank" rel="noopener">W3C</a></td></tr><tr><td>Touch target</td><td>48 × 48 dp</td><td><span class="lvl rec">המלצת פלטפורמה</span></td><td><a href="https://support.google.com/accessibility/android/answer/7101858" target="_blank" rel="noopener">Material Design 3</a></td></tr><tr><td>Touch target</td><td>44 × 44 pt כברירת מחדל, 28 × 28 pt מינימום</td><td><span class="lvl rec">המלצת פלטפורמה</span></td><td><a href="https://developer.apple.com/design/human-interface-guidelines/accessibility" target="_blank" rel="noopener">Apple HIG</a></td></tr><tr><td>Spacing</td><td>בסיס 8, עם חצאי צעדים של 4</td><td><span class="lvl rec">המלצת פלטפורמה</span></td><td><a href="https://m3.material.io/foundations/layout/understanding-layout/spacing" target="_blank" rel="noopener">Material Design 3</a></td></tr><tr><td>Body type</td><td>16 / 24 sp (Body Large), 14 / 20 (Body Medium)</td><td><span class="lvl rec">המלצת פלטפורמה</span></td><td><a href="https://m3.material.io/styles/typography/type-scale-tokens" target="_blank" rel="noopener">Material Design 3</a></td></tr><tr><td>Design tokens</td><td>‏$value חובה; ‏{ } ו-. אסורים בשם; קבוצות חסרות משמעות</td><td><span class="lvl rec">פורמט יציב</span></td><td><a href="https://www.designtokens.org/TR/2025.10/format/" target="_blank" rel="noopener">Design Tokens Format Module 2025.10</a></td></tr><tr><td>RTL</td><td>כיוון לוגי ב-CSS; לא להפוך סימנים אוניברסליים, שעונים או ספרות</td><td><span class="lvl rec">המלצת פלטפורמה</span></td><td><a href="https://developer.apple.com/design/human-interface-guidelines/right-to-left" target="_blank" rel="noopener">Apple HIG · Material</a></td></tr><tr><td>Motion</td><td>‏prefers-reduced-motion: להחליף תנועה בהצלבה, לא למחוק משוב</td><td><span class="lvl rec">המלצת פלטפורמה</span></td><td><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion" target="_blank" rel="noopener">MDN · Apple HIG</a></td></tr></tbody></table></div>
+
+<h2>צבע — תצוגת יום</h2>
+<p>העמודות מודדות כל אסימון מול שני המשטחים שהוא יושב עליהם. טקסט חייב 4.5:1
+  ‏(SC 1.4.3); מסגרת של פקד חייבת 3:1 ‏(SC 1.4.11); קו מפריד הוא קישוט ואינו
+  חייב דבר — ולכן הוא אסימון נפרד מהמסגרת, ולא אותו אסימון בשני תפקידים.</p>
+<div class="scroll"><table>
+<thead><tr><th>הצבע</th><th>האסימון</th><th>התפקיד</th><th>מול הכרטיס</th>
+  <th>מול הרקע</th><th></th></tr></thead>
+<tbody><tr><td><span class="sw" style="background:#eef1f5;color:#141b26" dir="ltr">#eef1f5</span></td><td><code dir="ltr">--bg</code></td><td>רקע המסך ורקע המפה כשמפת הרקע כבויה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#ffffff;color:#141b26" dir="ltr">#ffffff</span></td><td><code dir="ltr">--card</code></td><td>משטח חצי הטקסט</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#141b26;color:#ffffff" dir="ltr">#141b26</span></td><td><code dir="ltr">--ink</code></td><td>טקסט ראשי</td><td class="n"><span class="pass">17.29:1</span></td><td class="n"><span class="pass">15.26:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#5b6779;color:#ffffff" dir="ltr">#5b6779</span></td><td><code dir="ltr">--ink-2</code></td><td>טקסט משני</td><td class="n"><span class="pass">5.74:1</span></td><td class="n"><span class="pass">5.06:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#dde3ec;color:#141b26" dir="ltr">#dde3ec</span></td><td><code dir="ltr">--line</code></td><td>קו מפריד — קישוט, ולכן 1.4.11 אינו חל עליו</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#15568f;color:#ffffff" dir="ltr">#15568f</span></td><td><code dir="ltr">--accent</code></td><td>קישורים ומצב פעיל</td><td class="n"><span class="pass">7.61:1</span></td><td class="n"><span class="pass">6.72:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#ffffff;color:#141b26" dir="ltr">#ffffff</span></td><td><code dir="ltr">--accent-ink</code></td><td>טקסט על גבי הצבע המוביל</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#8a5000;color:#ffffff" dir="ltr">#8a5000</span></td><td><code dir="ltr">--warn</code></td><td>אזהרה</td><td class="n"><span class="pass">6.51:1</span></td><td class="n"><span class="pass">5.74:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#fdf3e3;color:#141b26" dir="ltr">#fdf3e3</span></td><td><code dir="ltr">--warn-bg</code></td><td>רקע אזהרה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#1c7a4a;color:#ffffff" dir="ltr">#1c7a4a</span></td><td><code dir="ltr">--good</code></td><td>תקין</td><td class="n"><span class="pass">5.34:1</span></td><td class="n"><span class="pass">4.71:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#b3261e;color:#ffffff" dir="ltr">#b3261e</span></td><td><code dir="ltr">--bad</code></td><td>שגיאה</td><td class="n"><span class="pass">6.54:1</span></td><td class="n"><span class="pass">5.77:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#666e7e;color:#ffffff" dir="ltr">#666e7e</span></td><td><code dir="ltr">--miss</code></td><td>׳אין נתון׳ — טקסט שקוראים, ולכן 4.5:1</td><td class="n"><span class="pass">5.13:1</span></td><td class="n"><span class="pass">4.52:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#67758b;color:#ffffff" dir="ltr">#67758b</span></td><td><code dir="ltr">--ctl-line</code></td><td>מסגרת של פקד — מזהה את הפקד, ולכן חייב 3:1</td><td class="n"><span class="pass">4.67:1</span></td><td class="n"><span class="pass">4.12:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#c9d3e0;color:#141b26" dir="ltr">#c9d3e0</span></td><td><code dir="ltr">--tool-bg</code></td><td>רקע התפריט המלא</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#c9d3e0;color:#141b26" dir="ltr">#c9d3e0</span></td><td><code dir="ltr">--tool-solid</code></td><td>רקע רצועת הכלים</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#b7c4d6;color:#141b26" dir="ltr">#b7c4d6</span></td><td><code dir="ltr">--tool-solid-2</code></td><td>רצועת הכלים, לחוץ</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#aab8cb;color:#141b26" dir="ltr">#aab8cb</span></td><td><code dir="ltr">--tool-line</code></td><td>קו קבוצה בתפריט — קישוט, ולכן 1.4.11 אינו חל עליו</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#000000;color:#ffffff" dir="ltr">#000000</span></td><td><code dir="ltr">--ring-off</code></td><td>החישוק הכבוי באייקון הגבולות</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#9fb0c8;color:#141b26" dir="ltr">#9fb0c8</span></td><td><code dir="ltr">--btn-solid</code></td><td>שני הכפתורים שעל המפה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#8b9eb9;color:#ffffff" dir="ltr">#8b9eb9</span></td><td><code dir="ltr">--btn-solid-2</code></td><td>אותם כפתורים, לחוצים</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#6b7f9c;color:#ffffff" dir="ltr">#6b7f9c</span></td><td><code dir="ltr">--btn-line</code></td><td>מסגרתם — 3:1 מול רקע המפה</td><td class="n"><span class="pass">4.08:1</span></td><td class="n"><span class="pass">3.61:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#fff3d6;color:#141b26" dir="ltr">#fff3d6</span></td><td><code dir="ltr">--hi</code></td><td>רקע הפריט המסומן</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#b7791f;color:#ffffff" dir="ltr">#b7791f</span></td><td><code dir="ltr">--hi-line</code></td><td>הקו של הפריט המסומן</td><td class="n"><span class="pass">3.64:1</span></td><td class="n"><span class="pass">3.21:1</span></td><td>מוגדר מחדש בלילה</td></tr>
+<tr><td><span class="sw" style="background:#101010;color:#ffffff" dir="ltr">#101010</span></td><td><code dir="ltr">--dot</code></td><td>נקודת POI</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#ffffff;color:#141b26" dir="ltr">#ffffff</span></td><td><code dir="ltr">--dot-ring</code></td><td>טבעת סביבה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr></tbody></table></div>
+
+<h2>צבע — תצוגת לילה</h2>
+<div class="scroll"><table>
+<thead><tr><th>הצבע</th><th>האסימון</th><th>התפקיד</th><th>מול הכרטיס</th>
+  <th>מול הרקע</th><th></th></tr></thead>
+<tbody><tr><td><span class="sw" style="background:#0e1420;color:#ffffff" dir="ltr">#0e1420</span></td><td><code dir="ltr">--bg</code></td><td>רקע המסך ורקע המפה כשמפת הרקע כבויה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#18202e;color:#ffffff" dir="ltr">#18202e</span></td><td><code dir="ltr">--card</code></td><td>משטח חצי הטקסט</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#e6ebf3;color:#141b26" dir="ltr">#e6ebf3</span></td><td><code dir="ltr">--ink</code></td><td>טקסט ראשי</td><td class="n"><span class="pass">13.65:1</span></td><td class="n"><span class="pass">15.39:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#97a3b6;color:#ffffff" dir="ltr">#97a3b6</span></td><td><code dir="ltr">--ink-2</code></td><td>טקסט משני</td><td class="n"><span class="pass">6.41:1</span></td><td class="n"><span class="pass">7.22:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#27303f;color:#ffffff" dir="ltr">#27303f</span></td><td><code dir="ltr">--line</code></td><td>קו מפריד — קישוט, ולכן 1.4.11 אינו חל עליו</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#6ea8dd;color:#ffffff" dir="ltr">#6ea8dd</span></td><td><code dir="ltr">--accent</code></td><td>קישורים ומצב פעיל</td><td class="n"><span class="pass">6.47:1</span></td><td class="n"><span class="pass">7.29:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#0e1420;color:#ffffff" dir="ltr">#0e1420</span></td><td><code dir="ltr">--accent-ink</code></td><td>טקסט על גבי הצבע המוביל</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#ffd28a;color:#141b26" dir="ltr">#ffd28a</span></td><td><code dir="ltr">--warn</code></td><td>אזהרה</td><td class="n"><span class="pass">11.55:1</span></td><td class="n"><span class="pass">13.02:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#3a2c12;color:#ffffff" dir="ltr">#3a2c12</span></td><td><code dir="ltr">--warn-bg</code></td><td>רקע אזהרה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#5fd39a;color:#141b26" dir="ltr">#5fd39a</span></td><td><code dir="ltr">--good</code></td><td>תקין</td><td class="n"><span class="pass">8.77:1</span></td><td class="n"><span class="pass">9.89:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#ff8a80;color:#141b26" dir="ltr">#ff8a80</span></td><td><code dir="ltr">--bad</code></td><td>שגיאה</td><td class="n"><span class="pass">7.16:1</span></td><td class="n"><span class="pass">8.07:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#95a0b2;color:#ffffff" dir="ltr">#95a0b2</span></td><td><code dir="ltr">--miss</code></td><td>׳אין נתון׳ — טקסט שקוראים, ולכן 4.5:1</td><td class="n"><span class="pass">6.19:1</span></td><td class="n"><span class="pass">6.98:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#7d8aa2;color:#ffffff" dir="ltr">#7d8aa2</span></td><td><code dir="ltr">--ctl-line</code></td><td>מסגרת של פקד — מזהה את הפקד, ולכן חייב 3:1</td><td class="n"><span class="pass">4.69:1</span></td><td class="n"><span class="pass">5.29:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#243044;color:#ffffff" dir="ltr">#243044</span></td><td><code dir="ltr">--tool-bg</code></td><td>רקע התפריט המלא</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#243044;color:#ffffff" dir="ltr">#243044</span></td><td><code dir="ltr">--tool-solid</code></td><td>רקע רצועת הכלים</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#2e3c53;color:#ffffff" dir="ltr">#2e3c53</span></td><td><code dir="ltr">--tool-solid-2</code></td><td>רצועת הכלים, לחוץ</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#3a4a63;color:#ffffff" dir="ltr">#3a4a63</span></td><td><code dir="ltr">--tool-line</code></td><td>קו קבוצה בתפריט — קישוט, ולכן 1.4.11 אינו חל עליו</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#9aa6b8;color:#ffffff" dir="ltr">#9aa6b8</span></td><td><code dir="ltr">--ring-off</code></td><td>החישוק הכבוי באייקון הגבולות</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#141d2b;color:#ffffff" dir="ltr">#141d2b</span></td><td><code dir="ltr">--btn-solid</code></td><td>שני הכפתורים שעל המפה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#1d2838;color:#ffffff" dir="ltr">#1d2838</span></td><td><code dir="ltr">--btn-solid-2</code></td><td>אותם כפתורים, לחוצים</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#576c90;color:#ffffff" dir="ltr">#576c90</span></td><td><code dir="ltr">--btn-line</code></td><td>מסגרתם — 3:1 מול רקע המפה</td><td class="n"><span class="pass">3.08:1</span></td><td class="n"><span class="pass">3.47:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#3a3312;color:#ffffff" dir="ltr">#3a3312</span></td><td><code dir="ltr">--hi</code></td><td>רקע הפריט המסומן</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#e0b040;color:#141b26" dir="ltr">#e0b040</span></td><td><code dir="ltr">--hi-line</code></td><td>הקו של הפריט המסומן</td><td class="n"><span class="pass">8.14:1</span></td><td class="n"><span class="pass">9.17:1</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#101010;color:#ffffff" dir="ltr">#101010</span></td><td><code dir="ltr">--dot</code></td><td>נקודת POI</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr>
+<tr><td><span class="sw" style="background:#ffffff;color:#141b26" dir="ltr">#ffffff</span></td><td><code dir="ltr">--dot-ring</code></td><td>טבעת סביבה</td><td class="n"><span class="na">—</span></td><td class="n"><span class="na">—</span></td><td></td></tr></tbody></table></div>
+
+<h2>חמש המדרגות של השוואת נתונים</h2>
+<div class="bands"><div class="band" style="background:#a1bbd9;color:#141b26"><b>1</b><span dir="ltr">#a1bbd9</span></div>
+<div class="band" style="background:#82a8d3;color:#ffffff"><b>2</b><span dir="ltr">#82a8d3</span></div>
+<div class="band" style="background:#4380c7;color:#ffffff"><b>3</b><span dir="ltr">#4380c7</span></div>
+<div class="band" style="background:#265b97;color:#ffffff"><b>4</b><span dir="ltr">#265b97</span></div>
+<div class="band" style="background:#13365d;color:#ffffff"><b>5</b><span dir="ltr">#13365d</span></div></div>
+<div class="scroll"><table>
+<thead><tr><th>בין שכנות</th><th>1→2</th><th>2→3</th><th>3→4</th><th>4→5</th></tr></thead>
+<tbody><tr><td>ΔE ב-OKLab נמדד ב-6.7 · 13.7 · 12.6 · 14.1</td><td class="n">1.25:1</td><td class="n">1.65:1</td><td class="n">1.70:1</td><td class="n">1.77:1</td></tr></tbody>
+</table></div>
+<h3>מול הרקע של כל מצב תצוגה</h3>
+<div class="scroll"><table>
+<thead><tr><th>המדרגה</th><th>מול רקע יום</th><th>מול רקע לילה</th></tr></thead>
+<tbody><tr><td><span class="sw" style="background:#a1bbd9;color:#141b26" dir="ltr">1</span></td><td class="n"><span class="fail">1.74:1</span></td><td class="n"><span class="pass">9.32:1</span></td></tr><tr><td><span class="sw" style="background:#82a8d3;color:#ffffff" dir="ltr">2</span></td><td class="n"><span class="fail">2.18:1</span></td><td class="n"><span class="pass">7.45:1</span></td></tr><tr><td><span class="sw" style="background:#4380c7;color:#ffffff" dir="ltr">3</span></td><td class="n"><span class="pass">3.60:1</span></td><td class="n"><span class="pass">4.52:1</span></td></tr><tr><td><span class="sw" style="background:#265b97;color:#ffffff" dir="ltr">4</span></td><td class="n"><span class="pass">6.13:1</span></td><td class="n"><span class="fail">2.66:1</span></td></tr><tr><td><span class="sw" style="background:#13365d;color:#ffffff" dir="ltr">5</span></td><td class="n"><span class="pass">10.82:1</span></td><td class="n"><span class="fail">1.50:1</span></td></tr></tbody></table></div>
+<div class="note"><b>מה שהמספרים האלה אומרים, ומה שלא.</b> כל מדרגה יושבת בתוך
+  מתאר לבן ולצד מדרגה אחרת, ולא לבדה על הרקע — ולכן ״הצבע שלצדה״ שעליו מדבר
+  SC 1.4.11 הוא המתאר והשכנה, לא הרקע הריק. במקום שבו צורה נוגעת ברקע הריק,
+  המדרגות הבהירות בתצוגת יום והכהות בתצוגת לילה אכן יורדות מתחת ל-3:1, וזה
+  רשום כאן במספרים במקום להיטען כהצלחה.</div>
+
+<h3>״אין נתון״</h3>
+<p>פספוס אלכסוני ברוחב 1.2px, כל 4px, בזווית 45° — בגוון שקווי המפה
+  לוקחים לאותו מצב תצוגה. צורה ולא צבע, ולכן היא נבדלת מכל מדרגה בלי להזדקק
+  ליחס ניגודיות, שורדת עיוורון צבעים, הדפסה בשחור-לבן ו-forced colors, ואינה
+  מתחרה על הקצה הבהיר של הסולם.</p>
+<div class="hatch" style="background:repeating-linear-gradient(45°,#9aa6b4 0 1.2px,transparent 1.2px 4px)"></div>
+
+<h2>טיפוגרפיה</h2>
+<p>גוף הטקסט: <code dir="ltr">system-ui,-apple-system,&quot;Noto Sans Hebrew&quot;,&quot;Heebo&quot;,Arial,sans-serif</code> · 16px · משקל 400 · גובה שורה
+  1.55. גובה השורה עומד בדרישת SC 1.4.12, שמחייבת שהטקסט ישרוד 1.5×.
+  ‏Material ממליץ 16/24 ל-Body Large; GOV.UK מפרסם 19/25, ואין מספר יחיד מוסכם.</p>
+<div class="spec"><span style="font-size:1.24rem;font-weight:700;line-height:1.22">רובע בונפים · Bonfim · 22,978</span><span class="n">h1 · 1.24rem · 20px · גובה שורה 1.22</span></div><div class="spec"><span style="font-size:1.06rem;font-weight:700;line-height:1.22">רובע בונפים · Bonfim · 22,978</span><span class="n">h2 · 1.06rem · 17px · גובה שורה 1.22</span></div><div class="spec"><span style="font-size:0.92rem;font-weight:700;line-height:1.22">רובע בונפים · Bonfim · 22,978</span><span class="n">h3 · 0.92rem · 15px · גובה שורה 1.22</span></div>
+<div class="spec"><span>רובע בונפים · Bonfim · 22,978 תושבים · 3.09 קמ״ר</span>
+  <span class="n">גוף · עברית, פורטוגזית וספרות בשורה אחת — המקרה האמיתי</span></div>
+<div class="note"><b>כלל RTL שקל לפספס.</b> פסקה מיישרת לפי השפה שלה, לא לפי
+  ההקשר — שורה או שתיים מיישרות להקשר, אבל שלוש שורות של מקור פורטוגזי בתוך
+  ממשק עברי מיישרות לשמאל. ספרות בתוך מספר לעולם אינן מתהפכות.</div>
+
+<h2>ריווח</h2>
+<p>‏4, 6, 8, 12, 16 הם הקצה הנמוך של הסולם שמפרסמת Polaris; הצעד השישי הועבר
+  מ-22 ל-24, כי Carbon, ‏Polaris ו-Material כולן פוסעות 16 ← 24, ו-22 הוא מספר
+  של טיפוגרפיה ולא של ריווח.</p>
+<div class="sp"><span class="sp-b" style="width:4px"></span><code dir="ltr">--s1</code><span class="n" dir="ltr">4px</span></div><div class="sp"><span class="sp-b" style="width:6px"></span><code dir="ltr">--s2</code><span class="n" dir="ltr">6px</span></div><div class="sp"><span class="sp-b" style="width:8px"></span><code dir="ltr">--s3</code><span class="n" dir="ltr">8px</span></div><div class="sp"><span class="sp-b" style="width:12px"></span><code dir="ltr">--s4</code><span class="n" dir="ltr">12px</span></div><div class="sp"><span class="sp-b" style="width:16px"></span><code dir="ltr">--s5</code><span class="n" dir="ltr">16px</span></div><div class="sp"><span class="sp-b" style="width:24px"></span><code dir="ltr">--s6</code><span class="n" dir="ltr">24px</span></div>
+
+<h2>רדיוסים</h2>
+<p>לפי תפקיד, לא רדיוס אחד מוטבע על הכול.</p>
+<div class="rad"><span class="rad-b" style="border-radius:14px"></span><code dir="ltr">--r-card</code><span class="n" dir="ltr">14px</span><span class="role">רדיוס כרטיס</span></div><div class="rad"><span class="rad-b" style="border-radius:10px"></span><code dir="ltr">--r-ctl</code><span class="n" dir="ltr">10px</span><span class="role">רדיוס פקד</span></div><div class="rad"><span class="rad-b" style="border-radius:999px"></span><code dir="ltr">--r-pill</code><span class="n" dir="ltr">999px</span><span class="role">רדיוס גלולה</span></div>
+
+<h2>יעדי מגע</h2>
+<p>תווית המספר במפה היא 20 פיקסל של דיו בתוך תיבה של 24 — הדיו לא גדל, שטח
+  המגע כן, וזו התבנית ש-Android מפרסם בדיוק למקרה הזה.</p>
+<div class="tg"><span class="tg-b" style="width:24px;height:24px"></span><span class="n">24 × 24</span><span class="role">WCAG 2.2 SC 2.5.8 · AA — הרצפה</span></div><div class="tg"><span class="tg-b" style="width:44px;height:44px"></span><span class="n">44 × 44</span><span class="role">SC 2.5.5 · AAA · וברירת המחדל של Apple</span></div><div class="tg"><span class="tg-b" style="width:48px;height:48px"></span><span class="n">48 × 48</span><span class="role">המלצת Material</span></div>
+
+<h2>תנועה</h2>
+<p>משכי המעבר בקוד: <span class="n">120ms</span> · <span class="n">150ms</span>. ‏<code dir="ltr">prefers-reduced-motion</code> מטופל —
+  ההנחיה היא להחליף תנועה בהצלבה ולא למחוק משוב, ולכן הכלל הגורף מכבה מעברים
+  ואנימציות ומשאיר את שינויי הצבע והאטימות.</p>
+
+<h2>אייקונים</h2>
+<p><code dir="ltr">search</code> · <code dir="ltr">pin</code> · <code dir="ltr">locate</code> · <code dir="ltr">station</code> · <code dir="ltr">hospital</code> · <code dir="ltr">university</code> · <code dir="ltr">museum</code> · <code dir="ltr">culture</code> · <code dir="ltr">market</code> · <code dir="ltr">landmark</code> · <code dir="ltr">green</code> · <code dir="ltr">split</code> · <code dir="ltr">maponly</code> · <code dir="ltr">textonly</code> · <code dir="ltr">day</code> · <code dir="ltr">night</code> · <code dir="ltr">tiles</code> · <code dir="ltr">glass</code> · <code dir="ltr">borders</code> · <code dir="ltr">more</code> · <code dir="ltr">regions</code> · <code dir="ltr">info</code> · <code dir="ltr">dots</code> · <code dir="ltr">save</code> · <code dir="ltr">load</code> · <code dir="ltr">cmp</code> — כולם SVG בשורה, ללא קובצי תמונה. באפליקציה אין תמונות רסטר
+  כלל; התמונה היחידה שיכולה להופיע היא זו שהמשתמש צירף לנקודה שסימן.</p>
+<h3>מה אסור להפוך ב-RTL</h3>
+<div class="scroll"><table>
+<thead><tr><th>האייקון</th><th>הסיבה</th></tr></thead>
+<tbody><tr><td><code dir="ltr">locate</code></td><td>מצפן/מיקום — מצביע לכיוון אמיתי במרחב</td></tr><tr><td><code dir="ltr">day</code></td><td>שמש — עצם מהעולם</td></tr><tr><td><code dir="ltr">night</code></td><td>ירח — עצם מהעולם</td></tr><tr><td><code dir="ltr">tiles</code></td><td>ערימת אריחים — עצם, לא כיוון</td></tr><tr><td><code dir="ltr">borders</code></td><td>חישוקים קונצנטריים — סימטרי</td></tr><tr><td><code dir="ltr">info</code></td><td>עיגול עם i — סימן אוניברסלי</td></tr><tr><td><code dir="ltr">dots</code></td><td>נקודות — אין להן כיוון</td></tr><tr><td><code dir="ltr">pin</code></td><td>פוש פין — עצם</td></tr></tbody></table></div>
+
+<footer>
+  <p>נוצר על ידי <code dir="ltr">scripts/build_design.py</code> מתוך
+    <code dir="ltr">app.css</code> ו-<code dir="ltr">app.js</code>. אין לערוך את הקובץ הזה ביד.</p>
+</footer>
+</div>
+</html>
