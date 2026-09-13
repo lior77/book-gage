@@ -59,6 +59,15 @@ SHARES = [
     ("since2011_pct", "N_EDIFICIOS_CONSTR_2011_2021", "N_EDIFICIOS_CLASSICOS"),
     ("repair_pct", "N_EDIFICIOS_COM_NECESSIDADES_REPARACAO",
      "N_EDIFICIOS_CLASSICOS"),
+    # How the stock is shaped, not only how old it is. Every one of these is a
+    # subsection count over a subsection count, so all 275 parishes get them
+    # exactly — including the 57 the section file cannot reach.
+    ("floors1_2_pct", "N_EDIFICIOS_1_OU_2_PISOS", "N_EDIFICIOS_CLASSICOS"),
+    ("floors3plus_pct", "N_EDIFICIOS_3_OU_MAIS_PISOS", "N_EDIFICIOS_CLASSICOS"),
+    ("only_resid_pct", "N_EDIFICIOS_EXCLUSIV_RESID", "N_EDIFICIOS_CLASSICOS"),
+    ("built1_2_pct", "N_EDIFICIOS_CLASS_CONST_1_OU_2_ALOJ", "N_EDIFICIOS_CLASSICOS"),
+    ("built3plus_pct", "N_EDIFICIOS_CLASS_CONST_3_OU_MAIS_ALOJAMENTOS",
+     "N_EDIFICIOS_CLASSICOS"),
 ]
 
 # What only the section file can answer: a median needs five-year bands, and
@@ -73,7 +82,39 @@ SHARES = [
 # says VAGOS_OU_RESID_SECUNDARIA and the app must not restate it as VAGOS. BGRI
 # cannot separate the two, so neither comes from it.
 SECTION_ONLY = ("median_age", "foreign_pct", "education_pct", "unemployment_pct",
-                "vacant_pct", "second_home_pct", "deep_repair_pct")
+                "vacant_pct", "second_home_pct", "deep_repair_pct",
+                # BGRI splits floors in two; the section file splits them in
+                # three. The 3-4 and 5+ bands therefore reach only the parishes
+                # whose sections landed in them whole.
+                "floors3_4_pct", "floors5plus_pct")
+
+
+def section_shares(acc):
+    """Everything only the section file can answer, for one summed unit.
+
+    Written once and called from both levels. It was written twice — once for
+    parishes and once for municipalities — and adding a field meant editing
+    both, which is how a formula in two places becomes two formulas.
+    """
+    got = dict(derived(acc))
+    edif = acc.get("N_EDIFICIOS_CLASSICOS")
+    if edif:
+        for name, col in (
+                ("deep_repair_pct", "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS"),
+                # BGRI splits floors in two, the section file in three
+                ("floors3_4_pct", "N_EDIFICIOS_3OU4_PISOS"),
+                ("floors5plus_pct", "N_EDIFICIOS_5OU_MAIS_PISOS")):
+            if acc.get(col) is not None:
+                got[name] = round(100.0 * acc[col] / edif, 1)
+    # the two dwelling shares the section file can separate and BGRI cannot
+    fam = acc.get("N_ALOJAMENTOS_FAM_CLASSICOS")
+    if fam:
+        for name, col in (
+                ("vacant_pct", "N_ALOJAMENTOS_VAGOS_TOTAL"),
+                ("second_home_pct", "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA")):
+            if acc.get(col) is not None:
+                got[name] = round(100.0 * acc[col] / fam, 1)
+    return got
 
 
 def main():
@@ -141,20 +182,7 @@ def main():
         if acc and covered == pop and pop:
             # every section that makes up this parish landed in it whole, and
             # the two routes agree on the head count
-            got = dict(derived(acc))
-            # the two housing shares the section file can separate and BGRI cannot
-            edif = acc.get("N_EDIFICIOS_CLASSICOS")
-            if edif and acc.get("N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS") is not None:
-                got["deep_repair_pct"] = round(
-                    100.0 * acc["N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS"] / edif, 1)
-            fam = acc.get("N_ALOJAMENTOS_FAM_CLASSICOS")
-            if fam:
-                if acc.get("N_ALOJAMENTOS_VAGOS_TOTAL") is not None:
-                    got["vacant_pct"] = round(
-                        100.0 * acc["N_ALOJAMENTOS_VAGOS_TOTAL"] / fam, 1)
-                if acc.get("N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA") is not None:
-                    got["second_home_pct"] = round(
-                        100.0 * acc["N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA"] / fam, 1)
+            got = section_shares(acc)
             for k in SECTION_ONLY:
                 if got.get(k) is not None:
                     rec[k] = got[k]
@@ -212,19 +240,7 @@ def main():
                      "subsections %d — a gap of %d is too large to be the 2025 "
                      "boundary correction" % (mcode, covered, pop, gap))
         if acc and pop and gap <= 0.001 * pop:
-            got = dict(derived(acc))
-            edif = acc.get("N_EDIFICIOS_CLASSICOS")
-            if edif and acc.get("N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS") is not None:
-                got["deep_repair_pct"] = round(
-                    100.0 * acc["N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS"] / edif, 1)
-            fam = acc.get("N_ALOJAMENTOS_FAM_CLASSICOS")
-            if fam:
-                if acc.get("N_ALOJAMENTOS_VAGOS_TOTAL") is not None:
-                    got["vacant_pct"] = round(
-                        100.0 * acc["N_ALOJAMENTOS_VAGOS_TOTAL"] / fam, 1)
-                if acc.get("N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA") is not None:
-                    got["second_home_pct"] = round(
-                        100.0 * acc["N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA"] / fam, 1)
+            got = section_shares(acc)
             for k in SECTION_ONLY:
                 if got.get(k) is not None:
                     rec[k] = got[k]

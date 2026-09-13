@@ -1508,6 +1508,69 @@ const css = (page, sel, prop) =>
      }));
   await page.evaluate(() => { D.mine = []; saveMine(); });
 
+  /* 13b. the constraints as a LAYER, switched from the layer panel — which is
+     where a layer belongs. Switching one on fetches it if it is not here yet,
+     and while one is drawn the street background comes off: a line that says
+     where building is forbidden has to be read, not compete with a photograph
+     of roofs. */
+  await page.evaluate(n => goMun(n), munWith);
+  await page.waitForTimeout(600);
+  await page.evaluate(() => toggleLayers(true));
+  await page.waitForTimeout(400);
+  const layRows = await page.$$eval('#panelBody [data-lay^="lay:"]',
+    els => els.map(e => e.dataset.lay));
+  ok('the layer panel lists the constraint layers', layRows.length === 2,
+     JSON.stringify(layRows));
+  ok('and states the size before one is switched on', await page.evaluate(() =>
+    /MB/.test(document.querySelector('#panelBody [data-lay^="lay:"]').innerText)));
+
+  await page.evaluate(() => { if (!S.tiles) { S.tiles = true; tileLayer.addTo(map); } });
+  await page.evaluate(() =>
+    document.querySelector('#panelBody [data-lay^="lay:"]').click());
+  await page.waitForFunction(() => !!LAYER_ON.ren, null, { timeout: 120000 });
+  await page.waitForTimeout(500);
+  ok('switching one on fetches it and draws it',
+     await page.evaluate(() => !!LAYER_ON.ren));
+  ok('and the street background goes off by itself',
+     await page.evaluate(() => S.tiles === false));
+  await page.evaluate(() => toggleLayers(true));
+  await page.waitForTimeout(300);
+  await page.evaluate(() =>
+    document.querySelector('#panelBody [data-lay="tiles"]').click());
+  await page.waitForTimeout(400);
+  ok('and cannot be switched back on while a constraint is drawn',
+     await page.evaluate(() => S.tiles === false));
+  ok('with a message that says why, not just a switch that does nothing',
+     await page.evaluate(() =>
+       /רקע הרחובות/.test(document.getElementById('msgs').innerText)));
+  await page.evaluate(() => toggleLayers(true));
+  await page.waitForTimeout(300);
+  await page.evaluate(() =>
+    document.querySelector('#panelBody [data-lay^="lay:"]').click());
+  await page.waitForTimeout(800);
+  ok('switching it off removes it', await page.evaluate(() => !LAYER_ON.ren));
+  ok('and gives the street background back exactly as it was',
+     await page.evaluate(() => S.tiles === true));
+  await page.evaluate(() => { if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); } });
+
+  /* 13c. the stock's shape, and the labels that say what they divide by. */
+  const houseTxt = await page.evaluate(() => {
+    S.view = 'text'; applyView();
+    return document.getElementById('doc').innerText;
+  });
+  ok('the housing card shows how many floors the buildings have',
+     /קומה או שתיים/.test(houseTxt) && /שלוש קומות ומעלה/.test(houseTxt));
+  ok('and what they were built to hold, and whether they are only homes',
+     /נבנו לדירה או שתיים/.test(houseTxt) && /למגורים בלבד/.test(houseTxt));
+  /* The label said "of them, deep repair" while showing a share of ALL
+     buildings — 4.7% where "of them" means 11.9%. A reader multiplying the two
+     rows got a third number, wrong again. */
+  ok('deep repair no longer claims to be a share of those needing repair',
+     !/מהם תיקון עמוק/.test(houseTxt) && /תיקון עמוק/.test(houseTxt));
+  ok('and higher education says it counts children in the denominator',
+     /מכלל התושבים/.test(houseTxt) || await page.evaluate(() =>
+       /מכלל התושבים/.test(document.getElementById('doc').innerText)));
+
   /* Porto has neither layer, and the first build showed it two dead rows
      saying "no data" and nothing else — which reads as a feature that does not
      work rather than a municipality DGT does not publish. The reader who hit

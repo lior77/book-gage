@@ -366,7 +366,7 @@ function peopleStats(o, lvl) {
       ${stat(t('בני 65+'), o.pct_65plus, '%', 0, lvl + '.pct_65plus')}
       ${stat(t('מדד הזדקנות'), o.ageing_index, '', 0, lvl + '.ageing_index')}
       ${stat(t('אזרחות זרה'), o.foreign_pct, '%', 0, lvl + '.foreign_pct')}
-      ${stat(t('השכלה גבוהה'), o.education_pct, '%', 0, lvl + '.education_pct')}
+      ${stat(t('השכלה גבוהה — מכלל התושבים'), o.education_pct, '%', 0, lvl + '.education_pct')}
       ${stat(t('אבטלה'), o.unemployment_pct, '%', 0, lvl + '.unemployment_pct')}
       ${D.sources.fields[lvl + '.pop_growth_pct']
         ? stat(t('שינוי מ-2011'), o.pop_growth_pct, '%', 1, lvl + '.pop_growth_pct',
@@ -391,11 +391,23 @@ function housingStats(o, lvl) {
       ${stat(t('עם חניה'), h.parking_pct, '%', 1, k)}
       ${stat(t('בנייני מגורים'), h.buildings, '', 0, k)}
       ${stat(t('זקוקים לתיקון'), h.repair_pct, '%', 1, k)}
-      ${stat(t('מהם תיקון עמוק'), h.deep_repair_pct, '%', 1, k)}
+      ${stat(t('תיקון עמוק'), h.deep_repair_pct, '%', 1, k)}
       ${stat(t('נבנו לפני 1946'), h.pre1946_pct, '%', 1, k)}
       ${stat(t('נבנו מ-2011'), h.since2011_pct, '%', 1, k)}
     </div>
-    <p class="note">${t('׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה כמעט בכל מקום; השורה שמתחתיו — תיקון עמוק — היא זו שמעידה על מצב הבניין.')}</p>
+    <p class="note">${t('׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה כמעט בכל מקום; ׳תיקון עמוק׳ הוא זה שמעיד על מצב הבניין. **שני השיעורים הם מתוך כלל בנייני המגורים** — ׳תיקון עמוק׳ אינו אחוז מתוך ׳זקוקים לתיקון׳.')}</p>
+
+    <h2>${t('צורת הבנייה')}</h2>
+    <div class="stats">
+      ${stat(t('בני קומה או שתיים'), h.floors1_2_pct, '%', 1, k)}
+      ${stat(t('בני שלוש קומות ומעלה'), h.floors3plus_pct, '%', 1, k)}
+      ${stat(t('בני 3–4 קומות'), h.floors3_4_pct, '%', 1, k)}
+      ${stat(t('בני 5 קומות ומעלה'), h.floors5plus_pct, '%', 1, k)}
+      ${stat(t('למגורים בלבד'), h.only_resid_pct, '%', 1, k)}
+      ${stat(t('נבנו לדירה או שתיים'), h.built1_2_pct, '%', 1, k)}
+      ${stat(t('נבנו לשלוש דירות ומעלה'), h.built3plus_pct, '%', 1, k)}
+    </div>
+    <p class="note">${t('כל השיעורים כאן הם מתוך בנייני המגורים של המפקד. ׳קומה או שתיים׳ ו׳שלוש ומעלה׳ מסתכמים ל-100%; הפירוט ל-3–4 ול-5 ומעלה מגיע מקובץ אחר של INE ואינו קיים לרובעים שהמקטעים הסטטיסטיים שלהם נחצים בין שני רובעים של 2025.')}</p>
   </div>`;
 }
 
@@ -1450,10 +1462,24 @@ async function tapLayer(id) {
     await refreshLayerHave();
     if (S.layers) S.layers[kind] = false;
     applyLayers();
+    applyConstraintTiles();
     redrawText();
     return;
   }
-  if (layerBusy) { mapNote(t('הורדה אחרת עדיין רצה.'), false); redrawText(); return; }
+  await tapLayerFetch(kind, code);
+  applyConstraintTiles();
+  redrawText();
+}
+
+/* The download itself, shared by the card and the layer panel. On success the
+   layer is stored, switched on and drawn; on failure nothing is stored and the
+   message says which failure it was. */
+async function tapLayerFetch(kind, code) {
+  const e = layerEntry(kind, code);
+  if (!e) return;
+  const L = D.layers.layers[kind];
+  const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
+  if (layerBusy) { mapNote(t('הורדה אחרת עדיין רצה.'), false); return; }
 
   const ctrl = new AbortController();
   layerBusy = ctrl;
@@ -1475,8 +1501,53 @@ async function tapLayer(id) {
     else mapNote(html(String(err.message || err)), true);
   } finally {
     layerBusy = null;
-    redrawText();
   }
+}
+
+/* Is any constraint layer actually on the map right now?  The switch and the
+   drawn layer are not the same thing — a layer can be switched on and not yet
+   downloaded — and what suppresses the street background is what is DRAWN. */
+function constraintOn() {
+  return Object.keys(LAYER_STYLE).some(k => !!LAYER_ON[k]);
+}
+
+/* The street background comes off while a constraint layer is drawn, and goes
+   back exactly as it was when the last one goes off.  A line that says where
+   building is forbidden has to be read, not compete with a photograph of
+   roofs — the same reason the comparison screen takes the tiles away. */
+let tilesBeforeConstraint = null;
+function applyConstraintTiles() {
+  const on = constraintOn();
+  if (on && tilesBeforeConstraint === null) {
+    tilesBeforeConstraint = S.tiles;
+    if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+  } else if (!on && tilesBeforeConstraint !== null) {
+    if (tilesBeforeConstraint && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+    tilesBeforeConstraint = null;
+  }
+  applySwitches();
+}
+
+async function toggleConstraint(id) {
+  const [kind, code] = id.split(':');
+  S.layers = S.layers || {};
+  if (S.layers[kind] && LAYER_ON[kind]) {        // switching it off
+    S.layers[kind] = false;
+    await applyLayer(kind);
+    applyConstraintTiles();
+    save(); renderLayers(); redrawText();
+    return;
+  }
+  const have = (D.layerHave || {})[layerKey(kind, code)];
+  if (!have) {
+    // not here yet: fetch it, and only then switch it on
+    await tapLayerFetch(kind, code);
+    if (!(D.layerHave || {})[layerKey(kind, code)]) { renderLayers(); return; }
+  }
+  S.layers[kind] = true;
+  await applyLayer(kind);
+  applyConstraintTiles();
+  save(); renderLayers(); redrawText();
 }
 
 /* ---- EXIF ---- */
@@ -2971,7 +3042,9 @@ function inkOn(hex) {
 
 const CMP_HOUSING = new Set(['dwellings', 'vacant_pct', 'second_home_pct', 'owner_pct',
   'rented_pct', 'parking_pct', 'buildings', 'repair_pct', 'deep_repair_pct',
-  'pre1946_pct', 'since2011_pct']);
+  'pre1946_pct', 'since2011_pct',
+  'floors1_2_pct', 'floors3plus_pct', 'floors3_4_pct', 'floors5plus_pct',
+  'only_resid_pct', 'built1_2_pct', 'built3plus_pct']);
 
 /* The fields offered, grouped the way the cards already group them elsewhere in
    the app.  `src` is the source record the value chip opens — every number in
@@ -2987,7 +3060,7 @@ const CMP_ALL = [
   { g: 'אנשים', k: 'pct_0_14', he: 'בני 0–14', unit: '%', dec: 1 },
   { g: 'אנשים', k: 'pct_65plus', he: 'בני 65+', unit: '%', dec: 1 },
   { g: 'אנשים', k: 'foreign_pct', he: 'אזרחות זרה', unit: '%', dec: 1 },
-  { g: 'אנשים', k: 'education_pct', he: 'השכלה גבוהה', unit: '%', dec: 1 },
+  { g: 'אנשים', k: 'education_pct', he: 'השכלה גבוהה — מכלל התושבים', unit: '%', dec: 1 },
   { g: 'אנשים', k: 'unemployment_pct', he: 'אבטלה', unit: '%', dec: 1 },
   /* Not in 'אנשים': the census counts people, this comes from tax returns and
      covers only what was declared. Beside the housing market is where it is
@@ -3006,9 +3079,19 @@ const CMP_ALL = [
   { g: 'דיור ובניינים', k: 'parking_pct', he: 'עם חניה', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'buildings', he: 'בנייני מגורים', unit: '', dec: 0 },
   { g: 'דיור ובניינים', k: 'repair_pct', he: 'זקוקים לתיקון', unit: '%', dec: 1 },
-  { g: 'דיור ובניינים', k: 'deep_repair_pct', he: 'מהם תיקון עמוק', unit: '%', dec: 1 },
+  { g: 'דיור ובניינים', k: 'deep_repair_pct', he: 'תיקון עמוק', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'pre1946_pct', he: 'נבנו לפני 1946', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'since2011_pct', he: 'נבנו מ-2011', unit: '%', dec: 1 },
+  /* The shape of the stock. Floors and what a building was built to hold are
+     subsection counts, so they cover all 275; the finer 3-4 / 5+ split comes
+     from the section file and reaches 218. */
+  { g: 'צורת הבנייה', k: 'floors1_2_pct', he: 'בני קומה או שתיים', unit: '%', dec: 1 },
+  { g: 'צורת הבנייה', k: 'floors3plus_pct', he: 'בני שלוש קומות ומעלה', unit: '%', dec: 1 },
+  { g: 'צורת הבנייה', k: 'floors3_4_pct', he: 'בני 3–4 קומות', unit: '%', dec: 1 },
+  { g: 'צורת הבנייה', k: 'floors5plus_pct', he: 'בני 5 קומות ומעלה', unit: '%', dec: 1 },
+  { g: 'צורת הבנייה', k: 'only_resid_pct', he: 'למגורים בלבד', unit: '%', dec: 1 },
+  { g: 'צורת הבנייה', k: 'built1_2_pct', he: 'נבנו לדירה או שתיים', unit: '%', dec: 1 },
+  { g: 'צורת הבנייה', k: 'built3plus_pct', he: 'נבנו לשלוש דירות ומעלה', unit: '%', dec: 1 },
   /* Its own group: this is the one figure on the screen where a high value is
      bad, and putting it beside the housing market or the census would invite
      reading the ramp the same way in all of them. */
@@ -3607,6 +3690,35 @@ function renderLayers() {
     (S.wp ? t('<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ') +
             t('חוזרת לפעול ביציאה ממנו.</p>') : '');
 
+  /* The constraint layers sit with the other layers, because that is what
+     they are.  The difference is that switching one on may have to fetch it
+     first — the row says the size and the year, and the fetch only starts
+     when it is pressed.  They are a municipality's, so the rows appear from
+     level 2 down. */
+  if (S.mun && !S.cmp) {
+    const code = munCodeOf(S.mun);
+    const rows = Object.keys(LAYER_STYLE).map(kind => {
+      const L = D.layers && D.layers.layers[kind];
+      if (!L) return '';
+      const e = layerEntry(kind, code);
+      const name = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
+      if (!e) {
+        return `<p class="note">${html(name)} — ${miss()}${
+          t(' לעירייה הזאת. מתפרסמת ל-')}${Object.keys(L.municipalities).length}${
+          t(' מתוך 18.')}</p>`;
+      }
+      const have = (D.layerHave || {})[layerKey(kind, code)];
+      const mb = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
+      return row(!!(S.layers && S.layers[kind]) && have, 'lay:' + kind + ':' + code,
+                 name + (have ? '' : ' · ' + mb + ' MB'),
+                 LAYER_STYLE[kind].fillColor, true);
+    }).join('');
+    if (rows) {
+      h += t('<h3>מגבלות בנייה</h3>') + rows +
+        t('<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>');
+    }
+  }
+
   // Which of these are black and which are grey is the level's decision, not
   // the user's; the switch is only whether the line is there at all.
   h += t('<h3>קווי גבול</h3>') +
@@ -4103,7 +4215,15 @@ function wire() {
     const b = e.target.closest('[data-lay]');
     if (!b) return;
     const k = b.dataset.lay;
+    /* A constraint layer. Switching it on fetches it first if it is not here
+       yet, which is why this one branch is asynchronous and returns early:
+       everything below assumes the switch has already flipped. */
+    if (k.startsWith('lay:')) { toggleConstraint(k.slice(4)); return; }
     if (k === 'tiles') {
+      if (!S.tiles && constraintOn()) {
+        mapNote(t('רקע הרחובות אינו זמין כל עוד מוצגת שכבת מגבלות בנייה. כבו אותה תחילה.'), false);
+        return;
+      }
       S.tiles = !S.tiles;
       if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
     }
@@ -4295,6 +4415,23 @@ function wire() {
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
 Object.assign(EN, {
+  'השכלה גבוהה — מכלל התושבים': 'Higher education — of all residents',
+  '<h3>מגבלות בנייה</h3>': '<h3>Building constraints</h3>',
+  ' לעירייה הזאת. מתפרסמת ל-': ' for this municipality. Published for ',
+  ' מתוך 18.': ' of the 18.',
+  '<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>': '<p class="note" style="margin-block-start:6px">Switching one on downloads it once, and from then on it works with no network. While such a layer is shown the street background is off: a line that says where building is forbidden has to be read, not compete with a photograph.</p>',
+  'רקע הרחובות אינו זמין כל עוד מוצגת שכבת מגבלות בנייה. כבו אותה תחילה.': 'The street background is not available while a building-constraint layer is shown. Switch it off first.',
+  'צורת הבנייה': 'The shape of the stock',
+  'בני קומה או שתיים': 'One or two floors',
+  'בני שלוש קומות ומעלה': 'Three floors or more',
+  'בני 3–4 קומות': 'Three or four floors',
+  'בני 5 קומות ומעלה': 'Five floors or more',
+  'למגורים בלבד': 'Residential only',
+  'נבנו לדירה או שתיים': 'Built for one or two dwellings',
+  'נבנו לשלוש דירות ומעלה': 'Built for three or more',
+  'תיקון עמוק': 'Deep repair',
+  '׳זקוקים לתיקון׳ כולל אצל INE גם תיקונים קלים, ולכן האחוז גבוה כמעט בכל מקום; ׳תיקון עמוק׳ הוא זה שמעיד על מצב הבניין. **שני השיעורים הם מתוך כלל בנייני המגורים** — ׳תיקון עמוק׳ אינו אחוז מתוך ׳זקוקים לתיקון׳.': 'INE\'s \'needing repair\' includes minor repairs, which is why the share is high almost everywhere; \'deep repair\' is the one that says something about a building\'s condition. **Both are shares of all residential buildings** — \'deep repair\' is not a percentage of \'needing repair\'.',
+  'כל השיעורים כאן הם מתוך בנייני המגורים של המפקד. ׳קומה או שתיים׳ ו׳שלוש ומעלה׳ מסתכמים ל-100%; הפירוט ל-3–4 ול-5 ומעלה מגיע מקובץ אחר של INE ואינו קיים לרובעים שהמקטעים הסטטיסטיים שלהם נחצים בין שני רובעים של 2025.': 'Every share here is out of the census\'s residential buildings. \'One or two\' and \'three or more\' add to 100%; the finer split into 3–4 and 5-or-more comes from a different INE file and does not exist for parishes whose statistical sections are cut in two by the 2025 boundaries.',
   'בנייני מגורים': 'Residential buildings',
   'היא כן מתפרסמת ל-': 'It is published for ',
   ' מתוך 18 העיריות.': ' of the 18 municipalities.',

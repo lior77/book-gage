@@ -473,6 +473,19 @@ def read_censos():
 
 # A ring of pastels for the parishes inside one municipality. Neighbouring
 # numbers land on different hues, and every one of them takes dark text.
+# The housing block, in the order it is read. One list, used at both levels:
+# it was written out twice and adding a field meant editing both, which is how
+# a municipality and its parishes come to show different rows.
+HOUSING_KEYS = (
+    "dwellings", "vacant_pct", "second_home_pct", "owner_pct", "rented_pct",
+    "parking_pct", "buildings", "repair_pct", "deep_repair_pct",
+    "pre1946_pct", "since2011_pct",
+    # how the stock is shaped — floors, what it was built to hold, and whether
+    # it is residential and nothing else
+    "floors1_2_pct", "floors3plus_pct", "floors3_4_pct", "floors5plus_pct",
+    "only_resid_pct", "built1_2_pct", "built3plus_pct",
+)
+
 # The four the section file alone can answer: a median needs five-year bands,
 # and BGRI carries no education, employment or nationality at all.
 SECTION_BOUND = ("median_age", "foreign_pct", "education_pct", "unemployment_pct")
@@ -1063,9 +1076,7 @@ def main():
                 if c25.get(key) is not None:
                     rec[key] = c25[key]
             housing = {k: c25[k] for k in
-                       ("dwellings", "vacant_pct", "second_home_pct", "owner_pct",
-                        "rented_pct", "parking_pct", "buildings", "repair_pct",
-                        "deep_repair_pct", "pre1946_pct", "since2011_pct")
+                       HOUSING_KEYS
                        if c25.get(k) is not None}
             if housing:
                 rec["housing"] = housing
@@ -1168,9 +1179,7 @@ def main():
                 if m25.get(key) is not None:
                     rec[key] = m25[key]
             housing = {k: m25[k] for k in
-                       ("dwellings", "vacant_pct", "second_home_pct", "owner_pct",
-                        "rented_pct", "parking_pct", "buildings", "repair_pct",
-                        "deep_repair_pct", "pre1946_pct", "since2011_pct")
+                       HOUSING_KEYS
                        if m25.get(k) is not None}
             if housing:
                 rec["housing"] = housing

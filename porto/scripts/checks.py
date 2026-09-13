@@ -891,6 +891,28 @@ def main():
                 fail("%s.housing's building definition does not say %r — the "
                      "reader cannot tell which buildings are counted"
                      % (level, need))
+        # A share is only readable if its denominator is. Three of these are
+        # out of usual residences and not out of all dwellings, and deep repair
+        # is out of ALL buildings and not out of those needing repair — which
+        # is exactly what the label "מהם תיקון עמוק" used to claim.
+        for term, need in (("בבעלות הדיירים", "מגורי הקבע"),
+                           ("בשכירות", "מגורי קבע"),
+                           ("עם חניה", "מגורי קבע"),
+                           ("תיקון עמוק", "כלל בנייני המגורים")):
+            got = defs.get(term)
+            if not got:
+                fail("%s.housing does not define %r" % (level, term))
+            elif need not in got:
+                fail("%s.housing's %r does not name its denominator (%r) — a "
+                     "share whose denominator is unstated reads as a share of "
+                     "everything" % (level, term, need))
+
+    # the education share counts children in the denominator, and the label has
+    # to carry that: 17.4% of everyone is not 17.4% of adults
+    if re.search(r"t\('השכלה גבוהה'\)", appjs3):
+        fail("the education share is labelled 'השכלה גבוהה' — INE divides by "
+             "ALL residents, children included, so a bare label reads as a "
+             "share of adults")
 
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.

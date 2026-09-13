@@ -59,6 +59,14 @@ COUNTS = [
     "N_EDIFICIOS_CONSTR_1981_2000", "N_EDIFICIOS_CONSTR_2001_2010",
     "N_EDIFICIOS_CONSTR_2011_2021",
     "N_EDIFICIOS_COM_NECESSIDADES_REPARACAO",
+    # How the stock is shaped, not only how old it is. All four are subsection
+    # counts, so a parish figure is a sum and is exact for all 275 — the
+    # section file's finer three-band split of floors reaches only the 218
+    # whose sections do not straddle.
+    "N_EDIFICIOS_1_OU_2_PISOS", "N_EDIFICIOS_3_OU_MAIS_PISOS",
+    "N_EDIFICIOS_EXCLUSIV_RESID",
+    "N_EDIFICIOS_CLASS_CONST_1_OU_2_ALOJ",
+    "N_EDIFICIOS_CLASS_CONST_3_OU_MAIS_ALOJAMENTOS",
     "N_ALOJAMENTOS_TOTAL", "N_ALOJAMENTOS_FAMILIARES",
     "N_ALOJAMENTOS_FAM_CLASS_RHABITUAL",
     "N_ALOJAMENTOS_FAM_CLASS_VAGOS_OU_RESID_SECUNDARIA",
