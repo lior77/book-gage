@@ -107,6 +107,18 @@ const css = (page, sel, prop) =>
   const gap = rtl ? homeBox.x - crumb.right : crumb.x - homeBox.right;
   ok('the trail sits beside the home button, not across the map from it',
      gap >= 8 && gap <= 20, `${gap.toFixed(1)}px from the home button`);
+  /* Centred ON the home button, not merely started at the same inset. The two
+     line heights were written in a `font:` shorthand ending in `inherit` —
+     which is not a font-family token, so the whole declaration was dropped and
+     the trail rendered at the inherited 16px/1.55. Its second line then hung
+     below the buttons it is meant to sit beside. */
+  const crumbMid = () => page.evaluate(() => {
+    const c = document.querySelector('#crumb').getBoundingClientRect();
+    const h = document.querySelector('#homeBtn').getBoundingClientRect();
+    return +((c.y + c.height / 2) - (h.y + h.height / 2)).toFixed(2);
+  });
+  ok('and its middle is the home button\'s middle', Math.abs(await crumbMid()) <= 1,
+     `${await crumbMid()}px off centre`);
 
 
   /* 1b. the map uses the room it has.  fitBounds snapped the zoom DOWN to a
@@ -1269,10 +1281,21 @@ const css = (page, sel, prop) =>
      enText.includes('Porto') && !/פורטו/.test(enText.split('\n').slice(0, 6).join(' ')));
   ok('the trail is English too',
      (await page.$eval('#crumb', e => e.innerText)).includes('Porto District'));
-  ok('and it still shows the last two levels, one per line',
+  /* One line here, because this is level 2 and there is exactly one level
+     above it. The trail names where you came from, not where you are — the
+     municipality's own name is the heading of the page under it. */
+  ok('and at level 2 it names the one level above, on one line',
      (await page.$eval('#crumb', e => e.innerText)).split('\n')
-       .filter(x => x.trim()).length === 2,
+       .filter(x => x.trim()).length === 1,
      await page.$eval('#crumb', e => JSON.stringify(e.innerText)));
+  /* Line by line, not substring: the municipality here is Porto, and "Porto"
+     is inside "Porto District" — a substring test would fail on a trail that is
+     perfectly correct. */
+  const enLines = (await page.$eval('#crumb', e => e.innerText))
+    .split('\n').map(x => x.trim()).filter(Boolean);
+  const enMun = await page.evaluate(() => nm(D.munByNum.get(S.mun)));
+  ok('and no line of it is the municipality the page is already titled with',
+     !enLines.includes(enMun), JSON.stringify([enLines, enMun]));
   /* the same logical rule, now pointing the other way: in English the trail
      reads rightward from the home button. A rule that only held in Hebrew
      would be a physical left, not a logical start. */
@@ -1583,19 +1606,34 @@ const css = (page, sel, prop) =>
      agricultural, ecological, both. The swatches are the same hex the map
      paints — read from the same table, so the legend cannot drift. */
   const ckey = await page.$$eval('.cons-key .cons-k', els => els.map(e => ({
-    t: e.textContent.trim(), c: e.querySelector('i').style.background,
+    t: e.innerText.replace(/\s+/g, ' ').trim(),
+    c: getComputedStyle(e).backgroundColor,
+    words: e.querySelectorAll('i').length,
   })));
   ok('a three-colour index sits above the title', ckey.length === 3,
      JSON.stringify(ckey));
   ok('in the order asked for: agricultural, ecological, both',
      /חקלאית/.test(ckey[0].t) && /אקולוגית/.test(ckey[1].t) && /משותפת/.test(ckey[2].t),
      JSON.stringify(ckey.map(k => k.t)));
+  ok('each plate carries its own name, stacked on its own colour',
+     ckey.every(k => k.words === 2));
   const asRgb = h => 'rgb(' + [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
-  ok('and each swatch is the colour the map actually paints',
-     await page.evaluate(() => JSON.stringify(CONS_ORDER.map(k => CONS_COLOUR[k])))
-       === JSON.stringify(['#c9a227', '#2e9e66', '#8e4ea8'])
-     && ckey[0].c === asRgb('#c9a227') && ckey[1].c === asRgb('#2e9e66') && ckey[2].c === asRgb('#8e4ea8'),
+  ok('and each plate IS the colour the map paints',
+     ckey[0].c === asRgb('#8a5a2b') && ckey[1].c === asRgb('#1f7a4d')
+       && ckey[2].c === asRgb('#556a3c'),
      JSON.stringify(ckey.map(k => k.c)));
+  /* The third colour is not chosen, it is the average of the other two. A
+     legend that names it "both" has to be able to say so. */
+  ok('and the khaki is literally the brown and the green mixed',
+     await page.evaluate(() => CONS_RGB.both.every((v, i) =>
+       Math.abs(v - (CONS_RGB.ran[i] + CONS_RGB.ren[i]) / 2) < 1e-9)));
+  /* White on all three, and all three owe 4.5:1 for text this size. */
+  const consLum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+    return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+  const ratios = await page.evaluate(() => CONS_ORDER.map(k => CONS_RGB[k]));
+  ok('and white text on each of them clears 4.5:1',
+     ratios.every(c => 1.05 / (consLum(c) + .05) >= 4.5),
+     JSON.stringify(ratios.map(c => +(1.05 / (consLum(c) + .05)).toFixed(2))));
   ok('the index is ABOVE the title, not under it',
      await page.evaluate(() => {
        const k = document.querySelector('.cons-key'), h = document.querySelector('#consCard h1');
@@ -1640,6 +1678,32 @@ const css = (page, sel, prop) =>
      await page.$$eval('#doc .crow[data-src]', els => els.length) === 4);
   ok('the parishes of that municipality are listed under it',
      await page.$$eval('#doc [data-fre]', els => els.length) > 0);
+  /* The bar is what a share is read on, so it gets the card's whole width —
+     a 74px stub beside a line of text could only be read against the other
+     stubs, never against the whole it is a share of. */
+  const bar = await page.evaluate(() => {
+    const r = document.querySelector('#doc .cons-row');
+    if (!r) return null;
+    const b = r.querySelector('.cons-bar'), v = r.querySelector('.cons-val');
+    const card = r.closest('.card');
+    return b && v ? {
+      w: b.getBoundingClientRect().width, card: card.getBoundingClientRect().width,
+      pad: parseFloat(getComputedStyle(card).paddingInlineStart),
+      h: b.getBoundingClientRect().height,
+      radius: parseFloat(getComputedStyle(b).borderTopLeftRadius),
+      val: v.innerText.replace(/\s+/g, ' ').trim(),
+      align: getComputedStyle(v).textAlign,
+      segs: [...b.querySelectorAll('i')].map(i => i.style.background),
+    } : null;
+  });
+  ok('the bar runs the card\'s width, less its side padding',
+     bar && Math.abs(bar.w - (bar.card - 2 * bar.pad)) <= 1.5,
+     JSON.stringify(bar && { w: bar.w, card: bar.card, pad: bar.pad }));
+  ok('it is half again as tall as it was, with the corners eased',
+     bar && Math.abs(bar.h - 14) <= 1 && bar.radius >= 3, JSON.stringify(bar && [bar.h, bar.radius]));
+  ok('and the figure under it is in km², at the end of the line',
+     bar && /קמ״ר/.test(bar.val) && /%/.test(bar.val) && bar.align === 'end',
+     JSON.stringify(bar && bar.val));
 
   /* Level 3, and the map's own click path — tapping the polygon does what
      tapping the name does, because the map underneath is the app's map. */
@@ -1650,6 +1714,54 @@ const css = (page, sel, prop) =>
   ok('with its own four rows and its municipality under them',
      await page.$$eval('#doc .crow', els => els.length) === 8,
      String(await page.$$eval('#doc .crow', els => els.length)));
+  /* A parish carries a letter on every locality and up to 341 landmark dots.
+     On a page about where the ground is restricted they are a different
+     question drawn on top of this one. */
+  ok('level 3 on this page carries no locality letters and no landmark dots',
+     await page.evaluate(() => (LG.letters ? LG.letters.getLayers().length : 0) === 0
+       && (LG.pois ? LG.pois.getLayers().length : 0) === 0));
+  /* The trail names where you came FROM. The page below it already carries the
+     name of the unit being looked at, in a heading, in full — the trail
+     repeating it in an ellipsis spent both its lines saying one thing. */
+  const tr3 = await page.$eval('#crumb', e => e.innerText.split('\n').filter(x => x.trim()));
+  const here3 = await page.evaluate(() => nm(D.freByKey.get(S.zone)));
+  const up3 = await page.evaluate(() => nm(D.munByNum.get(S.mun)));
+  ok('at level 3 the trail names the district and the municipality above it',
+     tr3.length === 2 && /פורטו/.test(tr3[0]) && tr3[1].trim() === up3, JSON.stringify(tr3));
+  ok('and does not repeat the parish the page is already titled with',
+     !tr3.some(x => x.trim() === here3), JSON.stringify([tr3, here3]));
+  ok('both of its lines are a way back', await page.$$eval('#crumb button', e => e.length) === 2);
+  ok('and it is still centred on the home button here',
+     Math.abs(await crumbMid()) <= 1, `${await crumbMid()}px off centre`);
+
+  /* Home is the way out of a mode, not a way up inside one. From level 3 of
+     this page it used to climb to the page's own level 1 and stop there. */
+  await page.evaluate(() => goHome());
+  await page.waitForTimeout(900);
+  ok('home from level 3 of the page returns to the base display',
+     await page.evaluate(() => S.cons === false && S.level === 'district'
+       && !/מגבלה חקלאית/.test(document.getElementById('doc').innerText)));
+  ok('and the level fill it had taken away is back',
+     await page.evaluate(() => S.muncol === true));
+  /* And from level 1, where it used to do nothing at all. */
+  await page.evaluate(() => openMenu(true));
+  await page.waitForTimeout(250);
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
+  await page.waitForFunction(() => consPhase === 'ready', null, { timeout: 120000 });
+  await page.waitForTimeout(600);
+  ok('the page reopens with no second download', await page.evaluate(() =>
+    S.cons === true && S.level === 'district' && consMissing().length === 0));
+  ok('and at level 1 the trail names the district, with nothing above it',
+     (await page.$eval('#crumb', e => e.innerText)).trim().indexOf('\n') < 0);
+  await page.evaluate(() => goHome());
+  await page.waitForTimeout(800);
+  ok('home from level 1 of the page leaves it too',
+     await page.evaluate(() => S.cons === false && S.level === 'district'));
+  await page.evaluate(() => openMenu(true));
+  await page.waitForTimeout(250);
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
+  await page.waitForFunction(() => consPhase === 'ready', null, { timeout: 120000 });
+  await page.waitForTimeout(500);
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
   await page.evaluate(() => {

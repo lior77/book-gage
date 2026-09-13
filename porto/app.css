@@ -240,19 +240,31 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
        inline-size:max-content;
        max-inline-size:calc(100% - var(--mapx) - 2*var(--ctl-size)
                             - var(--s2) - var(--s4) - 20px);
+       /* Centred on the buttons' band, not merely started at the same 10px:
+          the trail is one line at level 1 and two at levels 2 and 3, and the
+          two-line box has to grow around its middle or the second line hangs
+          below the buttons it is supposed to sit beside. */
        display:flex; flex-direction:column; justify-content:center;
-       block-size:var(--ctl-size); text-align:start;
+       min-block-size:var(--ctl-size); text-align:start;
        --crumb-halo:var(--crumb-halo-dark, rgba(255,255,255,.92))}
 .crumb button,.crumb span{display:block; max-width:100%; text-align:start;
        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
        text-shadow:0 0 3px var(--crumb-halo), 0 0 6px var(--crumb-halo),
                    0 1px 2px var(--crumb-halo)}
-.crumb button{font:400 12.5px/24px inherit; color:var(--ink-2); padding:0;
-       min-height:24px; background:none; border:0; cursor:pointer;
+/* Longhand, not the `font` shorthand.  `font: 400 12.5px/20px inherit` is
+   invalid — `inherit` is not a font-family token — so the whole declaration was
+   dropped and the trail had been rendering at the inherited 16px/1.55 ever
+   since, which is why its two lines sat 2.8px below the buttons' middle. */
+.crumb button{font-weight:400; font-size:12.5px; line-height:20px;
+       color:var(--ink-2); padding:0;
+       min-height:20px; background:none; border:0; cursor:pointer;
        text-decoration:underline; text-underline-offset:3px;
        text-decoration-thickness:1px}
 .crumb button:active{color:var(--ink)}
-.crumb .now{font:700 14px/18px inherit; color:var(--ink)}
+/* the level directly above this one — the one the reader is most likely to
+   want back — carries the weight, and is still a link */
+.crumb .now{font-weight:700; font-size:14px; line-height:22px;
+       color:var(--ink); min-height:22px}
 /* one level only — the district — and the block still holds the band's height */
 .crumb.one .now{line-height:inherit}
 
@@ -764,11 +776,15 @@ body[data-view="text"] .map-only{display:none}
    Every colour here is the same hex the map paints, read from CONS_COLOUR in
    app.js and written inline — a legend whose swatch is defined separately from
    the thing it names is a legend that can quietly stop being true. */
-.cons-key{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2) var(--s4);
-  margin-block-end:var(--s3); font-size:.78rem; color:var(--ink-2)}
-.cons-k{display:inline-flex; align-items:center; gap:5px; white-space:nowrap}
-.cons-k i{width:13px; height:13px; border-radius:3px; flex:0 0 auto;
-  border:1px solid rgba(0,0,0,.18)}
+/* Three plates, each carrying its own name on its own colour. The word and the
+   swatch are the same object, so there is no pairing left for the reader to
+   make and none for the code to get wrong. White on all three clears 5:1. */
+.cons-key{display:flex; gap:var(--s2); margin-block-end:var(--s4)}
+.cons-k{flex:1 1 0; min-width:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:1px;
+  padding:var(--s3) var(--s2); border-radius:var(--r-ctl); color:#fff;
+  font-size:.78rem; font-weight:700; line-height:1.25; text-align:center}
+.cons-k i{font-style:normal; display:block}
 
 /* the download, which happens once and then never again */
 .cons-prog{height:8px; border-radius:var(--r-pill); background:var(--bg);
@@ -797,11 +813,22 @@ body[data-view="text"] .map-only{display:none}
   margin-block-start:2px}
 .crow-tot .crow-l{font-size:.92rem}
 
-/* one unit on the list: the three classes drawn to scale, then the share */
-.cons-bar{display:inline-flex; width:74px; height:9px; border-radius:2px;
-  overflow:hidden; background:var(--bg); border:1px solid var(--line);
-  vertical-align:middle; margin-inline-end:var(--s2)}
+/* One unit on the list. The bar runs the full width of the card, because what
+   it is for is the filled part against the whole — a 74px stub beside a line of
+   text could only be read against the other stubs. */
+.cons-row{display:flex; flex-direction:column; gap:var(--s2); width:100%;
+  padding:var(--s3) 0; border-block-end:1px solid var(--line); text-align:start}
+.cons-row:last-child{border-block-end:0}
+.cons-row:active{background:var(--bg)}
+.cons-head{display:flex; align-items:center; gap:var(--s3); width:100%}
+.cons-head .row-t{flex:1 1 auto; min-width:0; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap}
+.cons-head .chev{flex:0 0 auto; width:16px; height:16px; color:var(--miss)}
+.cons-bar{display:flex; width:100%; height:14px; border-radius:4px;
+  overflow:hidden; background:var(--bg); border:1px solid var(--line)}
 .cons-bar i{display:block; height:100%}
-.cons-row .row-m{display:flex; align-items:center; gap:2px; flex-wrap:wrap}
+.cons-val{display:block; width:100%; text-align:end; font-size:.8rem;
+  color:var(--ink-2); font-variant-numeric:tabular-nums}
+.cons-row.no .cons-val{color:var(--miss)}
 /* the total has no colour of its own: it is the union of the three above it */
 .crow-tot .crow-c{border:0}

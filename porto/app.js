@@ -1362,21 +1362,20 @@ async function layerGeoJSON(kind, code) {
    Two translucent fills stacked would give a blend that changes with whatever
    is underneath — the street background, the level's fill, the page ground —
    and a legend cannot name a colour that moves. */
-const CONS_COLOUR = {
-  ran: '#c9a227',      // agricultural — RAN
-  ren: '#2e9e66',      // ecological — REN
-  both: '#8e4ea8',     // inside both
-};
 const CONS_ORDER = ['ran', 'ren', 'both'];
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+const CONS_RGB = { ran: hex2rgb('#8a5a2b'), ren: hex2rgb('#1f7a4d') };
+/* The third colour is not chosen, it is computed: ground inside both reserves
+   is painted the average of the two, channel by channel, so the khaki IS the
+   brown and the green and cannot drift from either. */
+CONS_RGB.both = CONS_RGB.ran.map((v, i) => (v + CONS_RGB.ren[i]) / 2);
+const CONS_COLOUR = {};
+CONS_ORDER.forEach(k => { CONS_COLOUR[k] = rgb2hex(CONS_RGB[k]); });
 const LAYER_STYLE = {
-  ren: { color: '#1f7a4d', weight: 1, fillColor: CONS_COLOUR.ren },
-  ran: { color: '#8a6d1f', weight: 1, fillColor: CONS_COLOUR.ran },
+  ren: { color: CONS_COLOUR.ren, weight: 1, fillColor: CONS_COLOUR.ren },
+  ran: { color: CONS_COLOUR.ran, weight: 1, fillColor: CONS_COLOUR.ran },
 };
-const CONS_RGB = {};
-CONS_ORDER.forEach(k => {
-  const h = CONS_COLOUR[k];
-  CONS_RGB[k] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-});
 /* 40% — what was asked for. */
 const CONS_FILL = .4;
 const CONS_REF_Z = 14;                    // the zoom the stored projection is at
@@ -1935,16 +1934,21 @@ const CONS_FULL = {
 let consPhase = 'off';        // off | load | unpack | ready
 let consProg = { pct: 0, at: 0, of: 0, mb: 0 };
 
-/* The colour index, one line above the title, exactly as the three classes are
-   painted on the map — the same three hex values, from the same table. */
+/* The colour index, one line above the title: three plates, each carrying its
+   own name on its own colour, so the swatch and the word cannot be read apart.
+   The words stack — two lines, centred — because the plates are square-ish and
+   a single line of Hebrew would set the row's width instead of its colour. */
 function consKeyLine() {
   return `<div class="cons-key">${CONS_ORDER.map(k =>
-    `<span class="cons-k"><i style="background:${CONS_COLOUR[k]}"></i>${html(t(CONS_HE[k]))}</span>`
+    `<span class="cons-k" style="background:${CONS_COLOUR[k]}">${
+      t(CONS_HE[k]).split(/\s+/).map(w => `<i>${html(w)}</i>`).join('')}</span>`
   ).join('')}</div>`;
 }
 
 /* A share of the unit, drawn as the three classes side by side: RAN alone,
-   both, REN alone. The bar is the same reading as the numbers under it. */
+   both, REN alone — the same three colours, in the same order as the key. The
+   bar runs the width of the card so the filled part can be read against the
+   whole, which is the only comparison it is for. */
 function consBar(c) {
   if (!c || c.either_pct === undefined) return '';
   const both = c.both_pct || 0;
@@ -2038,20 +2042,23 @@ function renderCons() {
   </div>`;
 }
 
-/* One municipality or one parish on the list: the name, the bar, the share. */
+/* One municipality or one parish on the list: the name and the chevron on the
+   first line, the bar across the whole width on the second, and the figure it
+   stands for under it. */
 function consUnitRow(o, kind, id) {
   const c = consOf(o);
   const has = c && c.either_pct !== undefined;
   const attr = kind === 'mun' ? `data-mun="${html(String(id))}"` : `data-fre="${html(id)}"`;
-  return `<button class="row row-full cons-row${has ? '' : ' no'}" ${attr}>
-    <span class="row-body">
-      <span class="row-t">${kind === 'mun' ? nmPair(o, o.en) : nmPair(o, o.en)}</span>
-      <span class="row-m">${has
-        ? consBar(c) + ' <span class="num">' + nf(c.either_pct, 1) + '</span>% ' +
-          t('מתוך') + ' <span class="num">' + nf(c.area_ha, 0) + '</span> ' + t('הקטר')
-        : miss() + ' — ' + t('אין תיחום מפורסם')}</span>
+  return `<button class="cons-row${has ? '' : ' no'}" ${attr}>
+    <span class="cons-head">
+      <span class="row-t">${nmPair(o, o.en)}</span>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
     </span>
-    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+    ${has ? consBar(c) : ''}
+    <span class="cons-val">${has
+      ? '<span class="num">' + nf(c.either_pct, 1) + '</span>% ' + t('מתוך') +
+        ' <span class="num">' + nf(c.area_ha / 100, 1) + '</span> ' + t('קמ״ר')
+      : miss() + ' — ' + t('אין תיחום מפורסם')}</span>
   </button>`;
 }
 
@@ -2834,13 +2841,18 @@ function autoName() {
    come from somewhere before there is anything to name. */
 /* The one way back, from anywhere. */
 function goHome() {
-  const busy = S.adding || ghost || mineEditing || wpNew || S.wp || S.cmp;
+  const busy = S.adding || ghost || mineEditing || wpNew || S.wp || S.cmp || S.cons;
   if (S.adding || ghost) stopPlacing();
   wpWay = null; wpNew = false;
   mineEditing = null; minePending = null; dropPhotoUrl();
   wpArmed = null;
   if (S.wp) toggleWp();
   if (S.cmp) toggleCmp();   // it puts the street background back as it was
+  /* Home is the way out of a mode, not a way up inside one.  From the
+     constraints page it used to do nothing at level 1 and climb to the page's
+     own level 1 from below — either way the reader was still on the page they
+     were trying to leave. */
+  if (S.cons) consOff();
   renderWpSheet();          // toggleWp redraws the level document, not the sheet
   if (S.level !== 'district') goDistrict();
   else if (!busy) refit();
@@ -3477,8 +3489,12 @@ function drawZone(key) {
 
   drawLines();
 
+  /* The constraints page is about where the ground is restricted, and a parish
+     carries up to 341 landmark dots and a letter on every locality. On this
+     page they are somebody else's answer on top of this one's. */
+  const bare = !!S.cons;
   // Locality letters — A, B, C… at the point OSM gives for the place.
-  LG.letters = L.layerGroup(!S.letters ? [] : z.bairros.filter(b => b.ll).map(b => {
+  LG.letters = L.layerGroup(!S.letters || bare ? [] : z.bairros.filter(b => b.ll).map(b => {
     const mk = L.marker(b.ll, { icon: numIcon(b.letter, 'lbl-ltr'), keyboard: false,
       // the historic centre carries 341 dots; the letters have to stay on top
       zIndexOffset: 1000, title: b.letter + ' · ' + (b.he || b.en), riseOnHover: true });
@@ -3490,7 +3506,7 @@ function drawZone(key) {
   // Landmarks: black dots, nothing written on the map itself.  Tapping a dot
   // highlights its record in the list, and tapping the record highlights the dot.
   LG.pois = L.layerGroup(z.pois.map((p, i) => {
-    if (!S.cats.has(p.cat)) return null;
+    if (!S.cats.has(p.cat) || bare) return null;
     const mk = L.circleMarker(p.ll, poiStyle(false, p.cat));
     mk.__hi = { kind: 'poi', id: i };
     mk.__cat = p.cat;
@@ -4682,23 +4698,21 @@ function goUp() {
 function afterNav() {
   drawMine();
   if (panelIs('layers')) renderLayers();
-  /* Two levels, one to a line: the one above and the one being looked at.  At
-     level 3 the district falls off the head of the trail — what says where you
-     are is the municipality, not the district every parish shares.  The arrows
-     went with the single line; a line break is the separator now. */
+  /* Where you came from, not where you are.  The page under it already carries
+     the name of the unit being looked at, in a heading, in full — and the trail
+     repeating it in an ellipsis spent both of its lines saying one thing. So it
+     names the levels ABOVE this one: the district at level 2, the district and
+     the municipality at level 3, and at level 1 the district itself, because
+     there is nothing above it to name.  Every line is a way back. */
   const c = [];
   if (S.level === 'district') {
     c.push(t('<span class="now">מחוז פורטו</span>'));
+  } else if (S.level === 'mun') {
+    c.push(t('<button class="now" data-go="district">מחוז פורטו</button>'));
   } else {
-    const m = D.munByNum.get(S.mun);
-    if (S.level === 'mun') {
-      c.push(t('<button data-go="district">מחוז פורטו</button>'));
-      c.push('<span class="now">' + html(nm(m)) + '</span>');
-    } else {
-      c.push('<button data-go="mun">' + html(nm(m)) + '</button>');
-      const f = D.freByKey.get(S.zone);
-      c.push('<span class="now">' + html(nm(f)) + '</span>');
-    }
+    c.push(t('<button data-go="district">מחוז פורטו</button>'));
+    c.push('<button class="now" data-go="mun">' +
+           html(nm(D.munByNum.get(S.mun))) + '</button>');
   }
   const crumb = $('#crumb');
   crumb.innerHTML = c.join('');
@@ -6120,12 +6134,6 @@ Object.assign(EN, {
     'The municipality colours are not shown in the building-constraint view: two flat colour fields on top of each other are not two readings but one muddy one. Switch the constraints off first.',
 
   /* ---- the constraints page ---- */
-  'מגבלה חקלאית':
-    'Agricultural',
-  'מגבלה אקולוגית':
-    'Ecological',
-  'מגבלה משותפת':
-    'Both',
   'עתודת הקרקע החקלאית הלאומית (RAN)':
     'National Agricultural Reserve (RAN)',
   'רשת העתודה האקולוגית הלאומית (REN)':
@@ -6156,4 +6164,12 @@ Object.assign(EN, {
     'Source: Direção-Geral do Território (DGT), CC BY 4.0. The area is clipped to the unit boundary in CAOP 2025, in the EPSG:3763 projection. REN and RAN are restrictions and licensing, not an outright ban on building — both have exception routes in law (DL 166/2008, DL 73/2009).',
   'לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה. לחיצה על מספר פותחת את רשומת המקור המלאה.':
     'Each municipality has its own delimitation, its own law and its own reference year. Tapping a number opens the full source record.',
+  '<button class="now" data-go="district">מחוז פורטו</button>':
+    '<button class="now" data-go="district">Porto District</button>',
+  'מגבלה חקלאית':
+    'Agricultural restriction',
+  'מגבלה אקולוגית':
+    'Ecological restriction',
+  'מגבלה משותפת':
+    'Both restrictions',
 });
