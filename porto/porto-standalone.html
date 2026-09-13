@@ -1640,10 +1640,10 @@ const S = {
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: false,        // rivers and lakes — off until asked for
-  // Which constraint layers are switched on, by kind.  A layer that is on but
-  // not downloaded simply does not draw: the switch is display and the
-  // download is storage, and they are deliberately not the same thing.
-  layers: {},
+  // The district-wide constraint view: REN and RAN for all 18 municipalities
+  // at once.  The switch is display and the download is storage, and they are
+  // deliberately not the same thing — switching this off deletes nothing.
+  cons: false,
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
   mine: true,          // draw the points the user added
@@ -2861,41 +2861,226 @@ async function layerGeoJSON(kind, code) {
 }
 
 /* ---- drawing them ----
-   A canvas renderer, and not by preference: Amarante's REN is 125,153 vertices
-   in one polygon and an SVG path of that size locks a phone.  Leaflet's
-   smoothFactor drops vertices in SCREEN space at the current zoom, so the line
-   drawn never leaves the true line by more than about a pixel — which is as
-   fine as a screen can put it anyway.  The stored coordinates are untouched;
-   this is the display, not the data. */
-const LAYER_STYLE = {
-  ren: { color: '#1f7a4d', weight: 1, fillColor: '#2e9e66', fillOpacity: .28 },
-  ran: { color: '#8a6d1f', weight: 1, fillColor: '#c9a227', fillOpacity: .26 },
-};
-const LAYER_ON = {};        // kind -> the Leaflet layer currently on the map
-let layerCanvas = null;
+   One municipality was a Leaflet GeoJSON layer on a canvas renderer.  The whole
+   district is a different problem and needs a different answer.
 
-async function applyLayer(kind) {
-  const want = S.layers && S.layers[kind];
-  if (LAYER_ON[kind]) { map.removeLayer(LAYER_ON[kind]); delete LAYER_ON[kind]; }
-  if (!want || S.cmp || !S.mun) return;
-  let gj;
-  try { gj = await layerGeoJSON(kind, munCodeOf(S.mun)); }
-  catch (e) { mapNote(html(String(e.message || e)), true); return; }
-  if (!gj || gj.stale) return;
-  if (!layerCanvas) layerCanvas = L.canvas({ pane: 'nature', padding: .3 });
-  LAYER_ON[kind] = L.geoJSON(gj, {
-    renderer: layerCanvas, pane: 'nature', interactive: false,
-    smoothFactor: 1.6, style: () => LAYER_STYLE[kind],
-  }).addTo(map);
+   The numbers: 1,556,351 vertices, 58 MB of GeoJSON once unpacked.  Handed to
+   L.geoJSON that becomes about 1.5 million LatLng objects plus the feature
+   objects Leaflet keeps beside them — comfortably past 200 MB of heap, which on
+   a phone is not slow, it is a crash.  So the coordinates go into Float64Array
+   instead: 2 doubles a vertex, 25 MB for the district, and the parsed JSON of
+   each municipality is dropped as soon as it has been copied in.
+
+   They are stored already projected, at one fixed zoom, because projecting a
+   million and a half points on every pan is the other way to lock a phone.
+   Web Mercator is linear in scale, so a frame is one multiply and one subtract
+   per vertex off that stored number.  The projection is Leaflet's own formula
+   written out (CRS.EPSG3857 → SphericalMercator + its transformation), and a
+   test holds it to map.project() rather than trusting that it is.
+
+   Nothing here simplifies the stored line.  What the draw does is drop a vertex
+   that would land within a pixel of the one before it — the same screen-space
+   decimation Leaflet's smoothFactor does, at the same scale, and for the same
+   reason: it is the display, not the data. */
+const LAYER_STYLE = {
+  ren: { color: '#1f7a4d', weight: 1, fillColor: '#2e9e66' },
+  ran: { color: '#8a6d1f', weight: 1, fillColor: '#c9a227' },
+};
+/* 40% — what was asked for.  Both layers get the same, so that where they
+   overlap the darker patch reads as "both" and not as a third category. */
+const CONS_FILL = .4;
+const CONS_REF_Z = 14;                    // the zoom the stored projection is at
+const CONS_PAD = .25;                     // drawn beyond the viewport, for panning
+
+/* Leaflet's projection, inlined.  L.CRS.EPSG3857: SphericalMercator.project()
+   followed by Transformation(0.5/(PI*R), 0.5, -0.5/(PI*R), 0.5), scaled by
+   256 * 2^z. */
+const CONS_R = 6378137;
+const CONS_MAXLAT = 85.0511287798;
+const CONS_K = .5 / (Math.PI * CONS_R);
+const CONS_SCALE = 256 * Math.pow(2, CONS_REF_Z);
+function consProjX(lng) { return CONS_SCALE * (CONS_K * (CONS_R * lng * Math.PI / 180) + .5); }
+function consProjY(lat) {
+  const la = lat > CONS_MAXLAT ? CONS_MAXLAT : lat < -CONS_MAXLAT ? -CONS_MAXLAT : lat;
+  const s = Math.sin(la * Math.PI / 180);
+  return CONS_SCALE * (-CONS_K * (CONS_R * Math.log((1 + s) / (1 - s)) / 2) + .5);
+}
+
+/* One municipality's polygons, flattened.  `ring` holds the vertex index each
+   ring starts at, `poly` the ring index each polygon starts at, and `box` the
+   projected bounding box of each polygon so that one comparison drops every
+   polygon that is off the screen. */
+function consChunk(gj) {
+  const polys = [];
+  ((gj && gj.features) || []).forEach(f => {
+    const g = f && f.geometry;
+    if (!g) return;
+    if (g.type === 'Polygon') polys.push(g.coordinates);
+    else if (g.type === 'MultiPolygon') g.coordinates.forEach(p => polys.push(p));
+  });
+  let nv = 0, nr = 0;
+  polys.forEach(rings => rings.forEach(r => { nr++; nv += r.length; }));
+  const xy = new Float64Array(nv * 2);
+  const ring = new Int32Array(nr + 1);
+  const poly = new Int32Array(polys.length + 1);
+  const box = new Float64Array(polys.length * 4);
+  let vi = 0, ri = 0;
+  polys.forEach((rings, pi) => {
+    poly[pi] = ri;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    rings.forEach(r => {
+      ring[ri++] = vi;
+      for (let i = 0; i < r.length; i++) {
+        const x = consProjX(r[i][0]), y = consProjY(r[i][1]);
+        xy[vi * 2] = x; xy[vi * 2 + 1] = y; vi++;
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    });
+    box[pi * 4] = x0; box[pi * 4 + 1] = y0; box[pi * 4 + 2] = x1; box[pi * 4 + 3] = y1;
+  });
+  poly[polys.length] = ri;
+  ring[nr] = vi;
+  return { xy, ring, poly, box, n: polys.length, vertices: nv };
+}
+
+/* kind -> the chunks built so far, keyed by municipality so a second build
+   does not redo one that is already in memory. */
+const consData = { ren: new Map(), ran: new Map() };
+function consVertices() {
+  let n = 0;
+  Object.keys(consData).forEach(k => consData[k].forEach(c => { n += c.vertices; }));
+  return n;
+}
+
+const ConsLayer = L.Layer ? L.Layer.extend({
+  onAdd(map) {
+    const cv = this._cv = L.DomUtil.create('canvas', 'cons-cv');
+    cv.style.position = 'absolute';
+    cv.style.pointerEvents = 'none';
+    map.getPane('nature').appendChild(cv);
+    map.on('moveend zoomend resize', this._reset, this);
+    if (map._zoomAnimated) map.on('zoomanim', this._zoomAnim, this);
+    this._reset();
+  },
+  onRemove(map) {
+    map.off('moveend zoomend resize', this._reset, this);
+    map.off('zoomanim', this._zoomAnim, this);
+    if (this._cv && this._cv.parentNode) this._cv.parentNode.removeChild(this._cv);
+    this._cv = null;
+  },
+  redraw() { if (this._cv) this._reset(); },
+  /* The canvas is one bitmap the size of the viewport plus a margin.  Leaflet
+     moves the pane while a pan is in flight, so what is already drawn keeps its
+     place on the ground; the margin is what stops the edge showing before the
+     pan ends. */
+  _zoomAnim(e) {
+    if (!this._cv || !this._bounds) return;
+    const map = this._map;
+    const scale = map.getZoomScale(e.zoom, map.getZoom());
+    const off = map._latLngBoundsToNewLayerBounds(this._bounds, e.zoom, e.center).min;
+    L.DomUtil.setTransform(this._cv, off, scale);
+  },
+  _reset() {
+    const map = this._map, cv = this._cv;
+    if (!map || !cv) return;
+    const size = map.getSize();
+    const pad = L.point(Math.round(size.x * CONS_PAD), Math.round(size.y * CONS_PAD));
+    const w = size.x + pad.x * 2, h = size.y + pad.y * 2;
+    const origin = L.point(-pad.x, -pad.y);
+    L.DomUtil.setTransform(cv, map.containerPointToLayerPoint(origin), 1);
+    cv.width = w; cv.height = h;               // also clears it
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    this._bounds = L.latLngBounds(
+      map.containerPointToLatLng(origin),
+      map.containerPointToLatLng(origin.add(L.point(w, h))));
+    this._paint(cv.getContext('2d'), w, h, map, origin);
+  },
+  _paint(ctx, w, h, map, origin) {
+    // one multiply-add per vertex: the stored projection is at CONS_REF_Z, and
+    // Web Mercator scales linearly with zoom
+    const k = Math.pow(2, map.getZoom() - CONS_REF_Z);
+    const o = map.project(map.containerPointToLatLng(origin), CONS_REF_Z);
+    const ox = o.x, oy = o.y;
+    Object.keys(LAYER_STYLE).forEach(kind => {
+      const st = LAYER_STYLE[kind];
+      ctx.fillStyle = st.fillColor;
+      ctx.strokeStyle = st.color;
+      ctx.lineWidth = st.weight;
+      ctx.globalAlpha = CONS_FILL;
+      consData[kind].forEach(c => this._chunk(ctx, c, k, ox, oy, w, h));
+    });
+    ctx.globalAlpha = 1;
+  },
+  _chunk(ctx, c, k, ox, oy, w, h) {
+    const { xy, ring, poly, box } = c;
+    for (let p = 0; p < c.n; p++) {
+      // off-screen in projected space, before a single vertex is touched
+      const bx0 = (box[p * 4] - ox) * k, by0 = (box[p * 4 + 1] - oy) * k;
+      const bx1 = (box[p * 4 + 2] - ox) * k, by1 = (box[p * 4 + 3] - oy) * k;
+      if (bx1 < 0 || by1 < 0 || bx0 > w || by0 > h) continue;
+      ctx.beginPath();
+      for (let r = poly[p]; r < poly[p + 1]; r++) {
+        const a = ring[r], b = ring[r + 1];
+        let lx = 0, ly = 0, put = 0;
+        for (let i = a; i < b; i++) {
+          const x = (xy[i * 2] - ox) * k, y = (xy[i * 2 + 1] - oy) * k;
+          // the same screen-space decimation smoothFactor does: a vertex that
+          // lands inside the pixel of the one before it cannot be drawn anyway
+          if (put && i !== b - 1 && Math.abs(x - lx) + Math.abs(y - ly) < 1) continue;
+          if (put) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+          lx = x; ly = y; put++;
+        }
+        if (put) ctx.closePath();
+      }
+      // evenodd, so a hole inside a polygon is a hole and not a second shape
+      ctx.fill('evenodd');
+      ctx.stroke();
+    }
+  },
+}) : null;
+
+let consLayer = null;
+function applyCons() {
+  if (consLayer) { map.removeLayer(consLayer); consLayer = null; }
+  if (!S.cons || S.cmp) return;
+  consLayer = new ConsLayer().addTo(map);
 }
 const munCodeOf = num => {
   const m = D.munByNum.get(num);
   return m ? m.dicofre : null;
 };
-function applyLayers() { Object.keys(LAYER_STYLE).forEach(applyLayer); }
+const munNameOf = code => {
+  const m = D.mun.find(x => x.dicofre === code);
+  return m ? nmPair(m) : code;
+};
+
+/* ---- what the district needs, and what of it is here ---- */
+function consEntries() {
+  const out = [];
+  if (!D.layers) return out;
+  Object.keys(LAYER_STYLE).forEach(kind => {
+    const L = D.layers.layers[kind];
+    if (!L || !L.municipalities) return;
+    Object.keys(L.municipalities).forEach(code =>
+      out.push({ kind, code, e: L.municipalities[code] }));
+  });
+  return out;
+}
+const consMissing = () =>
+  consEntries().filter(x => !(D.layerHave || {})[layerKey(x.kind, x.code)]);
+const consBytes = list => list.reduce((a, x) => a + x.e.bytes, 0);
+const consMB = n => (n / 1048576).toFixed(n > 1048576 ? 1 : 2);
 
 /* Everything a reader needs before spending their data, and none of it needs
-   the network: the manifest ships with the app. */
+   the network: the manifest ships with the app.
+
+   The card is per municipality and the switch is not.  What the reader gets
+   from here is what THIS municipality's two layers weigh, which year and which
+   law they carry, whether they are already on the phone, and a way to fetch or
+   drop just this one — the display itself is a district-wide mode, because a
+   constraint map that stops at a municipal line is a map that says "you may
+   build here" about ground nobody looked at. */
 function layerRows(num) {
   const code = munCodeOf(num);
   if (!code || !D.layers) return '';
@@ -2919,12 +3104,7 @@ function layerRows(num) {
     }
     const size = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
     const armed = layerArmed === kind + ':' + code;
-    const shown = !!(S.layers && S.layers[kind]) && state;
-    /* Three states, and the row has to say which it is in, because two of them
-       look identical from the map: not downloaded, downloaded and off,
-       downloaded and drawn.  Switching off is the middle one — the bytes stay
-       where they are, and the only thing that removes them is the explicit
-       delete below the rows. */
+    const shown = !!S.cons && state;
     return `<button class="row row-full" aria-pressed="${shown}" data-layer="${html(kind + ':' + code)}">
       <span class="dot" style="--c:${LAYER_STYLE[kind].fillColor}"></span>
       <span class="row-body">
@@ -2969,17 +3149,15 @@ function layerCard(num) {
   if (!rows) return '';
   const code = munCodeOf(num);
   const none = Object.keys(LAYER_STYLE).every(k => !layerEntry(k, code));
-  const elsewhere = none ? Object.keys(LAYER_STYLE).map(k => {
-    const L = D.layers.layers[k];
-    const names = (L.not_published_for || []).filter(x => x !== (D.munByNum.get(num) || {}).pt);
-    return { k, L, names };
-  }) : null;
+  const missing = consMissing();
   return `<div class="card" id="layerCard">
     <h2>${t('מגבלות בנייה')}</h2>
-    <p class="sub">${t('שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 22.8 מגה-בייט למחוז כולו — ולכן מורידים אותן לפי עירייה, פעם אחת, בלחיצה. שום דבר לא יורד מעצמו.')}</p>
+    <p class="sub">${t('שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 21.7 מגה-בייט למחוז כולו — ולכן הן יורדות בלחיצה, פעם אחת. שום דבר לא יורד מעצמו.')}</p>
+    <p class="note">${t('התצוגה היא של המחוז כולו, מהתפריט: שכבות ← מגבלות בנייה. השורות כאן אומרות מה יש לעירייה הזאת, ומאפשרות להוריד או למחוק אותה לבדה.')}</p>
     <div class="rows">${rows}</div>
     ${layerDelRows(num)}
     ${none ? `<p class="note">${t('בעירייה הזאת אין אף אחת משתי השכבות, ולכן אין כאן מה להוריד. בשאר המחוז יש: לחצו על הבית, בחרו עירייה אחרת, וגללו לכאן.')}</p>` : ''}
+    ${missing.length ? `<p class="note">${t('חסרות עוד ')}<span class="num">${nf(missing.length)}</span>${t(' שכבות במחוז, ')}<span class="num">${consMB(consBytes(missing))}</span>${t(' MB. התצוגה המלאה תוריד אותן בלחיצה אחת.')}</p>` : ''}
     <p class="note">${t('המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. הגבול נשמר בדיוק כפי ש-DGT מפרסם אותו — שכבה שאומרת ״כאן אסור לבנות״ לא מפושטת, כי פישוט מזיז את הקו. כל עירייה תוחמה בחוק משלה ובשנה משלה, ולכן אין ״שנת REN״ אחת.')}</p>
     <p class="note">${t('סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.')}</p>
   </div>`;
@@ -2997,6 +3175,7 @@ function layerCard(num) {
 let layerBusy = null;
 let layerArmed = null;      // the "kind:code" waiting for a second press
 let layerDelArmed = null;   // and the one waiting to be deleted
+let consArmed = false;      // the district-wide switch, waiting for its second
 
 async function refreshLayerHave() {
   const keys = await allLayerKeys();
@@ -3008,20 +3187,18 @@ async function tapLayer(id) {
   const [kind, code] = id.split(':');
   if (!layerEntry(kind, code)) return;
   layerDelArmed = null;
-  // Already here: the row is the same switch the layer panel carries, and
-  // flipping a switch costs nothing, so it does not arm.
+  // Already here: the row is a door onto the district-wide switch, and a
+  // switch on something already stored costs nothing, so it does not arm.
   if ((D.layerHave || {})[layerKey(kind, code)]) {
     layerArmed = null;
-    await toggleConstraint(id);
-    redrawText();
+    await toggleCons();
     return;
   }
   // Not here: this one spends somebody's mobile data, so the first press only
-  // arms it.  Two taps rather than confirm(), for the reason above.
+  // arms it.  One municipality, not the district — that is the menu's switch.
   if (layerArmed !== id) { layerArmed = id; redrawText(); return; }
   layerArmed = null;
   await tapLayerFetch(kind, code);
-  applyConstraintTiles();
   save(); renderLayers(); redrawText();
 }
 
@@ -3033,21 +3210,21 @@ async function tapLayerDel(id) {
   layerDelArmed = null;
   await delLayerRec(layerKey(kind, code));
   await refreshLayerHave();
-  if (S.layers) S.layers[kind] = false;
-  await applyLayer(kind);
-  applyConstraintTiles();
+  consData[kind].delete(code);
+  // the district view cannot stand with a hole in it: ground with no layer
+  // looks exactly like ground with no constraint on it
+  if (S.cons) { S.cons = false; applyCons(); consRestore(); }
   save(); renderLayers(); redrawText();
 }
 
-/* The download itself, shared by the card and the layer panel. On success the
-   layer is stored, switched on and drawn; on failure nothing is stored and the
-   message says which failure it was. */
+/* The download itself, one municipality.  On success the layer is stored; the
+   drawing is the district switch's business, not this one's. */
 async function tapLayerFetch(kind, code) {
   const e = layerEntry(kind, code);
-  if (!e) return;
+  if (!e) return false;
   const L = D.layers.layers[kind];
   const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
-  if (layerBusy) { mapNote(t('הורדה אחרת עדיין רצה.'), false); return; }
+  if (layerBusy) { mapNote(t('הורדה אחרת עדיין רצה.'), false); return false; }
 
   const ctrl = new AbortController();
   layerBusy = ctrl;
@@ -3059,63 +3236,139 @@ async function tapLayerFetch(kind, code) {
   try {
     await fetchLayer(kind, code, show, ctrl.signal);
     await refreshLayerHave();
-    S.layers = S.layers || {};
-    S.layers[kind] = true;
     hideNote();
-    await applyLayer(kind);
+    return true;
   } catch (err) {
     if (err && err.name === 'AbortError') hideNote();
     // what failed, not that something did
     else mapNote(html(String(err.message || err)), true);
+    return false;
   } finally {
     layerBusy = null;
   }
 }
 
-/* Is any constraint layer actually on the map right now?  The switch and the
-   drawn layer are not the same thing — a layer can be switched on and not yet
-   downloaded — and what suppresses the street background is what is DRAWN. */
-function constraintOn() {
-  return Object.keys(LAYER_STYLE).some(k => !!LAYER_ON[k]);
+/* ---- the district-wide mode ----
+   One switch, in the menu, under שכבות.  Turning it on brings the whole
+   district: every municipality DGT publishes either layer for, the municipal
+   boundaries over them so the reader can tell which is which, and the street
+   background underneath — because a constraint is read against streets, and
+   without them a green patch is a green patch nowhere.
+
+   What it does turn off is the level's own colour fill.  Two flat colour
+   fields on top of each other is not two readings, it is one muddy one, and
+   the municipality colours carry nothing here that the boundary lines do not
+   carry better. */
+let consBefore = null;
+function consEnter() {
+  consBefore = { tiles: S.tiles, muncol: S.muncol, lnMun: S.lnMun };
+  if (!S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+  if (S.muncol) { S.muncol = false; redrawLevel(); }
+  if (!S.lnMun) { S.lnMun = true; drawLines(); }
+}
+function consRestore() {
+  const b = consBefore;
+  consBefore = null;
+  if (!b) return;
+  if (b.muncol && !S.muncol) { S.muncol = true; redrawLevel(); }
+  if (!b.tiles && S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+  if (!b.lnMun && S.lnMun) { S.lnMun = false; drawLines(); }
 }
 
-/* The street background comes off while a constraint layer is drawn, and goes
-   back exactly as it was when the last one goes off.  A line that says where
-   building is forbidden has to be read, not compete with a photograph of
-   roofs — the same reason the comparison screen takes the tiles away. */
-let tilesBeforeConstraint = null;
-function applyConstraintTiles() {
-  const on = constraintOn();
-  if (on && tilesBeforeConstraint === null) {
-    tilesBeforeConstraint = S.tiles;
-    if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
-  } else if (!on && tilesBeforeConstraint !== null) {
-    if (tilesBeforeConstraint && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
-    tilesBeforeConstraint = null;
+/* Every layer the district has, fetched one after another with one progress
+   line for the lot.  A cancel stops it where it is: what came down whole is
+   kept, what did not is not stored at all, and the mode does not come on. */
+async function consFetchAll() {
+  const miss = consMissing();
+  if (!miss.length) return true;
+  if (layerBusy) { mapNote(t('הורדה אחרת עדיין רצה.'), false); return false; }
+  const ctrl = new AbortController();
+  layerBusy = ctrl;
+  const total = consBytes(miss);
+  let done = 0, at = 0;
+  const show = got => mapNote(
+    t('מגבלות בנייה') + ' · <span class="num">' + Math.round(100 * (done + got) / total)
+    + '</span>% · <span class="num">' + (at + 1) + '</span>/<span class="num">' + miss.length
+    + '</span> <button class="chip" type="button" data-layer-cancel="1">' + t('ביטול') + '</button>',
+    false, true);
+  try {
+    show(0);
+    for (; at < miss.length; at++) {
+      const x = miss[at];
+      await fetchLayer(x.kind, x.code, got => show(got), ctrl.signal);
+      done += x.e.bytes;
+    }
+    await refreshLayerHave();
+    hideNote();
+    return true;
+  } catch (err) {
+    await refreshLayerHave();
+    if (err && err.name === 'AbortError') hideNote();
+    else mapNote(html(String(err.message || err)), true);
+    return false;
+  } finally {
+    layerBusy = null;
   }
-  applySwitches();
 }
 
-async function toggleConstraint(id) {
-  const [kind, code] = id.split(':');
-  S.layers = S.layers || {};
-  if (S.layers[kind] && LAYER_ON[kind]) {        // switching it off
-    S.layers[kind] = false;
-    await applyLayer(kind);
-    applyConstraintTiles();
-    save(); renderLayers(); redrawText();
+/* Unpacking is its own wait, and a long one: 58 MB of GeoJSON across 33 files.
+   It is done once per run, a file at a time with the loop given back in
+   between so the progress line actually moves, and what comes out is the
+   Float64Array — the parsed JSON of each file is dropped before the next. */
+async function consLoad() {
+  const all = consEntries().filter(x => (D.layerHave || {})[layerKey(x.kind, x.code)]);
+  const todo = all.filter(x => !consData[x.kind].has(x.code));
+  if (!todo.length) return true;
+  for (let i = 0; i < todo.length; i++) {
+    const x = todo[i];
+    mapNote(t('פורס מגבלות בנייה') + ' · <span class="num">' + (i + 1)
+            + '</span>/<span class="num">' + todo.length + '</span>', false, true);
+    await new Promise(r => setTimeout(r, 0));      // let the note paint
+    let gj;
+    try { gj = await layerGeoJSON(x.kind, x.code); }
+    catch (e) { mapNote(html(String(e.message || e)), true); return false; }
+    if (!gj || gj.stale) {
+      mapNote(t('שכבה שמורה היא מגרסה קודמת. מחקו אותה והורידו מחדש.'), true);
+      return false;
+    }
+    consData[x.kind].set(x.code, consChunk(gj));
+  }
+  hideNote();
+  return true;
+}
+
+async function toggleCons() {
+  if (S.cons) {                       // off: the bytes stay, the drawing goes
+    S.cons = false;
+    consArmed = false;
+    applyCons();
+    consRestore();
+    save(); applySwitches(); renderLayers(); redrawText();
     return;
   }
-  const have = (D.layerHave || {})[layerKey(kind, code)];
-  if (!have) {
-    // not here yet: fetch it, and only then switch it on
-    await tapLayerFetch(kind, code);
-    if (!(D.layerHave || {})[layerKey(kind, code)]) { renderLayers(); return; }
+  const miss = consMissing();
+  if (miss.length) {
+    /* The whole district or none of it. A partial constraint map is worse than
+       none: the municipality that did not come down looks exactly like ground
+       with nothing forbidden on it. */
+    if (!consArmed) {
+      consArmed = true;
+      mapNote(t('להורדת מגבלות הבנייה של המחוז דרושים ') +
+        '<span class="num">' + consMB(consBytes(miss)) + '</span> MB' +
+        ' (' + '<span class="num">' + nf(miss.length) + '</span>' +
+        t(' שכבות). לחיצה נוספת מתחילה.'), false);
+      renderMenu(); renderLayers(); redrawText();
+      return;
+    }
+    consArmed = false;
+    if (!await consFetchAll()) { renderMenu(); renderLayers(); redrawText(); return; }
   }
-  S.layers[kind] = true;
-  await applyLayer(kind);
-  applyConstraintTiles();
-  save(); renderLayers(); redrawText();
+  consArmed = false;
+  if (!await consLoad()) { renderMenu(); renderLayers(); redrawText(); return; }
+  consEnter();
+  S.cons = true;
+  applyCons();
+  save(); applySwitches(); renderLayers(); redrawText();
 }
 
 /* ---- EXIF ---- */
@@ -4703,10 +4956,19 @@ function toggleTiles() {
   if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
   applySwitches(); save();
 }
+/* Returns whether it actually flipped.  Two flat colour fields on top of each
+   other is one muddy reading, not two, so the level's own fill is not offered
+   while the constraint view is on — and it says so rather than being a switch
+   that does nothing. */
 function toggleFills() {
+  if (!S.muncol && S.cons) {
+    mapNote(t('ויטרז׳ העיריות אינו מוצג בתצוגת מגבלות בנייה: שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה. כבו את מגבלות הבנייה תחילה.'), false);
+    return false;
+  }
   S.muncol = !S.muncol;
   redrawLevel();
   applySwitches(); save();
+  return true;
 }
 /* Four states, not two.  All three levels drawn, then each one dropped in turn,
    outside in: מחוז, then עיריות, then רובעים, then everything back.  The state
@@ -4762,6 +5024,16 @@ function boundsOff() {
   return [['d', S.lnDistrict], ['m', S.lnMun], ['f', S.lnFre]]
     .filter(([, on]) => !on).map(([k]) => k);
 }
+/* What the menu row says after the name: what is still to download, or
+   nothing at all once the district is here.  The price is on the control
+   before it is pressed. */
+function consHe() {
+  if (!D.layers) return '';
+  if (consArmed) return t(' · להוריד? לחיצה נוספת');
+  const miss = consMissing();
+  return miss.length ? ' · ' + consMB(consBytes(miss)) + ' MB' : '';
+}
+
 function boundsHe() {
   const off = boundsOff();
   return off.length ? t(' · בלי ') + off.map(k => BOUNDS_HE[k]).join(', ') : t(' · הכל');
@@ -4810,6 +5082,8 @@ const ICON = {
   borders: '<circle cx="12" cy="12" r="9.5" stroke-width="3"/><circle cx="12" cy="12" r="6" stroke-width="2"/><circle cx="12" cy="12" r="2.75" stroke-width="1"/>',
   more: '<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
   regions: '<path d="M3 8h8v9H3zM11 5h10v11H11z"/>',
+  // a parcel with a hatched no-build patch across it
+  cons: '<path d="M3.5 5h17v14h-17z"/><path d="M6 16 16 6M10 18 20 8" stroke-width="1.6" opacity=".85"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
   dots: '<circle cx="7" cy="8" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="5" cy="18" r="1.4"/>',
   save: '<path d="M12 3v11M8 10.5l4 3.5 4-3.5"/><path d="M4 16v3.5h16V16"/>',
@@ -5241,6 +5515,9 @@ function toggleCmp() {
     if (cmpTilesWere && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
     if (cmpWaterWere && !S.water) { S.water = true; applyNature(); }
   }
+  // The comparison screen is a chart drawn on a map outline; a second colour
+  // field on it is the same muddy reading the level fill would be.
+  applyCons();
   closePanel();
   applySwitches();
   redrawLevel(); drawMine(); redrawText();
@@ -5319,6 +5596,10 @@ const menuRows = () => [
   { grp: t('שכבות') },
   { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
   { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
+  /* The district's constraint view, above the boundaries because that is what
+     it draws them over.  The row carries what is still to download, so the
+     price is on it before it is pressed. */
+  { k: 'cons', he: t('מגבלות בנייה') + consHe(), icon: 'cons', kind: 'tog' },
   // Not on the list that was asked for, and kept anyway: the three-ring cycle
   // was designed row by row two versions ago, and the full panel is the only
   // way to נהרות, אותיות and one border kind at a time.  Dropping a control
@@ -5349,6 +5630,7 @@ function menuState(k) {
   if (k.startsWith('lang:')) return (S.lang || 'he') === k.slice(5);
   if (k === 'tiles') return S.tiles;
   if (k === 'glass') return S.muncol;
+  if (k === 'cons') return S.cons;
   if (k === 'regions') return S.lnRegion;
   if (k === 'locate') return !!meWatch;
   if (k === 'mine') return S.wp;
@@ -5456,6 +5738,7 @@ function menuPick(k) {
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
+    case 'cons':    toggleCons(); break;
     case 'borders': cycleBounds(); renderMenu(); break;
     case 'more':    openMenu(false); toggleLayers(true); break;
     case 'regions': toggleRegions(); renderMenu(); break;
@@ -5513,33 +5796,19 @@ function renderLayers() {
     (S.wp ? t('<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ') +
             t('חוזרת לפעול ביציאה ממנו.</p>') : '');
 
-  /* The constraint layers sit with the other layers, because that is what
-     they are.  The difference is that switching one on may have to fetch it
-     first — the row says the size and the year, and the fetch only starts
-     when it is pressed.  They are a municipality's, so the rows appear from
-     level 2 down. */
-  if (S.mun && !S.cmp) {
-    const code = munCodeOf(S.mun);
-    const rows = Object.keys(LAYER_STYLE).map(kind => {
-      const L = D.layers && D.layers.layers[kind];
-      if (!L) return '';
-      const e = layerEntry(kind, code);
-      const name = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
-      if (!e) {
-        return `<p class="note">${html(name)} — ${miss()}${
-          t(' לעירייה הזאת. מתפרסמת ל-')}${Object.keys(L.municipalities).length}${
-          t(' מתוך 18.')}</p>`;
-      }
-      const have = (D.layerHave || {})[layerKey(kind, code)];
-      const mb = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
-      return row(!!(S.layers && S.layers[kind]) && have, 'lay:' + kind + ':' + code,
-                 name + (have ? '' : ' · ' + mb + ' MB'),
-                 LAYER_STYLE[kind].fillColor, true);
-    }).join('');
-    if (rows) {
-      h += t('<h3>מגבלות בנייה</h3>') + rows +
-        t('<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כיבוי אינו מוחק אותה — היא נשארת במכשיר, והמחיקה היא פעולה נפרדת בכרטיס ״מגבלות בנייה״. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>');
-    }
+  /* One row, and it is the district's.  A constraint layer that stops at a
+     municipal line is a map that says "you may build here" about ground nobody
+     looked at, so the switch brings the whole district or nothing — which is
+     why the row carries what the rest of it still weighs. */
+  if (!S.cmp && D.layers) {
+    const miss = consMissing();
+    h += t('<h3>מגבלות בנייה</h3>') +
+      row(!!S.cons, 'lay:cons',
+          t('מגבלות בנייה במחוז') + (miss.length
+            ? ' · ' + (consArmed ? t('להוריד? לחיצה נוספת') : consMB(consBytes(miss)) + ' MB')
+            : ''),
+          LAYER_STYLE.ren.fillColor, true) +
+      t('<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>');
   }
 
   // Which of these are black and which are grey is the level's decision, not
@@ -5768,7 +6037,7 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
-      letters: S.letters, mine: S.mine, water: S.water, layers: S.layers, rev: PREF_REV,
+      letters: S.letters, mine: S.mine, water: S.water, cons: S.cons, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, wpList: S.wpList,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
@@ -5797,7 +6066,7 @@ function restore() {
     });
     if (o.lang === 'he' || o.lang === 'en') S.lang = o.lang;
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
-    if (o.layers && typeof o.layers === 'object') S.layers = o.layers;
+    if (typeof o.cons === 'boolean') S.cons = o.cons;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
@@ -6049,18 +6318,14 @@ function wire() {
     /* A constraint layer. Switching it on fetches it first if it is not here
        yet, which is why this one branch is asynchronous and returns early:
        everything below assumes the switch has already flipped. */
-    if (k.startsWith('lay:')) { toggleConstraint(k.slice(4)); return; }
+    if (k === 'lay:cons') { toggleCons(); return; }
     if (k === 'tiles') {
-      if (!S.tiles && constraintOn()) {
-        mapNote(t('רקע הרחובות אינו זמין כל עוד מוצגת שכבת מגבלות בנייה. כבו אותה תחילה.'), false);
-        return;
-      }
       S.tiles = !S.tiles;
       if (S.tiles) tileLayer.addTo(map); else map.removeLayer(tileLayer);
     }
     else if (k === 'letters') { S.letters = !S.letters; }
     else if (k === 'water') { S.water = !S.water; applyNature(); }
-    else if (k === 'muncol') { S.muncol = !S.muncol; redrawLevel(); }
+    else if (k === 'muncol') { if (!toggleFills()) return; }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
     else if (k.startsWith('ln:')) {
       const key = LINE_ON[k.slice(3)];
@@ -6229,6 +6494,26 @@ function wire() {
 
   $('#boot').remove();
 
+  /* What is already on the phone, read before anything claims otherwise.
+     Without this every stored layer reads as "not downloaded" on a fresh
+     start, and the menu row offers to buy again what is already paid for. */
+  refreshLayerHave().then(async () => {
+    renderMenu(); redrawText();
+    if (!S.cons) return;
+    /* It was on when the app was last closed. Nothing downloads by itself, so
+       a district that is no longer complete simply comes back off. */
+    if (consMissing().length) { S.cons = false; save(); renderMenu(); redrawText(); return; }
+    if (await consLoad()) {
+      /* No `before` to restore to: what the app reopened on IS the state the
+         reader last saw, and inventing a previous one would put back a switch
+         they never set. */
+      consBefore = null;
+      if (S.muncol) { S.muncol = false; redrawLevel(); }
+      applyCons();
+    } else S.cons = false;
+    save(); applySwitches(); renderLayers(); redrawText();
+  });
+
   // The Android wrapper asks this before it lets the system back button close
   // the app, so back climbs the app's own levels first.
   window.__portoBack = function () {
@@ -6253,9 +6538,6 @@ function wire() {
 Object.assign(EN, {
   'השכלה גבוהה — מכלל התושבים': 'Higher education — of all residents',
   '<h3>מגבלות בנייה</h3>': '<h3>Building constraints</h3>',
-  ' לעירייה הזאת. מתפרסמת ל-': ' for this municipality. Published for ',
-  ' מתוך 18.': ' of the 18.',
-  'רקע הרחובות אינו זמין כל עוד מוצגת שכבת מגבלות בנייה. כבו אותה תחילה.': 'The street background is not available while a building-constraint layer is shown. Switch it off first.',
   'צורת הבנייה': 'The shape of the stock',
   'בני קומה או שתיים': 'One or two floors',
   'בני שלוש קומות ומעלה': 'Three floors or more',
@@ -7072,8 +7354,6 @@ Object.assign(EN, {
     'Delete ',
   'כיבוי התצוגה אינו מוחק כלום: השכבה נשארת במכשיר ועובדת בלי רשת. מחיקה היא פעולה נפרדת, וזאת היא:':
     'Switching the display off deletes nothing: the layer stays on the device and works with no network. Deleting it is a separate act, and this is it:',
-  '<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כיבוי אינו מוחק אותה — היא נשארת במכשיר, והמחיקה היא פעולה נפרדת בכרטיס ״מגבלות בנייה״. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>':
-    '<p class="note" style="margin-block-start:6px">Switching one on downloads it once, and from then on it works with no network. Switching it off does not delete it — it stays on the device, and deleting it is a separate action on the "Building constraints" card. While such a layer is shown the street background is off: a line that says where building is forbidden has to be read, not compete with a photograph.</p>',
   'סופר…':
     'Counting…',
   'מקומות':
@@ -7130,6 +7410,36 @@ Object.assign(EN, {
     'Added: ',
   'לא נוסף דבר חדש.':
     'Nothing new was added.',
+
+  /* ---- the district-wide constraint view ---- */
+  '<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>':
+    '<p class="note" style="margin-block-start:6px">The national ecological network and the national agricultural land reserve, for all 18 municipalities, at 40% opacity over the street background and under the municipal boundaries. The first activation downloads them once and from then on they work with no network; switching off does not delete them. The municipality colours are not shown in this view — two flat colour fields on top of each other are not two readings but one muddy one.</p>',
+  'מגבלות בנייה במחוז':
+    'Building constraints across the district',
+  'להוריד? לחיצה נוספת':
+    'download? tap again',
+  ' · להוריד? לחיצה נוספת':
+    ' · download? tap again',
+  'שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 21.7 מגה-בייט למחוז כולו — ולכן הן יורדות בלחיצה, פעם אחת. שום דבר לא יורד מעצמו.':
+    'Two layers that decide whether and where building is allowed. They are not inside the app — they weigh 21.7 MB for the whole district — so they are downloaded on a tap, once. Nothing downloads by itself.',
+  'התצוגה היא של המחוז כולו, מהתפריט: שכבות ← מגבלות בנייה. השורות כאן אומרות מה יש לעירייה הזאת, ומאפשרות להוריד או למחוק אותה לבדה.':
+    'The view itself covers the whole district and is switched on from the menu: Layers → Building constraints. The rows here say what this municipality has, and let it be downloaded or deleted on its own.',
+  'חסרות עוד ':
+    'Still missing: ',
+  ' שכבות במחוז, ':
+    ' layers across the district, ',
+  ' MB. התצוגה המלאה תוריד אותן בלחיצה אחת.':
+    ' MB. The full view downloads them in one tap.',
+  'פורס מגבלות בנייה':
+    'Unpacking building constraints',
+  'שכבה שמורה היא מגרסה קודמת. מחקו אותה והורידו מחדש.':
+    'A stored layer is from an earlier release. Delete it and download it again.',
+  'להורדת מגבלות הבנייה של המחוז דרושים ':
+    'The district\'s building constraints need ',
+  ' שכבות). לחיצה נוספת מתחילה.':
+    ' layers). Another tap starts it.',
+  'ויטרז׳ העיריות אינו מוצג בתצוגת מגבלות בנייה: שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה. כבו את מגבלות הבנייה תחילה.':
+    'The municipality colours are not shown in the building-constraint view: two flat colour fields on top of each other are not two readings but one muddy one. Switch the constraints off first.',
 });
 
 </script>

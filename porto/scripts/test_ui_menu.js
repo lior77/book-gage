@@ -244,7 +244,7 @@ const css = (page, sel, prop) =>
   const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'borders', 'more', 'regions', 'save', 'load', 'info'];
+    'tiles', 'glass', 'cons', 'borders', 'more', 'regions', 'save', 'load', 'info'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -1411,6 +1411,23 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { S.lang = 'he'; applyLang(); });
   ok('the layer manifest ships with the app',
      await page.evaluate(() => !!(D.layers && D.layers.layers && D.layers.layers.ren)));
+
+  /* The projection is Leaflet's own formula written out, because projecting a
+     million and a half points through map.project() on every frame is the
+     other way to lock a phone. Written out means it can drift, so it is held
+     to the thing it copies rather than trusted. */
+  const proj = await page.evaluate(() => {
+    let worst = 0;
+    [[41.15, -8.61], [41.44, -8.29], [40.93, -8.65], [41.35, -7.90], [0, 0]]
+      .forEach(([lat, lng]) => {
+        const p = map.project(L.latLng(lat, lng), CONS_REF_Z);
+        worst = Math.max(worst, Math.abs(p.x - consProjX(lng)), Math.abs(p.y - consProjY(lat)));
+      });
+    return worst;
+  });
+  ok('the inlined projection is Leaflet\'s own, to a thousandth of a pixel',
+     proj < 0.001, 'worst ' + proj);
+
   /* Porto is the one municipality DGT publishes neither layer for. Picking a
      municipality that happens to have them, rather than assuming a number,
      is what keeps this from passing on the wrong place. */
@@ -1451,10 +1468,13 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
   await page.waitForFunction(() => Object.keys(D.layerHave || {}).length > 0,
                              null, { timeout: 120000 });
-  await page.waitForFunction(() => !!LAYER_ON.ren, null, { timeout: 60000 })
-            .catch(() => {});
-  ok('the second tap downloads it and draws it',
-     await page.evaluate(() => !!LAYER_ON.ren));
+  ok('the second tap downloads that one municipality',
+     await page.evaluate(() => Object.keys(D.layerHave || {}).length === 1));
+  /* And it does NOT draw. The drawing is the district's switch, because a
+     constraint map that stops at a municipal line says "you may build here"
+     about ground nobody looked at. */
+  ok('and does not draw it on its own — the view is the district\'s',
+     await page.evaluate(() => S.cons === false && consLayer === null));
   const stored = await page.evaluate(async k => {
     const r = await getLayerRec(k);
     return r ? { n: r.bytes.length, sha: r.sha256 } : null;
@@ -1491,23 +1511,111 @@ const css = (page, sel, prop) =>
      refused.m.slice(0, 60));
   ok('and nothing at all is stored when it is refused', refused.stored === false);
 
-  /* The row used to delete on a second arming, which put "show me this" and
-     "throw this away" on one button: a reader who switched the layer off found
-     it gone, and paid for the download twice. The row is a display switch now,
-     and deleting has a word of its own on a chip of its own. */
-  await page.evaluate(() => { layerArmed = null; });
-  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
-  await page.waitForTimeout(800);
-  ok('tapping a downloaded layer switches the display off',
-     await page.evaluate(() => !LAYER_ON.ren));
-  ok('and does NOT delete it — the bytes stay on the device',
-     await page.evaluate(async () => !!(await getLayerRec('ren:' + munWithCode))
-       && !!(D.layerHave || {})['ren:' + munWithCode]));
-  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
-  await page.waitForTimeout(900);
-  ok('and tapping it again draws it back with no second download',
-     await page.evaluate(() => !!LAYER_ON.ren));
+  /* 13b. THE DISTRICT VIEW — one switch, in the menu, under שכבות. */
+  await page.evaluate(() => openMenu(true));
+  await page.waitForTimeout(300);
+  const mrows = await page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
+  ok('the menu carries one row for the constraints', mrows.indexOf('cons') >= 0,
+     JSON.stringify(mrows.slice(mrows.indexOf('tiles'), mrows.indexOf('tiles') + 5)));
+  ok('and it sits under שכבות, above the boundaries row',
+     mrows.indexOf('cons') === mrows.indexOf('glass') + 1
+       && mrows.indexOf('cons') === mrows.indexOf('borders') - 1);
+  const consLabel = await page.evaluate(() =>
+    document.querySelector('#menuIn [data-m="cons"]').innerText);
+  ok('the row says what is still to download before it is pressed',
+     /MB/.test(consLabel), JSON.stringify(consLabel));
 
+  /* One municipality is already here; the switch has to buy the remaining 32
+     and nothing more. */
+  const before = await page.evaluate(() => ({
+    missing: consMissing().length, have: Object.keys(D.layerHave || {}).length,
+    all: consEntries().length,
+  }));
+  ok('the district needs 33 layers and 1 of them is already paid for',
+     before.all === 33 && before.have === 1 && before.missing === 32,
+     JSON.stringify(before));
+
+  await page.evaluate(() => { S.tiles = false; map.removeLayer(tileLayer); S.muncol = true; });
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
+  await page.waitForTimeout(400);
+  ok('one tap only arms it — this is 21 MB of somebody\'s data',
+     await page.evaluate(() => consArmed === true && S.cons === false));
+  ok('and the note says how much, and how many layers',
+     await page.evaluate(() => /MB/.test(document.getElementById('msgs').innerText)));
+
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
+  await page.waitForFunction(() => S.cons === true, null, { timeout: 600000 });
+  await page.waitForTimeout(500);
+  ok('the second tap brings the whole district', await page.evaluate(() =>
+    S.cons === true && consMissing().length === 0));
+  ok('and every polygon of it is actually in memory, not a subset',
+     await page.evaluate(() => consVertices()) === 1556351,
+     String(await page.evaluate(() => consVertices())));
+  ok('and it is drawn', await page.evaluate(() =>
+    !!consLayer && !!consLayer._cv && consLayer._cv.width > 0));
+
+  /* What the view asks for, and what it refuses. */
+  ok('the street background comes on by itself — a constraint is read against streets',
+     await page.evaluate(() => S.tiles === true));
+  ok('the municipality boundaries come on, so a patch can be placed',
+     await page.evaluate(() => S.lnMun === true));
+  ok('and the level\'s own colour fill goes off',
+     await page.evaluate(() => S.muncol === false));
+
+  await page.evaluate(() => openMenu(true));
+  await page.waitForTimeout(200);
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="glass"]').click());
+  await page.waitForTimeout(300);
+  ok('the colour fill cannot be switched back on while the constraints are drawn',
+     await page.evaluate(() => S.muncol === false));
+  ok('with a message that says why, not a switch that does nothing',
+     await page.evaluate(() => /ויטרז/.test(document.getElementById('msgs').innerText)));
+  /* The same guard from the other door. Three copies of one toggle is how a
+     guard comes to live in only one of them. */
+  await page.evaluate(() => { S.muncol = false; toggleLayers(true); });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => document.querySelector('#panelBody [data-lay="muncol"]').click());
+  await page.waitForTimeout(300);
+  ok('and from the layer panel too, which is the same toggle',
+     await page.evaluate(() => S.muncol === false));
+
+  /* The street background is NOT blocked here: it is the ground the reader
+     reads the constraint against, and it is on by default. */
+  await page.evaluate(() => document.querySelector('#panelBody [data-lay="tiles"]').click());
+  await page.waitForTimeout(300);
+  ok('the street background can still be switched off by hand',
+     await page.evaluate(() => S.tiles === false));
+  await page.evaluate(() => document.querySelector('#panelBody [data-lay="tiles"]').click());
+  await page.waitForTimeout(300);
+  ok('and back on', await page.evaluate(() => S.tiles === true));
+
+  ok('the layer panel offers the same one switch, not a row per kind',
+     await page.$$eval('#panelBody [data-lay^="lay:"]', els => els.length) === 1);
+
+  /* Off is off. It is not a refund. */
+  await page.evaluate(() => document.querySelector('#panelBody [data-lay="lay:cons"]').click());
+  await page.waitForFunction(() => S.cons === false, null, { timeout: 30000 });
+  await page.waitForTimeout(400);
+  ok('switching it off takes the drawing away',
+     await page.evaluate(() => consLayer === null));
+  ok('and deletes nothing at all — all 33 layers are still on the device',
+     await page.evaluate(() => Object.keys(D.layerHave || {}).length === 33));
+  ok('so switching it back on needs no download and no unpacking',
+     await page.evaluate(() => consMissing().length === 0
+       && consVertices() === 1556351));
+
+  /* And the card row is a door onto the same switch. */
+  await page.evaluate(() => closePanel());
+  await page.evaluate(n => goMun(n), munWith);
+  await page.waitForTimeout(700);
+  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
+  await page.waitForFunction(() => S.cons === true, null, { timeout: 60000 });
+  ok('a stored row on the municipality card switches the district view on',
+     await page.evaluate(() => S.cons === true && !!consLayer));
+
+  /* Deleting one municipality cannot leave a district view with a hole in it:
+     the missing municipality would look exactly like ground with nothing
+     forbidden on it. */
   ok('a stored layer offers a delete of its own, with the word on it',
      await page.evaluate(() => {
        const b = document.querySelector('#doc [data-layer-del]');
@@ -1516,15 +1624,17 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => document.querySelector('#doc [data-layer-del]').click());
   await page.waitForTimeout(350);
   ok('one tap on it only arms it', await page.evaluate(() =>
-    !!layerDelArmed && Object.keys(D.layerHave || {}).length > 0));
+    !!layerDelArmed && Object.keys(D.layerHave || {}).length === 33));
   await page.evaluate(() => document.querySelector('#doc [data-layer-del]').click());
   await page.waitForTimeout(900);
   ok('the second tap is what deletes it',
-     await page.evaluate(() => Object.keys(D.layerHave || {}).length === 0));
+     await page.evaluate(() => Object.keys(D.layerHave || {}).length === 32));
+  ok('and the district view comes off rather than showing a hole',
+     await page.evaluate(() => S.cons === false && consLayer === null));
   /* The promise that made on-demand storage acceptable in the first place.
      Layers live in their own IndexedDB database; saved points live in
-     localStorage. Deleting every layer cannot reach them, and this is the
-     test that says so rather than the comment. */
+     localStorage. Deleting layers cannot reach them, and this is the test that
+     says so rather than the comment. */
   ok('and a saved point is untouched by it',
      await page.evaluate(() => D.mine.length === 1 && D.mine[0].name === 'נקודה שלי'));
   ok('including in its own store, which the layer code never opens',
@@ -1534,54 +1644,17 @@ const css = (page, sel, prop) =>
      }));
   await page.evaluate(() => { D.mine = []; saveMine(); });
 
-  /* 13b. the constraints as a LAYER, switched from the layer panel — which is
-     where a layer belongs. Switching one on fetches it if it is not here yet,
-     and while one is drawn the street background comes off: a line that says
-     where building is forbidden has to be read, not compete with a photograph
-     of roofs. */
-  await page.evaluate(n => goMun(n), munWith);
-  await page.waitForTimeout(600);
-  await page.evaluate(() => toggleLayers(true));
-  await page.waitForTimeout(400);
-  const layRows = await page.$$eval('#panelBody [data-lay^="lay:"]',
-    els => els.map(e => e.dataset.lay));
-  ok('the layer panel lists the constraint layers', layRows.length === 2,
-     JSON.stringify(layRows));
-  ok('and states the size before one is switched on', await page.evaluate(() =>
-    /MB/.test(document.querySelector('#panelBody [data-lay^="lay:"]').innerText)));
-
-  await page.evaluate(() => { if (!S.tiles) { S.tiles = true; tileLayer.addTo(map); } });
-  await page.evaluate(() =>
-    document.querySelector('#panelBody [data-lay^="lay:"]').click());
-  await page.waitForFunction(() => !!LAYER_ON.ren, null, { timeout: 120000 });
-  await page.waitForTimeout(500);
-  ok('switching one on fetches it and draws it',
-     await page.evaluate(() => !!LAYER_ON.ren));
-  ok('and the street background goes off by itself',
-     await page.evaluate(() => S.tiles === false));
-  await page.evaluate(() => toggleLayers(true));
-  await page.waitForTimeout(300);
-  await page.evaluate(() =>
-    document.querySelector('#panelBody [data-lay="tiles"]').click());
-  await page.waitForTimeout(400);
-  ok('and cannot be switched back on while a constraint is drawn',
-     await page.evaluate(() => S.tiles === false));
-  ok('with a message that says why, not just a switch that does nothing',
-     await page.evaluate(() =>
-       /רקע הרחובות/.test(document.getElementById('msgs').innerText)));
-  await page.evaluate(() => toggleLayers(true));
-  await page.waitForTimeout(300);
-  await page.evaluate(() =>
-    document.querySelector('#panelBody [data-lay^="lay:"]').click());
-  await page.waitForTimeout(800);
-  ok('switching it off removes it', await page.evaluate(() => !LAYER_ON.ren));
-  ok('and gives the street background back exactly as it was',
-     await page.evaluate(() => S.tiles === true));
-  /* The whole reason the switch and the download are two different things.
-     Off is off; it is not a refund. */
-  ok('but the layer itself is still on the device, not deleted',
-     await page.evaluate(async () => !!(await getLayerRec('ren:' + munWithCode))));
-  await page.evaluate(() => { if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); } });
+  /* 13d starts from one municipality rather than the district: the export
+     test is about what a file carries, not about how much of it there is. */
+  await page.evaluate(async () => {
+    for (const k of (await allLayerKeys()) || []) await delLayerRec(k);
+    await refreshLayerHave();
+    Object.keys(consData).forEach(k => consData[k].clear());
+    S.cons = false; applyCons();
+  });
+  await page.evaluate(c => tapLayerFetch('ren', c), munWithCode);
+  await page.waitForFunction(() => Object.keys(D.layerHave || {}).length === 1,
+                             null, { timeout: 60000 });
 
   /* 13d. export and import carry all three things this phone holds that the
      app did not ship with: the points, the photos on them, and the constraint
