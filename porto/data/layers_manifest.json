@@ -1,0 +1,593 @@
+{
+ "version": "1",
+ "base": "https://cdn.jsdelivr.net/gh/lior77/book-gage@claude/mobile-app-pdf-knowledge-aoomsp/porto/data/layers/",
+ "fallback": "https://raw.githubusercontent.com/lior77/book-gage/claude/mobile-app-pdf-knowledge-aoomsp/porto/data/layers/",
+ "layers": {
+  "ren": {
+   "title_en": "REN — Reserva Ecológica Nacional",
+   "title_he": "רשת העתודה האקולוגית הלאומית",
+   "source": "Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0",
+   "licence": "CC BY 4.0",
+   "municipalities": {
+    "1301": {
+     "asset": "ren-1301.geojson.gz",
+     "municipio": "Amarante",
+     "bytes": 1953348,
+     "raw_bytes": 5259589,
+     "sha256": "5e769ad260e4c6a07423198cb0e9bf4c5b698156f35f4bc930c35ecaa1842605",
+     "features": 2,
+     "vertices": 134567,
+     "reference_year": "2024",
+     "years": [
+      "2024"
+     ],
+     "law": [
+      "AVISO 4954/2024/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 4954_2024_2.pdf"
+    },
+    "1302": {
+     "asset": "ren-1302.geojson.gz",
+     "municipio": "Baião",
+     "bytes": 1336657,
+     "raw_bytes": 3551302,
+     "sha256": "a71d3cfc09350ea51589bdc418e0f4d07433dac798a08aee2e364c8ccaa4919c",
+     "features": 2,
+     "vertices": 90741,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "AVISO 20794/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 20794_2025_2.pdf"
+    },
+    "1303": {
+     "asset": "ren-1303.geojson.gz",
+     "municipio": "Felgueiras",
+     "bytes": 2208631,
+     "raw_bytes": 5919072,
+     "sha256": "9fce73307109ef0fd29ab20f6f76674f16d7d9afce6b03706a5249fe24a53838",
+     "features": 2,
+     "vertices": 151619,
+     "reference_year": "2024",
+     "years": [
+      "2024"
+     ],
+     "law": [
+      "AVISO 7304/2024/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 7304_2024_2.pdf"
+    },
+    "1304": {
+     "asset": "ren-1304.geojson.gz",
+     "municipio": "Gondomar",
+     "bytes": 1391836,
+     "raw_bytes": 3723629,
+     "sha256": "d2ed4c583828aec26a1cd58f5b68cfcd756286e3f6602e4bd2d3c94280ff44bf",
+     "features": 2,
+     "vertices": 95400,
+     "reference_year": "2019",
+     "years": [
+      "2019"
+     ],
+     "law": [
+      "AVISO 19207/2019"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 19207_2019.pdf"
+    },
+    "1305": {
+     "asset": "ren-1305.geojson.gz",
+     "municipio": "Lousada",
+     "bytes": 312963,
+     "raw_bytes": 821825,
+     "sha256": "9a9dc21e45b3885c5c7995112fd6db9d73d11a92f6fd7f930f2441b4fffbf78d",
+     "features": 2,
+     "vertices": 21016,
+     "reference_year": "2024",
+     "years": [
+      "2024"
+     ],
+     "law": [
+      "DESPACHO 3725/2024"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 3725_2024.pdf"
+    },
+    "1306": {
+     "asset": "ren-1306.geojson.gz",
+     "municipio": "Maia",
+     "bytes": 1681005,
+     "raw_bytes": 4700045,
+     "sha256": "555eeb49e312063229d006acd74bf6d9c5bdd110fa01113afd971e445cc9bc6f",
+     "features": 2,
+     "vertices": 120416,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "AVISO 23434/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 23434_2025_2.pdf"
+    },
+    "1307": {
+     "asset": "ren-1307.geojson.gz",
+     "municipio": "Marco de Canaveses",
+     "bytes": 793887,
+     "raw_bytes": 2074382,
+     "sha256": "76e0ce1cb5cda956d6538fdf13204be93c72141516f30b27e66a223172a7bf68",
+     "features": 2,
+     "vertices": 53117,
+     "reference_year": "2016",
+     "years": [
+      "2016"
+     ],
+     "law": [
+      "PORTARIA 144/2016"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/PORT 144_2016.pdf"
+    },
+    "1308": {
+     "asset": "ren-1308.geojson.gz",
+     "municipio": "Matosinhos",
+     "bytes": 171032,
+     "raw_bytes": 443333,
+     "sha256": "64c17d4125d9d9d37a06c31b24ecd7a1747c56a84423ab289976515e131cfab6",
+     "features": 2,
+     "vertices": 11315,
+     "reference_year": "2023",
+     "years": [
+      "2023"
+     ],
+     "law": [
+      "AVISO 11601/2023"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 11601_2023.pdf"
+    },
+    "1309": {
+     "asset": "ren-1309.geojson.gz",
+     "municipio": "Paços de Ferreira",
+     "bytes": 220733,
+     "raw_bytes": 572662,
+     "sha256": "276baf79261446ef79f93b03d37c06b41c8e518aa211976b78b0ce4862f51dd4",
+     "features": 2,
+     "vertices": 14639,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "DESPACHO 13583/2025"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 13583_2025.pdf"
+    },
+    "1310": {
+     "asset": "ren-1310.geojson.gz",
+     "municipio": "Paredes",
+     "bytes": 953116,
+     "raw_bytes": 2509342,
+     "sha256": "a0a4a8674be465fd4c15bd7f5df6fb169fd8afa0e9a6211ba68111029615ddb2",
+     "features": 2,
+     "vertices": 64245,
+     "reference_year": "2024",
+     "years": [
+      "2024"
+     ],
+     "law": [
+      "AVISO 9299/2024/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 9299_2024_2.pdf"
+    },
+    "1311": {
+     "asset": "ren-1311.geojson.gz",
+     "municipio": "Penafiel",
+     "bytes": 217924,
+     "raw_bytes": 555125,
+     "sha256": "8e9d47d77ec8a75fd055c69f7db59ee2b3c0fabc65d1ba371c99c07b106a8d5a",
+     "features": 1,
+     "vertices": 14206,
+     "reference_year": "2007",
+     "years": [
+      "2007"
+     ],
+     "law": [
+      "RCM 187/2007"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/RCM 187_2007.pdf"
+    },
+    "1313": {
+     "asset": "ren-1313.geojson.gz",
+     "municipio": "Póvoa de Varzim",
+     "bytes": 88634,
+     "raw_bytes": 226509,
+     "sha256": "9c00231c3da51b1b653f22439dfdad7f2816b83ea47cb39d4ad0723e14a7fd2d",
+     "features": 2,
+     "vertices": 5769,
+     "reference_year": "2020",
+     "years": [
+      "2020"
+     ],
+     "law": [
+      "AVISO 1345/2020"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 1345_2020.pdf"
+    },
+    "1314": {
+     "asset": "ren-1314.geojson.gz",
+     "municipio": "Santo Tirso",
+     "bytes": 443830,
+     "raw_bytes": 1162050,
+     "sha256": "7930fb37684b551e89085546ef56c7d36a89e1f58985a55d63e59279a02d030d",
+     "features": 2,
+     "vertices": 29751,
+     "reference_year": "2023",
+     "years": [
+      "2023"
+     ],
+     "law": [
+      "DESPACHO 9867/2023"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 9867_2023.pdf"
+    },
+    "1315": {
+     "asset": "ren-1315.geojson.gz",
+     "municipio": "Valongo",
+     "bytes": 760506,
+     "raw_bytes": 2039270,
+     "sha256": "9d0633cf00c153dd72595e67c33500ff4d948d6a374b282716acfc5695b9d246",
+     "features": 2,
+     "vertices": 52219,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "AVISO 4789/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 4789_2025_2.pdf"
+    },
+    "1317": {
+     "asset": "ren-1317.geojson.gz",
+     "municipio": "Vila Nova de Gaia",
+     "bytes": 592549,
+     "raw_bytes": 1569952,
+     "sha256": "08fca76240843f71397602b87c73076fbd004754ec6a89157df02a21ca914767",
+     "features": 2,
+     "vertices": 40192,
+     "reference_year": "2024",
+     "years": [
+      "2024"
+     ],
+     "law": [
+      "DESPACHO 1991/2024"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 1991_2024.pdf"
+    },
+    "1318": {
+     "asset": "ren-1318.geojson.gz",
+     "municipio": "Trofa",
+     "bytes": 569874,
+     "raw_bytes": 1512442,
+     "sha256": "c4379f64ecf584908b256a34c68b493a7261c816e8701fc7e06342816483f406",
+     "features": 2,
+     "vertices": 38725,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "AVISO 11583/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 11583_2025_2.pdf"
+    }
+   },
+   "not_published_for": [
+    "Porto",
+    "Vila do Conde"
+   ],
+   "total_bytes": 13696525
+  },
+  "ran": {
+   "title_en": "RAN — Reserva Agrícola Nacional",
+   "title_he": "עתודת הקרקע החקלאית הלאומית",
+   "source": "Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0",
+   "licence": "CC BY 4.0",
+   "municipalities": {
+    "1301": {
+     "asset": "ran-1301.geojson.gz",
+     "municipio": "Amarante",
+     "bytes": 955416,
+     "raw_bytes": 2512630,
+     "sha256": "0c63e852c391a1e1dc32e0d6118c16a40b9fd56541497931a9517af599e76a64",
+     "features": 1,
+     "vertices": 64309,
+     "reference_year": "2017",
+     "years": [
+      "2017"
+     ],
+     "law": [
+      "Aviso 9728/2017"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 9728_2017.pdf"
+    },
+    "1302": {
+     "asset": "ran-1302.geojson.gz",
+     "municipio": "Baião",
+     "bytes": 1086567,
+     "raw_bytes": 2895735,
+     "sha256": "d20f0ce2db464ac5d027731009abad44ac6af26374bd74c03c28aa9af3517c45",
+     "features": 1,
+     "vertices": 73984,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "Aviso n.º 17721/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 17721_2025_2.pdf"
+    },
+    "1303": {
+     "asset": "ran-1303.geojson.gz",
+     "municipio": "Felgueiras",
+     "bytes": 839042,
+     "raw_bytes": 2231302,
+     "sha256": "e2f2ff0f6a140fef54676697bd9f04db2719158b451d3729913af6ffba2d09bc",
+     "features": 1,
+     "vertices": 57158,
+     "reference_year": "2021",
+     "years": [
+      "2021"
+     ],
+     "law": [
+      "Aviso 20586/2021"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO%2020586_2021.pdf"
+    },
+    "1304": {
+     "asset": "ran-1304.geojson.gz",
+     "municipio": "Gondomar",
+     "bytes": 768012,
+     "raw_bytes": 2078861,
+     "sha256": "20e758a9818815ab703e18262da69ad1cd72cbfff4c4618881f4381d51140980",
+     "features": 1,
+     "vertices": 53274,
+     "reference_year": "2017",
+     "years": [
+      "2017"
+     ],
+     "law": [
+      "Aviso 15049/2017"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 15049_2017.pdf"
+    },
+    "1305": {
+     "asset": "ran-1305.geojson.gz",
+     "municipio": "Lousada",
+     "bytes": 192782,
+     "raw_bytes": 503708,
+     "sha256": "a3a1662ec010e401c5c0007d76de813663255ad1bc1e6b25e1a53b7e63a3c413",
+     "features": 1,
+     "vertices": 12893,
+     "reference_year": "2012",
+     "years": [
+      "2012"
+     ],
+     "law": [
+      "AVISO 1746/2012"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 1746_2012.pdf"
+    },
+    "1306": {
+     "asset": "ran-1306.geojson.gz",
+     "municipio": "Maia",
+     "bytes": 454791,
+     "raw_bytes": 1220341,
+     "sha256": "6b01e490de8723d40123af145d2c027a17a3c834908e2100709bbd3c73b4a99b",
+     "features": 1,
+     "vertices": 31251,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "Aviso n.º 4731/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/Aviso 4731_2025_2.pdf"
+    },
+    "1307": {
+     "asset": "ran-1307.geojson.gz",
+     "municipio": "Marco de Canaveses",
+     "bytes": 639709,
+     "raw_bytes": 1670350,
+     "sha256": "468a7bb935a66ab9be0d88620820ec9a2fd75aaedd8328791e43595f511b00db",
+     "features": 1,
+     "vertices": 42793,
+     "reference_year": "2015",
+     "years": [
+      "2015"
+     ],
+     "law": [
+      "Aviso 9906/2015"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 9906_2015.pdf"
+    },
+    "1308": {
+     "asset": "ran-1308.geojson.gz",
+     "municipio": "Matosinhos",
+     "bytes": 180939,
+     "raw_bytes": 479197,
+     "sha256": "446616da8b7a64e7cba3de9c1dfc30e5082e40e661b3adbf87ff48eb7d8f3553",
+     "features": 1,
+     "vertices": 12258,
+     "reference_year": "2019",
+     "years": [
+      "2019"
+     ],
+     "law": [
+      "Aviso 13198/2019"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 13198_2019.pdf"
+    },
+    "1309": {
+     "asset": "ran-1309.geojson.gz",
+     "municipio": "Paços de Ferreira",
+     "bytes": 139069,
+     "raw_bytes": 356764,
+     "sha256": "7e038a24007b84b8fa163823adcb9a63e9a1910efb49905d6e31740aab2fede5",
+     "features": 1,
+     "vertices": 9130,
+     "reference_year": "2007",
+     "years": [
+      "2007"
+     ],
+     "law": [
+      "AVISO 23617/2007"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 23617_2007.pdf"
+    },
+    "1310": {
+     "asset": "ran-1310.geojson.gz",
+     "municipio": "Paredes",
+     "bytes": 1068028,
+     "raw_bytes": 2849401,
+     "sha256": "68c1cce84ef1bb88500c3001997efa226504f422e9235369b851fb003cb7dfa6",
+     "features": 1,
+     "vertices": 73008,
+     "reference_year": "2024",
+     "years": [
+      "2024"
+     ],
+     "law": [
+      "Aviso n.º 10688/2024/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 2010688_2024_2.pdf"
+    },
+    "1311": {
+     "asset": "ran-1311.geojson.gz",
+     "municipio": "Penafiel",
+     "bytes": 286703,
+     "raw_bytes": 747232,
+     "sha256": "8f880ac9fae498fce084374ceb6d891160155093626b193cdeaae3345bdc7c95",
+     "features": 1,
+     "vertices": 19135,
+     "reference_year": "2007",
+     "years": [
+      "2007"
+     ],
+     "law": [
+      "RCM 163/2007"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/RCM 163_2007.pdf"
+    },
+    "1313": {
+     "asset": "ran-1313.geojson.gz",
+     "municipio": "Póvoa de Varzim",
+     "bytes": 173874,
+     "raw_bytes": 452587,
+     "sha256": "04458b2592416a13426d297de14771321fa8ecbb63261a351a90ddf86db25a0a",
+     "features": 1,
+     "vertices": 11585,
+     "reference_year": "2015",
+     "years": [
+      "2015"
+     ],
+     "law": [
+      "Aviso 2157/2015"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 2157_2015.pdf"
+    },
+    "1314": {
+     "asset": "ran-1314.geojson.gz",
+     "municipio": "Santo Tirso",
+     "bytes": 1021472,
+     "raw_bytes": 2759050,
+     "sha256": "02db1c826bb9ab69b7415aea3fbd7c4dd146bfd144c2bf558687500900a5fa61",
+     "features": 1,
+     "vertices": 70693,
+     "reference_year": "2026",
+     "years": [
+      "2026"
+     ],
+     "law": [
+      "Aviso n.º 16577/2026/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 16577_2026_2.pdf"
+    },
+    "1315": {
+     "asset": "ran-1315.geojson.gz",
+     "municipio": "Valongo",
+     "bytes": 116217,
+     "raw_bytes": 307259,
+     "sha256": "738d05eea2c2d94ece77335b4f1c2998eade3ab81a53726fa273ad9e32722f04",
+     "features": 1,
+     "vertices": 7857,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "Aviso n.º 5073/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/Aviso 5073_2025_2.pdf"
+    },
+    "1316": {
+     "asset": "ran-1316.geojson.gz",
+     "municipio": "Vila do Conde",
+     "bytes": 433337,
+     "raw_bytes": 1133701,
+     "sha256": "d0497e005253cdd835bfcd2c6ef84b4bdb790377ac9336d456214caeb9ae34e0",
+     "features": 1,
+     "vertices": 29033,
+     "reference_year": "1995",
+     "years": [
+      "1995"
+     ],
+     "law": [
+      "RCM 166/95"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/RCM 166_1995.pdf"
+    },
+    "1317": {
+     "asset": "ran-1317.geojson.gz",
+     "municipio": "Vila Nova de Gaia",
+     "bytes": 414051,
+     "raw_bytes": 1104641,
+     "sha256": "cb007199a787c0ad39049805ec9248168f14f005c02b86c3547926f994f3fd8f",
+     "features": 1,
+     "vertices": 28282,
+     "reference_year": "2009",
+     "years": [
+      "2009"
+     ],
+     "law": [
+      "AVISO 14327/2009"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SNIT/Diplomas/AVISO 14327_2009.pdf"
+    },
+    "1318": {
+     "asset": "ran-1318.geojson.gz",
+     "municipio": "Trofa",
+     "bytes": 320423,
+     "raw_bytes": 850393,
+     "sha256": "a33e4d30eaaf77af0f9bd03ba782fd35ca8b50b4fa656ee1d0d20ed08693651e",
+     "features": 1,
+     "vertices": 21771,
+     "reference_year": "2025",
+     "years": [
+      "2025"
+     ],
+     "law": [
+      "Aviso n.º 8554/2025/2"
+     ],
+     "url": "https://snit-mais.dgterritorio.gov.pt/SRUP/Aviso 8554_2025_2.pdf"
+    }
+   },
+   "not_published_for": [
+    "Porto"
+   ],
+   "total_bytes": 9090432
+  }
+ }
+}

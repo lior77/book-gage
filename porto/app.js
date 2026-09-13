@@ -114,6 +114,10 @@ const S = {
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: false,        // rivers and lakes — off until asked for
+  // Which constraint layers are switched on, by kind.  A layer that is on but
+  // not downloaded simply does not draw: the switch is display and the
+  // download is storage, and they are deliberately not the same thing.
+  layers: {},
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
   mine: true,          // draw the points the user added
@@ -518,7 +522,8 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, zones, bW, sources, bM, bB, bF, bC, proseEn] = await Promise.all([
+  const [ind, mun, fre, city, zones, bW, sources, bM, bB, bF, bC, proseEn,
+         layersManifest] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
@@ -534,8 +539,13 @@ async function load() {
        its own and not part of app.js: five thousand words of editorial text
        belong beside the data they describe, where a diff can be read. */
     j('data/prose_en.json'),
+    /* What REN and RAN weigh, when each municipality's was delimited and by
+       which law — 16 KB, so the app can say all of it BEFORE anything is
+       downloaded. The polygons themselves are a release asset. */
+    j('data/layers_manifest.json'),
   ]);
   Object.assign(EN, proseEn.text || {});
+  D.layers = layersManifest;
   D.belts = mun.belts;
   D.mun = mun.items;
   D.fre = fre.items;
@@ -1114,6 +1124,7 @@ function renderMun(num) {
     ${marketStats(m, 'municipio')}
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
+    ${layerCard(m.num)}
 
     <div class="grp">${rows.length} ${isPorto ? t('רבעי העיר') : t('הרובעים')} ${t('— לפי המספור במפה')}</div>
     ${isPorto ? t('<p class="note" style="margin-block-end:8px">לחיצה על רובע פותחת אותו: השכונות שבתוכו באותיות, ואתרים ומוסדות כנקודות שחורות.</p>') : ''}
@@ -1184,6 +1195,274 @@ function photoTx(mode, fn) {
 const putPhoto = (id, blob) => photoTx('readwrite', s => s.put(blob, id));
 const getPhoto = id => photoTx('readonly', s => s.get(id));
 const delPhoto = id => photoTx('readwrite', s => s.delete(id)).catch(() => {});
+
+/* ------------------------------------------- constraint layers, on demand ---
+   REN and RAN are 22.8 MB gzipped for this district — 1.56 million vertices
+   against an APK of 840 KB — so they are not in the app.  They sit in a GitHub
+   release and a reader fetches the municipality they are looking at, once, on
+   an explicit tap.  Nothing downloads by itself: this is somebody's mobile
+   data, and a layer nobody asked for is not worth spending it on.
+
+   Their own database, not the photo one and not localStorage, so that deleting
+   every layer cannot touch a saved point — a property that is tested rather
+   than asserted. */
+const LAYER_DB = 'porto-layers';
+const LAYER_STORE = 'blob';
+
+let layerDb = null;
+function openLayerDb() {
+  if (layerDb) return Promise.resolve(layerDb);
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) { rej(new Error(t('אין IndexedDB בדפדפן הזה'))); return; }
+    const rq = indexedDB.open(LAYER_DB, 1);
+    rq.onupgradeneeded = () => {
+      if (!rq.result.objectStoreNames.contains(LAYER_STORE))
+        rq.result.createObjectStore(LAYER_STORE);
+    };
+    rq.onsuccess = () => { layerDb = rq.result; res(layerDb); };
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function layerTx(mode, fn) {
+  return openLayerDb().then(db => new Promise((res, rej) => {
+    let rq;
+    const tx = db.transaction(LAYER_STORE, mode);
+    try { rq = fn(tx.objectStore(LAYER_STORE)); }
+    catch (e) { rej(e); return; }
+    tx.oncomplete = () => res(rq && rq.result);
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error);
+  }));
+}
+const layerKey = (kind, code) => kind + ':' + code;
+const putLayerRec = (k, rec) => layerTx('readwrite', s => s.put(rec, k));
+const getLayerRec = k => layerTx('readonly', s => s.get(k));
+const delLayerRec = k => layerTx('readwrite', s => s.delete(k)).catch(() => {});
+const allLayerKeys = () => layerTx('readonly', s => s.getAllKeys()).catch(() => []);
+
+/* What is stored, and what the app believes about it, are the same record:
+   the bytes, the version they came from, and the digest that was checked. */
+async function sha256Hex(buf) {
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function layerEntry(kind, code) {
+  const L = (D.layers && D.layers.layers && D.layers.layers[kind]) || null;
+  return L && L.municipalities ? L.municipalities[code] || null : null;
+}
+
+/* A download is all or nothing.  A half-written layer draws half a map without
+   saying so, which is worse than no layer: the part that is missing looks
+   exactly like ground with no constraint on it. */
+async function fetchLayer(kind, code, onProgress, signal) {
+  const e = layerEntry(kind, code);
+  if (!e) throw new Error(t('אין שכבה כזו לעירייה הזאת'));
+  // Two hosts, because one CDN having a bad day should not be the end of it.
+  // Both send Access-Control-Allow-Origin; the GitHub release download does
+  // not, which is why these files are in the repository at all.
+  const hosts = [D.layers.base, D.layers.fallback].filter(Boolean);
+  let r = null, lastErr = null;
+  for (const base of hosts) {
+    try {
+      r = await fetch(base + e.asset, { signal });
+      if (r.ok) break;
+      lastErr = new Error(t('ההורדה נכשלה — השרת השיב ') + r.status);
+      r = null;
+    } catch (err) {
+      if (err && err.name === 'AbortError') throw err;
+      lastErr = err;
+      r = null;
+    }
+  }
+  if (!r) throw (lastErr || new Error(t('ההורדה נכשלה')));
+  const total = e.bytes;
+  const chunks = [];
+  let got = 0;
+  if (r.body && r.body.getReader) {
+    const reader = r.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+      if (onProgress) onProgress(got, total);
+    }
+  } else {
+    const b = new Uint8Array(await r.arrayBuffer());
+    chunks.push(b); got = b.length;
+    if (onProgress) onProgress(got, total);
+  }
+  const buf = new Uint8Array(got);
+  let at = 0;
+  for (const c of chunks) { buf.set(c, at); at += c.length; }
+  if (buf.length !== e.bytes)
+    throw new Error(t('ההורדה נקטעה: הגיעו ') + nf(buf.length) + t(' בתים מתוך ') + nf(e.bytes));
+  const sum = await sha256Hex(buf);
+  if (sum !== e.sha256)
+    throw new Error(t('הקובץ שהגיע אינו הקובץ שפורסם — בדיקת sha256 נכשלה. לא נשמר.'));
+  await putLayerRec(layerKey(kind, code), {
+    bytes: buf, sha256: sum, version: D.layers.version,
+    saved: new Date().toISOString().slice(0, 10),
+  });
+  return buf;
+}
+
+/* Stored gzip in, GeoJSON out.  DecompressionStream is in every WebView this
+   app runs on; where it is not, the layer stays undownloadable rather than
+   silently absent. */
+async function layerGeoJSON(kind, code) {
+  const rec = await getLayerRec(layerKey(kind, code));
+  if (!rec) return null;
+  if (rec.version !== D.layers.version) return { stale: true };
+  if (!('DecompressionStream' in window)) throw new Error(t('הדפדפן הזה אינו יודע לפרוס gzip'));
+  const ds = new DecompressionStream('gzip');
+  const stream = new Blob([rec.bytes]).stream().pipeThrough(ds);
+  const text = await new Response(stream).text();
+  return JSON.parse(text);
+}
+
+/* ---- drawing them ----
+   A canvas renderer, and not by preference: Amarante's REN is 125,153 vertices
+   in one polygon and an SVG path of that size locks a phone.  Leaflet's
+   smoothFactor drops vertices in SCREEN space at the current zoom, so the line
+   drawn never leaves the true line by more than about a pixel — which is as
+   fine as a screen can put it anyway.  The stored coordinates are untouched;
+   this is the display, not the data. */
+const LAYER_STYLE = {
+  ren: { color: '#1f7a4d', weight: 1, fillColor: '#2e9e66', fillOpacity: .28 },
+  ran: { color: '#8a6d1f', weight: 1, fillColor: '#c9a227', fillOpacity: .26 },
+};
+const LAYER_ON = {};        // kind -> the Leaflet layer currently on the map
+let layerCanvas = null;
+
+async function applyLayer(kind) {
+  const want = S.layers && S.layers[kind];
+  if (LAYER_ON[kind]) { map.removeLayer(LAYER_ON[kind]); delete LAYER_ON[kind]; }
+  if (!want || S.cmp || !S.mun) return;
+  let gj;
+  try { gj = await layerGeoJSON(kind, munCodeOf(S.mun)); }
+  catch (e) { mapNote(html(String(e.message || e)), true); return; }
+  if (!gj || gj.stale) return;
+  if (!layerCanvas) layerCanvas = L.canvas({ pane: 'nature', padding: .3 });
+  LAYER_ON[kind] = L.geoJSON(gj, {
+    renderer: layerCanvas, pane: 'nature', interactive: false,
+    smoothFactor: 1.6, style: () => LAYER_STYLE[kind],
+  }).addTo(map);
+}
+const munCodeOf = num => {
+  const m = D.munByNum.get(num);
+  return m ? m.dicofre : null;
+};
+function applyLayers() { Object.keys(LAYER_STYLE).forEach(applyLayer); }
+
+/* Everything a reader needs before spending their data, and none of it needs
+   the network: the manifest ships with the app. */
+function layerRows(num) {
+  const code = munCodeOf(num);
+  if (!code || !D.layers) return '';
+  return Object.keys(LAYER_STYLE).map(kind => {
+    const L = D.layers.layers[kind];
+    const e = layerEntry(kind, code);
+    const state = (D.layerHave || {})[layerKey(kind, code)];
+    const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
+    if (!e) {
+      return `<div class="row row-full"><span class="row-body">
+        <span class="row-t">${html(title)}</span>
+        <span class="row-m">${miss()}${t(' — DGT אינו מפרסם אותה לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.')}</span>
+      </span></div>`;
+    }
+    const size = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
+    const armed = layerArmed === kind + ':' + code;
+    return `<button class="row row-full" data-layer="${html(kind + ':' + code)}">
+      <span class="dot" style="--c:${LAYER_STYLE[kind].fillColor}"></span>
+      <span class="row-body">
+        <span class="row-t">${html(title)}${armed
+          ? (state ? t(' <span class="flag">למחוק? לחיצה נוספת</span>')
+                   : t(' <span class="flag">להוריד? לחיצה נוספת</span>'))
+          : (state ? t(' <span class="flag">זמין לא מקוון</span>')
+                   : t(' <span class="flag">לא הורדה</span>'))}</span>
+        <span class="row-m"><span class="num">${size}</span> MB ·
+          ${t('שנת ייחוס')} <span class="num">${html(e.reference_year)}</span> ·
+          <span class="lat" dir="ltr">${html((e.law || []).join(', '))}</span></span>
+      </span></button>`;
+  }).join('');
+}
+
+function layerCard(num) {
+  const rows = layerRows(num);
+  if (!rows) return '';
+  return `<div class="card" id="layerCard">
+    <h2>${t('מגבלות בנייה')}</h2>
+    <p class="sub">${t('שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 22.8 מגה-בייט למחוז כולו — ולכן מורידים אותן לפי עירייה, פעם אחת, בלחיצה. שום דבר לא יורד מעצמו.')}</p>
+    <div class="rows">${rows}</div>
+    <p class="note">${t('המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. הגבול נשמר בדיוק כפי ש-DGT מפרסם אותו — שכבה שאומרת ״כאן אסור לבנות״ לא מפושטת, כי פישוט מזיז את הקו. כל עירייה תוחמה בחוק משלה ובשנה משלה, ולכן אין ״שנת REN״ אחת.')}</p>
+    <p class="note">${t('סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.')}</p>
+  </div>`;
+}
+
+/* ---- the tap ----
+   Ask, then download, then draw.  The order matters: this spends somebody's
+   mobile data, so the size, the year and the law are on the row BEFORE it is
+   pressed, and the first press only arms it.
+
+   Two taps rather than confirm().  A WebView draws confirm() in the system's
+   language with the system's buttons, which on a Hebrew phone set to English
+   is a dialog the reader cannot read — the same reason the saved-point delete
+   arms in place instead (section 7 of the architecture). */
+let layerBusy = null;
+let layerArmed = null;      // the "kind:code" waiting for a second press
+
+async function refreshLayerHave() {
+  const keys = await allLayerKeys();
+  D.layerHave = {};
+  (keys || []).forEach(k => { D.layerHave[k] = true; });
+}
+
+async function tapLayer(id) {
+  const [kind, code] = id.split(':');
+  const e = layerEntry(kind, code);
+  if (!e) return;
+  const L = D.layers.layers[kind];
+  const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
+  const have = (D.layerHave || {})[layerKey(kind, code)];
+
+  if (layerArmed !== id) { layerArmed = id; redrawText(); return; }
+  layerArmed = null;
+
+  if (have) {
+    await delLayerRec(layerKey(kind, code));
+    await refreshLayerHave();
+    if (S.layers) S.layers[kind] = false;
+    applyLayers();
+    redrawText();
+    return;
+  }
+  if (layerBusy) { mapNote(t('הורדה אחרת עדיין רצה.'), false); redrawText(); return; }
+
+  const ctrl = new AbortController();
+  layerBusy = ctrl;
+  const show = (got, total) => mapNote(
+    html(title) + ' · <span class="num">' + Math.round(100 * got / total) + '</span>%'
+    + ' <button class="chip" type="button" data-layer-cancel="1">' + t('ביטול') + '</button>',
+    false, true);
+  show(0, e.bytes);
+  try {
+    await fetchLayer(kind, code, show, ctrl.signal);
+    await refreshLayerHave();
+    S.layers = S.layers || {};
+    S.layers[kind] = true;
+    hideNote();
+    await applyLayer(kind);
+  } catch (err) {
+    if (err && err.name === 'AbortError') hideNote();
+    // what failed, not that something did
+    else mapNote(html(String(err.message || err)), true);
+  } finally {
+    layerBusy = null;
+    redrawText();
+  }
+}
 
 /* ---- EXIF ---- */
 /* Only what a point needs: where, when, and which way up.  A hand-rolled reader
@@ -3539,7 +3818,7 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
-      letters: S.letters, mine: S.mine, water: S.water, rev: PREF_REV,
+      letters: S.letters, mine: S.mine, water: S.water, layers: S.layers, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, wpList: S.wpList,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
@@ -3568,6 +3847,7 @@ function restore() {
     });
     if (o.lang === 'he' || o.lang === 'en') S.lang = o.lang;
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
+    if (o.layers && typeof o.layers === 'object') S.layers = o.layers;
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
@@ -3674,7 +3954,7 @@ function showSource(key, exact) {
     ${exact ? `<p>${t('הערך המדויק:')} <b class="num">${html(exact)}</b>
       <span class="note">${t('— המספר במסך מעוגל כדי להיקרא, וזה מה שהמקור מפרסם.')}</span></p>` : ''}
     <p class="note"><code>${html(key)}</code></p>
-    ${f.reference_year ? `<p>${t('שנת ייחוס:')} <b class="num">${html(f.reference_year)}</b></p>` : ''}
+    ${f.reference_year ? `<p>${t('שנת ייחוס:')} <b class="num">${prose(String(f.reference_year))}</b></p>` : ''}
     <p>${t('מקור:')} ${prose(f.source || (f.derived_from || []).join(' / '))}</p>
     ${f.coverage ? `<p class="note">${t('כיסוי:')} ${prose(f.coverage)}</p>` : ''}
     ${f.validation_he ? `<p class="note">${t('בדיקה:')} ${prose(f.validation_he)}</p>` : ''}
@@ -3687,7 +3967,7 @@ function renderInfo() {
   const fields = Object.entries(s.fields).map(([k, f]) => `<div class="card">
       <h3>${html(t(f.label_he || k))}</h3>
       <p class="note"><code>${html(k)}</code></p>
-      ${f.reference_year ? `<p>${t('שנת ייחוס:')} <b class="num">${html(f.reference_year)}</b></p>` : ''}
+      ${f.reference_year ? `<p>${t('שנת ייחוס:')} <b class="num">${prose(String(f.reference_year))}</b></p>` : ''}
       <p>${t('מקור:')} ${prose(f.source || (f.derived_from || []).join(' / '))}</p>
       ${f.coverage ? `<p class="note">${t('כיסוי:')} ${prose(f.coverage)}</p>` : ''}
       ${f.definitions_he ? `<dl class="kv">${Object.entries(f.definitions_he).map(
@@ -3853,6 +4133,10 @@ function wire() {
     window.visualViewport.addEventListener('scroll', sizeSheet);
   }
   $('#msgs').addEventListener('click', e => {
+    if (e.target.closest('[data-layer-cancel]')) {
+      if (layerBusy) layerBusy.abort();
+      return;
+    }
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.add === 'off') { stopPlacing(); return; }
@@ -3903,6 +4187,8 @@ function wire() {
       goMun(m.num);
       return;
     }
+    const lay = e.target.closest('[data-layer]');
+    if (lay) { tapLayer(lay.dataset.layer); return; }
     const fre = e.target.closest('[data-fre]');
     if (fre) { pickFre(D.freByKey.get(fre.dataset.fre), 'list'); return; }
     const hi = e.target.closest('[data-hi]');
@@ -3994,6 +4280,24 @@ function wire() {
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
 Object.assign(EN, {
+  'ההורדה נכשלה': 'The download failed',
+  ' <span class="flag">זמין לא מקוון</span>': ' <span class="flag">available offline</span>',
+  ' <span class="flag">לא הורדה</span>': ' <span class="flag">not downloaded</span>',
+  ' <span class="flag">להוריד? לחיצה נוספת</span>': ' <span class="flag">download? tap again</span>',
+  ' <span class="flag">למחוק? לחיצה נוספת</span>': ' <span class="flag">delete? tap again</span>',
+  ' בתים מתוך ': ' bytes out of ',
+  ' — DGT אינו מפרסם אותה לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.': ' — DGT does not publish it for this municipality. The reason is not published, so none is given here.',
+  'אין שכבה כזו לעירייה הזאת': 'There is no such layer for this municipality',
+  'הדפדפן הזה אינו יודע לפרוס gzip': 'This browser cannot decompress gzip',
+  'ההורדה נכשלה — השרת השיב ': 'The download failed — the server answered ',
+  'ההורדה נקטעה: הגיעו ': 'The download was cut short: ',
+  'הורדה אחרת עדיין רצה.': 'Another download is still running.',
+  'המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. הגבול נשמר בדיוק כפי ש-DGT מפרסם אותו — שכבה שאומרת ״כאן אסור לבנות״ לא מפושטת, כי פישוט מזיז את הקו. כל עירייה תוחמה בחוק משלה ובשנה משלה, ולכן אין ״שנת REN״ אחת.': 'Source: Direção-Geral do Território (DGT), licensed CC BY 4.0. The boundary is kept exactly as DGT publishes it — a layer that says "you may not build here" is not simplified, because simplifying moves the line. Each municipality was delimited by its own law in its own year, so there is no single "REN year".',
+  'הקובץ שהגיע אינו הקובץ שפורסם — בדיקת sha256 נכשלה. לא נשמר.': 'What arrived is not what was published — the sha256 check failed. Nothing was saved.',
+  'מגבלות בנייה': 'Building constraints',
+  'סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.': 'Fire hazard is not here and will not be until its reference year is found: the field that looks like the map’s date is the date of the law that ordered it.',
+  'שנת ייחוס': 'reference year',
+  'שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 22.8 מגה-בייט למחוז כולו — ולכן מורידים אותן לפי עירייה, פעם אחת, בלחיצה. שום דבר לא יורד מעצמו.': 'Two layers that decide whether and where building is allowed. They are not inside the app — they weigh 22.8 MB for the whole district — so they are downloaded one municipality at a time, once, on a tap. Nothing downloads by itself.',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   '. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.': '. The code and the boundary above are this parish’s, in the 2025 division.',
   '<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>': '<p class="note">Median age, foreign citizenship, higher education and unemployment are not shown for this parish: the 2021 census was counted on the 2013 boundaries, and some of its statistical sections are cut in two by the 2025 ones. A share computed from the part that falls inside would be a share of most of the parish, presented as the parish’s.</p>',

@@ -21,6 +21,7 @@ on:
       - 'porto/data/processed/**'
       - 'porto/data/sources.json'
       - 'porto/data/prose_en.json'
+      - 'porto/data/layers_manifest.json'
       - '.github/workflows/porto-android-apk.yml'
 
 # write: the built APK is published as a release asset, so it has a direct

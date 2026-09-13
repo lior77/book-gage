@@ -82,7 +82,7 @@ def vertices(geom):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default="/tmp/srup")
-    ap.add_argument("--out", default=os.path.join(ROOT, "build", "layers"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "data", "layers"))
     ap.add_argument("--version", default="1")
     args = ap.parse_args()
 
@@ -91,7 +91,22 @@ def main():
     by_fold = {fold(m["pt"]): m for m in mun}
     by_code = {m["dicofre"]: m for m in mun}
 
-    manifest = {"version": args.version, "layers": {}}
+    manifest = {
+        "version": args.version,
+        # Where the app fetches from, and the reason it is not a GitHub
+        # release asset. A release download sends no Access-Control-Allow-Origin
+        # header at all — checked, not assumed — so a fetch() from the app is
+        # blocked by CORS everywhere it runs: the APK's WebView loads from
+        # file://, the standalone build from wherever it was saved, and neither
+        # is github.com. raw.githubusercontent.com and jsDelivr both send
+        # "access-control-allow-origin: *", so the files live in the repository
+        # and are served from a CDN that will let a page read them.
+        "base": ("https://cdn.jsdelivr.net/gh/lior77/book-gage@"
+                 "claude/mobile-app-pdf-knowledge-aoomsp/porto/data/layers/"),
+        "fallback": ("https://raw.githubusercontent.com/lior77/book-gage/"
+                     "claude/mobile-app-pdf-knowledge-aoomsp/porto/data/layers/"),
+        "layers": {},
+    }
     for key, (fname, how, title_en, title_he) in LAYERS.items():
         path = os.path.join(args.src, fname)
         if not os.path.exists(path):
@@ -109,14 +124,17 @@ def main():
             if m:
                 per[m["dicofre"]].append(f)
 
-        outdir = os.path.join(args.out, key)
+        # Flat names: a GitHub release asset has no directories, and the
+        # file the app asks for must be the file the release holds.
+        outdir = args.out
         os.makedirs(outdir, exist_ok=True)
         entries = {}
         for code, feats in sorted(per.items()):
             body = json.dumps({"type": "FeatureCollection", "features": feats},
                               ensure_ascii=False, separators=(",", ":")).encode()
             blob = gzip.compress(body, 9)
-            dest = os.path.join(outdir, "%s.geojson.gz" % code)
+            asset = "%s-%s.geojson.gz" % (key, code)
+            dest = os.path.join(outdir, asset)
             with open(dest, "wb") as fh:
                 fh.write(blob)
             years = sorted({str(f["properties"].get("serv_data"))[:4]
@@ -126,6 +144,7 @@ def main():
             urls = sorted({f["properties"].get("serv_hiperligacao") for f in feats
                            if f["properties"].get("serv_hiperligacao")})
             entries[code] = {
+                "asset": asset,
                 "municipio": by_code[code]["pt"],
                 "bytes": len(blob),
                 "raw_bytes": len(body),

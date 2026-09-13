@@ -58,6 +58,7 @@ tasks.register('copyWebApp', Copy) {
         include 'index.html', 'app.css', 'app.js', 'manifest.webmanifest'
         include 'vendor/**', 'icons/**', 'data/processed/**'
         include 'data/sources.json', 'data/prose_en.json'
+        include 'data/layers_manifest.json'
     }
     into "$buildDir/web/site"
 }

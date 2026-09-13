@@ -1398,6 +1398,116 @@ const css = (page, sel, prop) =>
      await page.evaluate(() => document.documentElement.dir) === 'rtl'
        && (await page.evaluate(() => document.getElementById('doc').innerText)).includes('תושבים'));
 
+  /* 13. the constraint layers: fetched on demand, stored apart, verified.
+     The files are in the repository, so the test server already serves them
+     from the same origin and no CORS fixture is needed — which is also the
+     reason they are in the repository. A GitHub release download sends no
+     Access-Control-Allow-Origin header at all, checked rather than assumed,
+     so a fetch() from the app would be blocked wherever it runs. */
+  await page.evaluate(() => {
+    D.layers.base = '/data/layers/';
+    D.layers.fallback = null;
+  });
+  await page.evaluate(() => { S.lang = 'he'; applyLang(); });
+  ok('the layer manifest ships with the app',
+     await page.evaluate(() => !!(D.layers && D.layers.layers && D.layers.layers.ren)));
+  /* Porto is the one municipality DGT publishes neither layer for. Picking a
+     municipality that happens to have them, rather than assuming a number,
+     is what keeps this from passing on the wrong place. */
+  const munWith = await page.evaluate(() => {
+    const code = Object.keys(D.layers.layers.ren.municipalities)[0];
+    const m = D.mun.find(x => x.dicofre === code);
+    return m ? m.num : null;
+  });
+  ok('and names a municipality it has REN for', munWith !== null);
+  // saved for real, not just set in memory: the point of the last assertion
+  // below is that the layer code never reaches localStorage, and a point that
+  // was never written there would have made it pass on nothing.
+  await page.evaluate(() => {
+    D.mine = [{ id: 'lay1', name: 'נקודה שלי', desc: '',
+                ll: [41.2, -8.5], at: '2026-09-13' }];
+    saveMine();
+  });
+  await page.evaluate(n => goMun(n), munWith);
+  await page.waitForTimeout(700);
+  const layRow = await page.$('#doc [data-layer]');
+  ok('the municipality page offers them', !!layRow);
+  const layText = await page.evaluate(() =>
+    document.querySelector('#doc [data-layer]').innerText);
+  ok('and states the size, the reference year and the law before any download',
+     /MB/.test(layText) && /20\d\d/.test(layText), JSON.stringify(layText.slice(0, 70)));
+
+  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
+  await page.waitForTimeout(350);
+  ok('one tap only arms it — this spends somebody\'s mobile data',
+     await page.evaluate(() => !!layerArmed
+       && Object.keys(D.layerHave || {}).length === 0));
+
+  const layId = await page.evaluate(() =>
+    document.querySelector('#doc [data-layer]').dataset.layer);
+  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
+  await page.waitForFunction(() => Object.keys(D.layerHave || {}).length > 0,
+                             null, { timeout: 120000 });
+  await page.waitForFunction(() => !!LAYER_ON.ren, null, { timeout: 60000 })
+            .catch(() => {});
+  ok('the second tap downloads it and draws it',
+     await page.evaluate(() => !!LAYER_ON.ren));
+  const stored = await page.evaluate(async k => {
+    const r = await getLayerRec(k);
+    return r ? { n: r.bytes.length, sha: r.sha256 } : null;
+  }, layId);
+  const promised = await page.evaluate(i => {
+    const [k, c] = i.split(':');
+    const e = layerEntry(k, c);
+    return { n: e.bytes, sha: e.sha256 };
+  }, layId);
+  ok('what was stored is byte for byte what the manifest promised',
+     stored && stored.n === promised.n && stored.sha === promised.sha);
+  ok('and it decompresses to real polygons',
+     await page.evaluate(async i => {
+       const [k, c] = i.split(':');
+       const g = await layerGeoJSON(k, c);
+       return !!(g && g.features && g.features.length);
+     }, layId));
+
+  /* A truncated or tampered file that gets stored draws half a map without
+     saying so, and the half that is missing looks exactly like ground with no
+     constraint on it. */
+  const refused = await page.evaluate(async () => {
+    const code = Object.keys(D.layers.layers.ren.municipalities)[1];
+    const e = layerEntry('ren', code);
+    const real = e.sha256;
+    e.sha256 = '0'.repeat(64);
+    let m = '';
+    try { await fetchLayer('ren', code, () => {}, undefined); m = 'NO ERROR'; }
+    catch (err) { m = String(err.message || err); }
+    e.sha256 = real;
+    return { m, stored: !!(await getLayerRec('ren:' + code)) };
+  });
+  ok('a file whose digest does not match is refused', /sha256/.test(refused.m),
+     refused.m.slice(0, 60));
+  ok('and nothing at all is stored when it is refused', refused.stored === false);
+
+  await page.evaluate(() => { layerArmed = null; });
+  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
+  await page.waitForTimeout(300);
+  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
+  await page.waitForTimeout(800);
+  ok('arming again and tapping deletes it',
+     await page.evaluate(() => Object.keys(D.layerHave || {}).length === 0));
+  /* The promise that made on-demand storage acceptable in the first place.
+     Layers live in their own IndexedDB database; saved points live in
+     localStorage. Deleting every layer cannot reach them, and this is the
+     test that says so rather than the comment. */
+  ok('and a saved point is untouched by it',
+     await page.evaluate(() => D.mine.length === 1 && D.mine[0].name === 'נקודה שלי'));
+  ok('including in its own store, which the layer code never opens',
+     await page.evaluate(() => {
+       const raw = localStorage.getItem('porto-mine-v1');
+       return !!raw && raw.indexOf('נקודה שלי') >= 0;
+     }));
+  await page.evaluate(() => { D.mine = []; saveMine(); });
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);
