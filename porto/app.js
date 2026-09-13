@@ -1367,9 +1367,16 @@ function layerRows(num) {
     const state = (D.layerHave || {})[layerKey(kind, code)];
     const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
     if (!e) {
+      /* A row that says "no data" and offers nothing reads as a feature that
+         does not work — which is exactly how it read on Porto, where BOTH
+         layers are absent and the card was two dead lines. It has to say how
+         many municipalities do have it, so the reader knows the layer exists
+         and where to look. */
+      const n = Object.keys(L.municipalities).length;
       return `<div class="row row-full"><span class="row-body">
         <span class="row-t">${html(title)}</span>
-        <span class="row-m">${miss()}${t(' — DGT אינו מפרסם אותה לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.')}</span>
+        <span class="row-m">${miss()}${t(' — DGT אינו מפרסם אותה לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.')}
+          ${t('היא כן מתפרסמת ל-')}<span class="num">${n}</span>${t(' מתוך 18 העיריות.')}</span>
       </span></div>`;
     }
     const size = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
@@ -1392,10 +1399,18 @@ function layerRows(num) {
 function layerCard(num) {
   const rows = layerRows(num);
   if (!rows) return '';
+  const code = munCodeOf(num);
+  const none = Object.keys(LAYER_STYLE).every(k => !layerEntry(k, code));
+  const elsewhere = none ? Object.keys(LAYER_STYLE).map(k => {
+    const L = D.layers.layers[k];
+    const names = (L.not_published_for || []).filter(x => x !== (D.munByNum.get(num) || {}).pt);
+    return { k, L, names };
+  }) : null;
   return `<div class="card" id="layerCard">
     <h2>${t('מגבלות בנייה')}</h2>
     <p class="sub">${t('שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 22.8 מגה-בייט למחוז כולו — ולכן מורידים אותן לפי עירייה, פעם אחת, בלחיצה. שום דבר לא יורד מעצמו.')}</p>
     <div class="rows">${rows}</div>
+    ${none ? `<p class="note">${t('בעירייה הזאת אין אף אחת משתי השכבות, ולכן אין כאן מה להוריד. בשאר המחוז יש: לחצו על הבית, בחרו עירייה אחרת, וגללו לכאן.')}</p>` : ''}
     <p class="note">${t('המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. הגבול נשמר בדיוק כפי ש-DGT מפרסם אותו — שכבה שאומרת ״כאן אסור לבנות״ לא מפושטת, כי פישוט מזיז את הקו. כל עירייה תוחמה בחוק משלה ובשנה משלה, ולכן אין ״שנת REN״ אחת.')}</p>
     <p class="note">${t('סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.')}</p>
   </div>`;
@@ -4280,6 +4295,9 @@ function wire() {
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
 Object.assign(EN, {
+  'היא כן מתפרסמת ל-': 'It is published for ',
+  ' מתוך 18 העיריות.': ' of the 18 municipalities.',
+  'בעירייה הזאת אין אף אחת משתי השכבות, ולכן אין כאן מה להוריד. בשאר המחוז יש: לחצו על הבית, בחרו עירייה אחרת, וגללו לכאן.': 'Neither layer exists for this municipality, so there is nothing here to download. The rest of the district has them: tap home, choose another municipality, and scroll back to here.',
   'ההורדה נכשלה': 'The download failed',
   ' <span class="flag">זמין לא מקוון</span>': ' <span class="flag">available offline</span>',
   ' <span class="flag">לא הורדה</span>': ' <span class="flag">not downloaded</span>',

@@ -1508,6 +1508,26 @@ const css = (page, sel, prop) =>
      }));
   await page.evaluate(() => { D.mine = []; saveMine(); });
 
+  /* Porto has neither layer, and the first build showed it two dead rows
+     saying "no data" and nothing else — which reads as a feature that does not
+     work rather than a municipality DGT does not publish. The reader who hit
+     this could not tell the difference, and neither could the test, because
+     nothing checked the empty case. */
+  const portoNum = await page.evaluate(() =>
+    (D.mun.find(m => m.dicofre === '1312') || {}).num);
+  await page.evaluate(n => goMun(n), portoNum);
+  await page.waitForTimeout(700);
+  ok('a municipality with neither layer still shows the card', await page.evaluate(() =>
+    !!document.getElementById('layerCard')));
+  ok('and offers nothing to tap, because there is nothing to download',
+     await page.evaluate(() => !document.querySelector('#doc [data-layer]')));
+  const emptyText = await page.evaluate(() =>
+    document.getElementById('layerCard').innerText);
+  ok('but says how many municipalities DO have it, so it does not read as broken',
+     /16/.test(emptyText) && /17/.test(emptyText), JSON.stringify(emptyText.slice(0, 120)));
+  ok('and says plainly where to go instead',
+     /עירייה אחרת/.test(emptyText), JSON.stringify(emptyText.slice(-140)));
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);
