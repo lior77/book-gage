@@ -54,7 +54,10 @@ import sys
 import zipfile
 from datetime import date
 
-import openpyxl
+# openpyxl is imported where the workbook is opened, not here: the derivation
+# formulas below are pure arithmetic and import_censos_2025.py reuses them.
+# A spreadsheet library at module level would have made it copy them instead,
+# and the same formula in two files is the same formula until one is edited.
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -83,6 +86,7 @@ def read_rows():
     with zipfile.ZipFile(SRC) as z:
         name = [n for n in z.namelist() if n.endswith(".xlsx")][0]
         blob = z.read(name)
+    import openpyxl
     ws = openpyxl.load_workbook(io.BytesIO(blob), read_only=True)["Sheet1"]
     it = ws.iter_rows(values_only=True)
     next(it)                                   # the title line above the header
