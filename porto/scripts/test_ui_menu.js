@@ -864,7 +864,12 @@ const css = (page, sel, prop) =>
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
-  /* one of the seven: INE publishes the municipality and none of its parishes */
+  /* one of the nine: INE publishes the municipality and none of its parishes.
+     It was seven until the app moved to the 2025 division. INE publishes
+     against the 2013 codes, so every parish the reform created has no row at
+     all — which took Matosinhos and Póvoa de Varzim, whose parishes were all
+     renumbered, from partly covered to not covered. That cost was written
+     down before the move and is recorded in sources.json. */
   // The count is the assertion, not the sample.  Picking whichever municipality
   // happens to be empty would keep passing while six of the seven quietly
   // filled up, which is the shape of a check that cannot fail.
@@ -873,12 +878,12 @@ const css = (page, sel, prop) =>
                              .map(f => f.mun_num));
     return D.mun.filter(x => !has.has(x.num)).map(x => x.pt);
   });
-  ok('INE publishes parishes in eleven municipalities and no more',
-     blind.length === 7, `${blind.length}: ${blind.join(', ')}`);
-  ok('and they are the seven the source record names',
+  ok('INE publishes parishes in nine municipalities and no more',
+     blind.length === 9, `${blind.length}: ${blind.join(', ')}`);
+  ok('and they are the nine the source record names',
      blind.slice().sort().join('|') === ['Amarante', 'Baião', 'Felgueiras',
-       'Lousada', 'Marco de Canaveses', 'Paços de Ferreira', 'Penafiel']
-       .sort().join('|'), blind.join(', '));
+       'Lousada', 'Marco de Canaveses', 'Matosinhos', 'Paços de Ferreira',
+       'Penafiel', 'Póvoa de Varzim'].sort().join('|'), blind.join(', '));
   const blindNum = await page.evaluate(names => {
     const m = D.mun.find(x => x.pt === names[0]);
     goMun(m.num);
@@ -1096,7 +1101,7 @@ const css = (page, sel, prop) =>
   const freRows = await cmpRows();
   const freShapes = await page.$$eval('#map .leaflet-overlay-pane path[fill^="#"]',
     els => els.length);
-  ok('choosing רובעים lists all 243 parishes', freRows.length === 243, String(freRows.length));
+  ok('choosing רובעים lists all 275 parishes', freRows.length === 275, String(freRows.length));
   ok('and draws every one of them on the map, not a sample',
      freShapes === freRows.length, `${freShapes} shapes, ${freRows.length} rows`);
   ok('nothing is left in the no-value pattern that has a value',

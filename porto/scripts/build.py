@@ -340,6 +340,64 @@ def read_mcol():
     return {int(k): v for k, v in re.findall(r"(\d+)\s*:\s*\"(#[0-9A-Fa-f]{6})\"", block)}
 
 
+def read_caop2025():
+    """CAOP 2025 as the parish layer, in the shape the build already expects.
+
+    Until now the parishes were CAOP 2020 — the 2013 division — and a parish
+    was found by matching its name against the source document. A name is how
+    the document refers to a place; DICOFRE is how the state does, and it is
+    what every INE series joins on. Matching on the code removes a whole class
+    of failure at once: two parishes called Lordelo in different
+    municipalities, an accent written two ways, a União whose members are
+    listed in a different order.
+
+    The 2025 division is also simply the current one. 25 of this district's
+    units were dissolved back into 57 separate parishes in 2025, and an app
+    drawing the 2013 boundaries draws a map that no longer matches the
+    addresses on the doors.
+    """
+    path = os.path.join(RAW, "dgt", "caop_freguesias.geojson")
+    with open(path, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    out = []
+    for ft in raw["features"]:
+        pr = ft["properties"]
+        code = pr.get("dtmnfr") or ""
+        if not code.startswith("13"):
+            continue
+        mun = pr["municipio"]
+        out.append({"type": "Feature",
+                    "properties": {"mun_num": NUM[mun], "mun": mun,
+                                   "name": pr["freguesia"], "dtmnfr": code},
+                    "geometry": ft["geometry"]})
+    return {"type": "FeatureCollection", "features": out}
+
+
+def read_censos_2025():
+    """The 2021 census rebuilt on the 2025 boundaries, by DICOFRE.
+
+    Written by import_censos_2025.py from BGRI subsections. A missing file is
+    fatal rather than quiet: the 2025 layer without it would draw 275 parishes
+    of which 57 had no population at all, and a map that silently loses a
+    quarter of a million people is worse than one that refuses to build.
+    """
+    path = os.path.join(RAW, "censos2021_caop2025.json")
+    if not os.path.exists(path):
+        sys.exit("missing %s — run scripts/import_censos_2025.py" % path)
+    with open(path, encoding="utf-8") as fh:
+        d = json.load(fh)
+    return d["freguesias"], d.get("municipios", {})
+
+
+def read_translit_2025():
+    """Hebrew for the 57 parishes the 2025 reform created."""
+    path = os.path.join(RAW, "hebrew_translit_2025.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)["names"]
+
+
 def read_official_codes():
     """The official DICOFRE code of every parish, from ingest_freguesia_codes.py.
 
@@ -415,6 +473,10 @@ def read_censos():
 
 # A ring of pastels for the parishes inside one municipality. Neighbouring
 # numbers land on different hues, and every one of them takes dark text.
+# The four the section file alone can answer: a median needs five-year bands,
+# and BGRI carries no education, employment or nationality at all.
+SECTION_BOUND = ("median_age", "foreign_pct", "education_pct", "unemployment_pct")
+
 PARISH_PALETTE = [
     "#F6C99A", "#9CC7E8", "#A8D9C9", "#C9DF9B", "#F3AFAF", "#CDB6E0",
     "#F2D98C", "#8FCFD6", "#E9B5CE", "#B9C9EC", "#D8DE93", "#F0BFA0",
@@ -634,7 +696,7 @@ def letter_at(i):
     return out
 
 
-def build_zones(freguesias, city):
+def build_zones(freguesias, city, fre_geom=None):
     """Level 3, for all 243 parishes rather than only Porto's seven.
 
     Porto keeps the curated material: 53 named neighbourhoods with a Hebrew
@@ -668,12 +730,41 @@ def build_zones(freguesias, city):
 
     district = load_raw("district_points.json")
     if district:
-        places, pois = {}, {}
+        # Every point carries a `freg` key that ingest_overpass.py worked out
+        # against the 2013 boundaries. On the 2025 division that key is stale:
+        # it names a parish that may no longer exist, or one whose edge has
+        # moved. Twenty-one letters landed outside the parish they were filed
+        # under — Modelos still filed under Paços de Ferreira, 1.1 km away —
+        # and a letter drawn outside its own shape is a map that contradicts
+        # its own list. The point decides, not the key.
+        assign = None
+        if fre_geom:
+            from shapely.strtree import STRtree
+            keys = list(fre_geom)
+            shapes = [fre_geom[k] for k in keys]
+            tree = STRtree(shapes)
+
+            def assign(ll):
+                pt = Point(ll[1], ll[0])
+                for idx in tree.query(pt):
+                    if shapes[idx].contains(pt):
+                        return keys[idx]
+                return None
+
+        places, pois, moved, lost = {}, {}, 0, 0
         for r in district["places"]:
-            places.setdefault(r["freg"], []).append(r)
+            key = (assign(r["ll"]) if assign else None) or r["freg"]
+            if assign and key != r["freg"]:
+                moved += 1
+            if assign and key is None:
+                lost += 1
+            places.setdefault(key, []).append(r)
         for r in district["pois"]:
             if r["cat"] in POI_CORE or r.get("notable") or r["cat"] == "landmark":
-                pois.setdefault(r["freg"], []).append(r)
+                key = (assign(r["ll"]) if assign else None) or r["freg"]
+                pois.setdefault(key, []).append(r)
+        stats["moved"] = moved
+        stats["lost"] = lost
 
         for f in freguesias:
             key = "%d|%s" % (f["mun_num"], f["pt"])
@@ -784,7 +875,7 @@ def round_geom(g, nd=5):
 def main():
     dist_km = read_dist()
     caop_mun = json.load(open(os.path.join(RAW, "caop2020_porto_municipios.geojson")))
-    caop_fre = json.load(open(os.path.join(RAW, "caop2020_porto_freguesias.geojson")))
+    caop_fre = read_caop2025()
     collected = json.load(open(os.path.join(RAW, "census2021_freguesias_collected.json")))
     translit = json.load(open(os.path.join(RAW, "hebrew_translit_new.json")))
     app_notes = load_raw("freguesia_notes_app.json")
@@ -816,17 +907,97 @@ def main():
     warnings = []
     codes = read_official_codes()
     ine_mun, ine_fre = read_censos()
+    ine_2025, mun25 = read_censos_2025()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
+    translit_2025 = read_translit_2025()
+    # what each 2025 parish was part of before the reform, so a new parish can
+    # show the figures of the unit it came out of without wearing them
+    was_part_of = {}
+    for key, rec in codes.items():
+        for kid in rec.get("split2025") or []:
+            # NUM[mun] is the app's own municipality number and it is NOT the
+            # municipality half of the DICOFRE: Póvoa de Varzim is 8 to the app
+            # and 13 to the state. Reading one as the other looked up an empty
+            # row list and quietly enriched nothing.
+            was_part_of[kid["dicofre"]] = {"dicofre": rec["dicofre"],
+                                           "pt": rec["pt"],
+                                           "mun_num": NUM[rec["mun"]]}
+    # The source document describes the 2013 units. A unit that was dissolved
+    # is not any one of the parishes that replaced it, so its row must not be
+    # matched to one of them — see below.
+    born_2025 = set(was_part_of)
+    codes_by_dicofre = {v["dicofre"]: v for v in codes.values()}
+    MUN_OF = {NUM[m]: m for m in MUNICIPALITIES}
+
+    # What each dissolved unit itself said and counted, so a parish born in
+    # 2025 can offer it without wearing it. Paços de Ferreira is why this has
+    # no exception for a matching name: the 2013 unit and the 2025 parish are
+    # both called Paços de Ferreira, and they are not the same ground — Modelos
+    # left. A description written for one is not a description of the other,
+    # however well it happens to read.
+    # match_one, not exact equality: the document writes "Santa Marinha e S.
+    # Pedro da Afurada" where CAOP writes "São Pedro". An exact key missed it
+    # and two parishes silently lost the description of the unit they left —
+    # the same abbreviation the main loop's matcher has always handled.
+    pdf_rows_by_mun = {}
+    for num, rows in porto_freg3.FREG3.items():
+        pdf_rows_by_mun[num] = {en: {"he": he, "note": note, "pop2021": pop}
+                                for he, en, pop, note in rows}
+    for kid, before in was_part_of.items():
+        mun_num = before.pop("mun_num")
+        rows = pdf_rows_by_mun.get(mun_num, {})
+        cand, score = match_one(before["pt"], list(rows))
+        was = rows[cand] if cand is not None and score >= 0.34 else None
+        if was:
+            for k in ("he", "note", "pop2021"):
+                if was.get(k) is not None:
+                    before[k] = was[k]
+        app_key = (mun_num, before["pt"])
+        if "note" not in before and app_key in app_note_of:
+            before["note"] = app_note_of[app_key]
+            before["note_origin"] = "app"
+        elif "note" in before:
+            before["note_origin"] = "pdf"
+        # six of the dissolved units are among the 103 whose Hebrew was written
+        # for the app rather than taken from the document
+        if "he" not in before:
+            he = (translit.get(MUN_OF.get(mun_num, "")) or {}).get(before["pt"])
+            if he:
+                before["he"] = he
+                before["he_origin"] = "app"
+        elif was:
+            before["he_origin"] = "pdf"
+        # The dissolved unit's population is the sum of the parishes that
+        # replaced it — that is what the reform did, and INE's reassignment
+        # table reconciles to it exactly. Taken this way it is always available
+        # and always right, rather than depending on a name matching a row.
+        kids_pop = [k2["pop2021"] for k2 in (codes_by_dicofre.get(before["dicofre"], {})
+                                             .get("split2025") or [])
+                    if k2.get("pop2021") is not None]
+        if kids_pop:
+            before["pop2021"] = sum(kids_pop)
+            before["pop_src"] = "sum of the parishes that replaced it"
 
     # ---- parishes -----------------------------------------------------------
     freguesias = []
     for mun in MUNICIPALITIES:
         n = NUM[mun]
         pool = {ft["properties"]["name"]: ft for ft in fre_by_mun[mun]}
+        # A parish the 2025 reform created takes no row from the document, and
+        # this is not a detail. The rows describe the 2013 units; matched by
+        # name against the new division, "União das freguesias da Póvoa de
+        # Varzim, Beiriz e Argivai" landed on the parish now called Póvoa de
+        # Varzim and labelled it with two neighbours that are no longer part of
+        # it, note and all. Nothing on screen looked broken — a real Hebrew
+        # name over a real Portuguese one. Identity for these comes from the
+        # transliteration file, and what the dissolved unit said about the
+        # ground is offered separately, under that unit's own name.
+        matchable = [k for k, ft in pool.items()
+                     if ft["properties"]["dtmnfr"] not in born_2025]
         pdf_rows = porto_freg3.FREG3.get(n, [])
         taken = {}
         for order, (he, en, pop, note) in enumerate(pdf_rows):
-            cand, score = match_one(en, [k for k in pool if k not in taken])
+            cand, score = match_one(en, [k for k in matchable if k not in taken])
             if cand is None or score < 0.34:
                 warnings.append("no CAOP match for parish %r in %s (score %.2f)" % (en, mun, score))
                 continue
@@ -851,16 +1022,19 @@ def main():
             # the DICOFRE code. A unit the 2025 reform split back into separate
             # parishes has no code of its own any more, so it carries its
             # successors instead and the UI says so.
-            official = codes.get(mun + "|" + caop_name)
-            if official:
-                rec["code"] = official["code"]
-                rec["dicofre"] = official["dicofre"]
-                # A unit the 2025 reform split back into separate parishes: the
-                # code above is the one it held until then, and these are the
-                # parishes that replaced it.
-                if official.get("split2025"):
-                    rec["split2025"] = official["split2025"]
-                    rec["code_until"] = 2025
+            # The official number comes off the boundary itself now. CAOP 2025
+            # carries dtmnfr on every polygon, so there is nothing to look up
+            # and nothing to match: the code and the shape are the same record.
+            rec["dicofre"] = ft["properties"]["dtmnfr"]
+            rec["code"] = rec["dicofre"][4:]
+            # A parish the 2025 reform created out of a dissolved union. The
+            # figures of that union are not this parish's and are never shown
+            # as such — they are offered beside it, under the old unit's own
+            # name, code and reference year, for a reader who wants to know
+            # what the ground looked like before the boundary moved.
+            before = was_part_of.get(rec["dicofre"])
+            if before:
+                rec["was_part_of"] = before
             if src:
                 rec["he"] = src["he"]
                 rec["he_origin"] = "pdf"
@@ -874,21 +1048,38 @@ def main():
             # The census figure wins over both the document and the collected
             # file: it is the same publication the municipality total comes
             # from, so a municipality equals the sum of its parishes exactly.
-            census = ine_fre.get(rec.get("dicofre", ""))
-            if census and census.get("N_INDIVIDUOS") is not None:
+            # On the 2025 boundaries it is rebuilt from BGRI subsections, which
+            # is the only way the 57 new parishes have a figure at all.
+            c25 = ine_2025.get(rec["dicofre"]) or {}
+            if c25.get("pop2021") is not None:
                 was = rec.get("pop2021")
-                rec["pop2021"] = int(census["N_INDIVIDUOS"])
+                rec["pop2021"] = int(c25["pop2021"])
                 rec["pop_src"] = "ine"
                 if was is not None and was != rec["pop2021"]:
-                    warnings.append("%s: population %d -> %d (INE Censos 2021)"
+                    warnings.append("%s: population %d -> %d (Censos 2021 on CAOP 2025)"
                                     % (caop_name, was, rec["pop2021"]))
-            housing = housing_block(census)
+            for key in ("median_age", "pct_0_14", "pct_65plus", "ageing_index",
+                        "foreign_pct", "education_pct", "unemployment_pct"):
+                if c25.get(key) is not None:
+                    rec[key] = c25[key]
+            housing = {k: c25[k] for k in
+                       ("dwellings", "vacant_pct", "second_home_pct", "owner_pct",
+                        "rented_pct", "parking_pct", "buildings", "repair_pct",
+                        "deep_repair_pct", "pre1946_pct", "since2011_pct")
+                       if c25.get(k) is not None}
             if housing:
                 rec["housing"] = housing
+            # A parish whose 2021 sections do not account for all of it keeps
+            # its population and loses the four fields a section is needed for.
+            # The UI says which, rather than showing a share of most of it.
+            if c25.get("section_cover") == "partial":
+                rec["census_partial"] = True
             if "pop2021" not in rec and caop_name in extra_pop:
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
-            if "note" not in rec and (n, caop_name) in app_note_of:
+            if "note" not in rec and rec["dicofre"] in born_2025:
+                pass          # its description belongs to the unit it left
+            elif "note" not in rec and (n, caop_name) in app_note_of:
                 # CONFIDENCE: approx. No official source publishes descriptive
                 # text for a parish, so these 103 were written for the app.
                 # They carry no figures — every number in the record above comes
@@ -898,6 +1089,13 @@ def main():
                 rec["note_origin"] = "app"
             elif "note" in rec:
                 rec["note_origin"] = "pdf"
+            if "he" not in rec and rec["dicofre"] in translit_2025:
+                # CONFIDENCE: not verified. Written by hand for the parishes the
+                # 2025 reform created — mostly the component exactly as it
+                # already reads inside the dissolved union's name, so one place
+                # is not spelled two ways. Rule 6 forbids generating these.
+                rec["he"] = translit_2025[rec["dicofre"]]
+                rec["he_origin"] = "app2025"
             if "he" not in rec and caop_name in extra_he:
                 # CONFIDENCE: not verified. These 103 Hebrew names were written
                 # for the app from the pronunciation rules the source document
@@ -953,11 +1151,27 @@ def main():
             rec["code"] = str(rec["ine"])[2:]
             rec["dicofre"] = str(rec["ine"])
         census = ine_mun.get(rec.get("dicofre", ""))
-        if census and census.get("N_INDIVIDUOS") is not None:
-            rec["pop2021"] = int(census["N_INDIVIDUOS"])
+        # The municipality comes from the same subsections as its parishes, so
+        # the two levels agree by construction. Read from the 2013-boundary
+        # file instead, Maia came out 33 people short of its own parishes and
+        # Trofa 33 over — the 2025 correction crosses a municipality line, and
+        # a municipality that does not equal the sum of its parts is the kind
+        # of thing a reader finds before the build does.
+        m25 = mun25.get(rec.get("dicofre", "")) or {}
+        if m25.get("pop2021") is not None:
+            rec["pop2021"] = int(m25["pop2021"])
             rec["pop_src"] = "ine"
-            rec["nuts3"] = census.get("nuts3")
-            housing = housing_block(census)
+            if census:
+                rec["nuts3"] = census.get("nuts3")
+            for key in ("median_age", "pct_0_14", "pct_65plus", "ageing_index",
+                        "foreign_pct", "education_pct", "unemployment_pct"):
+                if m25.get(key) is not None:
+                    rec[key] = m25[key]
+            housing = {k: m25[k] for k in
+                       ("dwellings", "vacant_pct", "second_home_pct", "owner_pct",
+                        "rented_pct", "parking_pct", "buildings", "repair_pct",
+                        "deep_repair_pct", "pre1946_pct", "since2011_pct")
+                       if m25.get(k) is not None}
             if housing:
                 rec["housing"] = housing
         elif mun in osm_pop:
@@ -1052,18 +1266,34 @@ def main():
                 m[spec["key"]] = v
                 n_m += 1
         for f in freguesias:
-            v = (by_code.get(f.get("dicofre"))
-                 or got.get("freguesias", {}).get("%s|%s" % (f["mun"], f["pt"])))
+            # By code only. The name fallback that used to sit here put the
+            # dissolved union's figures on whichever 2025 parish kept its name:
+            # Paços de Ferreira (130925) took the numbers of Paços de Ferreira
+            # (130918), which also contained Modelos. The values looked
+            # ordinary and were 0.6pp out. A 2025 code did not exist in 2013,
+            # so matching on the code cannot make this mistake.
+            v = by_code.get(f.get("dicofre"))
+            # A parish whose 2021 sections do not account for all of it must
+            # not receive these four from here either. The indicator files are
+            # on the 2013 boundaries, and for Nogueira e Silva Escura and
+            # Coronado that is 33 people out — 0.4%, four times the tenth of a
+            # point these are rounded to. Their population and every share the
+            # subsections can answer stay exact; these four do not.
+            if v is not None and f.get("census_partial") and spec["key"] in SECTION_BOUND:
+                v = None
             if v is not None:
                 f[spec["key"]] = v
                 n_f += 1
-        item["coverage"] = {"municipio": "%d/18" % n_m, "freguesia": "%d/243" % n_f}
+        item["coverage"] = {"municipio": "%d/18" % n_m,
+                            "freguesia": "%d/%d" % (n_f, len(freguesias))}
         indicators.append(item)
         warnings.append("merged indicator %s: %d municipalities, %d freguesias"
                         % (spec["key"], n_m, n_f))
 
     city_stats = city_extras(city)
-    zones, zone_stats = build_zones(freguesias, city)
+    fre_geom = {"%d|%s" % (ft["properties"]["mun_num"], ft["properties"]["name"]):
+                shape(ft["geometry"]).buffer(0) for ft in caop_fre["features"]}
+    zones, zone_stats = build_zones(freguesias, city, fre_geom)
     belt_fc = belt_outlines(belts, mun_geom, {NUM[m]: m for m in MUNICIPALITIES})
 
     os.makedirs(OUT, exist_ok=True)

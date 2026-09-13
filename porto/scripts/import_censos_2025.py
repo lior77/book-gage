@@ -73,7 +73,7 @@ SHARES = [
 # says VAGOS_OU_RESID_SECUNDARIA and the app must not restate it as VAGOS. BGRI
 # cannot separate the two, so neither comes from it.
 SECTION_ONLY = ("median_age", "foreign_pct", "education_pct", "unemployment_pct",
-                "vacant_pct", "second_home_pct")
+                "vacant_pct", "second_home_pct", "deep_repair_pct")
 
 
 def main():
@@ -100,6 +100,27 @@ def main():
             if isinstance(v, (int, float)):
                 acc[k] = acc.get(k, 0) + v
 
+    # Municipality totals come from the same subsections, so a municipality is
+    # the sum of its parishes by construction. Reading them from the old
+    # 2013-boundary file instead left Maia 33 people short and Trofa 33 over —
+    # the boundary correction the 2025 reform made between Nogueira e Silva
+    # Escura and Coronado, which crosses a municipality line.
+    mun_totals = {}
+    for code, t in totals.items():
+        acc = mun_totals.setdefault(code[:4], {})
+        for k, v in t.items():
+            acc[k] = acc.get(k, 0) + v
+    # Straight from the sections, not via by_parish: that one drops the 66
+    # sections that straddle a parish boundary, and a municipality that loses
+    # them loses their people too. A section's municipality is never in doubt —
+    # it is the first four digits of its own code — so nothing is dropped here.
+    mun_sections = {}
+    for code, row in seccoes.items():
+        m = mun_sections.setdefault(code[:4], {})
+        for k, v in row.items():
+            if isinstance(v, (int, float)):
+                m[k] = m.get(k, 0) + v
+
     out, complete, partial = {}, 0, 0
     for code, t in totals.items():
         pop = int(t.get("N_INDIVIDUOS") or 0)
@@ -122,6 +143,10 @@ def main():
             # the two routes agree on the head count
             got = dict(derived(acc))
             # the two housing shares the section file can separate and BGRI cannot
+            edif = acc.get("N_EDIFICIOS_CLASSICOS")
+            if edif and acc.get("N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS") is not None:
+                got["deep_repair_pct"] = round(
+                    100.0 * acc["N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS"] / edif, 1)
             fam = acc.get("N_ALOJAMENTOS_FAM_CLASSICOS")
             if fam:
                 if acc.get("N_ALOJAMENTOS_VAGOS_TOTAL") is not None:
@@ -152,6 +177,64 @@ def main():
         print("    %-16s %3d/%d" % (k, have, len(out)))
     print("sections that straddle two parishes and were dropped: %d" % orphan)
 
+    municipios = {}
+    for mcode, t in mun_totals.items():
+        pop = int(t.get("N_INDIVIDUOS") or 0)
+        rec = {"pop2021": pop}
+        for name, col in COUNTS:
+            if t.get(col) is not None:
+                rec[name] = int(t[col])
+        for name, part, whole in SHARES:
+            a, b = t.get(part), t.get(whole)
+            if a is not None and b:
+                rec[name] = round(100.0 * a / b, 1)
+        young, old = t.get("N_INDIVIDUOS_0_14"), t.get("N_INDIVIDUOS_65_OU_MAIS")
+        if young:
+            rec["ageing_index"] = round(100.0 * old / young, 1)
+        # every section lies inside one municipality even when it straddles two
+        # parishes, so this should always reconcile — and it is still tested
+        # Maia and Trofa do not reconcile exactly, and the reason is known:
+        # the 2025 reform moved 33 people between Nogueira e Silva Escura and
+        # Coronado, and that boundary is also a municipality boundary. The
+        # counts above are on the 2025 boundary and correct. The shares below
+        # are computed over sections on the 2021 boundary, so they carry a
+        # bounded error — at most 33/134,977 = 0.03pp for Maia and 0.09pp for
+        # Trofa, both under the 0.1 these are rounded to. That is accepted and
+        # recorded rather than ignored; anything larger than a tenth of one
+        # per cent is a different problem and fails the build.
+        acc = mun_sections.get(mcode)
+        covered = int((acc or {}).get("N_INDIVIDUOS") or 0)
+        gap = abs(covered - pop)
+        if acc and pop and gap and gap <= 0.001 * pop:
+            rec["section_boundary_gap"] = covered - pop
+        elif acc and pop and gap:
+            sys.exit("municipality %s: sections hold %d people and the "
+                     "subsections %d — a gap of %d is too large to be the 2025 "
+                     "boundary correction" % (mcode, covered, pop, gap))
+        if acc and pop and gap <= 0.001 * pop:
+            got = dict(derived(acc))
+            edif = acc.get("N_EDIFICIOS_CLASSICOS")
+            if edif and acc.get("N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS") is not None:
+                got["deep_repair_pct"] = round(
+                    100.0 * acc["N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS"] / edif, 1)
+            fam = acc.get("N_ALOJAMENTOS_FAM_CLASSICOS")
+            if fam:
+                if acc.get("N_ALOJAMENTOS_VAGOS_TOTAL") is not None:
+                    got["vacant_pct"] = round(
+                        100.0 * acc["N_ALOJAMENTOS_VAGOS_TOTAL"] / fam, 1)
+                if acc.get("N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA") is not None:
+                    got["second_home_pct"] = round(
+                        100.0 * acc["N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA"] / fam, 1)
+            for k in SECTION_ONLY:
+                if got.get(k) is not None:
+                    rec[k] = got[k]
+        else:
+            rec["section_cover"] = "partial"
+        municipios[mcode] = rec
+    bad = [m for m, r in municipios.items() if r.get("section_cover") == "partial"]
+    print("municipalities: %d, of which sections do not reconcile: %d %s"
+          % (len(municipios), len(bad), bad if bad else ""))
+
     dest = os.path.join(RAW, "censos2021_caop2025.json")
     with open(dest, "w", encoding="utf-8") as fh:
         json.dump({
@@ -164,6 +247,7 @@ def main():
             "reference_year": 2021,
             "parishes_complete": complete,
             "parishes_population_only": partial,
+            "municipios": municipios,
             "freguesias": out,
         }, fh, ensure_ascii=False, indent=1)
     print("wrote %s  (%.1f KB)" % (dest, os.path.getsize(dest) / 1024.0))

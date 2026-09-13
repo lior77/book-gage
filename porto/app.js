@@ -987,32 +987,41 @@ function freOfFeature(num, props) {
 const freNum = f => (f.code || '–');
 // Sorting key, so a municipality's parish list runs in the official order.
 const freOrder = f => (f.code || '99');
-// One sentence for a unit the 2025 reform undid, naming its successors.
-// Returns HTML, not text: each successor is its own LTR island, or the Hebrew
-// paragraph around it reorders the code away from the name it belongs to.
-function splitNote(f) {
-  if (!f.split2025 || !f.split2025.length) return '';
-  const kids = f.split2025.map(s =>
-    `<span class="lat" dir="ltr">${html(s.pt)} (${html(s.dicofre)})</span>`).join(' · ');
-  return t('ברפורמת 2025 חולק ל־') + f.split2025.length + t(' רובעים נפרדים: ') + kids;
+/* A parish the 2025 reform created out of a dissolved union.  The app draws
+   the 2025 division now, so the thing worth saying is no longer "this will be
+   split" but "this was part of something else until 2025, and here is what
+   that something else said and counted".
+
+   The rule that makes it publishable: the old unit's figures appear under the
+   OLD unit's name, code and reference year, never as this parish's. The same
+   number without that attribution is an inherited value wearing a new
+   parish's name, which is the unmarked interpolation rule 2 forbids — and it
+   is never counted in a comparison, a ranking or the colour scale. */
+function wasNote(f) {
+  const w = f.was_part_of;
+  if (!w) return '';
+  return t('עד רפורמת 2025 היה חלק מ־')
+    + `<span class="lat" dir="ltr">${html(w.pt)} (${html(w.dicofre)})</span>`;
 }
-// The same split as a table, for the card: how the 2021 population divided
-// between the parishes that replaced the unit. The shares come from the census
-// sub-sections themselves, and they add up to the unit's own total exactly.
-function splitTable(f) {
-  const kids = (f.split2025 || []).filter(s => s.pop2021 != null);
-  if (!kids.length) return '';
-  return `<div class="card">
-    <h2>${t('מה החליף אותו — 2025')}</h2>
-    <div class="rows">${kids.map(s => `<div class="row row-full">
-      <span class="pin pin-sq" style="--c:#dfe6ef">${html(s.code)}</span>
-      <span class="row-body">
-        <span class="row-t lat" dir="ltr">${html(s.pt)}</span>
-        <span class="row-m"><span class="num">${nf(s.pop2021)}</span> ${t('תושבים (2021) ·')}
-          <span class="num">${nf(100 * s.pop2021 / f.pop2021, 1)}</span>${t('% מהיחידה ·')}
-          ${t('קוד')} <span class="lat num">${html(s.dicofre)}</span></span>
-      </span></div>`).join('')}</div>
-    <p class="note">${t('החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.')}</p>
+
+function wasCard(f) {
+  const w = f.was_part_of;
+  if (!w) return '';
+  const rows = [];
+  if (w.pop2021 != null) {
+    rows.push(`<div><dt>${t('תושבים (2021)')}</dt>
+      <dd><span class="num">${nf(w.pop2021)}</span>${f.pop2021 != null
+        ? ` <span class="note">${t('· מתוכם ברובע הזה')} <span class="num">${
+            nf(100 * f.pop2021 / w.pop2021, 1)}</span>%</span>` : ''}</dd></div>`);
+  }
+  return `<div class="card" id="wasCard">
+    <h2>${t('היחידה שקדמה לו')}</h2>
+    <p class="sub">${nmPair(w, w.pt)} <span class="lat num">${html(w.dicofre)}</span></p>
+    ${rows.length ? `<dl class="kv">${rows.join('')}</dl>` : ''}
+    ${w.note ? `<p class="lead">${prose(w.note)}</p>` : ''}
+    ${w.note_origin === 'app'
+      ? t('<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>') : ''}
+    <p class="note">${t('המספרים כאן הם של היחידה הקודמת ולא של הרובע הזה, והם אינם נספרים בהשוואות, בדירוגים או בצבעי המפה. הם מוצגים כדי לומר איך נראה השטח לפני שהגבול זז.')}</p>
   </div>`;
 }
 
@@ -1066,7 +1075,7 @@ function renderMun(num) {
     const flag = !q && f.note && f.note_origin === 'app'
       ? t('<span class="flag">תיאור שנכתב לאפליקציה</span>') : '';
     const code = `<span class="lat num">${html(f.dicofre || '')}</span>`
-      + (f.split2025 ? t(' <span class="flag">פורק ב-2025</span>') : '');
+      + (f.was_part_of ? t(' <span class="flag">רובע מ-2025</span>') : '');
     return `<button class="row row-full" data-fre="${html(D.freKey(f))}">
       <span class="pin" style="--c:${html(f.colour)}">${n}</span>
       <span class="row-body">
@@ -1076,7 +1085,7 @@ function renderMun(num) {
           <span class="num">${nf(f.area_km2, 2)}</span> ${t('קמ״ר ·')}
           <span class="num">${nf(f.density)}</span> ${t('לקמ״ר')}${q ? ' · <span class="num">' + q.bairros.length + t('</span> שכונות') : ''}
           · ${code}</span>
-        ${f.split2025 ? `<span class="row-m">${splitNote(f)}</span>` : ''}
+        ${f.was_part_of ? `<span class="row-m">${wasNote(f)}</span>` : ''}
       </span>
       ${q ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
     </button>`;
@@ -2420,7 +2429,8 @@ function renderZone(key) {
       </div>
       <p class="sub">${html(nm(m))} · ${html(t(m.belt))}${f.dicofre
         ? t(' · קוד רשמי <span class="lat num">') + html(f.dicofre) + '</span>' : ''}</p>
-      ${f.split2025 ? `<p class="note">${splitNote(f)}${t('. הקוד שלמעלה הוא הקוד שהחזיקה עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של היחידה הזו.')}</p>` : ''}
+      ${f.was_part_of ? `<p class="note">${wasNote(f)}${t('. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.')}</p>` : ''}
+      ${f.census_partial ? t('<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>') : ''}
       <div class="stats">
         ${stat(t('תושבים'), f.pop2021, '', 0, 'freguesia.pop2021', 100)}
         ${stat(t('שטח'), f.area_km2, t('קמ״ר'), 1, 'freguesia.area_km2')}
@@ -2432,7 +2442,7 @@ function renderZone(key) {
         ? t('<p class="note">התיאור נכתב לאפליקציה ולא הועתק ממקור רשמי.</p>') : ''}
     </div>
 
-    ${splitTable(f)}
+    ${wasCard(f)}
     ${peopleStats(f, 'freguesia')}
     ${housingStats(f, 'freguesia')}
     ${marketStats(f, 'freguesia')}
@@ -3984,6 +3994,14 @@ function wire() {
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
 Object.assign(EN, {
+  ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
+  '. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.': '. The code and the boundary above are this parish’s, in the 2025 division.',
+  '<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>': '<p class="note">Median age, foreign citizenship, higher education and unemployment are not shown for this parish: the 2021 census was counted on the 2013 boundaries, and some of its statistical sections are cut in two by the 2025 ones. A share computed from the part that falls inside would be a share of most of the parish, presented as the parish’s.</p>',
+  '· מתוכם ברובע הזה': '· of them in this parish',
+  'היחידה שקדמה לו': 'The unit it came out of',
+  'המספרים כאן הם של היחידה הקודמת ולא של הרובע הזה, והם אינם נספרים בהשוואות, בדירוגים או בצבעי המפה. הם מוצגים כדי לומר איך נראה השטח לפני שהגבול זז.': 'These figures belong to the earlier unit and not to this parish, and they are never counted in a comparison, a ranking or the map’s colours. They are here to say what the ground looked like before the boundary moved.',
+  'עד רפורמת 2025 היה חלק מ־': 'Until the 2025 reform it was part of ',
+  'תושבים (2021)': 'Residents (2021)',
   '% מהיחידה ·': '% of the unit ·',
   '. הקוד שלמעלה הוא הקוד שהחזיקה עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של היחידה הזו.': '. The code above is the one it held until then, and it is also the code INE counted it under in 2021 — the boundary and the data here are that unit’s.',
   '18 עיריות המחוז': 'the district\'s 18 municipalities',

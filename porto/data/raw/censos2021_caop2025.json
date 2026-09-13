@@ -4,6 +4,388 @@
  "reference_year": 2021,
  "parishes_complete": 218,
  "parishes_population_only": 57,
+ "municipios": {
+  "1301": {
+   "pop2021": 52116,
+   "dwellings": 29428,
+   "buildings": 23609,
+   "pct_0_14": 11.8,
+   "pct_65plus": 22.2,
+   "owner_pct": 71.0,
+   "rented_pct": 18.6,
+   "parking_pct": 75.2,
+   "pre1946_pct": 9.5,
+   "since2011_pct": 4.2,
+   "repair_pct": 37.8,
+   "ageing_index": 187.6,
+   "median_age": 47.4,
+   "foreign_pct": 1.1,
+   "education_pct": 11.6,
+   "unemployment_pct": 9.4,
+   "vacant_pct": 12.7,
+   "second_home_pct": 20.5,
+   "deep_repair_pct": 7.2
+  },
+  "1302": {
+   "pop2021": 17534,
+   "dwellings": 11875,
+   "buildings": 10700,
+   "pct_0_14": 11.1,
+   "pct_65plus": 23.0,
+   "owner_pct": 77.2,
+   "rented_pct": 13.5,
+   "parking_pct": 64.6,
+   "pre1946_pct": 11.9,
+   "since2011_pct": 3.1,
+   "repair_pct": 49.3,
+   "ageing_index": 206.7,
+   "median_age": 48.4,
+   "foreign_pct": 0.9,
+   "education_pct": 6.6,
+   "unemployment_pct": 9.3,
+   "vacant_pct": 18.8,
+   "second_home_pct": 24.7,
+   "deep_repair_pct": 10.2
+  },
+  "1303": {
+   "pop2021": 55848,
+   "dwellings": 25231,
+   "buildings": 18356,
+   "pct_0_14": 12.7,
+   "pct_65plus": 18.0,
+   "owner_pct": 65.7,
+   "rented_pct": 21.8,
+   "parking_pct": 82.0,
+   "pre1946_pct": 9.5,
+   "since2011_pct": 3.5,
+   "repair_pct": 29.9,
+   "ageing_index": 142.0,
+   "median_age": 44.5,
+   "foreign_pct": 0.9,
+   "education_pct": 8.7,
+   "unemployment_pct": 7.3,
+   "vacant_pct": 11.0,
+   "second_home_pct": 10.2,
+   "deep_repair_pct": 3.8
+  },
+  "1304": {
+   "pop2021": 164257,
+   "dwellings": 74560,
+   "buildings": 36632,
+   "pct_0_14": 12.5,
+   "pct_65plus": 21.4,
+   "owner_pct": 66.4,
+   "rented_pct": 26.6,
+   "parking_pct": 70.8,
+   "pre1946_pct": 11.6,
+   "since2011_pct": 1.9,
+   "repair_pct": 39.8,
+   "ageing_index": 171.5,
+   "median_age": 46.5,
+   "foreign_pct": 1.9,
+   "education_pct": 14.6,
+   "unemployment_pct": 11.0,
+   "vacant_pct": 9.9,
+   "second_home_pct": 4.2,
+   "deep_repair_pct": 5.0
+  },
+  "1305": {
+   "pop2021": 47364,
+   "dwellings": 20038,
+   "buildings": 15058,
+   "pct_0_14": 13.9,
+   "pct_65plus": 15.4,
+   "owner_pct": 70.8,
+   "rented_pct": 17.6,
+   "parking_pct": 83.1,
+   "pre1946_pct": 7.4,
+   "since2011_pct": 5.7,
+   "repair_pct": 54.3,
+   "ageing_index": 110.4,
+   "median_age": 42.5,
+   "foreign_pct": 1.0,
+   "education_pct": 8.6,
+   "unemployment_pct": 7.6,
+   "vacant_pct": 9.6,
+   "second_home_pct": 7.1,
+   "deep_repair_pct": 5.2
+  },
+  "1306": {
+   "pop2021": 135010,
+   "dwellings": 59684,
+   "buildings": 26371,
+   "pct_0_14": 13.7,
+   "pct_65plus": 19.4,
+   "owner_pct": 68.9,
+   "rented_pct": 24.8,
+   "parking_pct": 81.9,
+   "pre1946_pct": 11.1,
+   "since2011_pct": 2.0,
+   "repair_pct": 38.2,
+   "ageing_index": 141.4,
+   "section_boundary_gap": -33,
+   "median_age": 44.9,
+   "foreign_pct": 2.7,
+   "education_pct": 22.0,
+   "unemployment_pct": 8.7,
+   "vacant_pct": 8.2,
+   "second_home_pct": 4.5,
+   "deep_repair_pct": 4.4
+  },
+  "1307": {
+   "pop2021": 49541,
+   "dwellings": 25060,
+   "buildings": 19522,
+   "pct_0_14": 13.0,
+   "pct_65plus": 18.2,
+   "owner_pct": 72.0,
+   "rented_pct": 17.5,
+   "parking_pct": 77.3,
+   "pre1946_pct": 12.1,
+   "since2011_pct": 4.5,
+   "repair_pct": 34.6,
+   "ageing_index": 140.1,
+   "median_age": 45.0,
+   "foreign_pct": 0.9,
+   "education_pct": 8.7,
+   "unemployment_pct": 9.3,
+   "vacant_pct": 12.0,
+   "second_home_pct": 16.1,
+   "deep_repair_pct": 6.3
+  },
+  "1308": {
+   "pop2021": 172557,
+   "dwellings": 82250,
+   "buildings": 32387,
+   "pct_0_14": 12.5,
+   "pct_65plus": 22.9,
+   "owner_pct": 63.5,
+   "rented_pct": 29.7,
+   "parking_pct": 65.8,
+   "pre1946_pct": 11.3,
+   "since2011_pct": 2.2,
+   "repair_pct": 36.6,
+   "ageing_index": 182.6,
+   "median_age": 47.0,
+   "foreign_pct": 3.0,
+   "education_pct": 21.6,
+   "unemployment_pct": 10.0,
+   "vacant_pct": 8.5,
+   "second_home_pct": 6.4,
+   "deep_repair_pct": 2.8
+  },
+  "1309": {
+   "pop2021": 55595,
+   "dwellings": 22374,
+   "buildings": 15618,
+   "pct_0_14": 13.4,
+   "pct_65plus": 16.3,
+   "owner_pct": 67.5,
+   "rented_pct": 21.1,
+   "parking_pct": 79.9,
+   "pre1946_pct": 6.4,
+   "since2011_pct": 4.3,
+   "repair_pct": 38.6,
+   "ageing_index": 121.1,
+   "median_age": 43.0,
+   "foreign_pct": 0.9,
+   "education_pct": 9.1,
+   "unemployment_pct": 7.7,
+   "vacant_pct": 8.8,
+   "second_home_pct": 5.8,
+   "deep_repair_pct": 3.6
+  },
+  "1310": {
+   "pop2021": 84354,
+   "dwellings": 36120,
+   "buildings": 24204,
+   "pct_0_14": 13.9,
+   "pct_65plus": 16.4,
+   "owner_pct": 69.3,
+   "rented_pct": 18.9,
+   "parking_pct": 79.5,
+   "pre1946_pct": 9.3,
+   "since2011_pct": 3.9,
+   "repair_pct": 43.6,
+   "ageing_index": 118.0,
+   "median_age": 43.4,
+   "foreign_pct": 1.4,
+   "education_pct": 10.5,
+   "unemployment_pct": 8.7,
+   "vacant_pct": 9.2,
+   "second_home_pct": 7.4,
+   "deep_repair_pct": 5.4
+  },
+  "1311": {
+   "pop2021": 69629,
+   "dwellings": 31866,
+   "buildings": 24189,
+   "pct_0_14": 13.4,
+   "pct_65plus": 17.8,
+   "owner_pct": 70.9,
+   "rented_pct": 17.6,
+   "parking_pct": 76.6,
+   "pre1946_pct": 11.7,
+   "since2011_pct": 5.4,
+   "repair_pct": 34.9,
+   "ageing_index": 132.5,
+   "median_age": 44.2,
+   "foreign_pct": 0.8,
+   "education_pct": 10.1,
+   "unemployment_pct": 8.0,
+   "vacant_pct": 11.5,
+   "second_home_pct": 9.5,
+   "deep_repair_pct": 6.0
+  },
+  "1312": {
+   "pop2021": 231800,
+   "dwellings": 133361,
+   "buildings": 39303,
+   "pct_0_14": 11.4,
+   "pct_65plus": 26.0,
+   "owner_pct": 49.1,
+   "rented_pct": 44.2,
+   "parking_pct": 44.2,
+   "pre1946_pct": 32.7,
+   "since2011_pct": 3.3,
+   "repair_pct": 43.4,
+   "ageing_index": 227.8,
+   "median_age": 47.3,
+   "foreign_pct": 6.3,
+   "education_pct": 31.2,
+   "unemployment_pct": 11.7,
+   "vacant_pct": 15.2,
+   "second_home_pct": 8.2,
+   "deep_repair_pct": 5.4
+  },
+  "1313": {
+   "pop2021": 64255,
+   "dwellings": 36156,
+   "buildings": 17629,
+   "pct_0_14": 13.3,
+   "pct_65plus": 20.6,
+   "owner_pct": 70.4,
+   "rented_pct": 21.3,
+   "parking_pct": 71.9,
+   "pre1946_pct": 6.7,
+   "since2011_pct": 5.2,
+   "repair_pct": 40.8,
+   "ageing_index": 155.1,
+   "median_age": 45.2,
+   "foreign_pct": 3.5,
+   "education_pct": 15.3,
+   "unemployment_pct": 8.3,
+   "vacant_pct": 7.3,
+   "second_home_pct": 27.8,
+   "deep_repair_pct": 3.8
+  },
+  "1314": {
+   "pop2021": 67709,
+   "dwellings": 30920,
+   "buildings": 22533,
+   "pct_0_14": 10.8,
+   "pct_65plus": 24.6,
+   "owner_pct": 68.0,
+   "rented_pct": 21.6,
+   "parking_pct": 75.0,
+   "pre1946_pct": 11.3,
+   "since2011_pct": 3.5,
+   "repair_pct": 30.6,
+   "ageing_index": 226.9,
+   "median_age": 48.7,
+   "foreign_pct": 1.5,
+   "education_pct": 12.8,
+   "unemployment_pct": 7.7,
+   "vacant_pct": 10.7,
+   "second_home_pct": 7.2,
+   "deep_repair_pct": 2.9
+  },
+  "1315": {
+   "pop2021": 94672,
+   "dwellings": 41770,
+   "buildings": 19049,
+   "pct_0_14": 13.5,
+   "pct_65plus": 19.4,
+   "owner_pct": 68.0,
+   "rented_pct": 25.2,
+   "parking_pct": 73.8,
+   "pre1946_pct": 9.3,
+   "since2011_pct": 2.6,
+   "repair_pct": 46.1,
+   "ageing_index": 144.4,
+   "median_age": 44.6,
+   "foreign_pct": 2.0,
+   "education_pct": 15.2,
+   "unemployment_pct": 10.0,
+   "vacant_pct": 7.0,
+   "second_home_pct": 5.3,
+   "deep_repair_pct": 3.8
+  },
+  "1316": {
+   "pop2021": 80825,
+   "dwellings": 38759,
+   "buildings": 22936,
+   "pct_0_14": 13.8,
+   "pct_65plus": 20.3,
+   "owner_pct": 71.8,
+   "rented_pct": 20.2,
+   "parking_pct": 76.2,
+   "pre1946_pct": 10.7,
+   "since2011_pct": 3.5,
+   "repair_pct": 27.3,
+   "ageing_index": 147.8,
+   "median_age": 45.2,
+   "foreign_pct": 2.9,
+   "education_pct": 15.2,
+   "unemployment_pct": 7.8,
+   "vacant_pct": 7.1,
+   "second_home_pct": 17.6,
+   "deep_repair_pct": 2.9
+  },
+  "1317": {
+   "pop2021": 303824,
+   "dwellings": 144233,
+   "buildings": 65829,
+   "pct_0_14": 12.8,
+   "pct_65plus": 21.4,
+   "owner_pct": 64.8,
+   "rented_pct": 27.7,
+   "parking_pct": 71.1,
+   "pre1946_pct": 13.3,
+   "since2011_pct": 2.6,
+   "repair_pct": 44.8,
+   "ageing_index": 167.1,
+   "median_age": 46.1,
+   "foreign_pct": 3.4,
+   "education_pct": 18.7,
+   "unemployment_pct": 11.2,
+   "vacant_pct": 9.4,
+   "second_home_pct": 6.5,
+   "deep_repair_pct": 4.5
+  },
+  "1318": {
+   "pop2021": 38515,
+   "dwellings": 15965,
+   "buildings": 10055,
+   "pct_0_14": 12.5,
+   "pct_65plus": 19.9,
+   "owner_pct": 70.9,
+   "rented_pct": 20.7,
+   "parking_pct": 79.0,
+   "pre1946_pct": 8.8,
+   "since2011_pct": 2.5,
+   "repair_pct": 35.2,
+   "ageing_index": 159.4,
+   "section_boundary_gap": 33,
+   "median_age": 45.4,
+   "foreign_pct": 2.4,
+   "education_pct": 12.5,
+   "unemployment_pct": 7.8,
+   "vacant_pct": 8.4,
+   "second_home_pct": 4.4,
+   "deep_repair_pct": 3.8
+  }
+ },
  "freguesias": {
   "130103": {
    "pop2021": 516,
@@ -24,6 +406,7 @@
    "unemployment_pct": 16.7,
    "vacant_pct": 8.4,
    "second_home_pct": 42.0,
+   "deep_repair_pct": 11.6,
    "section_cover": "full"
   },
   "130107": {
@@ -45,6 +428,7 @@
    "unemployment_pct": 12.2,
    "vacant_pct": 13.8,
    "second_home_pct": 41.7,
+   "deep_repair_pct": 2.7,
    "section_cover": "full"
   },
   "130112": {
@@ -66,6 +450,7 @@
    "unemployment_pct": 7.3,
    "vacant_pct": 8.0,
    "second_home_pct": 15.0,
+   "deep_repair_pct": 5.4,
    "section_cover": "full"
   },
   "130115": {
@@ -87,6 +472,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 20.7,
    "second_home_pct": 19.3,
+   "deep_repair_pct": 10.1,
    "section_cover": "full"
   },
   "130117": {
@@ -108,6 +494,7 @@
    "unemployment_pct": 8.9,
    "vacant_pct": 19.4,
    "second_home_pct": 21.5,
+   "deep_repair_pct": 10.9,
    "section_cover": "full"
   },
   "130118": {
@@ -129,6 +516,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 10.2,
    "second_home_pct": 21.8,
+   "deep_repair_pct": 6.0,
    "section_cover": "full"
   },
   "130119": {
@@ -150,6 +538,7 @@
    "unemployment_pct": 4.4,
    "vacant_pct": 13.5,
    "second_home_pct": 24.4,
+   "deep_repair_pct": 4.2,
    "section_cover": "full"
   },
   "130120": {
@@ -171,6 +560,7 @@
    "unemployment_pct": 5.3,
    "vacant_pct": 6.3,
    "second_home_pct": 20.8,
+   "deep_repair_pct": 2.6,
    "section_cover": "full"
   },
   "130121": {
@@ -192,6 +582,7 @@
    "unemployment_pct": 7.0,
    "vacant_pct": 14.5,
    "second_home_pct": 22.2,
+   "deep_repair_pct": 6.8,
    "section_cover": "full"
   },
   "130123": {
@@ -213,6 +604,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 13.3,
    "second_home_pct": 17.4,
+   "deep_repair_pct": 8.8,
    "section_cover": "full"
   },
   "130126": {
@@ -234,6 +626,7 @@
    "unemployment_pct": 15.4,
    "vacant_pct": 17.1,
    "second_home_pct": 20.8,
+   "deep_repair_pct": 16.4,
    "section_cover": "full"
   },
   "130128": {
@@ -255,6 +648,7 @@
    "unemployment_pct": 9.5,
    "vacant_pct": 14.9,
    "second_home_pct": 32.3,
+   "deep_repair_pct": 7.4,
    "section_cover": "full"
   },
   "130129": {
@@ -276,6 +670,7 @@
    "unemployment_pct": 4.6,
    "vacant_pct": 17.3,
    "second_home_pct": 19.2,
+   "deep_repair_pct": 11.5,
    "section_cover": "full"
   },
   "130134": {
@@ -297,6 +692,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 24.1,
    "second_home_pct": 21.1,
+   "deep_repair_pct": 15.6,
    "section_cover": "full"
   },
   "130135": {
@@ -318,6 +714,7 @@
    "unemployment_pct": 10.6,
    "vacant_pct": 11.5,
    "second_home_pct": 19.2,
+   "deep_repair_pct": 8.1,
    "section_cover": "full"
   },
   "130136": {
@@ -339,6 +736,7 @@
    "unemployment_pct": 8.2,
    "vacant_pct": 14.0,
    "second_home_pct": 13.1,
+   "deep_repair_pct": 4.6,
    "section_cover": "full"
   },
   "130138": {
@@ -360,6 +758,7 @@
    "unemployment_pct": 8.9,
    "vacant_pct": 9.9,
    "second_home_pct": 14.8,
+   "deep_repair_pct": 5.3,
    "section_cover": "full"
   },
   "130139": {
@@ -381,6 +780,7 @@
    "unemployment_pct": 8.2,
    "vacant_pct": 16.5,
    "second_home_pct": 27.8,
+   "deep_repair_pct": 15.4,
    "section_cover": "full"
   },
   "130141": {
@@ -402,6 +802,7 @@
    "unemployment_pct": 10.4,
    "vacant_pct": 17.5,
    "second_home_pct": 31.7,
+   "deep_repair_pct": 10.3,
    "section_cover": "full"
   },
   "130142": {
@@ -423,6 +824,7 @@
    "unemployment_pct": 10.3,
    "vacant_pct": 10.9,
    "second_home_pct": 17.6,
+   "deep_repair_pct": 3.6,
    "section_cover": "full"
   },
   "130143": {
@@ -444,6 +846,7 @@
    "unemployment_pct": 11.2,
    "vacant_pct": 29.3,
    "second_home_pct": 27.9,
+   "deep_repair_pct": 21.6,
    "section_cover": "full"
   },
   "130144": {
@@ -465,6 +868,7 @@
    "unemployment_pct": 10.3,
    "vacant_pct": 10.1,
    "second_home_pct": 20.5,
+   "deep_repair_pct": 8.5,
    "section_cover": "full"
   },
   "130145": {
@@ -486,6 +890,7 @@
    "unemployment_pct": 9.6,
    "vacant_pct": 10.7,
    "second_home_pct": 15.5,
+   "deep_repair_pct": 3.2,
    "section_cover": "full"
   },
   "130146": {
@@ -507,6 +912,7 @@
    "unemployment_pct": 11.5,
    "vacant_pct": 10.5,
    "second_home_pct": 49.7,
+   "deep_repair_pct": 2.9,
    "section_cover": "full"
   },
   "130147": {
@@ -528,6 +934,7 @@
    "unemployment_pct": 10.0,
    "vacant_pct": 10.8,
    "second_home_pct": 15.6,
+   "deep_repair_pct": 3.5,
    "section_cover": "full"
   },
   "130148": {
@@ -549,6 +956,7 @@
    "unemployment_pct": 6.6,
    "vacant_pct": 10.7,
    "second_home_pct": 26.1,
+   "deep_repair_pct": 5.1,
    "section_cover": "full"
   },
   "130204": {
@@ -570,6 +978,7 @@
    "unemployment_pct": 16.7,
    "vacant_pct": 15.3,
    "second_home_pct": 25.9,
+   "deep_repair_pct": 3.8,
    "section_cover": "full"
   },
   "130205": {
@@ -591,6 +1000,7 @@
    "unemployment_pct": 10.1,
    "vacant_pct": 24.7,
    "second_home_pct": 26.9,
+   "deep_repair_pct": 8.8,
    "section_cover": "full"
   },
   "130206": {
@@ -612,6 +1022,7 @@
    "unemployment_pct": 10.7,
    "vacant_pct": 11.6,
    "second_home_pct": 29.3,
+   "deep_repair_pct": 7.4,
    "section_cover": "full"
   },
   "130207": {
@@ -633,6 +1044,7 @@
    "unemployment_pct": 4.9,
    "vacant_pct": 21.6,
    "second_home_pct": 15.6,
+   "deep_repair_pct": 6.5,
    "section_cover": "full"
   },
   "130208": {
@@ -654,6 +1066,7 @@
    "unemployment_pct": 7.8,
    "vacant_pct": 20.0,
    "second_home_pct": 28.2,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "130215": {
@@ -675,6 +1088,7 @@
    "unemployment_pct": 11.6,
    "vacant_pct": 15.6,
    "second_home_pct": 21.2,
+   "deep_repair_pct": 6.8,
    "section_cover": "full"
   },
   "130219": {
@@ -696,6 +1110,7 @@
    "unemployment_pct": 7.5,
    "vacant_pct": 23.7,
    "second_home_pct": 21.1,
+   "deep_repair_pct": 15.3,
    "section_cover": "full"
   },
   "130220": {
@@ -717,6 +1132,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 30.3,
    "second_home_pct": 17.6,
+   "deep_repair_pct": 3.2,
    "section_cover": "full"
   },
   "130221": {
@@ -738,6 +1154,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 16.4,
    "second_home_pct": 24.3,
+   "deep_repair_pct": 12.4,
    "section_cover": "full"
   },
   "130222": {
@@ -759,6 +1176,7 @@
    "unemployment_pct": 9.0,
    "vacant_pct": 22.9,
    "second_home_pct": 24.6,
+   "deep_repair_pct": 5.5,
    "section_cover": "full"
   },
   "130223": {
@@ -780,6 +1198,7 @@
    "unemployment_pct": 7.4,
    "vacant_pct": 19.0,
    "second_home_pct": 21.7,
+   "deep_repair_pct": 19.2,
    "section_cover": "full"
   },
   "130224": {
@@ -801,6 +1220,7 @@
    "unemployment_pct": 9.8,
    "vacant_pct": 19.1,
    "second_home_pct": 20.9,
+   "deep_repair_pct": 3.1,
    "section_cover": "full"
   },
   "130225": {
@@ -822,6 +1242,7 @@
    "unemployment_pct": 8.8,
    "vacant_pct": 24.8,
    "second_home_pct": 24.7,
+   "deep_repair_pct": 9.6,
    "section_cover": "full"
   },
   "130226": {
@@ -843,6 +1264,7 @@
    "unemployment_pct": 6.2,
    "vacant_pct": 13.2,
    "second_home_pct": 44.3,
+   "deep_repair_pct": 9.0,
    "section_cover": "full"
   },
   "130301": {
@@ -864,6 +1286,7 @@
    "unemployment_pct": 6.5,
    "vacant_pct": 16.2,
    "second_home_pct": 11.9,
+   "deep_repair_pct": 4.3,
    "section_cover": "full"
   },
   "130302": {
@@ -885,6 +1308,7 @@
    "unemployment_pct": 5.1,
    "vacant_pct": 11.8,
    "second_home_pct": 14.0,
+   "deep_repair_pct": 7.3,
    "section_cover": "full"
   },
   "130305": {
@@ -906,6 +1330,7 @@
    "unemployment_pct": 6.1,
    "vacant_pct": 10.1,
    "second_home_pct": 10.3,
+   "deep_repair_pct": 3.6,
    "section_cover": "full"
   },
   "130306": {
@@ -927,6 +1352,7 @@
    "unemployment_pct": 5.8,
    "vacant_pct": 12.6,
    "second_home_pct": 8.3,
+   "deep_repair_pct": 6.2,
    "section_cover": "full"
   },
   "130307": {
@@ -948,6 +1374,7 @@
    "unemployment_pct": 5.8,
    "vacant_pct": 24.3,
    "second_home_pct": 4.8,
+   "deep_repair_pct": 15.6,
    "section_cover": "full"
   },
   "130313": {
@@ -969,6 +1396,7 @@
    "unemployment_pct": 6.4,
    "vacant_pct": 11.2,
    "second_home_pct": 4.9,
+   "deep_repair_pct": 8.4,
    "section_cover": "full"
   },
   "130314": {
@@ -990,6 +1418,7 @@
    "unemployment_pct": 6.6,
    "vacant_pct": 11.9,
    "second_home_pct": 12.7,
+   "deep_repair_pct": 3.7,
    "section_cover": "full"
   },
   "130315": {
@@ -1011,6 +1440,7 @@
    "unemployment_pct": 6.5,
    "vacant_pct": 6.7,
    "second_home_pct": 11.3,
+   "deep_repair_pct": 10.2,
    "section_cover": "full"
   },
   "130317": {
@@ -1032,6 +1462,7 @@
    "unemployment_pct": 6.6,
    "vacant_pct": 7.2,
    "second_home_pct": 10.5,
+   "deep_repair_pct": 0.4,
    "section_cover": "full"
   },
   "130318": {
@@ -1053,6 +1484,7 @@
    "unemployment_pct": 4.6,
    "vacant_pct": 9.6,
    "second_home_pct": 5.5,
+   "deep_repair_pct": 0.3,
    "section_cover": "full"
   },
   "130319": {
@@ -1074,6 +1506,7 @@
    "unemployment_pct": 4.9,
    "vacant_pct": 8.3,
    "second_home_pct": 6.2,
+   "deep_repair_pct": 4.0,
    "section_cover": "full"
   },
   "130324": {
@@ -1095,6 +1528,7 @@
    "unemployment_pct": 5.9,
    "vacant_pct": 14.7,
    "second_home_pct": 7.2,
+   "deep_repair_pct": 2.2,
    "section_cover": "full"
   },
   "130334": {
@@ -1116,6 +1550,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 14.1,
    "second_home_pct": 9.1,
+   "deep_repair_pct": 4.0,
    "section_cover": "full"
   },
   "130335": {
@@ -1137,6 +1572,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 8.7,
    "second_home_pct": 9.0,
+   "deep_repair_pct": 1.7,
    "section_cover": "full"
   },
   "130336": {
@@ -1158,6 +1594,7 @@
    "unemployment_pct": 6.9,
    "vacant_pct": 10.5,
    "second_home_pct": 11.0,
+   "deep_repair_pct": 3.0,
    "section_cover": "full"
   },
   "130337": {
@@ -1179,6 +1616,7 @@
    "unemployment_pct": 7.9,
    "vacant_pct": 5.7,
    "second_home_pct": 10.3,
+   "deep_repair_pct": 1.5,
    "section_cover": "full"
   },
   "130338": {
@@ -1200,6 +1638,7 @@
    "unemployment_pct": 5.0,
    "vacant_pct": 12.2,
    "second_home_pct": 8.9,
+   "deep_repair_pct": 8.0,
    "section_cover": "full"
   },
   "130339": {
@@ -1221,6 +1660,7 @@
    "unemployment_pct": 8.6,
    "vacant_pct": 14.3,
    "second_home_pct": 13.0,
+   "deep_repair_pct": 2.9,
    "section_cover": "full"
   },
   "130340": {
@@ -1242,6 +1682,7 @@
    "unemployment_pct": 5.3,
    "vacant_pct": 14.5,
    "second_home_pct": 10.7,
+   "deep_repair_pct": 7.6,
    "section_cover": "full"
   },
   "130341": {
@@ -1263,6 +1704,7 @@
    "unemployment_pct": 7.0,
    "vacant_pct": 12.2,
    "second_home_pct": 18.8,
+   "deep_repair_pct": 1.8,
    "section_cover": "full"
   },
   "130405": {
@@ -1284,6 +1726,7 @@
    "unemployment_pct": 12.0,
    "vacant_pct": 14.9,
    "second_home_pct": 23.7,
+   "deep_repair_pct": 7.9,
    "section_cover": "full"
   },
   "130408": {
@@ -1305,6 +1748,7 @@
    "unemployment_pct": 11.3,
    "vacant_pct": 10.1,
    "second_home_pct": 4.1,
+   "deep_repair_pct": 4.7,
    "section_cover": "full"
   },
   "130412": {
@@ -1326,6 +1770,7 @@
    "unemployment_pct": 10.3,
    "vacant_pct": 7.3,
    "second_home_pct": 4.0,
+   "deep_repair_pct": 2.9,
    "section_cover": "full"
   },
   "130413": {
@@ -1347,6 +1792,7 @@
    "unemployment_pct": 12.1,
    "vacant_pct": 10.4,
    "second_home_pct": 3.7,
+   "deep_repair_pct": 6.5,
    "section_cover": "full"
   },
   "130414": {
@@ -1368,6 +1814,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 11.0,
    "second_home_pct": 6.4,
+   "deep_repair_pct": 2.8,
    "section_cover": "full"
   },
   "130415": {
@@ -1389,6 +1836,7 @@
    "unemployment_pct": 10.5,
    "vacant_pct": 9.7,
    "second_home_pct": 3.2,
+   "deep_repair_pct": 4.9,
    "section_cover": "full"
   },
   "130416": {
@@ -1410,6 +1858,7 @@
    "unemployment_pct": 8.8,
    "vacant_pct": 10.9,
    "second_home_pct": 7.8,
+   "deep_repair_pct": 4.9,
    "section_cover": "full"
   },
   "130502": {
@@ -1431,6 +1880,7 @@
    "unemployment_pct": 9.5,
    "vacant_pct": 8.3,
    "second_home_pct": 7.0,
+   "deep_repair_pct": 1.3,
    "section_cover": "full"
   },
   "130504": {
@@ -1452,6 +1902,7 @@
    "unemployment_pct": 8.4,
    "vacant_pct": 12.6,
    "second_home_pct": 7.6,
+   "deep_repair_pct": 9.7,
    "section_cover": "full"
   },
   "130510": {
@@ -1473,6 +1924,7 @@
    "unemployment_pct": 6.9,
    "vacant_pct": 6.7,
    "second_home_pct": 7.4,
+   "deep_repair_pct": 2.6,
    "section_cover": "full"
   },
   "130512": {
@@ -1494,6 +1946,7 @@
    "unemployment_pct": 8.2,
    "vacant_pct": 7.6,
    "second_home_pct": 11.2,
+   "deep_repair_pct": 1.7,
    "section_cover": "full"
   },
   "130513": {
@@ -1515,6 +1968,7 @@
    "unemployment_pct": 9.0,
    "vacant_pct": 10.8,
    "second_home_pct": 7.2,
+   "deep_repair_pct": 7.4,
    "section_cover": "full"
   },
   "130515": {
@@ -1536,6 +1990,7 @@
    "unemployment_pct": 6.9,
    "vacant_pct": 6.0,
    "second_home_pct": 7.4,
+   "deep_repair_pct": 5.7,
    "section_cover": "full"
   },
   "130524": {
@@ -1557,6 +2012,7 @@
    "unemployment_pct": 5.9,
    "vacant_pct": 12.0,
    "second_home_pct": 3.6,
+   "deep_repair_pct": 4.1,
    "section_cover": "full"
   },
   "130525": {
@@ -1578,6 +2034,7 @@
    "unemployment_pct": 8.8,
    "vacant_pct": 13.3,
    "second_home_pct": 8.3,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "130526": {
@@ -1599,6 +2056,7 @@
    "unemployment_pct": 6.1,
    "vacant_pct": 9.6,
    "second_home_pct": 11.7,
+   "deep_repair_pct": 3.9,
    "section_cover": "full"
   },
   "130527": {
@@ -1620,6 +2078,7 @@
    "unemployment_pct": 8.7,
    "vacant_pct": 10.2,
    "second_home_pct": 9.7,
+   "deep_repair_pct": 6.0,
    "section_cover": "full"
   },
   "130528": {
@@ -1641,6 +2100,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 8.1,
    "second_home_pct": 5.8,
+   "deep_repair_pct": 5.8,
    "section_cover": "full"
   },
   "130529": {
@@ -1662,6 +2122,7 @@
    "unemployment_pct": 7.7,
    "vacant_pct": 11.3,
    "second_home_pct": 3.6,
+   "deep_repair_pct": 8.5,
    "section_cover": "full"
   },
   "130531": {
@@ -1683,6 +2144,7 @@
    "unemployment_pct": 7.0,
    "vacant_pct": 9.7,
    "second_home_pct": 6.2,
+   "deep_repair_pct": 6.2,
    "section_cover": "full"
   },
   "130532": {
@@ -1704,6 +2166,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 8.7,
    "second_home_pct": 7.8,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "130533": {
@@ -1757,6 +2220,7 @@
    "unemployment_pct": 9.7,
    "vacant_pct": 7.5,
    "second_home_pct": 3.9,
+   "deep_repair_pct": 8.0,
    "section_cover": "full"
   },
   "130603": {
@@ -1778,6 +2242,7 @@
    "unemployment_pct": 9.9,
    "vacant_pct": 11.3,
    "second_home_pct": 5.7,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "130608": {
@@ -1799,6 +2264,7 @@
    "unemployment_pct": 8.4,
    "vacant_pct": 9.6,
    "second_home_pct": 3.3,
+   "deep_repair_pct": 4.7,
    "section_cover": "full"
   },
   "130609": {
@@ -1820,6 +2286,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 8.2,
    "second_home_pct": 4.7,
+   "deep_repair_pct": 4.0,
    "section_cover": "full"
   },
   "130613": {
@@ -1841,6 +2308,7 @@
    "unemployment_pct": 6.1,
    "vacant_pct": 9.3,
    "second_home_pct": 2.7,
+   "deep_repair_pct": 4.3,
    "section_cover": "full"
   },
   "130616": {
@@ -1862,6 +2330,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 10.8,
    "second_home_pct": 4.1,
+   "deep_repair_pct": 5.9,
    "section_cover": "full"
   },
   "130617": {
@@ -1883,6 +2352,7 @@
    "unemployment_pct": 9.8,
    "vacant_pct": 13.4,
    "second_home_pct": 7.5,
+   "deep_repair_pct": 5.7,
    "section_cover": "full"
   },
   "130618": {
@@ -1904,6 +2374,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 8.0,
    "second_home_pct": 5.1,
+   "deep_repair_pct": 3.7,
    "section_cover": "full"
   },
   "130619": {
@@ -1925,6 +2396,7 @@
    "unemployment_pct": 8.4,
    "vacant_pct": 6.2,
    "second_home_pct": 3.7,
+   "deep_repair_pct": 2.4,
    "section_cover": "full"
   },
   "130620": {
@@ -1962,6 +2434,7 @@
    "unemployment_pct": 7.8,
    "vacant_pct": 14.7,
    "second_home_pct": 21.2,
+   "deep_repair_pct": 10.8,
    "section_cover": "full"
   },
   "130705": {
@@ -1983,6 +2456,7 @@
    "unemployment_pct": 10.4,
    "vacant_pct": 13.7,
    "second_home_pct": 9.6,
+   "deep_repair_pct": 6.6,
    "section_cover": "full"
   },
   "130722": {
@@ -2004,6 +2478,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 10.1,
    "second_home_pct": 19.1,
+   "deep_repair_pct": 4.3,
    "section_cover": "full"
   },
   "130723": {
@@ -2025,6 +2500,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 11.8,
    "second_home_pct": 7.6,
+   "deep_repair_pct": 3.9,
    "section_cover": "full"
   },
   "130724": {
@@ -2046,6 +2522,7 @@
    "unemployment_pct": 7.5,
    "vacant_pct": 5.0,
    "second_home_pct": 18.0,
+   "deep_repair_pct": 3.1,
    "section_cover": "full"
   },
   "130730": {
@@ -2067,6 +2544,7 @@
    "unemployment_pct": 9.3,
    "vacant_pct": 13.6,
    "second_home_pct": 18.7,
+   "deep_repair_pct": 5.6,
    "section_cover": "full"
   },
   "130732": {
@@ -2088,6 +2566,7 @@
    "unemployment_pct": 8.7,
    "vacant_pct": 9.4,
    "second_home_pct": 12.7,
+   "deep_repair_pct": 3.8,
    "section_cover": "full"
   },
   "130733": {
@@ -2109,6 +2588,7 @@
    "unemployment_pct": 9.6,
    "vacant_pct": 12.0,
    "second_home_pct": 23.3,
+   "deep_repair_pct": 7.6,
    "section_cover": "full"
   },
   "130734": {
@@ -2130,6 +2610,7 @@
    "unemployment_pct": 10.8,
    "vacant_pct": 16.6,
    "second_home_pct": 13.9,
+   "deep_repair_pct": 6.9,
    "section_cover": "full"
   },
   "130735": {
@@ -2151,6 +2632,7 @@
    "unemployment_pct": 10.0,
    "vacant_pct": 14.1,
    "second_home_pct": 11.2,
+   "deep_repair_pct": 9.1,
    "section_cover": "full"
   },
   "130736": {
@@ -2172,6 +2654,7 @@
    "unemployment_pct": 10.1,
    "vacant_pct": 7.4,
    "second_home_pct": 14.3,
+   "deep_repair_pct": 3.8,
    "section_cover": "full"
   },
   "130737": {
@@ -2193,6 +2676,7 @@
    "unemployment_pct": 7.3,
    "vacant_pct": 12.5,
    "second_home_pct": 22.5,
+   "deep_repair_pct": 3.4,
    "section_cover": "full"
   },
   "130739": {
@@ -2214,6 +2698,7 @@
    "unemployment_pct": 10.1,
    "vacant_pct": 18.9,
    "second_home_pct": 18.3,
+   "deep_repair_pct": 14.4,
    "section_cover": "full"
   },
   "130740": {
@@ -2235,6 +2720,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 18.6,
    "second_home_pct": 20.9,
+   "deep_repair_pct": 10.3,
    "section_cover": "full"
   },
   "130741": {
@@ -2256,6 +2742,7 @@
    "unemployment_pct": 8.2,
    "vacant_pct": 6.3,
    "second_home_pct": 16.4,
+   "deep_repair_pct": 4.4,
    "section_cover": "full"
   },
   "130742": {
@@ -2357,6 +2844,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 7.7,
    "second_home_pct": 7.8,
+   "deep_repair_pct": 5.2,
    "section_cover": "full"
   },
   "130819": {
@@ -2394,6 +2882,7 @@
    "unemployment_pct": 11.0,
    "vacant_pct": 10.3,
    "second_home_pct": 7.2,
+   "deep_repair_pct": 3.4,
    "section_cover": "full"
   },
   "130821": {
@@ -2479,6 +2968,7 @@
    "unemployment_pct": 6.1,
    "vacant_pct": 7.4,
    "second_home_pct": 5.1,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "130904": {
@@ -2500,6 +2990,7 @@
    "unemployment_pct": 6.7,
    "vacant_pct": 8.5,
    "second_home_pct": 4.9,
+   "deep_repair_pct": 2.6,
    "section_cover": "full"
   },
   "130905": {
@@ -2521,6 +3012,7 @@
    "unemployment_pct": 7.3,
    "vacant_pct": 9.9,
    "second_home_pct": 3.7,
+   "deep_repair_pct": 5.0,
    "section_cover": "full"
   },
   "130906": {
@@ -2542,6 +3034,7 @@
    "unemployment_pct": 6.6,
    "vacant_pct": 5.3,
    "second_home_pct": 7.2,
+   "deep_repair_pct": 2.0,
    "section_cover": "full"
   },
   "130908": {
@@ -2563,6 +3056,7 @@
    "unemployment_pct": 9.1,
    "vacant_pct": 9.0,
    "second_home_pct": 4.1,
+   "deep_repair_pct": 4.5,
    "section_cover": "full"
   },
   "130910": {
@@ -2584,6 +3078,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 8.2,
    "second_home_pct": 6.8,
+   "deep_repair_pct": 4.7,
    "section_cover": "full"
   },
   "130913": {
@@ -2605,6 +3100,7 @@
    "unemployment_pct": 6.6,
    "vacant_pct": 12.1,
    "second_home_pct": 4.5,
+   "deep_repair_pct": 3.6,
    "section_cover": "full"
   },
   "130914": {
@@ -2626,6 +3122,7 @@
    "unemployment_pct": 6.4,
    "vacant_pct": 8.0,
    "second_home_pct": 8.9,
+   "deep_repair_pct": 6.3,
    "section_cover": "full"
   },
   "130916": {
@@ -2647,6 +3144,7 @@
    "unemployment_pct": 9.2,
    "vacant_pct": 11.6,
    "second_home_pct": 7.7,
+   "deep_repair_pct": 1.5,
    "section_cover": "full"
   },
   "130920": {
@@ -2780,6 +3278,7 @@
    "unemployment_pct": 8.8,
    "vacant_pct": 6.1,
    "second_home_pct": 12.1,
+   "deep_repair_pct": 5.1,
    "section_cover": "full"
   },
   "131002": {
@@ -2801,6 +3300,7 @@
    "unemployment_pct": 7.6,
    "vacant_pct": 7.6,
    "second_home_pct": 6.6,
+   "deep_repair_pct": 3.6,
    "section_cover": "full"
   },
   "131003": {
@@ -2822,6 +3322,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 8.3,
    "second_home_pct": 7.7,
+   "deep_repair_pct": 7.8,
    "section_cover": "full"
   },
   "131004": {
@@ -2843,6 +3344,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 8.0,
    "second_home_pct": 4.8,
+   "deep_repair_pct": 8.0,
    "section_cover": "full"
   },
   "131008": {
@@ -2864,6 +3366,7 @@
    "unemployment_pct": 9.6,
    "vacant_pct": 9.5,
    "second_home_pct": 6.3,
+   "deep_repair_pct": 6.4,
    "section_cover": "full"
   },
   "131009": {
@@ -2885,6 +3388,7 @@
    "unemployment_pct": 11.6,
    "vacant_pct": 11.0,
    "second_home_pct": 6.4,
+   "deep_repair_pct": 3.5,
    "section_cover": "full"
   },
   "131010": {
@@ -2906,6 +3410,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 9.0,
    "second_home_pct": 4.2,
+   "deep_repair_pct": 4.0,
    "section_cover": "full"
   },
   "131011": {
@@ -2927,6 +3432,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 8.1,
    "second_home_pct": 18.5,
+   "deep_repair_pct": 3.2,
    "section_cover": "full"
   },
   "131013": {
@@ -2948,6 +3454,7 @@
    "unemployment_pct": 10.3,
    "vacant_pct": 11.5,
    "second_home_pct": 6.7,
+   "deep_repair_pct": 8.5,
    "section_cover": "full"
   },
   "131014": {
@@ -2969,6 +3476,7 @@
    "unemployment_pct": 8.6,
    "vacant_pct": 14.1,
    "second_home_pct": 6.6,
+   "deep_repair_pct": 9.2,
    "section_cover": "full"
   },
   "131017": {
@@ -2990,6 +3498,7 @@
    "unemployment_pct": 7.9,
    "vacant_pct": 8.3,
    "second_home_pct": 7.4,
+   "deep_repair_pct": 4.4,
    "section_cover": "full"
   },
   "131018": {
@@ -3011,6 +3520,7 @@
    "unemployment_pct": 8.4,
    "vacant_pct": 11.7,
    "second_home_pct": 4.3,
+   "deep_repair_pct": 5.3,
    "section_cover": "full"
   },
   "131019": {
@@ -3032,6 +3542,7 @@
    "unemployment_pct": 9.3,
    "vacant_pct": 7.0,
    "second_home_pct": 5.1,
+   "deep_repair_pct": 5.4,
    "section_cover": "full"
   },
   "131020": {
@@ -3053,6 +3564,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 7.1,
    "second_home_pct": 6.4,
+   "deep_repair_pct": 3.1,
    "section_cover": "full"
   },
   "131021": {
@@ -3074,6 +3586,7 @@
    "unemployment_pct": 7.1,
    "vacant_pct": 7.8,
    "second_home_pct": 5.4,
+   "deep_repair_pct": 3.2,
    "section_cover": "full"
   },
   "131022": {
@@ -3095,6 +3608,7 @@
    "unemployment_pct": 10.1,
    "vacant_pct": 11.6,
    "second_home_pct": 5.3,
+   "deep_repair_pct": 7.7,
    "section_cover": "full"
   },
   "131024": {
@@ -3116,6 +3630,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 5.5,
    "second_home_pct": 8.5,
+   "deep_repair_pct": 3.9,
    "section_cover": "full"
   },
   "131025": {
@@ -3137,6 +3652,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 9.2,
    "second_home_pct": 6.4,
+   "deep_repair_pct": 5.1,
    "section_cover": "full"
   },
   "131101": {
@@ -3158,6 +3674,7 @@
    "unemployment_pct": 11.4,
    "vacant_pct": 10.4,
    "second_home_pct": 15.5,
+   "deep_repair_pct": 4.7,
    "section_cover": "full"
   },
   "131102": {
@@ -3179,6 +3696,7 @@
    "unemployment_pct": 11.1,
    "vacant_pct": 7.4,
    "second_home_pct": 15.3,
+   "deep_repair_pct": 4.9,
    "section_cover": "full"
   },
   "131103": {
@@ -3200,6 +3718,7 @@
    "unemployment_pct": 6.0,
    "vacant_pct": 10.9,
    "second_home_pct": 7.7,
+   "deep_repair_pct": 4.3,
    "section_cover": "full"
   },
   "131104": {
@@ -3221,6 +3740,7 @@
    "unemployment_pct": 8.0,
    "vacant_pct": 12.4,
    "second_home_pct": 5.2,
+   "deep_repair_pct": 1.7,
    "section_cover": "full"
   },
   "131105": {
@@ -3242,6 +3762,7 @@
    "unemployment_pct": 7.8,
    "vacant_pct": 15.3,
    "second_home_pct": 10.7,
+   "deep_repair_pct": 8.5,
    "section_cover": "full"
   },
   "131106": {
@@ -3263,6 +3784,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 15.0,
    "second_home_pct": 7.5,
+   "deep_repair_pct": 7.8,
    "section_cover": "full"
   },
   "131107": {
@@ -3284,6 +3806,7 @@
    "unemployment_pct": 7.1,
    "vacant_pct": 13.3,
    "second_home_pct": 13.0,
+   "deep_repair_pct": 5.2,
    "section_cover": "full"
   },
   "131108": {
@@ -3305,6 +3828,7 @@
    "unemployment_pct": 7.6,
    "vacant_pct": 10.6,
    "second_home_pct": 7.7,
+   "deep_repair_pct": 6.6,
    "section_cover": "full"
   },
   "131109": {
@@ -3326,6 +3850,7 @@
    "unemployment_pct": 9.5,
    "vacant_pct": 9.9,
    "second_home_pct": 10.1,
+   "deep_repair_pct": 2.0,
    "section_cover": "full"
   },
   "131110": {
@@ -3347,6 +3872,7 @@
    "unemployment_pct": 11.7,
    "vacant_pct": 19.4,
    "second_home_pct": 16.1,
+   "deep_repair_pct": 7.7,
    "section_cover": "full"
   },
   "131112": {
@@ -3368,6 +3894,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 13.7,
    "second_home_pct": 9.2,
+   "deep_repair_pct": 13.8,
    "section_cover": "full"
   },
   "131113": {
@@ -3389,6 +3916,7 @@
    "unemployment_pct": 5.1,
    "vacant_pct": 11.6,
    "second_home_pct": 7.0,
+   "deep_repair_pct": 3.1,
    "section_cover": "full"
   },
   "131115": {
@@ -3410,6 +3938,7 @@
    "unemployment_pct": 7.8,
    "vacant_pct": 12.1,
    "second_home_pct": 4.0,
+   "deep_repair_pct": 2.4,
    "section_cover": "full"
   },
   "131121": {
@@ -3431,6 +3960,7 @@
    "unemployment_pct": 8.9,
    "vacant_pct": 9.7,
    "second_home_pct": 5.5,
+   "deep_repair_pct": 3.9,
    "section_cover": "full"
   },
   "131122": {
@@ -3452,6 +3982,7 @@
    "unemployment_pct": 7.1,
    "vacant_pct": 9.6,
    "second_home_pct": 8.1,
+   "deep_repair_pct": 10.1,
    "section_cover": "full"
   },
   "131125": {
@@ -3473,6 +4004,7 @@
    "unemployment_pct": 8.8,
    "vacant_pct": 9.4,
    "second_home_pct": 14.5,
+   "deep_repair_pct": 9.7,
    "section_cover": "full"
   },
   "131128": {
@@ -3494,6 +4026,7 @@
    "unemployment_pct": 6.2,
    "vacant_pct": 11.9,
    "second_home_pct": 8.5,
+   "deep_repair_pct": 7.0,
    "section_cover": "full"
   },
   "131129": {
@@ -3515,6 +4048,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 11.5,
    "second_home_pct": 16.3,
+   "deep_repair_pct": 4.2,
    "section_cover": "full"
   },
   "131132": {
@@ -3536,6 +4070,7 @@
    "unemployment_pct": 8.4,
    "vacant_pct": 13.3,
    "second_home_pct": 15.6,
+   "deep_repair_pct": 6.4,
    "section_cover": "full"
   },
   "131133": {
@@ -3557,6 +4092,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 10.2,
    "second_home_pct": 9.4,
+   "deep_repair_pct": 2.7,
    "section_cover": "full"
   },
   "131134": {
@@ -3578,6 +4114,7 @@
    "unemployment_pct": 7.7,
    "vacant_pct": 5.3,
    "second_home_pct": 11.0,
+   "deep_repair_pct": 4.1,
    "section_cover": "full"
   },
   "131136": {
@@ -3599,6 +4136,7 @@
    "unemployment_pct": 9.3,
    "vacant_pct": 6.1,
    "second_home_pct": 12.4,
+   "deep_repair_pct": 4.2,
    "section_cover": "full"
   },
   "131138": {
@@ -3620,6 +4158,7 @@
    "unemployment_pct": 9.8,
    "vacant_pct": 9.2,
    "second_home_pct": 15.2,
+   "deep_repair_pct": 2.4,
    "section_cover": "full"
   },
   "131139": {
@@ -3641,6 +4180,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 12.2,
    "second_home_pct": 6.6,
+   "deep_repair_pct": 9.1,
    "section_cover": "full"
   },
   "131140": {
@@ -3662,6 +4202,7 @@
    "unemployment_pct": 9.1,
    "vacant_pct": 18.3,
    "second_home_pct": 14.3,
+   "deep_repair_pct": 10.4,
    "section_cover": "full"
   },
   "131141": {
@@ -3683,6 +4224,7 @@
    "unemployment_pct": 7.0,
    "vacant_pct": 9.6,
    "second_home_pct": 7.1,
+   "deep_repair_pct": 8.1,
    "section_cover": "full"
   },
   "131142": {
@@ -3704,6 +4246,7 @@
    "unemployment_pct": 6.3,
    "vacant_pct": 10.0,
    "second_home_pct": 7.0,
+   "deep_repair_pct": 2.6,
    "section_cover": "full"
   },
   "131143": {
@@ -3725,6 +4268,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 11.6,
    "second_home_pct": 11.9,
+   "deep_repair_pct": 2.8,
    "section_cover": "full"
   },
   "131202": {
@@ -3746,6 +4290,7 @@
    "unemployment_pct": 12.2,
    "vacant_pct": 19.1,
    "second_home_pct": 7.6,
+   "deep_repair_pct": 3.7,
    "section_cover": "full"
   },
   "131203": {
@@ -3767,6 +4312,7 @@
    "unemployment_pct": 17.6,
    "vacant_pct": 15.2,
    "second_home_pct": 6.3,
+   "deep_repair_pct": 9.0,
    "section_cover": "full"
   },
   "131210": {
@@ -3788,6 +4334,7 @@
    "unemployment_pct": 11.8,
    "vacant_pct": 10.9,
    "second_home_pct": 13.2,
+   "deep_repair_pct": 5.8,
    "section_cover": "full"
   },
   "131211": {
@@ -3809,6 +4356,7 @@
    "unemployment_pct": 10.4,
    "vacant_pct": 9.3,
    "second_home_pct": 5.4,
+   "deep_repair_pct": 6.2,
    "section_cover": "full"
   },
   "131216": {
@@ -3830,6 +4378,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 10.4,
    "second_home_pct": 6.0,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "131217": {
@@ -3851,6 +4400,7 @@
    "unemployment_pct": 11.8,
    "vacant_pct": 25.4,
    "second_home_pct": 7.8,
+   "deep_repair_pct": 4.5,
    "section_cover": "full"
   },
   "131218": {
@@ -3872,6 +4422,7 @@
    "unemployment_pct": 10.4,
    "vacant_pct": 13.0,
    "second_home_pct": 8.4,
+   "deep_repair_pct": 4.2,
    "section_cover": "full"
   },
   "131305": {
@@ -3893,6 +4444,7 @@
    "unemployment_pct": 6.4,
    "vacant_pct": 9.5,
    "second_home_pct": 15.5,
+   "deep_repair_pct": 4.4,
    "section_cover": "full"
   },
   "131307": {
@@ -3914,6 +4466,7 @@
    "unemployment_pct": 4.6,
    "vacant_pct": 10.4,
    "second_home_pct": 21.1,
+   "deep_repair_pct": 7.9,
    "section_cover": "full"
   },
   "131308": {
@@ -3935,6 +4488,7 @@
    "unemployment_pct": 4.8,
    "vacant_pct": 4.7,
    "second_home_pct": 19.2,
+   "deep_repair_pct": 1.0,
    "section_cover": "full"
   },
   "131311": {
@@ -3956,6 +4510,7 @@
    "unemployment_pct": 4.2,
    "vacant_pct": 6.3,
    "second_home_pct": 15.4,
+   "deep_repair_pct": 6.5,
    "section_cover": "full"
   },
   "131316": {
@@ -4105,6 +4660,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 6.4,
    "second_home_pct": 10.4,
+   "deep_repair_pct": 1.9,
    "section_cover": "full"
   },
   "131402": {
@@ -4126,6 +4682,7 @@
    "unemployment_pct": 7.3,
    "vacant_pct": 9.1,
    "second_home_pct": 7.5,
+   "deep_repair_pct": 2.3,
    "section_cover": "full"
   },
   "131405": {
@@ -4147,6 +4704,7 @@
    "unemployment_pct": 8.2,
    "vacant_pct": 10.5,
    "second_home_pct": 6.5,
+   "deep_repair_pct": 3.6,
    "section_cover": "full"
   },
   "131413": {
@@ -4168,6 +4726,7 @@
    "unemployment_pct": 7.9,
    "vacant_pct": 11.5,
    "second_home_pct": 11.4,
+   "deep_repair_pct": 8.5,
    "section_cover": "full"
   },
   "131416": {
@@ -4189,6 +4748,7 @@
    "unemployment_pct": 8.4,
    "vacant_pct": 16.5,
    "second_home_pct": 4.9,
+   "deep_repair_pct": 1.0,
    "section_cover": "full"
   },
   "131418": {
@@ -4210,6 +4770,7 @@
    "unemployment_pct": 6.0,
    "vacant_pct": 9.7,
    "second_home_pct": 10.8,
+   "deep_repair_pct": 0.0,
    "section_cover": "full"
   },
   "131419": {
@@ -4231,6 +4792,7 @@
    "unemployment_pct": 6.9,
    "vacant_pct": 9.1,
    "second_home_pct": 6.5,
+   "deep_repair_pct": 1.8,
    "section_cover": "full"
   },
   "131430": {
@@ -4252,6 +4814,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 13.2,
    "second_home_pct": 6.4,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "131432": {
@@ -4273,6 +4836,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 7.4,
    "second_home_pct": 6.4,
+   "deep_repair_pct": 1.6,
    "section_cover": "full"
   },
   "131433": {
@@ -4294,6 +4858,7 @@
    "unemployment_pct": 9.5,
    "vacant_pct": 9.5,
    "second_home_pct": 8.8,
+   "deep_repair_pct": 2.2,
    "section_cover": "full"
   },
   "131434": {
@@ -4315,6 +4880,7 @@
    "unemployment_pct": 6.0,
    "vacant_pct": 8.0,
    "second_home_pct": 5.6,
+   "deep_repair_pct": 2.2,
    "section_cover": "full"
   },
   "131435": {
@@ -4336,6 +4902,7 @@
    "unemployment_pct": 6.4,
    "vacant_pct": 9.5,
    "second_home_pct": 7.6,
+   "deep_repair_pct": 2.1,
    "section_cover": "full"
   },
   "131436": {
@@ -4357,6 +4924,7 @@
    "unemployment_pct": 7.8,
    "vacant_pct": 12.8,
    "second_home_pct": 8.3,
+   "deep_repair_pct": 1.4,
    "section_cover": "full"
   },
   "131437": {
@@ -4378,6 +4946,7 @@
    "unemployment_pct": 7.6,
    "vacant_pct": 11.5,
    "second_home_pct": 6.8,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "131501": {
@@ -4399,6 +4968,7 @@
    "unemployment_pct": 9.4,
    "vacant_pct": 7.7,
    "second_home_pct": 5.6,
+   "deep_repair_pct": 3.6,
    "section_cover": "full"
   },
   "131503": {
@@ -4420,6 +4990,7 @@
    "unemployment_pct": 10.8,
    "vacant_pct": 7.1,
    "second_home_pct": 5.7,
+   "deep_repair_pct": 2.8,
    "section_cover": "full"
   },
   "131505": {
@@ -4441,6 +5012,7 @@
    "unemployment_pct": 9.3,
    "vacant_pct": 6.4,
    "second_home_pct": 4.5,
+   "deep_repair_pct": 4.2,
    "section_cover": "full"
   },
   "131507": {
@@ -4494,6 +5066,7 @@
    "unemployment_pct": 8.5,
    "vacant_pct": 7.7,
    "second_home_pct": 20.3,
+   "deep_repair_pct": 2.3,
    "section_cover": "full"
   },
   "131603": {
@@ -4515,6 +5088,7 @@
    "unemployment_pct": 7.9,
    "vacant_pct": 8.2,
    "second_home_pct": 3.3,
+   "deep_repair_pct": 1.5,
    "section_cover": "full"
   },
   "131604": {
@@ -4536,6 +5110,7 @@
    "unemployment_pct": 8.9,
    "vacant_pct": 6.0,
    "second_home_pct": 21.6,
+   "deep_repair_pct": 1.3,
    "section_cover": "full"
   },
   "131607": {
@@ -4557,6 +5132,7 @@
    "unemployment_pct": 6.9,
    "vacant_pct": 10.7,
    "second_home_pct": 6.0,
+   "deep_repair_pct": 1.2,
    "section_cover": "full"
   },
   "131610": {
@@ -4578,6 +5154,7 @@
    "unemployment_pct": 9.1,
    "vacant_pct": 11.7,
    "second_home_pct": 7.0,
+   "deep_repair_pct": 1.5,
    "section_cover": "full"
   },
   "131611": {
@@ -4599,6 +5176,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 7.9,
    "second_home_pct": 3.8,
+   "deep_repair_pct": 3.8,
    "section_cover": "full"
   },
   "131612": {
@@ -4620,6 +5198,7 @@
    "unemployment_pct": 5.2,
    "vacant_pct": 7.1,
    "second_home_pct": 12.4,
+   "deep_repair_pct": 2.8,
    "section_cover": "full"
   },
   "131613": {
@@ -4641,6 +5220,7 @@
    "unemployment_pct": 6.6,
    "vacant_pct": 6.3,
    "second_home_pct": 22.1,
+   "deep_repair_pct": 2.6,
    "section_cover": "full"
   },
   "131614": {
@@ -4662,6 +5242,7 @@
    "unemployment_pct": 8.1,
    "vacant_pct": 8.6,
    "second_home_pct": 6.7,
+   "deep_repair_pct": 1.9,
    "section_cover": "full"
   },
   "131616": {
@@ -4683,6 +5264,7 @@
    "unemployment_pct": 7.8,
    "vacant_pct": 5.2,
    "second_home_pct": 34.5,
+   "deep_repair_pct": 2.0,
    "section_cover": "full"
   },
   "131617": {
@@ -4704,6 +5286,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 9.1,
    "second_home_pct": 4.1,
+   "deep_repair_pct": 5.9,
    "section_cover": "full"
   },
   "131627": {
@@ -4725,6 +5308,7 @@
    "unemployment_pct": 10.0,
    "vacant_pct": 7.4,
    "second_home_pct": 23.4,
+   "deep_repair_pct": 4.2,
    "section_cover": "full"
   },
   "131628": {
@@ -4746,6 +5330,7 @@
    "unemployment_pct": 8.3,
    "vacant_pct": 6.4,
    "second_home_pct": 21.1,
+   "deep_repair_pct": 1.5,
    "section_cover": "full"
   },
   "131630": {
@@ -4767,6 +5352,7 @@
    "unemployment_pct": 8.7,
    "vacant_pct": 8.1,
    "second_home_pct": 5.2,
+   "deep_repair_pct": 1.8,
    "section_cover": "full"
   },
   "131631": {
@@ -4788,6 +5374,7 @@
    "unemployment_pct": 5.2,
    "vacant_pct": 8.5,
    "second_home_pct": 11.4,
+   "deep_repair_pct": 9.8,
    "section_cover": "full"
   },
   "131636": {
@@ -4809,6 +5396,7 @@
    "unemployment_pct": 6.0,
    "vacant_pct": 6.4,
    "second_home_pct": 13.0,
+   "deep_repair_pct": 2.2,
    "section_cover": "full"
   },
   "131637": {
@@ -4830,6 +5418,7 @@
    "unemployment_pct": 6.9,
    "vacant_pct": 10.7,
    "second_home_pct": 4.5,
+   "deep_repair_pct": 3.3,
    "section_cover": "full"
   },
   "131638": {
@@ -4979,6 +5568,7 @@
    "unemployment_pct": 9.3,
    "vacant_pct": 8.5,
    "second_home_pct": 8.8,
+   "deep_repair_pct": 2.5,
    "section_cover": "full"
   },
   "131702": {
@@ -5000,6 +5590,7 @@
    "unemployment_pct": 12.5,
    "vacant_pct": 12.5,
    "second_home_pct": 4.4,
+   "deep_repair_pct": 7.5,
    "section_cover": "full"
   },
   "131703": {
@@ -5021,6 +5612,7 @@
    "unemployment_pct": 10.4,
    "vacant_pct": 7.1,
    "second_home_pct": 4.1,
+   "deep_repair_pct": 3.8,
    "section_cover": "full"
   },
   "131704": {
@@ -5042,6 +5634,7 @@
    "unemployment_pct": 10.9,
    "vacant_pct": 7.3,
    "second_home_pct": 9.2,
+   "deep_repair_pct": 5.7,
    "section_cover": "full"
   },
   "131709": {
@@ -5063,6 +5656,7 @@
    "unemployment_pct": 10.7,
    "vacant_pct": 9.7,
    "second_home_pct": 9.7,
+   "deep_repair_pct": 6.1,
    "section_cover": "full"
   },
   "131712": {
@@ -5084,6 +5678,7 @@
    "unemployment_pct": 12.9,
    "vacant_pct": 10.9,
    "second_home_pct": 3.9,
+   "deep_repair_pct": 5.7,
    "section_cover": "full"
   },
   "131717": {
@@ -5105,6 +5700,7 @@
    "unemployment_pct": 9.7,
    "vacant_pct": 8.0,
    "second_home_pct": 10.8,
+   "deep_repair_pct": 4.0,
    "section_cover": "full"
   },
   "131723": {
@@ -5126,6 +5722,7 @@
    "unemployment_pct": 14.6,
    "vacant_pct": 8.5,
    "second_home_pct": 4.2,
+   "deep_repair_pct": 4.8,
    "section_cover": "full"
   },
   "131732": {
@@ -5403,6 +6000,7 @@
    "unemployment_pct": 6.7,
    "vacant_pct": 9.7,
    "second_home_pct": 3.9,
+   "deep_repair_pct": 5.3,
    "section_cover": "full"
   },
   "131808": {
@@ -5424,6 +6022,7 @@
    "unemployment_pct": 7.2,
    "vacant_pct": 8.4,
    "second_home_pct": 6.2,
+   "deep_repair_pct": 5.1,
    "section_cover": "full"
   },
   "131810": {
@@ -5445,6 +6044,7 @@
    "unemployment_pct": 7.9,
    "vacant_pct": 7.9,
    "second_home_pct": 4.2,
+   "deep_repair_pct": 4.4,
    "section_cover": "full"
   },
   "131811": {

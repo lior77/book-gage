@@ -5,13 +5,13 @@
 Rules enforced (from BRIEF.md):
   1. every numeric field has a source and a reference year in data/sources.json
   2. no filler values - a missing field is absent, never 0 and never an estimate
-  3. the district has exactly 243 freguesias, and each municipality has the
+  3. the district has exactly 275 freguesias, and each municipality has the
      expected number
   4. sum of parish populations == municipality population (within tolerance,
      because INE published the two at different moments)
   5. density == population / area
   6. every geometry is valid and lies inside the district bounding box
-  7. level 3 covers all 243 parishes, and what the app draws matches what it
+  7. level 3 covers all 275 parishes, and what the app draws matches what it
      lists: the internal parish order runs 1..N with
      no gaps and no repeats, every parish has a description whose origin is
      recorded, every bairro has a letter, and every belt outline names the
@@ -35,10 +35,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 PROC = os.path.join(ROOT, "data", "processed")
 
+# CAOP 2025. The 2013 division had 243 and these counts are the reform's:
+# 25 unions dissolved back into 57 parishes, so Gaia goes from 15 to 24 and
+# Matosinhos from 4 to 10. The number is written here rather than counted from
+# the file, because a check that counts what it is checking cannot fail.
 EXPECTED_FREG = {
-    1: 7, 2: 15, 3: 4, 4: 10, 5: 7, 6: 4, 7: 21, 8: 7, 9: 14, 10: 5,
-    11: 18, 12: 28, 13: 12, 14: 15, 15: 20, 16: 26, 17: 16, 18: 14,
+    1: 7, 2: 24, 3: 10, 4: 10, 5: 7, 6: 5, 7: 25, 8: 12, 9: 14, 10: 6,
+    11: 18, 12: 28, 13: 16, 14: 16, 15: 20, 16: 26, 17: 17, 18: 14,
 }
+EXPECTED_FREG_TOTAL = 275
 SUM_TOLERANCE_PCT = 0.5      # municipality total vs sum of its parishes
 DISTRICT_BBOX = (-9.0, 40.9, -7.6, 41.6)
 
@@ -122,8 +127,13 @@ def main():
     # ---- 3. counts ---------------------------------------------------------
     if len(mun) != 18:
         fail("expected 18 municipalities, got %d" % len(mun))
-    if len(fre) != 243:
-        fail("expected 243 freguesias in the district, got %d" % len(fre))
+    if len(fre) != EXPECTED_FREG_TOTAL:
+        fail("expected %d freguesias in the district, got %d"
+             % (EXPECTED_FREG_TOTAL, len(fre)))
+    if sum(EXPECTED_FREG.values()) != EXPECTED_FREG_TOTAL:
+        fail("the per-municipality counts add to %d, not %d — one of the two "
+             "was edited without the other"
+             % (sum(EXPECTED_FREG.values()), EXPECTED_FREG_TOTAL))
     per = {}
     for f in fre:
         per[f["mun_num"]] = per.get(f["mun_num"], 0) + 1
@@ -249,20 +259,61 @@ def main():
                 fail("DICOFRE %s is on two parishes: %s and %s"
                      % (f["dicofre"], seen[f["dicofre"]], f["pt"]))
             seen[f["dicofre"]] = f["pt"]
-        if f.get("split2025"):
-            if not all(k.get("code") and k.get("pt") for k in f["split2025"]):
-                fail("%s: a 2025 successor has no code or no name" % f["pt"])
-            # A split that does not account for everyone the census counted is
-            # worse than no split at all, because it looks like a breakdown.
-            pops = [k["pop2021"] for k in f["split2025"] if "pop2021" in k]
-            if pops and len(pops) != len(f["split2025"]):
-                fail("%s: some 2025 successors carry a population and some do not"
-                     % f["pt"])
-            if pops and sum(pops) != f.get("pop2021"):
-                fail("%s: successors add to %d, the census counted %s"
-                     % (f["pt"], sum(pops), f.get("pop2021")))
         if not f.get("dicofre"):
             fail("%s: no official code" % f["pt"])
+    # ---- 7r. a parish born in 2025 says what it came out of, and wears none
+    # of it. The app draws the 2025 division now, so the record that matters is
+    # the other way round from before: not "this will be split" but "this was
+    # part of X". Two things make the old unit's figures publishable beside a
+    # parish rather than as one — they must be attributed to the old unit, and
+    # the parish must not silently take its name, its description or its
+    # numbers. Both were violated while this was being built, by fuzzy name
+    # matching in two different places, and neither looked wrong on screen.
+    born = [f for f in fre if f.get("was_part_of")]
+    if len(born) != 57:
+        fail("expected 57 parishes created by the 2025 reform, got %d" % len(born))
+    by_old = {}
+    for f in born:
+        w = f["was_part_of"]
+        for need in ("dicofre", "pt"):
+            if not w.get(need):
+                fail("%s: was_part_of has no %s" % (f["pt"], need))
+        if w.get("dicofre") == f.get("dicofre"):
+            fail("%s: says it was part of itself" % f["pt"])
+        if f.get("note"):
+            fail("%s was created in 2025 and carries a description written for "
+                 "the unit it left — %r" % (f["pt"], f["note"][:40]))
+        # Sharing the Hebrew is only wrong when the Portuguese differs. The
+        # 2013 unit Paços de Ferreira became Paços de Ferreira and Modelos, so
+        # the town legitimately keeps its own name; what must never happen is
+        # "Póvoa de Varzim" reading פובואה דה וארזים, ביריז ואַרז'יבאי, which
+        # names two parishes that left.
+        if (f.get("he") and w.get("he") and f["he"] == w["he"]
+                and f.get("pt") != w.get("pt")):
+            fail("%s carries the dissolved union's Hebrew name (%s), which "
+                 "names parishes that are no longer part of it" % (f["pt"], f["he"]))
+        by_old.setdefault(w["dicofre"], []).append(f)
+    # the dissolved unit's population is the sum of the parishes that replaced
+    # it — the reform moved nobody, and a total that does not add up is a
+    # breakdown that looks like one and is not
+    for old, kids in by_old.items():
+        want = kids[0]["was_part_of"].get("pop2021")
+        got = sum(k.get("pop2021", 0) for k in kids)
+        if want is not None and want != got:
+            fail("the unit %s is given %d residents but the %d parishes that "
+                 "replaced it add to %d" % (old, want, len(kids), got))
+    if len(by_old) != 25:
+        fail("expected 25 dissolved units, got %d" % len(by_old))
+    # a parish whose 2021 sections straddle keeps its population and loses the
+    # four fields a section is needed for — it must not have them anyway
+    for f in fre:
+        if f.get("census_partial"):
+            for k in ("median_age", "foreign_pct", "education_pct",
+                      "unemployment_pct"):
+                if f.get(k) is not None:
+                    fail("%s: sections do not account for all of it, yet it "
+                         "carries %s = %r" % (f["pt"], k, f[k]))
+
     # ---- 7c. the census figures -------------------------------------------
     # A municipality is the sum of its parishes, exactly: both come out of one
     # INE file. Anything else means the two levels drifted apart again.
