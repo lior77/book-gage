@@ -373,6 +373,28 @@ def read_caop2025():
     return {"type": "FeatureCollection", "features": out}
 
 
+CONS_KEYS = ("area_ha", "ran_ha", "ran_pct", "ren_ha", "ren_pct",
+             "both_ha", "both_pct", "either_ha", "either_pct",
+             "ran_year", "ran_law", "ren_year", "ren_law")
+
+
+def read_constraints():
+    """How much of each unit is inside REN and inside RAN.
+
+    Built by scripts/build_constraints.py against CAOP 2025 in EPSG:3763, and
+    read here rather than recomputed: it is a 50-second overlay of 1.56 million
+    vertices and it only changes when the DGT layers do.
+
+    A unit whose municipality has no published delimitation carries no key for
+    that layer at all, so the app renders אין נתון and never a zero. That is
+    Porto for both reserves, and Vila do Conde for REN."""
+    raw = load_raw("constraints_caop2025.json")
+    if not raw:
+        return {}, {}
+    pick = lambda d: {k: {x: v[x] for x in CONS_KEYS if x in v} for k, v in d.items()}
+    return pick(raw.get("municipios", {})), pick(raw.get("freguesias", {}))
+
+
 def read_censos_2025():
     """The 2021 census rebuilt on the 2025 boundaries, by DICOFRE.
 
@@ -921,6 +943,7 @@ def main():
     codes = read_official_codes()
     ine_mun, ine_fre = read_censos()
     ine_2025, mun25 = read_censos_2025()
+    cons_mun, cons_fre = read_constraints()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
     translit_2025 = read_translit_2025()
     # what each 2025 parish was part of before the reform, so a new parish can
@@ -1085,6 +1108,9 @@ def main():
             # The UI says which, rather than showing a share of most of it.
             if c25.get("section_cover") == "partial":
                 rec["census_partial"] = True
+            cons = cons_fre.get(rec["dicofre"])
+            if cons:
+                rec["cons"] = cons
             if "pop2021" not in rec and caop_name in extra_pop:
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
@@ -1186,6 +1212,9 @@ def main():
         elif mun in osm_pop:
             rec["pop2021"] = osm_pop[mun]
             rec["pop_src"] = "osm"
+        cons = cons_mun.get(rec.get("dicofre", ""))
+        if cons:
+            rec["cons"] = cons
         if rec.get("pop2021"):
             rec["density"] = round(rec["pop2021"] / area, 1)
         municipios.append(rec)

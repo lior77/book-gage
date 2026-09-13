@@ -1356,12 +1356,28 @@ async function layerGeoJSON(kind, code) {
    that would land within a pixel of the one before it — the same screen-space
    decimation Leaflet's smoothFactor does, at the same scale, and for the same
    reason: it is the display, not the data. */
-const LAYER_STYLE = {
-  ren: { color: '#1f7a4d', weight: 1, fillColor: '#2e9e66' },
-  ran: { color: '#8a6d1f', weight: 1, fillColor: '#c9a227' },
+/* Three classes on the map, and the third is a class rather than a blend:
+   ground inside BOTH reserves is its own colour, named in the legend, because
+   a reader has to be able to point at a patch and say which regime is on it.
+   Two translucent fills stacked would give a blend that changes with whatever
+   is underneath — the street background, the level's fill, the page ground —
+   and a legend cannot name a colour that moves. */
+const CONS_COLOUR = {
+  ran: '#c9a227',      // agricultural — RAN
+  ren: '#2e9e66',      // ecological — REN
+  both: '#8e4ea8',     // inside both
 };
-/* 40% — what was asked for.  Both layers get the same, so that where they
-   overlap the darker patch reads as "both" and not as a third category. */
+const CONS_ORDER = ['ran', 'ren', 'both'];
+const LAYER_STYLE = {
+  ren: { color: '#1f7a4d', weight: 1, fillColor: CONS_COLOUR.ren },
+  ran: { color: '#8a6d1f', weight: 1, fillColor: CONS_COLOUR.ran },
+};
+const CONS_RGB = {};
+CONS_ORDER.forEach(k => {
+  const h = CONS_COLOUR[k];
+  CONS_RGB[k] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+});
+/* 40% — what was asked for. */
 const CONS_FILL = .4;
 const CONS_REF_Z = 14;                    // the zoom the stored projection is at
 const CONS_PAD = .25;                     // drawn beyond the viewport, for panning
@@ -1476,14 +1492,39 @@ const ConsLayer = L.Layer ? L.Layer.extend({
     const k = Math.pow(2, map.getZoom() - CONS_REF_Z);
     const o = map.project(map.containerPointToLatLng(origin), CONS_REF_Z);
     const ox = o.x, oy = o.y;
-    Object.keys(LAYER_STYLE).forEach(kind => {
-      const st = LAYER_STYLE[kind];
-      ctx.fillStyle = st.fillColor;
-      ctx.strokeStyle = st.color;
-      ctx.lineWidth = st.weight;
-      ctx.globalAlpha = CONS_FILL;
-      consData[kind].forEach(c => this._chunk(ctx, c, k, ox, oy, w, h));
-    });
+    /* Membership first, colour second.  REN goes into the red channel of an
+       off-screen mask and RAN into the green, both fully opaque, so a pixel
+       comes out red, green or yellow — in, in, or in both.  One pass then
+       turns those three cases into the three colours the legend names, and the
+       result is composited once at 40%.  Painting two translucent fills on top
+       of each other instead would make the overlap a colour that depends on
+       the ground under it, which is not a colour a legend can name. */
+    const m = this._mask || (this._mask = document.createElement('canvas'));
+    if (m.width !== w || m.height !== h) { m.width = w; m.height = h; }
+    const mc = m.getContext('2d', { willReadFrequently: true });
+    mc.globalCompositeOperation = 'source-over';
+    mc.clearRect(0, 0, w, h);
+    mc.globalCompositeOperation = 'lighter';
+    mc.fillStyle = '#ff0000';
+    consData.ren.forEach(c => this._chunk(mc, c, k, ox, oy, w, h));
+    mc.fillStyle = '#00ff00';
+    consData.ran.forEach(c => this._chunk(mc, c, k, ox, oy, w, h));
+
+    const img = mc.getImageData(0, 0, w, h);
+    const d = img.data;
+    const R = CONS_RGB.ren, A = CONS_RGB.ran, B = CONS_RGB.both;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1];
+      // the antialiased edge keeps its coverage, so the line stays a line
+      const a = r > g ? r : g;
+      if (!a) { d[i + 3] = 0; continue; }
+      const c = (r > 63 && g > 63) ? B : (r > g ? R : A);
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = a;
+    }
+    mc.globalCompositeOperation = 'source-over';
+    mc.putImageData(img, 0, 0);
+    ctx.globalAlpha = CONS_FILL;
+    ctx.drawImage(m, 0, 0);
     ctx.globalAlpha = 1;
   },
   _chunk(ctx, c, k, ox, oy, w, h) {
@@ -1507,9 +1548,10 @@ const ConsLayer = L.Layer ? L.Layer.extend({
         }
         if (put) ctx.closePath();
       }
-      // evenodd, so a hole inside a polygon is a hole and not a second shape
+      // evenodd, so a hole inside a polygon is a hole and not a second shape.
+      // No stroke: the mask is a membership test, and a stroke would paint the
+      // boundary into the wrong class at every edge.
       ctx.fill('evenodd');
-      ctx.stroke();
     }
   },
 }) : null;
@@ -1649,7 +1691,6 @@ function layerCard(num) {
 let layerBusy = null;
 let layerArmed = null;      // the "kind:code" waiting for a second press
 let layerDelArmed = null;   // and the one waiting to be deleted
-let consArmed = false;      // the district-wide switch, waiting for its second
 
 async function refreshLayerHave() {
   const keys = await allLayerKeys();
@@ -1736,22 +1777,47 @@ async function tapLayerFetch(kind, code) {
 let consBefore = null;
 function consEnter() {
   consBefore = { tiles: S.tiles, muncol: S.muncol, lnMun: S.lnMun };
-  if (!S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+  /* No street background by default.  Three flat colour classes have to be
+     told apart from each other, and a photograph of roofs under them is one
+     more thing competing for the same pixels.  It can still be switched on by
+     hand — what cannot is the level's own colour fill, which would put a
+     fourth colour field in the same place. */
+  if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
   if (S.muncol) { S.muncol = false; redrawLevel(); }
   if (!S.lnMun) { S.lnMun = true; drawLines(); }
+  // a note about the street background is stale the moment it is switched off,
+  // and this page opens with it off
+  hideNote();
 }
 function consRestore() {
   const b = consBefore;
   consBefore = null;
   if (!b) return;
   if (b.muncol && !S.muncol) { S.muncol = true; redrawLevel(); }
-  if (!b.tiles && S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+  if (b.tiles && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
   if (!b.lnMun && S.lnMun) { S.lnMun = false; drawLines(); }
 }
 
-/* Every layer the district has, fetched one after another with one progress
-   line for the lot.  A cancel stops it where it is: what came down whole is
-   kept, what did not is not stored at all, and the mode does not come on. */
+/* Every layer the district has, fetched one after another, with the progress
+   going to the page itself: the reader is looking at a screen that exists to
+   say what is happening, and a floating note over the map would say it twice.
+
+   A cancel stops it where it is. What came down whole is kept — it is paid
+   for, and the next attempt will not fetch it again — and the page comes off,
+   because a district with a hole in it is worse than no district at all. */
+/* The bar moves on tenths of a percent.  fetchLayer reports every chunk, which
+   for 33 files is a couple of thousand callbacks, and rebuilding the document
+   on each of them spends the phone on a number that did not change. */
+let consShown = -1;
+function consPaint(force) {
+  if (!S.cons) return;
+  const step = Math.round(consProg.pct * 10);
+  if (!force && step === consShown) return;
+  consShown = step;
+  const doc = $('#doc');
+  if (doc) doc.innerHTML = renderCons();
+}
+
 async function consFetchAll() {
   const miss = consMissing();
   if (!miss.length) return true;
@@ -1760,25 +1826,23 @@ async function consFetchAll() {
   layerBusy = ctrl;
   const total = consBytes(miss);
   let done = 0, at = 0;
-  const show = got => mapNote(
-    t('מגבלות בנייה') + ' · <span class="num">' + Math.round(100 * (done + got) / total)
-    + '</span>% · <span class="num">' + (at + 1) + '</span>/<span class="num">' + miss.length
-    + '</span> <button class="chip" type="button" data-layer-cancel="1">' + t('ביטול') + '</button>',
-    false, true);
+  consPhase = 'load';
+  consProg = { pct: 0, at: 0, of: miss.length, mb: total };
+  consPaint(true);
   try {
-    show(0);
     for (; at < miss.length; at++) {
       const x = miss[at];
-      await fetchLayer(x.kind, x.code, got => show(got), ctrl.signal);
+      await fetchLayer(x.kind, x.code, got => {
+        consProg = { pct: 100 * (done + got) / total, at: at, of: miss.length, mb: total };
+        consPaint();
+      }, ctrl.signal);
       done += x.e.bytes;
     }
     await refreshLayerHave();
-    hideNote();
     return true;
   } catch (err) {
     await refreshLayerHave();
-    if (err && err.name === 'AbortError') hideNote();
-    else mapNote(html(String(err.message || err)), true);
+    if (!(err && err.name === 'AbortError')) mapNote(html(String(err.message || err)), true);
     return false;
   } finally {
     layerBusy = null;
@@ -1787,17 +1851,19 @@ async function consFetchAll() {
 
 /* Unpacking is its own wait, and a long one: 58 MB of GeoJSON across 33 files.
    It is done once per run, a file at a time with the loop given back in
-   between so the progress line actually moves, and what comes out is the
-   Float64Array — the parsed JSON of each file is dropped before the next. */
+   between so the bar actually moves, and what comes out is the Float64Array —
+   the parsed JSON of each file is dropped before the next. */
 async function consLoad() {
   const all = consEntries().filter(x => (D.layerHave || {})[layerKey(x.kind, x.code)]);
   const todo = all.filter(x => !consData[x.kind].has(x.code));
   if (!todo.length) return true;
+  consPhase = 'unpack';
   for (let i = 0; i < todo.length; i++) {
     const x = todo[i];
-    mapNote(t('פורס מגבלות בנייה') + ' · <span class="num">' + (i + 1)
-            + '</span>/<span class="num">' + todo.length + '</span>', false, true);
-    await new Promise(r => setTimeout(r, 0));      // let the note paint
+    consProg = { pct: 100 * i / todo.length, at: i, of: todo.length, mb: 0 };
+    consPaint(true);
+    await new Promise(r => setTimeout(r, 0));      // let the bar paint
+    if (!S.cons) return false;                     // cancelled while unpacking
     let gj;
     try { gj = await layerGeoJSON(x.kind, x.code); }
     catch (e) { mapNote(html(String(e.message || e)), true); return false; }
@@ -1807,42 +1873,186 @@ async function consLoad() {
     }
     consData[x.kind].set(x.code, consChunk(gj));
   }
-  hideNote();
   return true;
 }
 
+function consOff() {
+  S.cons = false;
+  consPhase = 'off';
+  if (layerBusy) { layerBusy.abort(); layerBusy = null; }
+  applyCons();
+  consRestore();
+  save(); applySwitches(); renderLayers(); redrawText();
+}
+
+/* One tap opens the page.  The page is what says what is happening — the size,
+   the bar, and a cancel — so there is no second tap to arm: the reader is
+   looking straight at the thing they would otherwise have been arming.
+
+   The whole district or none of it. A partial constraint map is worse than
+   none: the municipality that did not come down looks exactly like ground with
+   nothing forbidden on it. */
 async function toggleCons() {
-  if (S.cons) {                       // off: the bytes stay, the drawing goes
-    S.cons = false;
-    consArmed = false;
-    applyCons();
-    consRestore();
-    save(); applySwitches(); renderLayers(); redrawText();
-    return;
-  }
-  const miss = consMissing();
-  if (miss.length) {
-    /* The whole district or none of it. A partial constraint map is worse than
-       none: the municipality that did not come down looks exactly like ground
-       with nothing forbidden on it. */
-    if (!consArmed) {
-      consArmed = true;
-      mapNote(t('להורדת מגבלות הבנייה של המחוז דרושים ') +
-        '<span class="num">' + consMB(consBytes(miss)) + '</span> MB' +
-        ' (' + '<span class="num">' + nf(miss.length) + '</span>' +
-        t(' שכבות). לחיצה נוספת מתחילה.'), false);
-      renderMenu(); renderLayers(); redrawText();
-      return;
-    }
-    consArmed = false;
-    if (!await consFetchAll()) { renderMenu(); renderLayers(); redrawText(); return; }
-  }
-  consArmed = false;
-  if (!await consLoad()) { renderMenu(); renderLayers(); redrawText(); return; }
-  consEnter();
+  if (S.cons) { consOff(); return; }
   S.cons = true;
+  consPhase = consMissing().length ? 'load' : 'unpack';
+  consProg = { pct: 0, at: 0, of: consMissing().length, mb: consBytes(consMissing()) };
+  consEnter();
+  applyCons();
+  openMenu(false);
+  if (S.view === 'map') { S.view = 'split'; applyView(); }
+  /* The page opens on the district: eighteen municipalities on the map and
+     eighteen names under the title. Opening it inside whichever parish the
+     reader happened to be in would answer a question they had not asked yet. */
+  if (S.level !== 'district') goDistrict();
+  applySwitches(); renderLayers(); redrawText();
+
+  if (consMissing().length && !await consFetchAll()) { consOff(); return; }
+  if (!S.cons) return;                      // cancelled while it was running
+  if (!await consLoad()) { if (S.cons) consOff(); return; }
+  if (!S.cons) return;
+  consPhase = 'ready';
   applyCons();
   save(); applySwitches(); renderLayers(); redrawText();
+}
+
+/* ---- the constraints page ----
+   Its own screen, not a card among the others.  While it is open the reading
+   half shows REN and RAN and nothing else: the population, the housing stock
+   and the profile are a different question, and mixing them into a page about
+   where you may build makes the reader hunt for the two numbers they came for.
+
+   Level 1 lists the 18 municipalities, level 2 a municipality and its
+   parishes, level 3 the parish.  The map underneath is the app's own map at
+   the same level, so tapping a municipality on it does what tapping its name
+   does. */
+const CONS_HE = { ran: 'מגבלה חקלאית', ren: 'מגבלה אקולוגית', both: 'מגבלה משותפת' };
+const CONS_FULL = {
+  ran: 'עתודת הקרקע החקלאית הלאומית (RAN)',
+  ren: 'רשת העתודה האקולוגית הלאומית (REN)',
+  both: 'בשתי השכבות — נספר פעם אחת',
+};
+let consPhase = 'off';        // off | load | unpack | ready
+let consProg = { pct: 0, at: 0, of: 0, mb: 0 };
+
+/* The colour index, one line above the title, exactly as the three classes are
+   painted on the map — the same three hex values, from the same table. */
+function consKeyLine() {
+  return `<div class="cons-key">${CONS_ORDER.map(k =>
+    `<span class="cons-k"><i style="background:${CONS_COLOUR[k]}"></i>${html(t(CONS_HE[k]))}</span>`
+  ).join('')}</div>`;
+}
+
+/* A share of the unit, drawn as the three classes side by side: RAN alone,
+   both, REN alone. The bar is the same reading as the numbers under it. */
+function consBar(c) {
+  if (!c || c.either_pct === undefined) return '';
+  const both = c.both_pct || 0;
+  const ranOnly = (c.ran_pct || 0) - both;
+  const renOnly = (c.ren_pct || 0) - both;
+  const seg = (v, k) => v > 0
+    ? `<i style="width:${v.toFixed(2)}%;background:${CONS_COLOUR[k]}"></i>` : '';
+  return `<span class="cons-bar">${seg(ranOnly, 'ran')}${seg(both, 'both')}${seg(renOnly, 'ren')}</span>`;
+}
+
+const consOf = o => (o && o.cons) || null;
+const consSrc = () => S.level === 'district' || S.level === 'mun'
+  ? 'municipio.cons_pct' : 'freguesia.cons_pct';
+
+/* The four numbers, and the fourth is not the sum of the first two.  REN and
+   RAN overlap — up to 16.2% of a municipality — so the total is the union and
+   the overlap has a row of its own saying so. */
+function consNumbers(o, srcKey) {
+  const c = consOf(o);
+  const row = (k, cls) => {
+    const ha = c ? c[k + '_ha'] : undefined;
+    const pc = c ? c[k + '_pct'] : undefined;
+    const year = c ? c[k + '_year'] : undefined;
+    const law = c ? c[k + '_law'] : undefined;
+    const has = pc !== undefined && pc !== null;
+    return `<button class="crow${cls ? ' ' + cls : ''}${has ? '' : ' no'}" data-src="${html(srcKey)}">
+      <span class="crow-c" style="background:${k === 'either' ? 'transparent' : CONS_COLOUR[k]}"></span>
+      <span class="crow-b">
+        <span class="crow-l">${html(t(k === 'either' ? 'סך הכול, בקיזוז החפיפה' : CONS_FULL[k]))}</span>
+        ${has ? `<span class="crow-m"><span class="num">${nf(ha, 1)}</span> ${t('הקטר')}${
+          year ? ' · ' + t('שנת ייחוס') + ' <span class="num">' + html(year) + '</span>' : ''}${
+          law && law.length ? ' · <span class="lat" dir="ltr">' + html(law.join(', ')) + '</span>' : ''}</span>`
+        : `<span class="crow-m">${t('DGT אינו מפרסם תיחום לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.')}</span>`}
+      </span>
+      <span class="crow-p">${has ? '<span class="num">' + nf(pc, 1) + '</span>%' : miss()}</span>
+    </button>`;
+  };
+  return `<div class="crows">${row('ran')}${row('ren')}${row('both')}${row('either', 'crow-tot')}</div>`;
+}
+
+function consProgHtml() {
+  const p = Math.max(0, Math.min(100, consProg.pct));
+  const what = consPhase === 'unpack'
+    ? t('פורס את השכבות. זה קורה פעם אחת, במכשיר, בלי רשת.')
+    : t('מוריד את נתוני מגבלות הבנייה של מחוז פורטו. זה קורה פעם אחת — מכאן הן עובדות בלי רשת.');
+  return `<p class="lead">${what}</p>
+    <div class="cons-prog"><i style="width:${p.toFixed(1)}%"></i></div>
+    <p class="note"><span class="num">${Math.round(p)}</span>% ·
+      <span class="num">${nf(consProg.at)}</span>/<span class="num">${nf(consProg.of)}</span>
+      ${t('שכבות')}${consPhase === 'load' ? ' · <span class="num">' + consMB(consProg.mb) + '</span> MB' : ''}</p>
+    <div class="btns"><button class="chip" type="button" data-cons="cancel">${t('ביטול')}</button></div>`;
+}
+
+function renderCons() {
+  const ready = consPhase === 'ready';
+  let body = '';
+  let title = t('מגבלות בנייה');
+  let sub = '';
+
+  if (!ready) {
+    body = consProgHtml();
+  } else if (S.level === 'district') {
+    sub = t('שתי שכבות שקובעות איפה הבנייה מוגבלת: עתודת הקרקע החקלאית הלאומית ורשת העתודה האקולוגית הלאומית. הן חופפות זו לזו, ולכן שני השיעורים אינם מתחברים — ״סך הכול״ הוא האיחוד.');
+    body = `<div class="grp">${t('18 העיריות — לפי שיעור השטח המוגבל')}</div>
+      <div class="rows">${D.mun.slice()
+        .sort((a, b) => ((consOf(b) || {}).either_pct || -1) - ((consOf(a) || {}).either_pct || -1))
+        .map(m => consUnitRow(m, 'mun', m.num)).join('')}</div>`;
+  } else if (S.level === 'mun') {
+    const m = D.munByNum.get(S.mun);
+    title = nmPair(m, m.en);
+    body = consNumbers(m, 'municipio.cons_pct') +
+      `<div class="grp">${t('הרובעים')}</div>
+       <div class="rows">${(D.freByMun.get(S.mun) || []).slice()
+         .sort((a, b) => ((consOf(b) || {}).either_pct || -1) - ((consOf(a) || {}).either_pct || -1))
+         .map(f => consUnitRow(f, 'fre', D.freKey(f))).join('')}</div>`;
+  } else {
+    const f = D.freByKey.get(S.zone);
+    const m = f ? D.munByNum.get(f.mun_num) : null;
+    title = f ? nmPair(f, f.en) : t('מגבלות בנייה');
+    body = (f ? consNumbers(f, 'freguesia.cons_pct') : '') +
+      (m ? `<div class="grp">${t('העירייה')}</div>${consNumbers(m, 'municipio.cons_pct')}` : '');
+  }
+
+  return `<div class="card" id="consCard">
+    ${ready ? consKeyLine() : ''}
+    <h1>${title}</h1>
+    ${sub ? `<p class="sub">${sub}</p>` : ''}
+    ${body}
+    ${ready ? `<p class="note">${t('המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. השטח נחתך לגבול היחידה ב-CAOP 2025, בהיטל EPSG:3763. REN ו-RAN הן הגבלות ורישוי, לא איסור בנייה מוחלט — לשתיהן מסלולי חריג בחוק (DL 166/2008, DL 73/2009).')}</p>
+    <p class="note">${t('לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה. לחיצה על מספר פותחת את רשומת המקור המלאה.')}</p>` : ''}
+  </div>`;
+}
+
+/* One municipality or one parish on the list: the name, the bar, the share. */
+function consUnitRow(o, kind, id) {
+  const c = consOf(o);
+  const has = c && c.either_pct !== undefined;
+  const attr = kind === 'mun' ? `data-mun="${html(String(id))}"` : `data-fre="${html(id)}"`;
+  return `<button class="row row-full cons-row${has ? '' : ' no'}" ${attr}>
+    <span class="row-body">
+      <span class="row-t">${kind === 'mun' ? nmPair(o, o.en) : nmPair(o, o.en)}</span>
+      <span class="row-m">${has
+        ? consBar(c) + ' <span class="num">' + nf(c.either_pct, 1) + '</span>% ' +
+          t('מתוך') + ' <span class="num">' + nf(c.area_ha, 0) + '</span> ' + t('הקטר')
+        : miss() + ' — ' + t('אין תיחום מפורסם')}</span>
+    </span>
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>`;
 }
 
 /* ---- EXIF ---- */
@@ -3503,7 +3713,6 @@ function boundsOff() {
    before it is pressed. */
 function consHe() {
   if (!D.layers) return '';
-  if (consArmed) return t(' · להוריד? לחיצה נוספת');
   const miss = consMissing();
   return miss.length ? ' · ' + consMB(consBytes(miss)) + ' MB' : '';
 }
@@ -4279,7 +4488,7 @@ function renderLayers() {
     h += t('<h3>מגבלות בנייה</h3>') +
       row(!!S.cons, 'lay:cons',
           t('מגבלות בנייה במחוז') + (miss.length
-            ? ' · ' + (consArmed ? t('להוריד? לחיצה נוספת') : consMB(consBytes(miss)) + ' MB')
+            ? ' · ' + consMB(consBytes(miss)) + ' MB'
             : ''),
           LAYER_STYLE.ren.fillColor, true) +
       t('<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>');
@@ -4323,6 +4532,10 @@ function redrawText() {
   // still navigable, but the text half is the list of נ.צ. until it is closed
   if (S.cmp) { $('#doc').innerHTML = renderCmp(); return; }
   if (S.wp) { renderWaypoints(); return; }
+  /* The constraints page replaces the level document rather than adding a card
+     to it: it is a screen about one question, and the population and the
+     housing stock are a different one. */
+  if (S.cons) { $('#doc').innerHTML = renderCons(); $('#paneText').scrollTop = 0; return; }
   if (S.level === 'district') renderDistrict();
   else if (S.level === 'mun') renderMun(S.mun);
   else renderZone(S.zone);
@@ -4897,6 +5110,8 @@ function wire() {
     }
     const layDel = e.target.closest('[data-layer-del]');
     if (layDel) { tapLayerDel(layDel.dataset.layerDel); return; }
+    const cons = e.target.closest('[data-cons]');
+    if (cons) { if (cons.dataset.cons === 'cancel') consOff(); return; }
     const lay = e.target.closest('[data-layer]');
     if (lay) { tapLayer(lay.dataset.layer); return; }
     const fre = e.target.closest('[data-fre]');
@@ -5042,7 +5257,6 @@ Object.assign(EN, {
   'מגבלות בנייה': 'Building constraints',
   'סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.': 'Fire hazard is not here and will not be until its reference year is found: the field that looks like the map’s date is the date of the law that ordered it.',
   'שנת ייחוס': 'reference year',
-  'שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 22.8 מגה-בייט למחוז כולו — ולכן מורידים אותן לפי עירייה, פעם אחת, בלחיצה. שום דבר לא יורד מעצמו.': 'Two layers that decide whether and where building is allowed. They are not inside the app — they weigh 22.8 MB for the whole district — so they are downloaded one municipality at a time, once, on a tap. Nothing downloads by itself.',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   '. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.': '. The code and the boundary above are this parish’s, in the 2025 division.',
   '<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>': '<p class="note">Median age, foreign citizenship, higher education and unemployment are not shown for this parish: the 2021 census was counted on the 2013 boundaries, and some of its statistical sections are cut in two by the 2025 ones. A share computed from the part that falls inside would be a share of most of the parish, presented as the parish’s.</p>',
@@ -5890,10 +6104,6 @@ Object.assign(EN, {
     '<p class="note" style="margin-block-start:6px">The national ecological network and the national agricultural land reserve, for all 18 municipalities, at 40% opacity over the street background and under the municipal boundaries. The first activation downloads them once and from then on they work with no network; switching off does not delete them. The municipality colours are not shown in this view — two flat colour fields on top of each other are not two readings but one muddy one.</p>',
   'מגבלות בנייה במחוז':
     'Building constraints across the district',
-  'להוריד? לחיצה נוספת':
-    'download? tap again',
-  ' · להוריד? לחיצה נוספת':
-    ' · download? tap again',
   'שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 21.7 מגה-בייט למחוז כולו — ולכן הן יורדות בלחיצה, פעם אחת. שום דבר לא יורד מעצמו.':
     'Two layers that decide whether and where building is allowed. They are not inside the app — they weigh 21.7 MB for the whole district — so they are downloaded on a tap, once. Nothing downloads by itself.',
   'התצוגה היא של המחוז כולו, מהתפריט: שכבות ← מגבלות בנייה. השורות כאן אומרות מה יש לעירייה הזאת, ומאפשרות להוריד או למחוק אותה לבדה.':
@@ -5904,14 +6114,46 @@ Object.assign(EN, {
     ' layers across the district, ',
   ' MB. התצוגה המלאה תוריד אותן בלחיצה אחת.':
     ' MB. The full view downloads them in one tap.',
-  'פורס מגבלות בנייה':
-    'Unpacking building constraints',
   'שכבה שמורה היא מגרסה קודמת. מחקו אותה והורידו מחדש.':
     'A stored layer is from an earlier release. Delete it and download it again.',
-  'להורדת מגבלות הבנייה של המחוז דרושים ':
-    'The district\'s building constraints need ',
-  ' שכבות). לחיצה נוספת מתחילה.':
-    ' layers). Another tap starts it.',
   'ויטרז׳ העיריות אינו מוצג בתצוגת מגבלות בנייה: שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה. כבו את מגבלות הבנייה תחילה.':
     'The municipality colours are not shown in the building-constraint view: two flat colour fields on top of each other are not two readings but one muddy one. Switch the constraints off first.',
+
+  /* ---- the constraints page ---- */
+  'מגבלה חקלאית':
+    'Agricultural',
+  'מגבלה אקולוגית':
+    'Ecological',
+  'מגבלה משותפת':
+    'Both',
+  'עתודת הקרקע החקלאית הלאומית (RAN)':
+    'National Agricultural Reserve (RAN)',
+  'רשת העתודה האקולוגית הלאומית (REN)':
+    'National Ecological Reserve (REN)',
+  'בשתי השכבות — נספר פעם אחת':
+    'Inside both — counted once',
+  'סך הכול, בקיזוז החפיפה':
+    'Total, net of the overlap',
+  'הקטר':
+    'ha',
+  'מתוך':
+    'of',
+  'העירייה':
+    'The municipality',
+  'אין תיחום מפורסם':
+    'no published delimitation',
+  '18 העיריות — לפי שיעור השטח המוגבל':
+    'The 18 municipalities — by the share of the area under restriction',
+  'DGT אינו מפרסם תיחום לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.':
+    'DGT publishes no delimitation for this municipality. The reason is not published, so none is given here.',
+  'פורס את השכבות. זה קורה פעם אחת, במכשיר, בלי רשת.':
+    'Unpacking the layers. This happens once, on the device, with no network.',
+  'מוריד את נתוני מגבלות הבנייה של מחוז פורטו. זה קורה פעם אחת — מכאן הן עובדות בלי רשת.':
+    'Downloading the building-constraint data for Porto district. This happens once — from here on they work with no network.',
+  'שתי שכבות שקובעות איפה הבנייה מוגבלת: עתודת הקרקע החקלאית הלאומית ורשת העתודה האקולוגית הלאומית. הן חופפות זו לזו, ולכן שני השיעורים אינם מתחברים — ״סך הכול״ הוא האיחוד.':
+    'Two layers that decide where building is restricted: the National Agricultural Reserve and the National Ecological Reserve. They overlap each other, so the two shares do not add up — "total" is the union.',
+  'המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. השטח נחתך לגבול היחידה ב-CAOP 2025, בהיטל EPSG:3763. REN ו-RAN הן הגבלות ורישוי, לא איסור בנייה מוחלט — לשתיהן מסלולי חריג בחוק (DL 166/2008, DL 73/2009).':
+    'Source: Direção-Geral do Território (DGT), CC BY 4.0. The area is clipped to the unit boundary in CAOP 2025, in the EPSG:3763 projection. REN and RAN are restrictions and licensing, not an outright ban on building — both have exception routes in law (DL 166/2008, DL 73/2009).',
+  'לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה. לחיצה על מספר פותחת את רשומת המקור המלאה.':
+    'Each municipality has its own delimitation, its own law and its own reference year. Tapping a number opens the full source record.',
 });

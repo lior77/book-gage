@@ -1440,6 +1440,7 @@ const css = (page, sel, prop) =>
   const munWithCode = await page.evaluate(() =>
     Object.keys(D.layers.layers.ren.municipalities)[0]);
   await page.evaluate(c => { window.munWithCode = c; }, munWithCode);
+  await page.evaluate(n => { window.munWithNum = n; }, munWith);
   // saved for real, not just set in memory: the point of the last assertion
   // below is that the layer code never reaches localStorage, and a point that
   // was never written there would have made it pass on nothing.
@@ -1511,7 +1512,8 @@ const css = (page, sel, prop) =>
      refused.m.slice(0, 60));
   ok('and nothing at all is stored when it is refused', refused.stored === false);
 
-  /* 13b. THE DISTRICT VIEW — one switch, in the menu, under שכבות. */
+  /* 13b. THE CONSTRAINTS PAGE — one switch in the menu, under שכבות, and what
+     it opens is a screen of its own rather than a card among the others. */
   await page.evaluate(() => openMenu(true));
   await page.waitForTimeout(300);
   const mrows = await page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
@@ -1525,8 +1527,8 @@ const css = (page, sel, prop) =>
   ok('the row says what is still to download before it is pressed',
      /MB/.test(consLabel), JSON.stringify(consLabel));
 
-  /* One municipality is already here; the switch has to buy the remaining 32
-     and nothing more. */
+  /* One municipality is already here; the page has to buy the remaining 32 and
+     nothing more. */
   const before = await page.evaluate(() => ({
     missing: consMissing().length, have: Object.keys(D.layerHave || {}).length,
     all: consEntries().length,
@@ -1535,114 +1537,154 @@ const css = (page, sel, prop) =>
      before.all === 33 && before.have === 1 && before.missing === 32,
      JSON.stringify(before));
 
-  await page.evaluate(() => { S.tiles = false; map.removeLayer(tileLayer); S.muncol = true; });
-  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
-  await page.waitForTimeout(400);
-  ok('one tap only arms it — this is 21 MB of somebody\'s data',
-     await page.evaluate(() => consArmed === true && S.cons === false));
-  ok('and the note says how much, and how many layers',
-     await page.evaluate(() => /MB/.test(document.getElementById('msgs').innerText)));
-
-  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
-  await page.waitForFunction(() => S.cons === true, null, { timeout: 600000 });
+  /* Slow the files down so the loading state is a state and not a flicker. */
+  await page.route('**/data/layers/*.gz', async r => {
+    await new Promise(x => setTimeout(x, 40)); r.continue();
+  });
+  await page.evaluate(() => { S.tiles = true; tileLayer.addTo(map); S.muncol = true; });
+  page.evaluate(() => { document.querySelector('#menuIn [data-m="cons"]').click(); });
+  await page.waitForFunction(() => S.cons === true, null, { timeout: 20000 });
   await page.waitForTimeout(500);
-  ok('the second tap brings the whole district', await page.evaluate(() =>
-    S.cons === true && consMissing().length === 0));
-  ok('and every polygon of it is actually in memory, not a subset',
+
+  ok('one tap opens the page — no second tap to arm, the page is the asking',
+     await page.evaluate(() => S.cons === true && consPhase !== 'off'));
+  ok('and the menu closes behind it', await page.evaluate(() => S.menu === false));
+  const loadTxt = await page.evaluate(() => document.getElementById('doc').innerText);
+  ok('the text half carries the page title', /מגבלות בנייה/.test(loadTxt));
+  ok('and says a download is running, with a percentage',
+     /מוריד/.test(loadTxt) && /%/.test(loadTxt), JSON.stringify(loadTxt.slice(0, 120)));
+  ok('and there is a real progress bar behind the number',
+     await page.evaluate(() => {
+       const b = document.querySelector('.cons-prog i');
+       return !!b && parseFloat(b.style.width) >= 0;
+     }));
+  ok('and a way to stop it', await page.evaluate(() =>
+    !!document.querySelector('[data-cons="cancel"]')));
+  /* The visual half is the district's 18 municipalities, and nothing else:
+     no street background under a page about three flat colour classes. */
+  ok('the street background is off by default on this page',
+     await page.evaluate(() => S.tiles === false));
+  ok('and so is the level\'s own colour fill',
+     await page.evaluate(() => S.muncol === false));
+  ok('while the municipality boundaries are on and drawn',
+     await page.evaluate(() => S.lnMun === true && !!LG.mun));
+  ok('nothing is drawn as a constraint yet — the data has not arrived',
+     await page.evaluate(() => consPhase !== 'ready' && consVertices() < 1556351));
+
+  await page.waitForFunction(() => consPhase === 'ready', null, { timeout: 600000 });
+  await page.waitForTimeout(600);
+  ok('when it finishes the whole district is in memory, not a subset',
      await page.evaluate(() => consVertices()) === 1556351,
      String(await page.evaluate(() => consVertices())));
   ok('and it is drawn', await page.evaluate(() =>
     !!consLayer && !!consLayer._cv && consLayer._cv.width > 0));
 
-  /* What the view asks for, and what it refuses. */
-  ok('the street background comes on by itself — a constraint is read against streets',
-     await page.evaluate(() => S.tiles === true));
-  ok('the municipality boundaries come on, so a patch can be placed',
-     await page.evaluate(() => S.lnMun === true));
-  ok('and the level\'s own colour fill goes off',
-     await page.evaluate(() => S.muncol === false));
+  /* The colour index, one line above the title, in the order asked for:
+     agricultural, ecological, both. The swatches are the same hex the map
+     paints — read from the same table, so the legend cannot drift. */
+  const ckey = await page.$$eval('.cons-key .cons-k', els => els.map(e => ({
+    t: e.textContent.trim(), c: e.querySelector('i').style.background,
+  })));
+  ok('a three-colour index sits above the title', ckey.length === 3,
+     JSON.stringify(ckey));
+  ok('in the order asked for: agricultural, ecological, both',
+     /חקלאית/.test(ckey[0].t) && /אקולוגית/.test(ckey[1].t) && /משותפת/.test(ckey[2].t),
+     JSON.stringify(ckey.map(k => k.t)));
+  const asRgb = h => 'rgb(' + [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
+  ok('and each swatch is the colour the map actually paints',
+     await page.evaluate(() => JSON.stringify(CONS_ORDER.map(k => CONS_COLOUR[k])))
+       === JSON.stringify(['#c9a227', '#2e9e66', '#8e4ea8'])
+     && ckey[0].c === asRgb('#c9a227') && ckey[1].c === asRgb('#2e9e66') && ckey[2].c === asRgb('#8e4ea8'),
+     JSON.stringify(ckey.map(k => k.c)));
+  ok('the index is ABOVE the title, not under it',
+     await page.evaluate(() => {
+       const k = document.querySelector('.cons-key'), h = document.querySelector('#consCard h1');
+       return !!k && !!h && k.getBoundingClientRect().bottom <= h.getBoundingClientRect().top + 1;
+     }));
 
-  await page.evaluate(() => openMenu(true));
-  await page.waitForTimeout(200);
-  await page.evaluate(() => document.querySelector('#menuIn [data-m="glass"]').click());
-  await page.waitForTimeout(300);
-  ok('the colour fill cannot be switched back on while the constraints are drawn',
-     await page.evaluate(() => S.muncol === false));
-  ok('with a message that says why, not a switch that does nothing',
-     await page.evaluate(() => /ויטרז/.test(document.getElementById('msgs').innerText)));
-  /* The same guard from the other door. Three copies of one toggle is how a
-     guard comes to live in only one of them. */
-  await page.evaluate(() => { S.muncol = false; toggleLayers(true); });
-  await page.waitForTimeout(300);
-  await page.evaluate(() => document.querySelector('#panelBody [data-lay="muncol"]').click());
-  await page.waitForTimeout(300);
-  ok('and from the layer panel too, which is the same toggle',
-     await page.evaluate(() => S.muncol === false));
+  /* Level 1: the 18 municipalities, and nothing about population or housing. */
+  const l1 = await page.evaluate(() => document.getElementById('doc').innerText);
+  const l1rows = await page.$$eval('#doc [data-mun]', els => els.length);
+  ok('level 1 lists all 18 municipalities under the title', l1rows === 18, String(l1rows));
+  ok('and the rest of the municipality data is not on this page',
+     !/תושבים/.test(l1) && !/בנייני מגורים/.test(l1) && !/גיל חציוני/.test(l1),
+     JSON.stringify(l1.slice(0, 100)));
 
-  /* The street background is NOT blocked here: it is the ground the reader
-     reads the constraint against, and it is on by default. */
-  await page.evaluate(() => document.querySelector('#panelBody [data-lay="tiles"]').click());
-  await page.waitForTimeout(300);
-  ok('the street background can still be switched off by hand',
-     await page.evaluate(() => S.tiles === false));
-  await page.evaluate(() => document.querySelector('#panelBody [data-lay="tiles"]').click());
-  await page.waitForTimeout(300);
-  ok('and back on', await page.evaluate(() => S.tiles === true));
+  /* Level 2, from the list. */
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('#doc [data-mun]')];
+    const want = rows.find(r => r.dataset.mun === String(window.munWithNum));
+    (want || rows[0]).click();
+  });
+  await page.waitForTimeout(900);
+  ok('tapping a municipality name opens it', await page.evaluate(() => S.level === 'mun'));
+  const l2 = await page.evaluate(() => document.getElementById('doc').innerText);
+  ok('and the page is still the constraints page', /מגבלה|עתודת|REN/.test(l2));
+  const crows = await page.$$eval('#doc .crow', els => els.map(e => e.innerText.replace(/\n/g, ' ')));
+  ok('with the four rows: each layer alone, the overlap, and the total',
+     crows.length === 4 && /RAN/.test(crows[0]) && /REN/.test(crows[1])
+       && /בשתי/.test(crows[2]) && /בקיזוז/.test(crows[3]),
+     JSON.stringify(crows));
+  ok('each row carries an area in hectares beside its share',
+     crows.slice(0, 3).every(r => /הקטר/.test(r)) && /%/.test(crows[3]));
+  /* The number that must never be the sum. */
+  const sums = await page.evaluate(() => {
+    const c = D.munByNum.get(S.mun).cons;
+    return { ran: c.ran_pct, ren: c.ren_pct, both: c.both_pct, either: c.either_pct };
+  });
+  ok('and the total is the union, not the sum — it is smaller by the overlap',
+     Math.abs(sums.ran + sums.ren - sums.both - sums.either) <= 0.15
+       && sums.both > 0 && sums.either < sums.ran + sums.ren,
+     JSON.stringify(sums));
+  ok('every number on the page opens its own source record',
+     await page.$$eval('#doc .crow[data-src]', els => els.length) === 4);
+  ok('the parishes of that municipality are listed under it',
+     await page.$$eval('#doc [data-fre]', els => els.length) > 0);
 
-  ok('the layer panel offers the same one switch, not a row per kind',
-     await page.$$eval('#panelBody [data-lay^="lay:"]', els => els.length) === 1);
+  /* Level 3, and the map's own click path — tapping the polygon does what
+     tapping the name does, because the map underneath is the app's map. */
+  await page.evaluate(() => document.querySelector('#doc [data-fre]').click());
+  await page.waitForTimeout(900);
+  ok('tapping a parish opens it, and the page follows to level 3',
+     await page.evaluate(() => S.level === 'zone'));
+  ok('with its own four rows and its municipality under them',
+     await page.$$eval('#doc .crow', els => els.length) === 8,
+     String(await page.$$eval('#doc .crow', els => els.length)));
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+  await page.evaluate(() => {
+    LG.mun.eachLayer(l => { if (l.feature && l.feature.properties.num === window.munWithNum) l.fire('click'); });
+  });
+  await page.waitForTimeout(900);
+  ok('and tapping the municipality ON THE MAP opens the same page',
+     await page.evaluate(() => S.level === 'mun' && S.cons === true
+       && document.querySelectorAll('#doc .crow').length === 4));
+
+  /* A municipality DGT publishes neither reserve for says so, and does not say
+     zero. Porto is the one. */
+  await page.evaluate(() => goMun((D.mun.find(m => m.dicofre === '1312') || {}).num));
+  await page.waitForTimeout(800);
+  const porto = await page.evaluate(() => document.getElementById('doc').innerText);
+  ok('Porto has no delimitation, and the page says so rather than showing 0%',
+     /אין נתון/.test(porto) && !/\b0\.0%/.test(porto), JSON.stringify(porto.slice(0, 160)));
+  ok('and it names why nothing is shown, without inventing a reason',
+     /אינו מפרסם/.test(porto) && /הסיבה אינה מתפרסמת/.test(porto));
 
   /* Off is off. It is not a refund. */
-  await page.evaluate(() => document.querySelector('#panelBody [data-lay="lay:cons"]').click());
+  await page.evaluate(() => openMenu(true));
+  await page.waitForTimeout(250);
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
   await page.waitForFunction(() => S.cons === false, null, { timeout: 30000 });
-  await page.waitForTimeout(400);
-  ok('switching it off takes the drawing away',
-     await page.evaluate(() => consLayer === null));
+  await page.waitForTimeout(500);
+  ok('switching it off takes the page and the drawing away',
+     await page.evaluate(() => consLayer === null && !/מגבלה חקלאית/.test(
+       document.getElementById('doc').innerText)));
   ok('and deletes nothing at all — all 33 layers are still on the device',
      await page.evaluate(() => Object.keys(D.layerHave || {}).length === 33));
+  ok('the level fill comes back exactly as it was',
+     await page.evaluate(() => S.muncol === true && S.tiles === true));
   ok('so switching it back on needs no download and no unpacking',
-     await page.evaluate(() => consMissing().length === 0
-       && consVertices() === 1556351));
-
-  /* And the card row is a door onto the same switch. */
-  await page.evaluate(() => closePanel());
-  await page.evaluate(n => goMun(n), munWith);
-  await page.waitForTimeout(700);
-  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
-  await page.waitForFunction(() => S.cons === true, null, { timeout: 60000 });
-  ok('a stored row on the municipality card switches the district view on',
-     await page.evaluate(() => S.cons === true && !!consLayer));
-
-  /* Deleting one municipality cannot leave a district view with a hole in it:
-     the missing municipality would look exactly like ground with nothing
-     forbidden on it. */
-  ok('a stored layer offers a delete of its own, with the word on it',
-     await page.evaluate(() => {
-       const b = document.querySelector('#doc [data-layer-del]');
-       return !!b && /מחיקת/.test(b.innerText);
-     }));
-  await page.evaluate(() => document.querySelector('#doc [data-layer-del]').click());
-  await page.waitForTimeout(350);
-  ok('one tap on it only arms it', await page.evaluate(() =>
-    !!layerDelArmed && Object.keys(D.layerHave || {}).length === 33));
-  await page.evaluate(() => document.querySelector('#doc [data-layer-del]').click());
-  await page.waitForTimeout(900);
-  ok('the second tap is what deletes it',
-     await page.evaluate(() => Object.keys(D.layerHave || {}).length === 32));
-  ok('and the district view comes off rather than showing a hole',
-     await page.evaluate(() => S.cons === false && consLayer === null));
-  /* The promise that made on-demand storage acceptable in the first place.
-     Layers live in their own IndexedDB database; saved points live in
-     localStorage. Deleting layers cannot reach them, and this is the test that
-     says so rather than the comment. */
-  ok('and a saved point is untouched by it',
-     await page.evaluate(() => D.mine.length === 1 && D.mine[0].name === 'נקודה שלי'));
-  ok('including in its own store, which the layer code never opens',
-     await page.evaluate(() => {
-       const raw = localStorage.getItem('porto-mine-v1');
-       return !!raw && raw.indexOf('נקודה שלי') >= 0;
-     }));
-  await page.evaluate(() => { D.mine = []; saveMine(); });
+     await page.evaluate(() => consMissing().length === 0 && consVertices() === 1556351));
 
   /* 13d starts from one municipality rather than the district: the export
      test is about what a file carries, not about how much of it there is. */

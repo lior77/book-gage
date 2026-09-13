@@ -757,3 +757,51 @@ body[data-view="text"] .map-only{display:none}
 .cmp-f-u{font-size:.74rem; color:var(--ink-2)}
 .cmp-f-c{font-size:.74rem; color:var(--miss); direction:ltr; text-align:start}
 .cmp-f.part .cmp-f-c{color:var(--hi-line); font-weight:700}
+
+/* ---------- מגבלות בנייה ---------- */
+/* Its own screen: a colour index on one line above the title, then either the
+   progress of a download that happens once, or the three classes as numbers.
+   Every colour here is the same hex the map paints, read from CONS_COLOUR in
+   app.js and written inline — a legend whose swatch is defined separately from
+   the thing it names is a legend that can quietly stop being true. */
+.cons-key{display:flex; flex-wrap:wrap; align-items:center; gap:var(--s2) var(--s4);
+  margin-block-end:var(--s3); font-size:.78rem; color:var(--ink-2)}
+.cons-k{display:inline-flex; align-items:center; gap:5px; white-space:nowrap}
+.cons-k i{width:13px; height:13px; border-radius:3px; flex:0 0 auto;
+  border:1px solid rgba(0,0,0,.18)}
+
+/* the download, which happens once and then never again */
+.cons-prog{height:8px; border-radius:var(--r-pill); background:var(--bg);
+  border:1px solid var(--line); overflow:hidden; margin-block:var(--s3) var(--s2)}
+.cons-prog i{display:block; height:100%; background:var(--accent);
+  transition:width .18s linear}
+@media (prefers-reduced-motion:reduce){.cons-prog i{transition:none}}
+
+/* the four numbers. The fourth is the union and not the sum of the first two,
+   so it is ruled off from them rather than sitting in the same list. */
+.crows{display:flex; flex-direction:column;
+  border-block-start:1px solid var(--line); margin-block-start:var(--s3)}
+.crow{display:flex; align-items:center; gap:var(--s3); width:100%;
+  padding:var(--s3) 0; border-block-end:1px solid var(--line); text-align:start}
+.crow:active{background:var(--bg)}
+.crow-c{flex:0 0 auto; width:13px; height:13px; border-radius:3px;
+  border:1px solid rgba(0,0,0,.18)}
+.crow-b{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px}
+.crow-l{font-size:.86rem; font-weight:700; line-height:1.3}
+.crow-m{font-size:.74rem; color:var(--ink-2); line-height:1.4}
+.crow-p{flex:0 0 auto; min-width:4.4em; text-align:end;
+  font-weight:700; font-size:1.02rem; font-variant-numeric:tabular-nums}
+.crow.no .crow-p{color:var(--miss); font-size:.9rem}
+.crow.no .crow-c{background:transparent!important; border-style:dashed}
+.crow-tot{border-block-end:0; border-block-start:2px solid var(--line);
+  margin-block-start:2px}
+.crow-tot .crow-l{font-size:.92rem}
+
+/* one unit on the list: the three classes drawn to scale, then the share */
+.cons-bar{display:inline-flex; width:74px; height:9px; border-radius:2px;
+  overflow:hidden; background:var(--bg); border:1px solid var(--line);
+  vertical-align:middle; margin-inline-end:var(--s2)}
+.cons-bar i{display:block; height:100%}
+.cons-row .row-m{display:flex; align-items:center; gap:2px; flex-wrap:wrap}
+/* the total has no colour of its own: it is the union of the three above it */
+.crow-tot .crow-c{border:0}

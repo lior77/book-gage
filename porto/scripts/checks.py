@@ -914,6 +914,150 @@ def main():
              "ALL residents, children included, so a bare label reads as a "
              "share of adults")
 
+    # ---- 7t. REN and RAN: four numbers, and the fourth is not the sum -------
+    # The thing that makes this table dangerous is that REN and RAN OVERLAP —
+    # by up to 16.2% of a municipality — so REN% + RAN% is not the constrained
+    # share and never was. The identity below is the one the page rests on, and
+    # it is checked on the shipped numbers rather than trusted from the build.
+    #
+    # The other half is Porto. DGT publishes no delimitation for it and none
+    # for Vila do Conde's REN, and the temptation there is a zero: a zero says
+    # "nothing is restricted here", which is a claim nobody made.
+    HEBREW_RE = re.compile(u"[\u0590-\u05ff]")
+    CONS_PCT = ("ren_pct", "ran_pct", "both_pct", "either_pct")
+    cons_cov = {"ren": 0, "ran": 0}
+    fre_sum = {}
+    for level, rows, skey in (("municipio", mun, "municipio.cons_pct"),
+                              ("freguesia", fre, "freguesia.cons_pct")):
+        for r in rows:
+            c = r.get("cons")
+            name = r.get("he") or r.get("pt")
+            if not c:
+                fail("%s %s has no cons block at all" % (level, name))
+                continue
+            if c.get("area_ha") is None:
+                fail("%s %s: cons has no area_ha" % (level, name))
+                continue
+            # the denominator is the unit's own area, and the app already
+            # publishes that in km2 from the same polygons
+            if r.get("area_km2"):
+                gap = abs(c["area_ha"] / 100.0 / r["area_km2"] - 1) * 100
+                if gap > 0.6:
+                    fail("%s %s: cons area %.1f ha against area_km2 %.2f, %.2f%% apart"
+                         % (level, name, c["area_ha"], r["area_km2"], gap))
+            for k in CONS_PCT:
+                v = c.get(k)
+                if v is None:
+                    continue
+                if not (0 <= v <= 100):
+                    fail("%s %s: %s is %r" % (level, name, k, v))
+            if all(c.get(k) is not None for k in CONS_PCT):
+                got = c["ren_pct"] + c["ran_pct"] - c["both_pct"]
+                if abs(got - c["either_pct"]) > 0.25:
+                    fail("%s %s: REN+RAN-both is %.1f but the total says %.1f — "
+                         "the total must be the union, never the sum"
+                         % (level, name, got, c["either_pct"]))
+                if c["both_pct"] > min(c["ren_pct"], c["ran_pct"]) + 0.05:
+                    fail("%s %s: the overlap (%.1f) is larger than one of the two"
+                         % (level, name, c["both_pct"]))
+            elif c.get("either_pct") is not None:
+                # only one reserve published: the total is that one, unchanged
+                only = [k for k in ("ren_pct", "ran_pct") if c.get(k) is not None]
+                if len(only) != 1 or abs(c[only[0]] - c["either_pct"]) > 0.05:
+                    fail("%s %s: one reserve published but the total is not it"
+                         % (level, name))
+            if level == "municipio":
+                for kind in ("ren", "ran"):
+                    if c.get(kind + "_pct") is not None:
+                        cons_cov[kind] += 1
+                        if not c.get(kind + "_year"):
+                            fail("municipio %s: %s has a share but no reference "
+                                 "year" % (name, kind.upper()))
+            else:
+                b = fre_sum.setdefault(r["dicofre"][:4], {"ren": 0.0, "ran": 0.0, "n": 0})
+                b["n"] += 1
+                for kind in ("ren", "ran"):
+                    if c.get(kind + "_ha") is not None:
+                        b[kind] += c[kind + "_ha"]
+            if sources["fields"].get(skey) is None:
+                fail("%s has no source record" % skey)
+
+    if cons_cov != {"ren": 16, "ran": 17}:
+        fail("REN/RAN coverage is %r, not 16 and 17 of 18" % cons_cov)
+    # the two DGT does not publish carry no key at all — not a zero
+    for code, missing_kinds in (("1312", ("ren", "ran")), ("1316", ("ren",))):
+        row = next((m for m in mun if m.get("dicofre") == code), None)
+        if row is None:
+            fail("no municipality %s" % code)
+            continue
+        for kind in missing_kinds:
+            for suffix in ("_pct", "_ha"):
+                if (row.get("cons") or {}).get(kind + suffix) is not None:
+                    fail("%s has a %s%s and DGT publishes no delimitation for it "
+                         "— that has to be absent, not zero"
+                         % (row.get("he"), kind, suffix))
+        for f in fre:
+            if f.get("dicofre", "").startswith(code):
+                for kind in missing_kinds:
+                    if (f.get("cons") or {}).get(kind + "_pct") is not None:
+                        fail("%s: a parish of a municipality with no %s "
+                             "delimitation has a share" % (f.get("he"), kind.upper()))
+    # every piece adds back up to the whole it came from
+    for code, b in fre_sum.items():
+        row = next((m for m in mun if m.get("dicofre") == code), None)
+        c = (row or {}).get("cons") or {}
+        for kind in ("ren", "ran"):
+            whole = c.get(kind + "_ha")
+            if whole is None:
+                continue
+            if abs(b[kind] - whole) > max(1.0, 0.002 * whole):
+                fail("%s %s: the parishes add to %.1f ha, the municipality is "
+                     "%.1f ha" % (row.get("he"), kind.upper(), b[kind], whole))
+
+    # Rule 4, where this data is most likely to break it: REN and RAN are
+    # restrições de utilidade pública. They restrict and they license; they are
+    # not a ban, and the app must not say they are.
+    for skey in ("municipio.cons_pct", "freguesia.cons_pct"):
+        entry = sources["fields"].get(skey) or {}
+        for want in ("source", "reference_year", "caveat_he", "confidence",
+                     "validation_he", "coverage"):
+            if not entry.get(want):
+                fail("%s: no %s recorded" % (skey, want))
+        cav = entry.get("caveat_he") or ""
+        if "restrições de utilidade pública" not in cav:
+            fail("%s: the caveat does not name what REN and RAN legally are" % skey)
+        if entry.get("confidence") != "approx":
+            fail("%s: a derived share with no parallel publication is approx"
+                 % skey)
+    appjs4 = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    for bad in ("אסור לבנות בו", "אחוז השטח שאסור", "איסור בנייה'",
+                "שטח אסור לבנייה"):
+        if bad in appjs4:
+            fail("app.js calls REN/RAN an outright ban (%r). They are "
+                 "restrictions with an exception regime." % bad)
+
+    # ---- 7u. a label carried in a table still has to reach the translator ---
+    # 7n reads every literal t('...') in app.js. It cannot see t(CONS_HE[k]),
+    # and that is exactly how the constraint page's three class names would
+    # have shipped in Hebrew inside the English build — the same shape as the
+    # POI labels, which froze the language once already.
+    en_table = appjs4[appjs4.index("Object.assign(EN, {"):]
+    en_keys = set()
+    for m in re.finditer(r"\n  ('((?:[^'\\]|\\.)*)')\s*:", en_table):
+        en_keys.add(m.group(2))
+    for tbl in ("CONS_HE", "CONS_FULL"):
+        block = re.search(tbl + r"\s*=\s*\{(.*?)\}", appjs4, re.S)
+        if not block:
+            fail("app.js has no %s table" % tbl)
+            continue
+        vals = re.findall(r":\s*'((?:[^'\\]|\\.)*)'", block.group(1))
+        if not vals:
+            fail("%s holds no labels" % tbl)
+        for v in vals:
+            if HEBREW_RE.search(v) and v not in en_keys:
+                fail("%s carries %r and the English table does not answer it"
+                     % (tbl, v))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a
