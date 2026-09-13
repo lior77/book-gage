@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Render docs/WORKPLAN.md as a page that can be read on a phone.
+"""Render one of the project's markdown documents as a page for a phone.
 
 The markdown file is the source of truth — it is what gets reviewed in a diff
 and what lives beside ARCHITECTURE.md.  This turns it into the artifact copy so
@@ -11,7 +11,9 @@ neutrals, same RTL table treatment.  A plan for this project should look like
 this project's other document, not like a page from somewhere else.
 
     python3 scripts/build_workplan.py [out.html]
+    python3 scripts/build_workplan.py --src docs/DELIVERY.md --title "..." out.html
 """
+import argparse
 import os
 import re
 import sys
@@ -19,6 +21,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SRC = os.path.join(ROOT, "docs", "WORKPLAN.md")
+TITLE = "פורטולנד — תוכנית העבודה"
 
 
 def esc(t):
@@ -148,7 +151,7 @@ def render(md):
     return "\n".join(out)
 
 
-PAGE = """<title>פורטולנד — תוכנית העבודה</title>
+PAGE = """<title>%(title)s</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
@@ -224,17 +227,22 @@ a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);
 
 
 def main():
-    md = open(SRC, encoding="utf-8").read()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("out", nargs="?", default=os.path.join(ROOT, "workplan.html"))
+    ap.add_argument("--src", default=SRC, help="the markdown file to render")
+    ap.add_argument("--title", default=TITLE, help="the page's own title")
+    args = ap.parse_args()
+
+    md = open(args.src, encoding="utf-8").read()
     body = render(md)
     # the first heading becomes the page's own header block
     body = body.replace("<h1>", "<header><h1>", 1)
     body = re.sub(r"(</h1>)(\s*<blockquote>.*?</blockquote>)", r"\1\2</header>",
                   body, count=1, flags=re.S)
-    html = PAGE % {"body": body}
-    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "workplan.html")
-    with open(out, "w", encoding="utf-8") as fh:
+    html = PAGE % {"body": body, "title": esc(args.title)}
+    with open(args.out, "w", encoding="utf-8") as fh:
         fh.write(html)
-    print("wrote %s  (%.1f KB)" % (out, len(html.encode()) / 1024))
+    print("wrote %s  (%.1f KB)" % (args.out, len(html.encode()) / 1024))
     return 0
 
 
