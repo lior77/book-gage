@@ -856,6 +856,42 @@ def main():
     print("missing.items %d records, none of them fully published"
           % len(sources["missing"]["items"]))
 
+    # ---- 7s. the building count says which buildings ----------------------
+    # N_EDIFICIOS_CLASSICOS is INE's edifícios clássicos — permanent
+    # constructions intended for habitation. It is NOT the number of buildings
+    # in a parish: anything with no dwelling in it (a factory, an office block,
+    # a school, a church) is outside the universe entirely. The app labelled it
+    # "בניינים", flat, which a reader takes as every building there is — and in
+    # Porto, where the office blocks and the factories are, that is materially
+    # wrong. Same shape as calling crimes registados "violent crime": the
+    # source's own word is narrower than the app's.
+    #
+    # Both levels' figures come from the same column, so both labels are held
+    # to the same thing.
+    appjs3 = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    if re.search(r"t\('בניינים'\)", appjs3):
+        fail("the building count is labelled 'בניינים' — INE counts only "
+             "edifícios clássicos, buildings meant for habitation, so a bare "
+             "'buildings' claims a universe the number does not cover")
+    for level in ("municipio", "freguesia"):
+        rec = sources["fields"].get(level + ".housing")
+        if not rec:
+            fail("%s.housing has no source record" % level)
+            continue
+        defs = rec.get("definitions_he") or {}
+        key = [k for k in defs if "בניינ" in k]
+        if not key:
+            fail("%s.housing does not define what it counts as a building"
+                 % level)
+            continue
+        text = defs[key[0]]
+        # the column, and the fact that the universe is narrower than "buildings"
+        for need in ("N_EDIFICIOS_CLASSICOS", "למגורים"):
+            if need not in text:
+                fail("%s.housing's building definition does not say %r — the "
+                     "reader cannot tell which buildings are counted"
+                     % (level, need))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a

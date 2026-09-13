@@ -389,7 +389,7 @@ function housingStats(o, lvl) {
       ${stat(t('בבעלות הדיירים'), h.owner_pct, '%', 1, k)}
       ${stat(t('בשכירות'), h.rented_pct, '%', 1, k)}
       ${stat(t('עם חניה'), h.parking_pct, '%', 1, k)}
-      ${stat(t('בניינים'), h.buildings, '', 0, k)}
+      ${stat(t('בנייני מגורים'), h.buildings, '', 0, k)}
       ${stat(t('זקוקים לתיקון'), h.repair_pct, '%', 1, k)}
       ${stat(t('מהם תיקון עמוק'), h.deep_repair_pct, '%', 1, k)}
       ${stat(t('נבנו לפני 1946'), h.pre1946_pct, '%', 1, k)}
@@ -3004,7 +3004,7 @@ const CMP_ALL = [
   { g: 'דיור ובניינים', k: 'owner_pct', he: 'בבעלות הדיירים', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'rented_pct', he: 'בשכירות', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'parking_pct', he: 'עם חניה', unit: '%', dec: 1 },
-  { g: 'דיור ובניינים', k: 'buildings', he: 'בניינים', unit: '', dec: 0 },
+  { g: 'דיור ובניינים', k: 'buildings', he: 'בנייני מגורים', unit: '', dec: 0 },
   { g: 'דיור ובניינים', k: 'repair_pct', he: 'זקוקים לתיקון', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'deep_repair_pct', he: 'מהם תיקון עמוק', unit: '%', dec: 1 },
   { g: 'דיור ובניינים', k: 'pre1946_pct', he: 'נבנו לפני 1946', unit: '%', dec: 1 },
@@ -4295,6 +4295,7 @@ function wire() {
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
 Object.assign(EN, {
+  'בנייני מגורים': 'Residential buildings',
   'היא כן מתפרסמת ל-': 'It is published for ',
   ' מתוך 18 העיריות.': ' of the 18 municipalities.',
   'בעירייה הזאת אין אף אחת משתי השכבות, ולכן אין כאן מה להוריד. בשאר המחוז יש: לחצו על הבית, בחרו עירייה אחרת, וגללו לכאן.': 'Neither layer exists for this municipality, so there is nothing here to download. The rest of the district has them: tap home, choose another municipality, and scroll back to here.',
