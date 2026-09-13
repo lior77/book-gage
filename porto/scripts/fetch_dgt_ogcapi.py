@@ -263,9 +263,16 @@ def main():
     ap.add_argument("--list", action="store_true",
                     help="print the layer table and exit")
     ap.add_argument("--crs", default=CRS84,
-                    help="CRS84 (default) or %s" % PTTM06)
+                    help="CRS84 (default), an EPSG number such as 3763, or a "
+                         "full CRS URI like %s" % PTTM06)
     ap.add_argument("--out", default=os.path.join(ROOT, "data", "raw", "dgt"))
     args = ap.parse_args()
+
+    # A bare EPSG number is what anyone types, and the server answers it with a
+    # 400 that says nothing about the CRS. Expanding it here turns a puzzling
+    # rejection into the request that was meant.
+    if args.crs.isdigit():
+        args.crs = "http://www.opengis.net/def/crs/EPSG/0/%s" % args.crs
 
     if args.list:
         for name, (coll, extra, what) in sorted(LAYERS.items()):

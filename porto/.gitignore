@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 data/raw/ine/.cache/
 node_modules/
+data/raw/bgri/
+data/raw/dgt/caop_freguesias_3763.geojson
