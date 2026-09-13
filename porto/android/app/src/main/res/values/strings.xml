@@ -3,4 +3,6 @@
     <string name="app_name">פורטולנד</string>
     <!-- the title over the system picker when a point is given a photo -->
     <string name="pick_photo">בחירת תמונה לנקודה</string>
+    <!-- and when the picker is opened for an exported file rather than a photo -->
+    <string name="pick_file">בחירת קובץ לייבוא</string>
 </resources>

@@ -1393,19 +1393,49 @@ function layerRows(num) {
     }
     const size = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
     const armed = layerArmed === kind + ':' + code;
-    return `<button class="row row-full" data-layer="${html(kind + ':' + code)}">
+    const shown = !!(S.layers && S.layers[kind]) && state;
+    /* Three states, and the row has to say which it is in, because two of them
+       look identical from the map: not downloaded, downloaded and off,
+       downloaded and drawn.  Switching off is the middle one — the bytes stay
+       where they are, and the only thing that removes them is the explicit
+       delete below the rows. */
+    return `<button class="row row-full" aria-pressed="${shown}" data-layer="${html(kind + ':' + code)}">
       <span class="dot" style="--c:${LAYER_STYLE[kind].fillColor}"></span>
       <span class="row-body">
-        <span class="row-t">${html(title)}${armed
-          ? (state ? t(' <span class="flag">למחוק? לחיצה נוספת</span>')
-                   : t(' <span class="flag">להוריד? לחיצה נוספת</span>'))
-          : (state ? t(' <span class="flag">זמין לא מקוון</span>')
-                   : t(' <span class="flag">לא הורדה</span>'))}</span>
+        <span class="row-t">${html(title)}${!state
+          ? (armed ? t(' <span class="flag">להוריד? לחיצה נוספת</span>')
+                   : t(' <span class="flag">לא הורדה</span>'))
+          : (shown ? t(' <span class="flag">מוצגת</span>')
+                   : t(' <span class="flag">שמורה במכשיר · כבויה</span>'))}</span>
         <span class="row-m"><span class="num">${size}</span> MB ·
           ${t('שנת ייחוס')} <span class="num">${html(e.reference_year)}</span> ·
           <span class="lat" dir="ltr">${html((e.law || []).join(', '))}</span></span>
       </span></button>`;
   }).join('');
+}
+
+/* Deleting a layer is a separate act with a separate word on it.  It used to
+   be the second tap on the row itself, which put "show me this" and "throw
+   this away" on the same button — and a reader who switched the layer off
+   found it gone. */
+function layerDelRows(num) {
+  const code = munCodeOf(num);
+  if (!code || !D.layers) return '';
+  const chips = Object.keys(LAYER_STYLE).map(kind => {
+    if (!(D.layerHave || {})[layerKey(kind, code)]) return '';
+    const e = layerEntry(kind, code);
+    const L = D.layers.layers[kind];
+    const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
+    const id = kind + ':' + code;
+    const armed = layerDelArmed === id;
+    const size = (e.bytes / 1048576).toFixed(e.bytes > 1048576 ? 1 : 2);
+    return `<button class="chip${armed ? ' wp-arm' : ''}" type="button" data-layer-del="${html(id)}">${
+      armed ? t('למחוק? לחיצה נוספת') : t('מחיקת ') + html(title) + ' · ' + size + ' MB'}</button>`;
+  }).join('');
+  return chips
+    ? `<p class="note">${t('כיבוי התצוגה אינו מוחק כלום: השכבה נשארת במכשיר ועובדת בלי רשת. מחיקה היא פעולה נפרדת, וזאת היא:')}</p>
+       <div class="chips">${chips}</div>`
+    : '';
 }
 
 function layerCard(num) {
@@ -1422,6 +1452,7 @@ function layerCard(num) {
     <h2>${t('מגבלות בנייה')}</h2>
     <p class="sub">${t('שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 22.8 מגה-בייט למחוז כולו — ולכן מורידים אותן לפי עירייה, פעם אחת, בלחיצה. שום דבר לא יורד מעצמו.')}</p>
     <div class="rows">${rows}</div>
+    ${layerDelRows(num)}
     ${none ? `<p class="note">${t('בעירייה הזאת אין אף אחת משתי השכבות, ולכן אין כאן מה להוריד. בשאר המחוז יש: לחצו על הבית, בחרו עירייה אחרת, וגללו לכאן.')}</p>` : ''}
     <p class="note">${t('המקור: Direção-Geral do Território (DGT), רישיון CC BY 4.0. הגבול נשמר בדיוק כפי ש-DGT מפרסם אותו — שכבה שאומרת ״כאן אסור לבנות״ לא מפושטת, כי פישוט מזיז את הקו. כל עירייה תוחמה בחוק משלה ובשנה משלה, ולכן אין ״שנת REN״ אחת.')}</p>
     <p class="note">${t('סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.')}</p>
@@ -1439,6 +1470,7 @@ function layerCard(num) {
    arms in place instead (section 7 of the architecture). */
 let layerBusy = null;
 let layerArmed = null;      // the "kind:code" waiting for a second press
+let layerDelArmed = null;   // and the one waiting to be deleted
 
 async function refreshLayerHave() {
   const keys = await allLayerKeys();
@@ -1448,27 +1480,37 @@ async function refreshLayerHave() {
 
 async function tapLayer(id) {
   const [kind, code] = id.split(':');
-  const e = layerEntry(kind, code);
-  if (!e) return;
-  const L = D.layers.layers[kind];
-  const title = nm({ he: L.title_he, pt: L.title_en, en: L.title_en });
-  const have = (D.layerHave || {})[layerKey(kind, code)];
-
-  if (layerArmed !== id) { layerArmed = id; redrawText(); return; }
-  layerArmed = null;
-
-  if (have) {
-    await delLayerRec(layerKey(kind, code));
-    await refreshLayerHave();
-    if (S.layers) S.layers[kind] = false;
-    applyLayers();
-    applyConstraintTiles();
+  if (!layerEntry(kind, code)) return;
+  layerDelArmed = null;
+  // Already here: the row is the same switch the layer panel carries, and
+  // flipping a switch costs nothing, so it does not arm.
+  if ((D.layerHave || {})[layerKey(kind, code)]) {
+    layerArmed = null;
+    await toggleConstraint(id);
     redrawText();
     return;
   }
+  // Not here: this one spends somebody's mobile data, so the first press only
+  // arms it.  Two taps rather than confirm(), for the reason above.
+  if (layerArmed !== id) { layerArmed = id; redrawText(); return; }
+  layerArmed = null;
   await tapLayerFetch(kind, code);
   applyConstraintTiles();
-  redrawText();
+  save(); renderLayers(); redrawText();
+}
+
+/* The only thing that removes a downloaded layer. */
+async function tapLayerDel(id) {
+  const [kind, code] = id.split(':');
+  layerArmed = null;
+  if (layerDelArmed !== id) { layerDelArmed = id; redrawText(); return; }
+  layerDelArmed = null;
+  await delLayerRec(layerKey(kind, code));
+  await refreshLayerHave();
+  if (S.layers) S.layers[kind] = false;
+  await applyLayer(kind);
+  applyConstraintTiles();
+  save(); renderLayers(); redrawText();
 }
 
 /* The download itself, shared by the card and the layer panel. On success the
@@ -2553,9 +2595,177 @@ function deleteMine(id) {
   drawMine(); redrawText();
 }
 
-/* The points are the one thing here the user made, and the only thing an
-   uninstall would take with it.  Both directions are plain text, so they
-   survive a new phone, a reinstall, and a message to yourself. */
+/* ------------------------------------------------------------- export ---
+   Three things on this phone were not shipped with the app: the points the
+   user marked, the photos attached to them, and the constraint layers that
+   were downloaded.  An export that carries only the first is not a backup —
+   a reinstall would still lose the pictures, and every layer would have to be
+   fetched again over mobile data.  So all three go.
+
+   Which is also why the export is a file and not the clipboard any more.  A
+   layer is 0.3 to 3 MB gzipped and base64 makes it a third bigger again; an
+   Android clipboard refuses a string of that size (the binder transaction is
+   capped around a megabyte) and fails by truncating rather than by saying so.
+   The clipboard is still offered for the points alone, which is what it was
+   always good at: a message to yourself that survives a new phone.
+
+   The file is JSON, so it can be read by a person and repaired by hand.  The
+   binary parts are base64 inside it.  Nothing here is compressed a second
+   time: the layers already are. */
+const MINE_FILE_V = 1;
+
+/* Big buffers, in the one way that does not blow the argument stack:
+   String.fromCharCode.apply on a two-megabyte array throws RangeError on every
+   engine, so it goes 32 KB at a time. */
+const B64_CHUNK = 0x8000;
+function bytesToB64(u8) {
+  const a = u8 instanceof Uint8Array ? u8 : new Uint8Array(u8);
+  let s = '';
+  for (let i = 0; i < a.length; i += B64_CHUNK)
+    s += String.fromCharCode.apply(null, a.subarray(i, i + B64_CHUNK));
+  return btoa(s);
+}
+function b64ToBytes(s) {
+  const bin = atob(String(s || '').replace(/\s+/g, ''));
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+
+async function gatherPhotos() {
+  const out = [];
+  for (const p of D.mine) {
+    if (!p.photo) continue;
+    let blob = null;
+    try { blob = await getPhoto(p.id); } catch (e) { blob = null; }
+    if (!blob) continue;                      // the record says there is one and there is not
+    out.push({ id: p.id, type: blob.type || 'image/jpeg',
+               b64: bytesToB64(new Uint8Array(await blob.arrayBuffer())) });
+  }
+  return out;
+}
+async function gatherLayers() {
+  const out = [];
+  for (const k of (await allLayerKeys()) || []) {
+    const rec = await getLayerRec(k);
+    if (!rec || !rec.bytes) continue;
+    const [kind, code] = String(k).split(':');
+    out.push({ kind: kind, code: code, version: rec.version || '',
+               sha256: rec.sha256 || '', saved: rec.saved || '',
+               b64: bytesToB64(rec.bytes) });
+  }
+  return out;
+}
+
+/* What an export would weigh, said before it is made rather than after: the
+   layers dominate it and the reader is the one paying for the storage. */
+async function exportSizes() {
+  let photos = 0, layers = 0;
+  for (const p of D.mine) if (p.photo && p.photo.bytes) photos += p.photo.bytes;
+  for (const k of (await allLayerKeys()) || []) {
+    const rec = await getLayerRec(k);
+    if (rec && rec.bytes) layers += rec.bytes.length;
+  }
+  return { photos: photos, layers: layers };
+}
+
+function openExport() {
+  openPanel('export', t('שמירת נתונים'), `<p class="note" id="expNote">${t('סופר…')}</p>`);
+  fillExport();
+}
+async function fillExport() {
+  const nPhoto = D.mine.filter(p => p.photo).length;
+  const keys = (await allLayerKeys()) || [];
+  const size = await exportSizes();
+  if (!panelIs('export')) return;              // it was closed while counting
+  const mb = n => (n / 1048576).toFixed(n > 1048576 ? 1 : 2);
+  const total = Math.round((size.photos + size.layers) * 4 / 3);   // base64 grows by a third
+  const rows = [
+    `<div class="row row-full"><span class="row-body"><span class="row-t">${t('מקומות')}</span>
+      <span class="row-m"><span class="num">${nf(D.mine.length)}</span></span></span></div>`,
+    `<div class="row row-full"><span class="row-body"><span class="row-t">${t('תמונות')}</span>
+      <span class="row-m">${nPhoto ? '<span class="num">' + nf(nPhoto) + '</span> · <span class="num">'
+        + mb(size.photos) + '</span> MB' : t('אין')}</span></span></div>`,
+    `<div class="row row-full"><span class="row-body"><span class="row-t">${t('מגבלות בנייה שהורדו')}</span>
+      <span class="row-m">${keys.length ? '<span class="num">' + nf(keys.length) + '</span> · <span class="num">'
+        + mb(size.layers) + '</span> MB' : t('אין')}</span></span></div>`,
+  ].join('');
+  const heavy = nPhoto || keys.length;
+  $('#panelBody').innerHTML = `
+    <p class="note">${t('הקובץ נושא את שלושת הדברים שאינם מגיעים עם האפליקציה: המקומות שסומנו, התמונות שצורפו אליהם, ושכבות מגבלות הבנייה שהורדו. ייבוא שלו במכשיר אחר מחזיר את שלושתם.')}</p>
+    <div class="rows">${rows}</div>
+    <div class="btns">
+      <button class="cta" id="expFile">${t('שמירה כקובץ')}${heavy ? ' · <span class="num">≈' + mb(total) + '</span> MB' : ''}</button>
+      <button class="chip" id="expClip">${t('העתקת המקומות ללוח')}</button>
+    </div>
+    <p class="note" id="expNote">${heavy
+      ? t('הלוח נושא את המקומות בלבד. תמונות ושכבות אינן נכנסות אליו — מחרוזת בגודל כזה נחתכת בדרך בלי להודיע — ולכן הן בקובץ.')
+      : t('אין כאן תמונות ולא שכבות, ולכן שתי הדרכים נושאות אותו דבר.')}</p>`;
+}
+
+/* Everything that goes in the file, in one place, so that what the test packs
+   is what the button packs. */
+async function exportPayload() {
+  return {
+    portoland: MINE_FILE_V,
+    app: D.version || '',
+    saved: new Date().toISOString(),
+    points: D.mine,
+    photos: await gatherPhotos(),
+    layers: await gatherLayers(),
+  };
+}
+
+/* The file itself.  In a browser this is an <a download>; in the app there is
+   no download manager behind the WebView, so the bytes go through a bridge
+   that writes them into the app's own Download folder and answers with the
+   path — which the note then shows, because a file the reader cannot find is
+   not saved. */
+async function exportFile() {
+  const btn = $('#expFile');
+  if (btn) { btn.disabled = true; btn.textContent = t('אורז…'); }
+  let text;
+  try {
+    text = JSON.stringify(await exportPayload());
+  } catch (e) {
+    if ($('#expNote')) $('#expNote').textContent = t('האריזה נכשלה: ') + String(e.message || e);
+    if (btn) { btn.disabled = false; }
+    return;
+  }
+  const name = 'portoland-' + new Date().toISOString().slice(0, 10) + '.json';
+  const where = await saveFile(name, text);
+  closePanel();
+  mapNote(where.ok
+    ? t('נשמר: ') + '<span class="lat" dir="ltr">' + html(where.where || name) + '</span>'
+    : t('השמירה נכשלה: ') + html(where.err || ''), !where.ok);
+}
+
+/* Two ways out, and the app one first: a WebView with no DownloadListener
+   swallows an <a download> click silently, which is exactly the failure that
+   looks like a broken button. */
+async function saveFile(name, text) {
+  const bridge = window.PortoSave;
+  if (bridge && typeof bridge.save === 'function') {
+    try {
+      const bytes = new TextEncoder().encode(text);
+      const answer = String(bridge.save(name, bytesToB64(bytes)) || '');
+      if (answer.startsWith('ok:')) return { ok: true, where: answer.slice(3) };
+      return { ok: false, err: answer.replace(/^err:/, '') };
+    } catch (e) { return { ok: false, err: String(e.message || e) }; }
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return { ok: true, where: name };
+  } catch (e) { return { ok: false, err: String(e.message || e) }; }
+}
+
+/* The clipboard keeps doing the one job it does well. */
 function exportMine() {
   if (!D.mine.length) { mapNote(t('אין עדיין נקודות לייצוא.')); return; }
   const text = JSON.stringify(D.mine, null, 1);
@@ -2582,39 +2792,126 @@ function fallbackCopy(text, done) {
   else openImport(text);          // could not copy: show it to be selected by hand
 }
 
+/* -------------------------------------------------------------- import ---
+   Two mouths, one throat: a file picked from the phone and text pasted into
+   the box both end up in importPayload(). */
 function openImport(prefill) {
-  openPanel('import', prefill ? t('העתקה ידנית') : t('ייבוא נקודות'), `
+  openPanel('import', prefill ? t('העתקה ידנית') : t('ייבוא נתונים'), `
     <p class="note" id="impNote">${prefill
       ? t('לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.')
-      : t('הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.')}</p>
+      : t('בחרו קובץ שנשמר קודם, או הדביקו כאן נקודות. מה שכבר קיים לא ישוכפל.')}</p>
+    ${prefill ? '' : `<div class="btns"><button class="cta" id="impPick">${t('בחירת קובץ')}</button></div>
+    <input id="impFile" type="file" accept="application/json,.json" hidden>`}
     <textarea id="impText" rows="7" dir="ltr" spellcheck="false">${html(prefill || '')}</textarea>
     <div class="btns"><button class="cta" id="impSave">${t('ייבוא')}</button></div>`);
 }
-function commitImport() {
-  let rows;
-  try { rows = JSON.parse($('#impText').value); }
+function importPickFile(file) {
+  if (!file) return;
+  const note = $('#impNote');
+  if (note) note.textContent = t('קורא את הקובץ…');
+  const r = new FileReader();
+  r.onload = () => commitImport(String(r.result || ''));
+  r.onerror = () => { if ($('#impNote')) $('#impNote').textContent = t('לא הצלחתי לקרוא את הקובץ.'); };
+  r.readAsText(file);
+}
+
+function commitImport(fromFile) {
+  let data;
+  const raw = fromFile !== undefined ? fromFile : $('#impText').value;
+  try { data = JSON.parse(raw); }
   catch (e) { $('#impNote').textContent = t('זה לא טקסט תקין של נקודות.'); return; }
-  if (!Array.isArray(rows)) { $('#impNote').textContent = t('ציפיתי לרשימה של נקודות.'); return; }
+  // Version 0 of this format was the bare array of points, and files of it are
+  // in people's messages to themselves; it still reads.
+  const rows = Array.isArray(data) ? data : data && Array.isArray(data.points) ? data.points : null;
+  if (!rows) { $('#impNote').textContent = t('ציפיתי לרשימה של נקודות.'); return; }
+  const bag = Array.isArray(data) ? {} : data;
+  importAll(rows, bag);
+}
+
+async function importAll(rows, bag) {
   const have = new Set(D.mine.map(p => p.id));
   let added = 0, skipped = 0;
+  const kept = new Set();
   rows.forEach(r => {
     const ok = r && typeof r.name === 'string' && Array.isArray(r.ll)
       && r.ll.length === 2 && r.ll.every(n => typeof n === 'number' && isFinite(n));
     if (!ok) { skipped++; return; }
     const id = typeof r.id === 'string' && r.id ? r.id : 'p' + Math.random().toString(36).slice(2);
     if (have.has(id)) { skipped++; return; }
-    have.add(id);
-    D.mine.push({ id: id, name: r.name, desc: typeof r.desc === 'string' ? r.desc : '',
-                  ll: [r.ll[0], r.ll[1]], at: typeof r.at === 'string' ? r.at : '' });
+    have.add(id); kept.add(id);
+    const rec = { id: id, name: r.name, desc: typeof r.desc === 'string' ? r.desc : '',
+                  ll: [r.ll[0], r.ll[1]], at: typeof r.at === 'string' ? r.at : '' };
+    // the photo's own record travels with the point; the bytes are restored
+    // below, and a point whose bytes did not arrive loses the record too
+    if (r.photo && typeof r.photo === 'object') rec.photo = r.photo;
+    D.mine.push(rec);
     added++;
   });
+
+  /* Photos, for the points that were actually added.  A picture belonging to a
+     point that was already here is not written over it. */
+  let photos = 0;
+  for (const ph of (Array.isArray(bag.photos) ? bag.photos : [])) {
+    if (!ph || !kept.has(ph.id) || typeof ph.b64 !== 'string') continue;
+    try {
+      await putPhoto(ph.id, new Blob([b64ToBytes(ph.b64)],
+        { type: typeof ph.type === 'string' ? ph.type : 'image/jpeg' }));
+      photos++;
+    } catch (e) { /* the point stays; the card will say the picture is missing */ }
+  }
+  // a point that says it carries a photo and does not is a card that renders a
+  // hole, so the claim goes when the bytes did not come
+  for (const id of kept) {
+    const p = D.mine.find(x => x.id === id);
+    if (!p || !p.photo) continue;
+    let blob = null;
+    try { blob = await getPhoto(id); } catch (e) { blob = null; }
+    if (!blob) delete p.photo;
+  }
+
+  /* Layers.  Nothing is trusted here: the bytes are hashed and the hash has to
+     equal what THIS app's manifest publishes for that municipality.  A file
+     from an older release carries older polygons, and a boundary that says
+     "here you may not build" is not a thing to accept on a stranger's word. */
+  let layers = 0, layersBad = 0;
+  for (const L of (Array.isArray(bag.layers) ? bag.layers : [])) {
+    if (!L || typeof L.b64 !== 'string') { layersBad++; continue; }
+    const e = layerEntry(L.kind, L.code);
+    if (!e) { layersBad++; continue; }
+    if ((D.layerHave || {})[layerKey(L.kind, L.code)]) continue;   // already here
+    let bytes;
+    try { bytes = b64ToBytes(L.b64); } catch (err) { layersBad++; continue; }
+    if (bytes.length !== e.bytes) { layersBad++; continue; }
+    let sum;
+    try { sum = await sha256Hex(bytes); } catch (err) { layersBad++; continue; }
+    if (sum !== e.sha256) { layersBad++; continue; }
+    try {
+      await putLayerRec(layerKey(L.kind, L.code), {
+        bytes: bytes, sha256: sum, version: D.layers.version,
+        saved: typeof L.saved === 'string' ? L.saved : new Date().toISOString().slice(0, 10),
+      });
+      layers++;
+    } catch (err) { layersBad++; }
+  }
+  if (layers) await refreshLayerHave();
+
   saveMine();
   closePanel();
   drawMine(); redrawText();
-  mapNote(added
-    ? ((added === 1 ? t('נוספה נקודה אחת') : t('נוספו ') + nf(added) + t(' נקודות')) +
-       (skipped ? ', ' + (skipped === 1 ? t('אחת דולגה') : nf(skipped) + t(' דולגו')) : '') + '.')
-    : t('לא נוספה אף נקודה חדשה.'), !added);
+  if (layers) { renderLayers(); }
+
+  const parts = [];
+  if (added) parts.push(added === 1 ? t('מקום אחד') : nf(added) + t(' מקומות'));
+  if (photos) parts.push(photos === 1 ? t('תמונה אחת') : nf(photos) + t(' תמונות'));
+  if (layers) parts.push(layers === 1 ? t('שכבת מגבלות אחת') : nf(layers) + t(' שכבות מגבלות'));
+  const tail = [];
+  if (skipped) tail.push(skipped === 1 ? t('אחת דולגה') : nf(skipped) + t(' דולגו'));
+  if (layersBad) tail.push(layersBad === 1
+    ? t('שכבה אחת נדחתה — אינה תואמת את מה שהאפליקציה מפרסמת')
+    : nf(layersBad) + t(' שכבות נדחו — אינן תואמות את מה שהאפליקציה מפרסמת'));
+  mapNote(parts.length
+    ? t('נוספו: ') + parts.join(', ') + (tail.length ? '. ' + tail.join(', ') : '') + '.'
+    : (tail.length ? tail.join(', ') + '.' : t('לא נוסף דבר חדש.')), !parts.length);
 }
 
 let ghost = null;              // the crosshair being positioned
@@ -3636,7 +3933,7 @@ function menuPick(k) {
     case 'borders': cycleBounds(); renderMenu(); break;
     case 'more':    openMenu(false); toggleLayers(true); break;
     case 'regions': toggleRegions(); renderMenu(); break;
-    case 'save':    openMenu(false); exportMine(); break;
+    case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
     case 'info':    openMenu(false); openInfo(); break;
   }
@@ -3715,7 +4012,7 @@ function renderLayers() {
     }).join('');
     if (rows) {
       h += t('<h3>מגבלות בנייה</h3>') + rows +
-        t('<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>');
+        t('<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כיבוי אינו מוחק אותה — היא נשארת במכשיר, והמחיקה היא פעולה נפרדת בכרטיס ״מגבלות בנייה״. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>');
     }
   }
 
@@ -4189,7 +4486,7 @@ function renderInfo() {
     <p>${t('לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה פותחת את הכרטיסייה שלה. לחיצה כפולה על נקודה פותחת אותה במפות גוגל.')}</p>
     <p>${t('בבחירת תמונה אפשר לסמן כמה תמונות בבת אחת. הראשונה נכנסת לכרטיסייה הפתוחה, וכל אחת מהשאר הופכת לנקודה משלה. תמונה שיש בה קואורדינטות נוחתת עליהן; תמונה שאין בה נוחתת בפינה השמאלית העליונה של המפה — מקום שאפשר לראות ולגרור ממנו, ולא טענה על היכן היא צולמה.')}</p>
     <p>${t('בסימון נ.צ. על המפה: גוררים את הסימון למקום, ולחיצה כפולה עליו קובעת אותו.')}</p>
-    <p class="note">${t('ההעתקה מוציאה את הנקודות כטקסט. התמונות עצמן נשארות במכשיר ולא נכללות בה, ולכן נקודה שתיובא במכשיר אחר תגיע בלי התמונה שלה.')}</p>`;
+    <p class="note">${t('שמירת נתונים כותבת קובץ אחד שנושא את שלושת הדברים שאינם מגיעים עם האפליקציה: המקומות, התמונות שעליהם, ושכבות מגבלות הבנייה שהורדו. ייבוא הקובץ במכשיר אחר מחזיר את שלושתם. ההעתקה ללוח נושאת את המקומות בלבד — מחרוזת שכוללת תמונות או שכבות נחתכת בדרך — ולכן היא מוצעת לצידו ולא במקומו.')}</p>`;
 }
 
 /* ------------------------------------------------------------------ wire --- */
@@ -4208,8 +4505,16 @@ function wire() {
   $('#panelClose').addEventListener('click', closePanel);
   $('#panelBody').addEventListener('click', e => {
     if (panelIs('search')) { panelSearchClick(e); return; }
+    if (panelIs('export')) {
+      if (e.target.closest('#expFile')) exportFile();
+      else if (e.target.closest('#expClip')) { closePanel(); exportMine(); }
+      return;
+    }
     if (panelIs('import')) {
       if (e.target.closest('#impSave')) commitImport();
+      // the file input is hidden and the button in front of it is what is seen;
+      // a WebView needs the click to land on the input itself
+      else if (e.target.closest('#impPick')) { const f = $('#impFile'); if (f) f.click(); }
       return;
     }
     const b = e.target.closest('[data-lay]');
@@ -4246,6 +4551,9 @@ function wire() {
   });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
+  });
+  $('#panelBody').addEventListener('change', e => {
+    if (e.target.id === 'impFile') importPickFile(e.target.files && e.target.files[0]);
   });
   // the photo picker lives on the form sheet now; the one on the מקומות screen
   // is the "בחירת מקום מתמונה" way in and starts a place rather than adding to one
@@ -4305,7 +4613,7 @@ function wire() {
     }
     const act = e.target.closest('[data-mine-act]');
     if (act) {
-      if (act.dataset.mineAct === 'export') exportMine(); else openImport('');
+      if (act.dataset.mineAct === 'export') openExport(); else openImport('');
       return;
     }
     const mine = e.target.closest('[data-mine]');
@@ -4322,6 +4630,8 @@ function wire() {
       goMun(m.num);
       return;
     }
+    const layDel = e.target.closest('[data-layer-del]');
+    if (layDel) { tapLayerDel(layDel.dataset.layerDel); return; }
     const lay = e.target.closest('[data-layer]');
     if (lay) { tapLayer(lay.dataset.layer); return; }
     const fre = e.target.closest('[data-fre]');
@@ -4419,7 +4729,6 @@ Object.assign(EN, {
   '<h3>מגבלות בנייה</h3>': '<h3>Building constraints</h3>',
   ' לעירייה הזאת. מתפרסמת ל-': ' for this municipality. Published for ',
   ' מתוך 18.': ' of the 18.',
-  '<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>': '<p class="note" style="margin-block-start:6px">Switching one on downloads it once, and from then on it works with no network. While such a layer is shown the street background is off: a line that says where building is forbidden has to be read, not compete with a photograph.</p>',
   'רקע הרחובות אינו זמין כל עוד מוצגת שכבת מגבלות בנייה. כבו אותה תחילה.': 'The street background is not available while a building-constraint layer is shown. Switch it off first.',
   'צורת הבנייה': 'The shape of the stock',
   'בני קומה או שתיים': 'One or two floors',
@@ -4437,10 +4746,8 @@ Object.assign(EN, {
   ' מתוך 18 העיריות.': ' of the 18 municipalities.',
   'בעירייה הזאת אין אף אחת משתי השכבות, ולכן אין כאן מה להוריד. בשאר המחוז יש: לחצו על הבית, בחרו עירייה אחרת, וגללו לכאן.': 'Neither layer exists for this municipality, so there is nothing here to download. The rest of the district has them: tap home, choose another municipality, and scroll back to here.',
   'ההורדה נכשלה': 'The download failed',
-  ' <span class="flag">זמין לא מקוון</span>': ' <span class="flag">available offline</span>',
   ' <span class="flag">לא הורדה</span>': ' <span class="flag">not downloaded</span>',
   ' <span class="flag">להוריד? לחיצה נוספת</span>': ' <span class="flag">download? tap again</span>',
-  ' <span class="flag">למחוק? לחיצה נוספת</span>': ' <span class="flag">delete? tap again</span>',
   ' בתים מתוך ': ' bytes out of ',
   ' — DGT אינו מפרסם אותה לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.': ' — DGT does not publish it for this municipality. The reason is not published, so none is given here.',
   'אין שכבה כזו לעירייה הזאת': 'There is no such layer for this municipality',
@@ -4777,14 +5084,12 @@ Object.assign(EN, {
     'The app works without a network. With no connection the background tiles will not load, the map shows boundaries only, and all the data and text remain fully available.',
   'הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14. השינוי מ-2011 הוא כפי ש-INE מפרסמת אותו על גאוגרפיית מפקד 2021 — לא חושב כאן, כי חלוקת הרובעים של 2011 אינה זו של 2021.':
     'Median age is interpolated from five-year age bands — INE publishes no median in this file. The ageing index is people aged 65 and over per hundred aged 0–14. The change since 2011 is as INE publishes it, on the 2021 census geography: it is not computed here, because the 2011 parishes are not the 2021 parishes.',
-  'הדביקו כאן נקודות שיוצאו קודם. נקודה שכבר קיימת לא תשוכפל.':
-    'Paste points exported earlier. A point that already exists will not be duplicated.',
   'הדפדפן הזה לא תומך באיתור מיקום.':
     'This browser does not support geolocation.',
   'הדפדפן נותן מיקום רק בחיבור מאובטח. הדף הזה נפתח מ־':
     'Browsers give a location only over a secure connection. This page was opened from ',
-  'ההעתקה מוציאה את הנקודות כטקסט. התמונות עצמן נשארות במכשיר ולא נכללות בה, ולכן נקודה שתיובא במכשיר אחר תגיע בלי התמונה שלה.':
-    'Copying exports the points as text. The photos themselves stay on the device and are not included, so a point imported on another device arrives without its photo.',
+  'שמירת נתונים כותבת קובץ אחד שנושא את שלושת הדברים שאינם מגיעים עם האפליקציה: המקומות, התמונות שעליהם, ושכבות מגבלות הבנייה שהורדו. ייבוא הקובץ במכשיר אחר מחזיר את שלושתם. ההעתקה ללוח נושאת את המקומות בלבד — מחרוזת שכוללת תמונות או שכבות נחתכת בדרך — ולכן היא מוצעת לצידו ולא במקומו.':
+    'Saving writes one file carrying the three things the app does not ship with: the places, the photos on them, and the building-constraint layers that were downloaded. Importing that file on another device brings all three back. The clipboard carries the places alone — a string that includes photos or layers is truncated on the way — so it is offered alongside the file rather than instead of it.',
   'הוא תקן אירופי לחלוקת שטח לצורך סטטיסטיקה והקצאת תקציבים. בפורטוגל יש שלוש רמות; הרמה שבפועל משמשת היא':
     'is a European standard for dividing territory for statistics and budget allocation. Portugal has three levels; the one actually used is',
   'החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה מקיף את העיריות של כל אזור.':
@@ -4901,8 +5206,6 @@ Object.assign(EN, {
     'Text full screen',
   'ייבוא':
     'Import',
-  'ייבוא נקודות':
-    'Import points',
   'ייבוא נתונים':
     'Import data',
   'יישוב':
@@ -4933,8 +5236,6 @@ Object.assign(EN, {
     'Could not read the photo. It may be in a format the browser ',
   'לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.':
     'Could not save — the browser may be blocking local storage.',
-  'לא נוספה אף נקודה חדשה.':
-    'No new point was added.',
   'לא ניתנה הרשאת מיקום. אפשר לאשר אותה מהאייקון שליד כתובת האתר בדפדפן.':
     'Location permission was refused. You can allow it from the icon beside the address bar.',
   'לא פותח, כמו HEIC — צילום ב-JPEG יעבוד.':
@@ -5235,4 +5536,72 @@ Object.assign(EN, {
     '€/m²',
   '€/מ״ר לחודש':
     '€/m² per month',
+
+  /* ---- the constraint rows, the export file, and the import that reads it ---- */
+  ' <span class="flag">מוצגת</span>':
+    ' <span class="flag">shown</span>',
+  ' <span class="flag">שמורה במכשיר · כבויה</span>':
+    ' <span class="flag">on the device · off</span>',
+  'מחיקת ':
+    'Delete ',
+  'כיבוי התצוגה אינו מוחק כלום: השכבה נשארת במכשיר ועובדת בלי רשת. מחיקה היא פעולה נפרדת, וזאת היא:':
+    'Switching the display off deletes nothing: the layer stays on the device and works with no network. Deleting it is a separate act, and this is it:',
+  '<p class="note" style="margin-block-start:6px">הפעלה ראשונה מורידה את השכבה פעם אחת, ומכאן היא עובדת בלי רשת. כיבוי אינו מוחק אותה — היא נשארת במכשיר, והמחיקה היא פעולה נפרדת בכרטיס ״מגבלות בנייה״. כל עוד שכבה כזאת מוצגת, רקע הרחובות כבוי: קו שאומר איפה אסור לבנות צריך להיקרא, ולא להתחרות בתצלום.</p>':
+    '<p class="note" style="margin-block-start:6px">Switching one on downloads it once, and from then on it works with no network. Switching it off does not delete it — it stays on the device, and deleting it is a separate action on the "Building constraints" card. While such a layer is shown the street background is off: a line that says where building is forbidden has to be read, not compete with a photograph.</p>',
+  'סופר…':
+    'Counting…',
+  'מקומות':
+    'Places',
+  'תמונות':
+    'Photos',
+  'אין':
+    'none',
+  'מגבלות בנייה שהורדו':
+    'Building constraints downloaded',
+  'הקובץ נושא את שלושת הדברים שאינם מגיעים עם האפליקציה: המקומות שסומנו, התמונות שצורפו אליהם, ושכבות מגבלות הבנייה שהורדו. ייבוא שלו במכשיר אחר מחזיר את שלושתם.':
+    'The file carries the three things the app does not ship with: the places that were marked, the photos attached to them, and the building-constraint layers that were downloaded. Importing it on another device brings all three back.',
+  'שמירה כקובץ':
+    'Save as a file',
+  'העתקת המקומות ללוח':
+    'Copy the places to the clipboard',
+  'הלוח נושא את המקומות בלבד. תמונות ושכבות אינן נכנסות אליו — מחרוזת בגודל כזה נחתכת בדרך בלי להודיע — ולכן הן בקובץ.':
+    'The clipboard carries the places alone. Photos and layers do not fit in it — a string that size is truncated on the way with no warning — which is why they are in the file.',
+  'אין כאן תמונות ולא שכבות, ולכן שתי הדרכים נושאות אותו דבר.':
+    'There are no photos and no layers here, so both ways carry the same thing.',
+  'אורז…':
+    'Packing…',
+  'האריזה נכשלה: ':
+    'Packing failed: ',
+  'נשמר: ':
+    'Saved: ',
+  'השמירה נכשלה: ':
+    'Saving failed: ',
+  'בחרו קובץ שנשמר קודם, או הדביקו כאן נקודות. מה שכבר קיים לא ישוכפל.':
+    'Choose a file saved earlier, or paste places here. Anything already present is not duplicated.',
+  'בחירת קובץ':
+    'Choose a file',
+  'קורא את הקובץ…':
+    'Reading the file…',
+  'לא הצלחתי לקרוא את הקובץ.':
+    'I could not read the file.',
+  'מקום אחד':
+    'one place',
+  ' מקומות':
+    ' places',
+  'תמונה אחת':
+    'one photo',
+  ' תמונות':
+    ' photos',
+  'שכבת מגבלות אחת':
+    'one constraint layer',
+  ' שכבות מגבלות':
+    ' constraint layers',
+  'שכבה אחת נדחתה — אינה תואמת את מה שהאפליקציה מפרסמת':
+    'one layer was rejected — it does not match what the app publishes',
+  ' שכבות נדחו — אינן תואמות את מה שהאפליקציה מפרסמת':
+    ' layers were rejected — they do not match what the app publishes',
+  'נוספו: ':
+    'Added: ',
+  'לא נוסף דבר חדש.':
+    'Nothing new was added.',
 });

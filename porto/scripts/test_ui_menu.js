@@ -1420,6 +1420,9 @@ const css = (page, sel, prop) =>
     return m ? m.num : null;
   });
   ok('and names a municipality it has REN for', munWith !== null);
+  const munWithCode = await page.evaluate(() =>
+    Object.keys(D.layers.layers.ren.municipalities)[0]);
+  await page.evaluate(c => { window.munWithCode = c; }, munWithCode);
   // saved for real, not just set in memory: the point of the last assertion
   // below is that the layer code never reaches localStorage, and a point that
   // was never written there would have made it pass on nothing.
@@ -1488,12 +1491,35 @@ const css = (page, sel, prop) =>
      refused.m.slice(0, 60));
   ok('and nothing at all is stored when it is refused', refused.stored === false);
 
+  /* The row used to delete on a second arming, which put "show me this" and
+     "throw this away" on one button: a reader who switched the layer off found
+     it gone, and paid for the download twice. The row is a display switch now,
+     and deleting has a word of its own on a chip of its own. */
   await page.evaluate(() => { layerArmed = null; });
   await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
-  await page.waitForTimeout(300);
-  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
   await page.waitForTimeout(800);
-  ok('arming again and tapping deletes it',
+  ok('tapping a downloaded layer switches the display off',
+     await page.evaluate(() => !LAYER_ON.ren));
+  ok('and does NOT delete it — the bytes stay on the device',
+     await page.evaluate(async () => !!(await getLayerRec('ren:' + munWithCode))
+       && !!(D.layerHave || {})['ren:' + munWithCode]));
+  await page.evaluate(() => document.querySelector('#doc [data-layer]').click());
+  await page.waitForTimeout(900);
+  ok('and tapping it again draws it back with no second download',
+     await page.evaluate(() => !!LAYER_ON.ren));
+
+  ok('a stored layer offers a delete of its own, with the word on it',
+     await page.evaluate(() => {
+       const b = document.querySelector('#doc [data-layer-del]');
+       return !!b && /מחיקת/.test(b.innerText);
+     }));
+  await page.evaluate(() => document.querySelector('#doc [data-layer-del]').click());
+  await page.waitForTimeout(350);
+  ok('one tap on it only arms it', await page.evaluate(() =>
+    !!layerDelArmed && Object.keys(D.layerHave || {}).length > 0));
+  await page.evaluate(() => document.querySelector('#doc [data-layer-del]').click());
+  await page.waitForTimeout(900);
+  ok('the second tap is what deletes it',
      await page.evaluate(() => Object.keys(D.layerHave || {}).length === 0));
   /* The promise that made on-demand storage acceptable in the first place.
      Layers live in their own IndexedDB database; saved points live in
@@ -1551,7 +1577,124 @@ const css = (page, sel, prop) =>
   ok('switching it off removes it', await page.evaluate(() => !LAYER_ON.ren));
   ok('and gives the street background back exactly as it was',
      await page.evaluate(() => S.tiles === true));
+  /* The whole reason the switch and the download are two different things.
+     Off is off; it is not a refund. */
+  ok('but the layer itself is still on the device, not deleted',
+     await page.evaluate(async () => !!(await getLayerRec('ren:' + munWithCode))));
   await page.evaluate(() => { if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); } });
+
+  /* 13d. export and import carry all three things this phone holds that the
+     app did not ship with: the points, the photos on them, and the constraint
+     layers that were downloaded. Before this, an export carried the points
+     alone — a reinstall lost every picture and every layer had to be paid for
+     again over mobile data, and nothing said so. */
+  await page.evaluate(async j => {
+    D.mine = [{ id: 'exp1', name: 'נקודה עם תמונה', desc: '', ll: [41.2, -8.5],
+                at: '2026-09-13', photo: { w: 2, h: 2, bytes: 64, from: 'map' } }];
+    saveMine();
+    const bin = atob(j);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    await putPhoto('exp1', new Blob([u8], { type: 'image/jpeg' }));
+  }, TINY_JPEG);
+
+  const packed = await page.evaluate(async () => {
+    const pay = await exportPayload();
+    return {
+      points: pay.points.length,
+      photos: pay.photos.length,
+      layers: pay.layers.map(l => l.kind + ':' + l.code),
+      photoB64: pay.photos[0] && pay.photos[0].b64.length,
+      bytes: JSON.stringify(pay).length,
+    };
+  });
+  ok('the export carries the point', packed.points === 1);
+  ok('and the photo bytes with it, not only the record that there is one',
+     packed.photos === 1 && packed.photoB64 > 0);
+  ok('and the constraint layer that was downloaded',
+     packed.layers.length === 1 && packed.layers[0] === 'ren:' + munWithCode,
+     JSON.stringify(packed.layers));
+  /* A layer is megabytes. This is why the export is a file: an Android
+     clipboard truncates a string that size instead of refusing it. */
+  ok('which is why it is a file and not the clipboard', packed.bytes > 200000,
+     String(packed.bytes));
+
+  const back = await page.evaluate(async () => {
+    const pay = await exportPayload();
+    const text = JSON.stringify(pay);          // through the same text a file holds
+    // wipe everything the export was made from
+    D.mine = []; saveMine();
+    await delPhoto('exp1');
+    for (const k of (await allLayerKeys()) || []) await delLayerRec(k);
+    await refreshLayerHave();
+    const emptied = {
+      points: D.mine.length,
+      photo: !!(await getPhoto('exp1')),
+      layers: Object.keys(D.layerHave || {}).length,
+    };
+    const read = JSON.parse(text);
+    await importAll(read.points, read);
+    const rec = await getLayerRec('ren:' + munWithCode);
+    const e = layerEntry('ren', munWithCode);
+    return {
+      emptied: emptied,
+      points: D.mine.length,
+      name: (D.mine[0] || {}).name,
+      photo: !!(await getPhoto('exp1')),
+      hasPhotoRec: !!(D.mine[0] || {}).photo,
+      layer: rec ? { n: rec.bytes.length, sha: rec.sha256 } : null,
+      promised: { n: e.bytes, sha: e.sha256 },
+    };
+  });
+  ok('the wipe really emptied all three', back.emptied.points === 0
+     && back.emptied.photo === false && back.emptied.layers === 0,
+     JSON.stringify(back.emptied));
+  ok('importing brings the point back', back.points === 1 && back.name === 'נקודה עם תמונה');
+  ok('and its photo, as bytes and not only as a claim',
+     back.photo === true && back.hasPhotoRec === true);
+  ok('and the constraint layer, byte for byte what the manifest promises',
+     !!back.layer && back.layer.n === back.promised.n
+       && back.layer.sha === back.promised.sha, JSON.stringify(back.layer));
+
+  /* An imported boundary is a stranger's file. "Here you may not build" is not
+     a thing to take on trust: the bytes are hashed and the hash has to equal
+     what this app publishes, or the layer does not go in. */
+  const tampered = await page.evaluate(async () => {
+    const pay = await exportPayload();
+    for (const k of (await allLayerKeys()) || []) await delLayerRec(k);
+    await refreshLayerHave();
+    const bad = JSON.parse(JSON.stringify(pay));
+    // flip one base64 character: same length out, different bytes
+    const b = bad.layers[0].b64;
+    const at = Math.floor(b.length / 2);
+    bad.layers[0].b64 = b.slice(0, at) + (b[at] === 'A' ? 'B' : 'A') + b.slice(at + 1);
+    await importAll([], bad);
+    return {
+      stored: Object.keys(D.layerHave || {}).length,
+      said: document.getElementById('msgs').innerText,
+    };
+  });
+  ok('a tampered layer in an import file is refused', tampered.stored === 0);
+  ok('and the message says it was, rather than passing in silence',
+     /נדחת|נדחו/.test(tampered.said), JSON.stringify(tampered.said.slice(0, 90)));
+
+  /* The panel says what the file will weigh before it is made, because the
+     reader is the one paying for the storage. */
+  await page.evaluate(() => { D.mine = []; saveMine(); });
+  await page.evaluate(n => goMun(n), munWith);
+  await page.waitForTimeout(400);
+  await page.evaluate(() => openExport());
+  await page.waitForFunction(() => /MB|אין/.test(
+    document.getElementById('panelBody').innerText), null, { timeout: 15000 });
+  const expText = await page.evaluate(() =>
+    document.getElementById('panelBody').innerText);
+  ok('the export panel counts all three before anything is written',
+     /מקומות/.test(expText) && /תמונות/.test(expText) && /מגבלות בנייה/.test(expText),
+     JSON.stringify(expText.slice(0, 120)));
+  ok('and offers a file, not only the clipboard',
+     await page.evaluate(() => !!document.getElementById('expFile')
+       && !!document.getElementById('expClip')));
+  await page.evaluate(() => closePanel());
 
   /* 13c. the stock's shape, and the labels that say what they divide by. */
   const houseTxt = await page.evaluate(() => {

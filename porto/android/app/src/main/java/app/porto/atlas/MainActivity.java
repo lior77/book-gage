@@ -1,13 +1,17 @@
 package app.porto.atlas;
 
 import android.Manifest;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -44,6 +48,10 @@ import java.util.Map;
  *     photo worked in a browser and not in the app.
  *  4. Make the system back button walk up the app's own levels instead of
  *     closing it.
+ *  5. Write an exported file somewhere the reader can find it.  There is no
+ *     download manager behind a bare WebView: an <a download> click is
+ *     swallowed with no error and no file, which is indistinguishable from a
+ *     dead button.  Saver below is the one thing the page can call into.
  */
 public class MainActivity extends Activity {
 
@@ -134,8 +142,12 @@ public class MainActivity extends Activity {
                 try {
                     Intent pick = params.createIntent();
                     pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    // the same picker serves two inputs now, and the title over
+                    // it should say which one asked
                     startActivityForResult(
-                        Intent.createChooser(pick, getString(R.string.pick_photo)), REQ_FILE);
+                        Intent.createChooser(pick, getString(
+                            wantsImage(params) ? R.string.pick_photo : R.string.pick_file)),
+                        REQ_FILE);
                     return true;
                 } catch (Exception e) {
                     // no app on the phone can answer the intent; tell the page
@@ -165,6 +177,11 @@ public class MainActivity extends Activity {
             }
         });
 
+        // The page is the app's own asset on porto.local, and
+        // shouldOverrideUrlLoading sends every other host to the browser, so
+        // nothing but this app's own code ever reaches the bridge.
+        web.addJavascriptInterface(new Saver(), "PortoSave");
+
         if (state != null) {
             web.restoreState(state);
         } else {
@@ -173,6 +190,14 @@ public class MainActivity extends Activity {
         }
 
         askOnce();
+    }
+
+    /** Which of the page's two file inputs opened the picker. */
+    private static boolean wantsImage(WebChromeClient.FileChooserParams params) {
+        String[] want = params.getAcceptTypes();
+        if (want == null) return true;
+        for (String w : want) if (w != null && w.startsWith("image/")) return true;
+        return want.length == 0;
     }
 
     /**
@@ -291,6 +316,69 @@ public class MainActivity extends Activity {
         pendingCallback.invoke(pendingOrigin, ok, true);
         pendingCallback = null;
         pendingOrigin = null;
+    }
+
+    /**
+     * The export, written to disk.
+     *
+     * From Android 10 the file goes into the phone's real Downloads folder
+     * through MediaStore, which needs no permission and puts it where a file
+     * manager, a mail app and a cable all find it.  Before that, MediaStore
+     * has no Downloads collection and writing to the public folder would mean
+     * asking for WRITE_EXTERNAL_STORAGE — a permission over the whole card, to
+     * save one file the user asked for.  So on those versions it goes into the
+     * app's own external directory, which needs nothing, and the answer says
+     * the full path because a file the reader cannot find is not saved.
+     *
+     * The answer is a string rather than a boolean for the same reason the
+     * layer download reports which failure it was: "it did not work" sends
+     * nobody anywhere.
+     */
+    public class Saver {
+        @JavascriptInterface
+        public String save(String name, String b64) {
+            if (name == null || name.isEmpty() || name.indexOf('/') >= 0) return "err:bad name";
+            byte[] data;
+            try {
+                data = Base64.decode(b64, Base64.DEFAULT);
+            } catch (Exception e) {
+                return "err:" + e;
+            }
+            try {
+                // MediaStore.Downloads does not exist before API 29, and a
+                // reference to it inside this method would be resolved when the
+                // method runs — on an older phone that is NoClassDefFoundError,
+                // not a skipped branch.  Hence the separate method.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                    return toDownloads(name, data);
+                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (dir == null) return "err:no external storage";
+                if (!dir.isDirectory() && !dir.mkdirs()) return "err:" + dir;
+                File f = new File(dir, name);
+                try (OutputStream o = new FileOutputStream(f)) { o.write(data); }
+                return "ok:" + f.getAbsolutePath();
+            } catch (Exception e) {
+                return "err:" + e;
+            }
+        }
+    }
+
+    /** Android 10 and up: the phone's real Downloads folder, no permission. */
+    private String toDownloads(String name, byte[] data) throws IOException {
+        ContentValues v = new ContentValues();
+        v.put(MediaStore.Downloads.DISPLAY_NAME, name);
+        v.put(MediaStore.Downloads.MIME_TYPE, "application/json");
+        v.put(MediaStore.Downloads.IS_PENDING, 1);
+        Uri item = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+        if (item == null) return "err:Downloads refused the file";
+        try (OutputStream o = getContentResolver().openOutputStream(item)) {
+            if (o == null) throw new IOException("no stream");
+            o.write(data);
+        }
+        ContentValues done = new ContentValues();
+        done.put(MediaStore.Downloads.IS_PENDING, 0);
+        getContentResolver().update(item, done, null, null);
+        return "ok:Download/" + name;
     }
 
     /** An asset, served as if it came off a web server. */
