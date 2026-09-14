@@ -2946,9 +2946,40 @@ function closeNewSheet() {
 function pickPhoto() {
   const i = $('#photoIn');
   if (!i) return;
+  pickerDone();
   i.value = '';
   i.click();
 }
+
+/* ---- what the picker did, said out loud ----
+   On a phone the picker is another app: it opens, the reader chooses a photo,
+   and everything between that and this input receiving it happens where the
+   page cannot see it.  When it fails, the page is left exactly as it was —
+   which reads as an app that ignored the tap.  So the wrapper reports the
+   outcome and this says what happened.
+
+   Nothing is said on the good path: the form opening IS the answer.  Nothing
+   is said on a cancel either, because the reader knows they cancelled. */
+let pickerTimer = null;
+function pickerDone() {
+  if (pickerTimer) { clearTimeout(pickerTimer); pickerTimer = null; }
+}
+window.__portoPicker = function (what) {
+  const s = String(what || '');
+  pickerDone();
+  if (s.indexOf('cancelled') === 0) return;
+  if (s.indexOf('ok:') !== 0) {
+    mapNote(t('בוחר הקבצים לא החזיר קובץ. ') + '<span class="lat" dir="ltr">' + html(s) + '</span>', true);
+    return;
+  }
+  /* The wrapper handed the file over and the browser has to pass it to the
+     input. If that does not happen there is nothing more the page can do, but
+     it can at least name the layer that swallowed it. */
+  pickerTimer = setTimeout(() => {
+    pickerTimer = null;
+    mapNote(t('הקובץ נבחר אך לא הגיע לעמוד. ') + '<span class="lat" dir="ltr">' + html(s) + '</span>', true);
+  }, 3000);
+};
 
 function pickWay(k) {
   wpWay = k;
@@ -5141,6 +5172,7 @@ function wire() {
      They used to be delegated onto panels whose innerHTML is rebuilt, which is
      a listener that works until the moment it matters. */
   $('#photoIn').addEventListener('change', e => {
+    pickerDone();
     const files = e.target.files;
     if (files && files.length) takePhotos(files);
     e.target.value = '';
@@ -6290,4 +6322,8 @@ Object.assign(EN, {
     'Ecological restriction (REN)',
   'בשתי השכבות':
     'Inside both layers',
+  'בוחר הקבצים לא החזיר קובץ. ':
+    'The file picker returned no file. ',
+  'הקובץ נבחר אך לא הגיע לעמוד. ':
+    'The file was chosen but never reached the page. ',
 });

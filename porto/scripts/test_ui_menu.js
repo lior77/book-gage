@@ -1974,6 +1974,35 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(1500);
   ok('choosing the same file a second time still answers',
      await page.$$eval('#wpSheet input[type=text]', e => e.length) === 1);
+  /* And when the picker answers with nothing, the page says so. On a phone the
+     picker is another app and everything between choosing a photo and this
+     input receiving it happens where the page cannot see it; a failure there
+     used to leave the screen exactly as it was, which reads as an app that
+     ignored the tap. */
+  ok('the wrapper has a way to report what the picker did',
+     await page.evaluate(() => typeof window.__portoPicker === 'function'));
+  await page.evaluate(() => { hideNote(); window.__portoPicker('empty:no-uris'); });
+  await page.waitForTimeout(300);
+  ok('a picker that returns nothing is reported, not swallowed',
+     await page.evaluate(() => /no-uris/.test(document.getElementById('msgs').innerText)
+       && /לא החזיר/.test(document.getElementById('msgs').innerText)));
+  await page.evaluate(() => { hideNote(); window.__portoPicker('cancelled:0'); });
+  await page.waitForTimeout(300);
+  ok('but a cancel says nothing — the reader knows they cancelled',
+     await page.evaluate(() => document.getElementById('msgs').innerText.trim() === ''));
+  /* Handed over and then lost between the wrapper and the input: the one case
+     the page can name but not fix. */
+  await page.evaluate(() => { hideNote(); window.__portoPicker('ok:1:content'); });
+  await page.waitForTimeout(3400);
+  ok('and a file handed over but never delivered names the layer that lost it',
+     await page.evaluate(() => /לא הגיע לעמוד/.test(document.getElementById('msgs').innerText)));
+  await page.evaluate(() => { hideNote(); window.__portoPicker('ok:1:content'); });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => pickerDone());
+  await page.waitForTimeout(3400);
+  ok('while a file that does arrive is never complained about',
+     await page.evaluate(() => document.getElementById('msgs').innerText.trim() === ''));
+
   await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); if (S.wp) toggleWp(); });
   await page.waitForTimeout(400);
 

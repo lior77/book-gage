@@ -21,6 +21,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.app.Activity;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -246,6 +248,21 @@ public class MainActivity extends Activity {
                                Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_FIRST_RUN);
     }
 
+    /**
+     * Everything between a photo being chosen and the page's input receiving it
+     * happens out here, where the page cannot see it.  When it goes wrong the
+     * page is left exactly as it was — which reads as an app that ignored the
+     * tap — so the outcome is reported back and the page says what happened
+     * instead of saying nothing.
+     */
+    private void tellPage(String what) {
+        final String js = "window.__portoPicker && window.__portoPicker("
+                          + JSONObject.quote(what) + ")";
+        web.post(new Runnable() {
+            @Override public void run() { web.evaluateJavascript(js, null); }
+        });
+    }
+
     @Override
     protected void onActivityResult(int code, int result, Intent data) {
         super.onActivityResult(code, result, data);
@@ -255,7 +272,17 @@ public class MainActivity extends Activity {
         // the next tap on it does nothing.
         Uri[] picked = result == RESULT_OK
             ? WebChromeClient.FileChooserParams.parseResult(result, data) : null;
-        pendingFiles.onReceiveValue(picked == null ? null : unredacted(picked));
+        if (result != RESULT_OK) {
+            tellPage("cancelled:" + result);
+        } else if (picked == null || picked.length == 0) {
+            tellPage("empty:" + (data == null ? "no-intent" : "no-uris"));
+        }
+        Uri[] out = picked == null ? null : unredacted(picked);
+        if (out != null && out.length > 0) {
+            tellPage("ok:" + out.length + ":"
+                     + (out[0] == null ? "null" : String.valueOf(out[0].getScheme())));
+        }
+        pendingFiles.onReceiveValue(out);
         pendingFiles = null;
     }
 
