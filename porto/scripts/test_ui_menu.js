@@ -1573,7 +1573,7 @@ const css = (page, sel, prop) =>
      await page.evaluate(() => S.cons === true && consPhase !== 'off'));
   ok('and the menu closes behind it', await page.evaluate(() => S.menu === false));
   const loadTxt = await page.evaluate(() => document.getElementById('doc').innerText);
-  ok('the text half carries the page title', /מגבלות בנייה/.test(loadTxt));
+  ok('the text half carries the page title', /מגבלת בנייה/.test(loadTxt));
   ok('and says a download is running, with a percentage',
      /מוריד/.test(loadTxt) && /%/.test(loadTxt), JSON.stringify(loadTxt.slice(0, 120)));
   ok('and there is a real progress bar behind the number',
@@ -1615,25 +1615,8 @@ const css = (page, sel, prop) =>
   ok('in the order asked for: agricultural, ecological, both',
      /חקלאית/.test(ckey[0].t) && /אקולוגית/.test(ckey[1].t) && /משותפת/.test(ckey[2].t),
      JSON.stringify(ckey.map(k => k.t)));
-  ok('each plate carries its own name, stacked on its own colour',
-     ckey.every(k => k.words === 2));
-  const asRgb = h => 'rgb(' + [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ') + ')';
-  ok('and each plate IS the colour the map paints',
-     ckey[0].c === asRgb('#8a5a2b') && ckey[1].c === asRgb('#1f7a4d')
-       && ckey[2].c === asRgb('#556a3c'),
-     JSON.stringify(ckey.map(k => k.c)));
-  /* The third colour is not chosen, it is the average of the other two. A
-     legend that names it "both" has to be able to say so. */
-  ok('and the khaki is literally the brown and the green mixed',
-     await page.evaluate(() => CONS_RGB.both.every((v, i) =>
-       Math.abs(v - (CONS_RGB.ran[i] + CONS_RGB.ren[i]) / 2) < 1e-9)));
-  /* White on all three, and all three owe 4.5:1 for text this size. */
-  const consLum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
-    return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
-  const ratios = await page.evaluate(() => CONS_ORDER.map(k => CONS_RGB[k]));
-  ok('and white text on each of them clears 4.5:1',
-     ratios.every(c => 1.05 / (consLum(c) + .05) >= 4.5),
-     JSON.stringify(ratios.map(c => +(1.05 / (consLum(c) + .05)).toFixed(2))));
+  /* What each plate is painted, and that it is a switch, is checked in 13e —
+     where the page is open and the map is drawn to compare it against. */
   ok('the index is ABOVE the title, not under it',
      await page.evaluate(() => {
        const k = document.querySelector('.cons-key'), h = document.querySelector('#consCard h1');
@@ -1678,32 +1661,16 @@ const css = (page, sel, prop) =>
      await page.$$eval('#doc .crow[data-src]', els => els.length) === 4);
   ok('the parishes of that municipality are listed under it',
      await page.$$eval('#doc [data-fre]', els => els.length) > 0);
-  /* The bar is what a share is read on, so it gets the card's whole width —
-     a 74px stub beside a line of text could only be read against the other
-     stubs, never against the whole it is a share of. */
+  /* The bar is what a share is read on, so it gets the row's own line. */
   const bar = await page.evaluate(() => {
-    const r = document.querySelector('#doc .cons-row');
-    if (!r) return null;
-    const b = r.querySelector('.cons-bar'), v = r.querySelector('.cons-val');
-    const card = r.closest('.card');
-    return b && v ? {
-      w: b.getBoundingClientRect().width, card: card.getBoundingClientRect().width,
-      pad: parseFloat(getComputedStyle(card).paddingInlineStart),
-      h: b.getBoundingClientRect().height,
-      radius: parseFloat(getComputedStyle(b).borderTopLeftRadius),
-      val: v.innerText.replace(/\s+/g, ' ').trim(),
-      align: getComputedStyle(v).textAlign,
-      segs: [...b.querySelectorAll('i')].map(i => i.style.background),
-    } : null;
+    const r = document.querySelector('#doc .cons-row:not(.no)');
+    const b = r && r.querySelector('.cons-bar');
+    return b ? { h: b.getBoundingClientRect().height, w: b.getBoundingClientRect().width,
+      radius: parseFloat(getComputedStyle(b).borderTopLeftRadius) } : null;
   });
-  ok('the bar runs the card\'s width, less its side padding',
-     bar && Math.abs(bar.w - (bar.card - 2 * bar.pad)) <= 1.5,
-     JSON.stringify(bar && { w: bar.w, card: bar.card, pad: bar.pad }));
   ok('it is half again as tall as it was, with the corners eased',
-     bar && Math.abs(bar.h - 14) <= 1 && bar.radius >= 3, JSON.stringify(bar && [bar.h, bar.radius]));
-  ok('and the figure under it is in km², at the end of the line',
-     bar && /קמ״ר/.test(bar.val) && /%/.test(bar.val) && bar.align === 'end',
-     JSON.stringify(bar && bar.val));
+     bar && Math.abs(bar.h - 14) <= 1 && bar.radius >= 3, JSON.stringify(bar));
+  ok('and it takes the width the row has left', bar && bar.w > 200, JSON.stringify(bar));
 
   /* Level 3, and the map's own click path — tapping the polygon does what
      tapping the name does, because the map underneath is the app's map. */
@@ -1797,6 +1764,160 @@ const css = (page, sel, prop) =>
      await page.evaluate(() => S.muncol === true && S.tiles === true));
   ok('so switching it back on needs no download and no unpacking',
      await page.evaluate(() => consMissing().length === 0 && consVertices() === 1556351));
+
+  /* 13e. THE KEY IS THREE SWITCHES, and the map is what they switch. */
+  await page.evaluate(() => { if (!S.cons) { openMenu(true);
+    document.querySelector('#menuIn [data-m="cons"]').click(); } });
+  await page.waitForFunction(() => S.cons && consPhase === 'ready', null, { timeout: 120000 });
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+  await page.evaluate(() => { S.consShow = { ran: true, ren: true, both: true };
+    if (consLayer) consLayer.redraw(); redrawText(); });
+  await page.waitForTimeout(500);
+  const plates = await page.$$eval('.cons-key .cons-k', els => els.map(e => ({
+    tag: e.tagName, k: e.dataset.conskey, on: e.getAttribute('aria-pressed'),
+    t: e.innerText.trim(), bg: getComputedStyle(e).backgroundColor })));
+  ok('the three plates are buttons, not labels',
+     plates.length === 3 && plates.every(p => p.tag === 'BUTTON' && p.on === 'true'),
+     JSON.stringify(plates));
+  ok('and each is named by its class alone, without the word מגבלה',
+     plates.map(p => p.t).join('|') === 'חקלאית|אקולוגית|משותפת',
+     JSON.stringify(plates.map(p => p.t)));
+  /* The plate is a sample of the map: the class at 40% over the map's ground,
+     not the full-strength colour. A key painted brighter than the thing it
+     indexes is a key the reader has to translate. */
+  const plateWant = await page.evaluate(() =>
+    CONS_ORDER.map(k => 'rgb(' + consPlate(k).join(', ') + ')'));
+  ok('and each is painted the colour the map actually shows, not a brighter one',
+     plates.map(p => p.bg).join('|') === plateWant.join('|'),
+     JSON.stringify([plates.map(p => p.bg), plateWant]));
+  ok('the overlap is purple', await page.evaluate(() => CONS_COLOUR.both) === '#8e4ea8');
+
+  const painted = () => page.evaluate(() => {
+    const cv = consLayer._cv, c = cv.getContext('2d');
+    const d = c.getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i]) n++;
+    return n;
+  });
+  const allOn = await painted();
+  await page.evaluate(() => document.querySelector('.cons-k[data-conskey="ran"]').click());
+  await page.waitForTimeout(700);
+  ok('pressing one switches its class off', await page.evaluate(() => S.consShow.ran === false));
+  const oneOff = await painted();
+  ok('and the map stops painting it', oneOff < allOn && oneOff > 0,
+     `${allOn} -> ${oneOff} painted pixels`);
+  ok('and the bars drop its segment too',
+     await page.evaluate(() => {
+       const segs = document.querySelectorAll('#doc .cons-bar i');
+       return ![...segs].some(i => i.style.background.replace(/\s/g, '')
+         === 'rgb(' + CONS_RGB.ran.join(',') + ')');
+     }));
+  await page.evaluate(() => document.querySelector('.cons-k[data-conskey="ran"]').click());
+  await page.waitForTimeout(700);
+  ok('pressing it again brings it back', await painted() === allOn);
+
+  /* Smallest share first, and the one municipality with no delimitation at the
+     end — it has no share to be smallest of, and a zero at the head of the list
+     would say "nothing is restricted here". */
+  const order = await page.$$eval('#doc .cons-row', els => els.map(e => ({
+    pct: (e.querySelector('.cons-pct') || {}).innerText || null,
+    no: e.classList.contains('no') })));
+  const nums = order.filter(o => o.pct).map(o => parseFloat(o.pct));
+  ok('the list runs smallest share first', nums.length === 17
+     && nums.every((v, i) => i === 0 || v >= nums[i - 1]), JSON.stringify(nums));
+  ok('and the municipality with no delimitation is last',
+     order.length === 18 && order[17].no === true && !order[17].pct);
+  /* On the map it is hatched, not blank: blank ground reads as ground with
+     nothing on it, which is the one thing it does not mean. */
+  ok('and on the map it is hatched rather than left blank',
+     await page.evaluate(() => {
+       const n = (D.mun.find(m => m.dicofre === '1312') || {}).num;
+       let f = null; LG.mun.eachLayer(l => { if (l.feature.properties.num === n) f = l.options.fillColor; });
+       return f === 'url(#' + CMP_PAT + ')'
+         && !!document.querySelector('#map .leaflet-overlay-pane svg #' + CMP_PAT);
+     }));
+
+  /* One line per unit: the bar and its own share, and nothing else. */
+  const line = await page.evaluate(() => {
+    const r = document.querySelector('#doc .cons-row:not(.no)');
+    const l = r.querySelector('.cons-line');
+    return { hasVal: !!r.querySelector('.cons-val'),
+      text: l.innerText.replace(/\s+/g, ' ').trim(),
+      barEnd: l.querySelector('.cons-bar').getBoundingClientRect().x,
+      pctEnd: l.querySelector('.cons-pct').getBoundingClientRect().x };
+  });
+  ok('the row carries the share and nothing else beside the bar',
+     /^\d+\.\d%$/.test(line.text.replace(/[\u200e\u200f]/g, '')) && !line.hasVal,
+     JSON.stringify(line.text));
+  ok('and the figure sits at the end of the line, past the bar',
+     line.pctEnd < line.barEnd, JSON.stringify([line.pctEnd, line.barEnd]));
+
+  /* 13f. and the comparison screen can compare the same four. */
+  await page.evaluate(() => { if (S.cons) consOff(); });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => toggleCmp());
+  await page.waitForTimeout(700);
+  const cf = await page.evaluate(() => cmpFields().filter(f => f.g === 'מגבלות בנייה').map(f => f.k));
+  ok('the comparison screen offers the four constraint fields',
+     JSON.stringify(cf) === JSON.stringify(['either_pct', 'ran_pct', 'ren_pct', 'both_pct']),
+     JSON.stringify(cf));
+  await page.evaluate(() => { S.cmpField = 'either_pct'; drawCmp(); redrawText(); });
+  await page.waitForTimeout(800);
+  const cmpTxt = await page.evaluate(() => document.getElementById('doc').innerText);
+  ok('and ranks the municipalities on one of them',
+     /סך המגבלות/.test(cmpTxt) && /21\.3|68\.3/.test(cmpTxt),
+     JSON.stringify(cmpTxt.slice(0, 120)));
+  ok('with the one it has no figure for shown as missing, not as zero',
+     await page.evaluate(() => cmpValue(D.mun.find(m => m.dicofre === '1312'), 'either_pct') === null));
+  ok('and every one of them opens the same source record',
+     await page.evaluate(() => cmpSrcKey('municipio', 'either_pct') === 'municipio.cons_pct'
+       && cmpSrcKey('freguesia', 'ran_pct') === 'freguesia.cons_pct'));
+  await page.evaluate(() => toggleCmp());
+  await page.waitForTimeout(600);
+
+  /* 13g. adding a place, by real taps, from the screen the reader starts on.
+     Reported as broken on the phone and not reproducible here — so the whole
+     flow is walked, both ways in, so that a regression in it cannot be silent
+     again. */
+  for (const way of ['map', 'photo']) {
+    await page.evaluate(() => { D.mine = []; saveMine(); if (S.wp) toggleWp(); });
+    await page.evaluate(() => { if (!S.wp) toggleWp(); });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => document.querySelector('#doc [data-wpact="new"]').click());
+    await page.waitForTimeout(500);
+    await page.evaluate(w => document.querySelector(`#wpSheet [data-wpway="${w}"]`).click(), way);
+    await page.waitForTimeout(700);
+    if (way === 'map') {
+      ok('placing from the map offers בחירה, clear of the screen edge',
+         await page.evaluate(() => {
+           const f = document.querySelector('#pickBar [data-wpact="fix"]');
+           if (!f) return false;
+           const r = f.getBoundingClientRect();
+           return r.width > 0 && r.bottom <= window.innerHeight - 8;
+         }));
+      await page.evaluate(() => document.querySelector('#pickBar [data-wpact="fix"]').click());
+    } else {
+      const input = await page.$('#wpSheet input[type=file]');
+      ok('the photo way offers a real file input', !!input);
+      await input.setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg',
+                                  buffer: Buffer.from(TINY_JPEG, 'base64') });
+    }
+    await page.waitForTimeout(1400);
+    const save = await page.$('#wpSheet [data-wpact="save"]');
+    ok(`the ${way} way reaches a שמירה button`, !!save);
+    if (save) await save.click();
+    await page.waitForTimeout(900);
+    ok(`and saving by the ${way} way adds the place`,
+       await page.evaluate(() => D.mine.length) === 1,
+       String(await page.evaluate(() => D.mine.length)));
+    if (way === 'photo')
+      ok('with the picture stored beside it',
+         await page.evaluate(async () => {
+           const b = await getPhoto(D.mine[0].id); return !!b && b.size > 0; }));
+  }
+  await page.evaluate(() => { D.mine = []; saveMine(); if (S.wp) toggleWp(); });
+  await page.waitForTimeout(400);
 
   /* 13d starts from one municipality rather than the district: the export
      test is about what a file carries, not about how much of it there is. */

@@ -118,6 +118,8 @@ const S = {
   // at once.  The switch is display and the download is storage, and they are
   // deliberately not the same thing — switching this off deletes nothing.
   cons: false,
+  // which of the three classes the key is showing; a switch on the page, saved
+  consShow: { ran: true, ren: true, both: true },
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
   mine: true,          // draw the points the user added
@@ -896,13 +898,22 @@ function toggleLocate() {
 function drawDistrict() {
   clearMap();
   LG.mun = L.geoJSON(D.bM, {
-    style: ft => ({
-      // no stroke: every boundary on the map is drawn by drawLines()
-      weight: 0, opacity: .9,
-      fillColor: (D.munByNum.get(ft.properties.num) || {}).fill || '#ddd',
-      // solid, and a switch that empties the fill without losing the outline
-      fillOpacity: S.muncol ? 1 : 0,
-    }),
+    style: ft => {
+      const m = D.munByNum.get(ft.properties.num) || {};
+      /* On the constraints page a municipality DGT publishes no delimitation
+         for is hatched, not left blank: blank ground there reads as ground
+         with nothing on it, which is the one thing it does not mean. The hatch
+         is the same one the comparison screen draws for a missing value. */
+      if (S.cons && consNone(m)) return { weight: 0, fillOpacity: 1,
+        fillColor: 'url(#' + CMP_PAT + ')' };
+      return {
+        // no stroke: every boundary on the map is drawn by drawLines()
+        weight: 0, opacity: .9,
+        fillColor: m.fill || '#ddd',
+        // solid, and a switch that empties the fill without losing the outline
+        fillOpacity: S.muncol ? 1 : 0,
+      };
+    },
     onEachFeature: (ft, l) => {
       const m = D.munByNum.get(ft.properties.num);
       l.on('click', () => {
@@ -914,6 +925,9 @@ function drawDistrict() {
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
+  // the hatch a no-delimitation unit is filled with lives in the overlay pane's
+  // <defs>, which Leaflet rebuilds with the layer — so it is made after it
+  if (S.cons) cmpPattern();
 
   drawLines();
 
@@ -1055,6 +1069,8 @@ function drawMun(num) {
   LG.fre = L.geoJSON(freFeatures(num), {
     style: ft => {
       const f = freOfFeature(num, ft.properties);
+      if (S.cons && consNone(f)) return { weight: 0, fillOpacity: 1,
+        fillColor: 'url(#' + CMP_PAT + ')' };
       return { weight: 0, opacity: .95,
         fillColor: (f && f.colour) || colourOf.get(ft.properties.num) || '#ddd',
         fillOpacity: S.muncol ? .78 : 0 };
@@ -1068,6 +1084,7 @@ function drawMun(num) {
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
+  if (S.cons) cmpPattern();
 
   drawLines();
 
@@ -1365,11 +1382,35 @@ async function layerGeoJSON(kind, code) {
 const CONS_ORDER = ['ran', 'ren', 'both'];
 const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const rgb2hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
-const CONS_RGB = { ran: hex2rgb('#8a5a2b'), ren: hex2rgb('#1f7a4d') };
-/* The third colour is not chosen, it is computed: ground inside both reserves
-   is painted the average of the two, channel by channel, so the khaki IS the
-   brown and the green and cannot drift from either. */
-CONS_RGB.both = CONS_RGB.ran.map((v, i) => (v + CONS_RGB.ren[i]) / 2);
+/* Three classes, three hues.  The overlap is a class of its own and gets a
+   colour of its own — a blend of the other two reads as "somewhere between
+   them", which is the one thing ground inside BOTH reserves is not. */
+const CONS_RGB = {
+  ran: hex2rgb('#8a5a2b'),    // agricultural — brown
+  ren: hex2rgb('#1f7a4d'),    // ecological — green
+  both: hex2rgb('#8e4ea8'),   // inside both — purple
+};
+
+/* What the reader sees on the map is the colour at 40% over the map's own
+   ground, so that is what the key's plate is painted: the plate is a sample of
+   the map, not a brighter relative of it.  Composited here rather than written
+   into the stylesheet, because the ground moves with the theme. */
+function consGround() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  return /^#[0-9a-f]{6}$/i.test(v) ? hex2rgb(v) : [238, 241, 245];
+}
+function consPlate(kind) {
+  const g = consGround(), c = CONS_RGB[kind];
+  return c.map((v, i) => Math.round(v * CONS_FILL + g[i] * (1 - CONS_FILL)));
+}
+// black or white on it, by the plate's own luminance — the plates are pale in
+// the light theme and dark in the dark one, and the ink has to follow
+function consInk(rgb) {
+  const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  const L = .2126 * f(rgb[0]) + .7152 * f(rgb[1]) + .0722 * f(rgb[2]);
+  return (L + .05) / .05 >= 1.05 / (L + .05) ? '#141b26' : '#ffffff';
+}
+const consShown = k => !S.consShow || S.consShow[k] !== false;
 const CONS_COLOUR = {};
 CONS_ORDER.forEach(k => { CONS_COLOUR[k] = rgb2hex(CONS_RGB[k]); });
 const LAYER_STYLE = {
@@ -1509,15 +1550,23 @@ const ConsLayer = L.Layer ? L.Layer.extend({
     mc.fillStyle = '#00ff00';
     consData.ran.forEach(c => this._chunk(mc, c, k, ox, oy, w, h));
 
+    /* Both channels are always painted, even when a class is switched off:
+       the mask is a membership test, and "inside both" cannot be decided
+       without the channel of a layer the reader has hidden.  What the switch
+       drops is the pixel, after its class is known. */
     const img = mc.getImageData(0, 0, w, h);
     const d = img.data;
     const R = CONS_RGB.ren, A = CONS_RGB.ran, B = CONS_RGB.both;
+    const onR = consShown('ren'), onA = consShown('ran'), onB = consShown('both');
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], g = d[i + 1];
       // the antialiased edge keeps its coverage, so the line stays a line
       const a = r > g ? r : g;
       if (!a) { d[i + 3] = 0; continue; }
-      const c = (r > 63 && g > 63) ? B : (r > g ? R : A);
+      const both = r > 63 && g > 63;
+      const on = both ? onB : (r > g ? onR : onA);
+      if (!on) { d[i + 3] = 0; continue; }
+      const c = both ? B : (r > g ? R : A);
       d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = a;
     }
     mc.globalCompositeOperation = 'source-over';
@@ -1807,12 +1856,12 @@ function consRestore() {
 /* The bar moves on tenths of a percent.  fetchLayer reports every chunk, which
    for 33 files is a couple of thousand callbacks, and rebuilding the document
    on each of them spends the phone on a number that did not change. */
-let consShown = -1;
+let consPainted = -1;
 function consPaint(force) {
   if (!S.cons) return;
   const step = Math.round(consProg.pct * 10);
-  if (!force && step === consShown) return;
-  consShown = step;
+  if (!force && step === consPainted) return;
+  consPainted = step;
   const doc = $('#doc');
   if (doc) doc.innerHTML = renderCons();
 }
@@ -1925,7 +1974,7 @@ async function toggleCons() {
    parishes, level 3 the parish.  The map underneath is the app's own map at
    the same level, so tapping a municipality on it does what tapping its name
    does. */
-const CONS_HE = { ran: 'מגבלה חקלאית', ren: 'מגבלה אקולוגית', both: 'מגבלה משותפת' };
+const CONS_HE = { ran: 'חקלאית', ren: 'אקולוגית', both: 'משותפת' };
 const CONS_FULL = {
   ran: 'עתודת הקרקע החקלאית הלאומית (RAN)',
   ren: 'רשת העתודה האקולוגית הלאומית (REN)',
@@ -1934,15 +1983,20 @@ const CONS_FULL = {
 let consPhase = 'off';        // off | load | unpack | ready
 let consProg = { pct: 0, at: 0, of: 0, mb: 0 };
 
-/* The colour index, one line above the title: three plates, each carrying its
-   own name on its own colour, so the swatch and the word cannot be read apart.
-   The words stack — two lines, centred — because the plates are square-ish and
-   a single line of Hebrew would set the row's width instead of its colour. */
+/* The colour index, one line above the title, and each plate is a switch: the
+   class it names comes off the map and out of the bars when it is pressed.
+   The plate is painted the colour the MAP shows — the class at 40% over the
+   map's ground — so the key is a sample of the thing it indexes and not a
+   brighter cousin of it. */
 function consKeyLine() {
-  return `<div class="cons-key">${CONS_ORDER.map(k =>
-    `<span class="cons-k" style="background:${CONS_COLOUR[k]}">${
-      t(CONS_HE[k]).split(/\s+/).map(w => `<i>${html(w)}</i>`).join('')}</span>`
-  ).join('')}</div>`;
+  return `<div class="cons-key">${CONS_ORDER.map(k => {
+    const on = consShown(k);
+    const rgb = consPlate(k);
+    const bg = 'rgb(' + rgb.join(',') + ')';
+    return `<button class="cons-k" type="button" data-conskey="${k}" aria-pressed="${on}"
+      style="${on ? `background:${bg};color:${consInk(rgb)};border-color:${bg}`
+                  : `border-color:${bg}`}">${html(t(CONS_HE[k]))}</button>`;
+  }).join('')}</div>`;
 }
 
 /* A share of the unit, drawn as the three classes side by side: RAN alone,
@@ -1954,12 +2008,26 @@ function consBar(c) {
   const both = c.both_pct || 0;
   const ranOnly = (c.ran_pct || 0) - both;
   const renOnly = (c.ren_pct || 0) - both;
-  const seg = (v, k) => v > 0
+  const seg = (v, k) => v > 0 && consShown(k)
     ? `<i style="width:${v.toFixed(2)}%;background:${CONS_COLOUR[k]}"></i>` : '';
   return `<span class="cons-bar">${seg(ranOnly, 'ran')}${seg(both, 'both')}${seg(renOnly, 'ren')}</span>`;
 }
 
 const consOf = o => (o && o.cons) || null;
+// no delimitation at all — not a zero, and not a blank patch on the map
+const consNone = o => !o || !o.cons || o.cons.either_pct === undefined;
+/* Smallest share first, and a unit DGT publishes no delimitation for goes to
+   the end — it has no share to be smallest or largest of, and dropping it in at
+   zero would put "nothing is restricted here" at the head of the list. */
+function consSort(rows) {
+  return rows.slice().sort((a, b) => {
+    const x = (consOf(a) || {}).either_pct, y = (consOf(b) || {}).either_pct;
+    if (x === undefined && y === undefined) return 0;
+    if (x === undefined) return 1;
+    if (y === undefined) return -1;
+    return x - y;
+  });
+}
 const consSrc = () => S.level === 'district' || S.level === 'mun'
   ? 'municipio.cons_pct' : 'freguesia.cons_pct';
 
@@ -2005,24 +2073,22 @@ function consProgHtml() {
 function renderCons() {
   const ready = consPhase === 'ready';
   let body = '';
-  let title = t('מגבלות בנייה');
+  let title = t('מגבלת בנייה חקלאית ואקולוגית');
   let sub = '';
 
   if (!ready) {
     body = consProgHtml();
   } else if (S.level === 'district') {
-    sub = t('שתי שכבות שקובעות איפה הבנייה מוגבלת: עתודת הקרקע החקלאית הלאומית ורשת העתודה האקולוגית הלאומית. הן חופפות זו לזו, ולכן שני השיעורים אינם מתחברים — ״סך הכול״ הוא האיחוד.');
+    sub = t('שתי שכבות שקובעות איפה הבנייה מוגבלת בשל עתודת הקרקע החקלאית הלאומית ורשת העתודה האקולוגית הלאומית. הן חופפות זו לזו, ולכן שני השיעורים אינם מתחברים — ״סך הכול״ הוא האיחוד.');
     body = `<div class="grp">${t('18 העיריות — לפי שיעור השטח המוגבל')}</div>
-      <div class="rows">${D.mun.slice()
-        .sort((a, b) => ((consOf(b) || {}).either_pct || -1) - ((consOf(a) || {}).either_pct || -1))
+      <div class="rows">${consSort(D.mun)
         .map(m => consUnitRow(m, 'mun', m.num)).join('')}</div>`;
   } else if (S.level === 'mun') {
     const m = D.munByNum.get(S.mun);
     title = nmPair(m, m.en);
     body = consNumbers(m, 'municipio.cons_pct') +
       `<div class="grp">${t('הרובעים')}</div>
-       <div class="rows">${(D.freByMun.get(S.mun) || []).slice()
-         .sort((a, b) => ((consOf(b) || {}).either_pct || -1) - ((consOf(a) || {}).either_pct || -1))
+       <div class="rows">${consSort(D.freByMun.get(S.mun) || [])
          .map(f => consUnitRow(f, 'fre', D.freKey(f))).join('')}</div>`;
   } else {
     const f = D.freByKey.get(S.zone);
@@ -2054,11 +2120,10 @@ function consUnitRow(o, kind, id) {
       <span class="row-t">${nmPair(o, o.en)}</span>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
     </span>
-    ${has ? consBar(c) : ''}
-    <span class="cons-val">${has
-      ? '<span class="num">' + nf(c.either_pct, 1) + '</span>% ' + t('מתוך') +
-        ' <span class="num">' + nf(c.area_ha / 100, 1) + '</span> ' + t('קמ״ר')
-      : miss() + ' — ' + t('אין תיחום מפורסם')}</span>
+    ${has
+      ? `<span class="cons-line">${consBar(c)}<span class="cons-pct"><span class="num">${
+          nf(c.either_pct, 1)}</span>%</span></span>`
+      : `<span class="cons-val">${miss()} — ${t('אין תיחום מפורסם')}</span>`}
   </button>`;
 }
 
@@ -3893,14 +3958,27 @@ const CMP_ALL = [
      reading the ramp the same way in all of them. */
   { g: 'ביטחון', k: 'crimes_per_1000', he: 'עבירות רשומות', unit: 'לאלף',
     dec: 1, only: 'municipio' },
+  /* REN and RAN overlap, so the two shares must never be added: 'סך הכול' is
+     the union and the overlap has a field of its own saying how much of it
+     there is. Four fields, and the fourth is not the sum of the first two. */
+  { g: 'מגבלות בנייה', k: 'either_pct', he: 'סך המגבלות, בקיזוז החפיפה', unit: '%', dec: 1 },
+  { g: 'מגבלות בנייה', k: 'ran_pct', he: 'מגבלה חקלאית (RAN)', unit: '%', dec: 1 },
+  { g: 'מגבלות בנייה', k: 'ren_pct', he: 'מגבלה אקולוגית (REN)', unit: '%', dec: 1 },
+  { g: 'מגבלות בנייה', k: 'both_pct', he: 'בשתי השכבות', unit: '%', dec: 1 },
   { g: 'שטח ומרחק', k: 'area_km2', he: 'שטח', unit: 'קמ״ר', dec: 1 },
   { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי מפורטו', unit: 'ק״מ', dec: 1,
     only: 'municipio' },
 ];
 
-const cmpSrcKey = (lvl, k) => lvl + '.' + (CMP_HOUSING.has(k) ? 'housing' : k);
+/* Three places a comparable number can live on a unit: on the record itself,
+   inside `housing`, or inside `cons`. The source record each maps to differs
+   with it, and one table decides both so they cannot drift apart. */
+const CMP_CONS = new Set(['ran_pct', 'ren_pct', 'both_pct', 'either_pct']);
+const cmpSrcKey = (lvl, k) => lvl + '.' +
+  (CMP_HOUSING.has(k) ? 'housing' : CMP_CONS.has(k) ? 'cons_pct' : k);
 const cmpValue = (o, k) => {
-  const v = CMP_HOUSING.has(k) ? (o.housing || {})[k] : o[k];
+  const v = CMP_HOUSING.has(k) ? (o.housing || {})[k]
+          : CMP_CONS.has(k) ? (o.cons || {})[k] : o[k];
   return v === undefined ? null : v;
 };
 
@@ -4738,7 +4816,8 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
-      letters: S.letters, mine: S.mine, water: S.water, cons: S.cons, rev: PREF_REV,
+      letters: S.letters, mine: S.mine, water: S.water, cons: S.cons,
+      consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, wpList: S.wpList,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
@@ -4768,6 +4847,8 @@ function restore() {
     if (o.lang === 'he' || o.lang === 'en') S.lang = o.lang;
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
     if (typeof o.cons === 'boolean') S.cons = o.cons;
+    if (o.consShow && typeof o.consShow === 'object')
+      CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
@@ -5124,6 +5205,14 @@ function wire() {
     }
     const layDel = e.target.closest('[data-layer-del]');
     if (layDel) { tapLayerDel(layDel.dataset.layerDel); return; }
+    const ckey = e.target.closest('[data-conskey]');
+    if (ckey) {
+      const k = ckey.dataset.conskey;
+      S.consShow[k] = !consShown(k);
+      if (consLayer) consLayer.redraw();
+      save(); redrawText();
+      return;
+    }
     const cons = e.target.closest('[data-cons]');
     if (cons) { if (cons.dataset.cons === 'cancel') consOff(); return; }
     const lay = e.target.closest('[data-layer]');
@@ -6166,10 +6255,22 @@ Object.assign(EN, {
     'Each municipality has its own delimitation, its own law and its own reference year. Tapping a number opens the full source record.',
   '<button class="now" data-go="district">מחוז פורטו</button>':
     '<button class="now" data-go="district">Porto District</button>',
-  'מגבלה חקלאית':
-    'Agricultural restriction',
-  'מגבלה אקולוגית':
-    'Ecological restriction',
-  'מגבלה משותפת':
-    'Both restrictions',
+  'חקלאית':
+    'Agricultural',
+  'אקולוגית':
+    'Ecological',
+  'משותפת':
+    'Both',
+  'מגבלת בנייה חקלאית ואקולוגית':
+    'Agricultural and ecological building restrictions',
+  'שתי שכבות שקובעות איפה הבנייה מוגבלת בשל עתודת הקרקע החקלאית הלאומית ורשת העתודה האקולוגית הלאומית. הן חופפות זו לזו, ולכן שני השיעורים אינם מתחברים — ״סך הכול״ הוא האיחוד.':
+    'Two layers that decide where building is restricted on account of the National Agricultural Reserve and the National Ecological Reserve. They overlap each other, so the two shares do not add up — "total" is the union.',
+  'סך המגבלות, בקיזוז החפיפה':
+    'Total restricted, net of the overlap',
+  'מגבלה חקלאית (RAN)':
+    'Agricultural restriction (RAN)',
+  'מגבלה אקולוגית (REN)':
+    'Ecological restriction (REN)',
+  'בשתי השכבות':
+    'Inside both layers',
 });

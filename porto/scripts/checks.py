@@ -467,6 +467,11 @@ def main():
         house = set(re.findall(r"'([a-z0-9_]+)'",
                                re.search(r"CMP_HOUSING = new Set\(\[(.*?)\]\)",
                                          app, re.S).group(1)))
+        # a third nest, and the same rule: the field's source record is the
+        # block's, not one per key
+        cons_set = set(re.findall(r"'([a-z0-9_]+)'",
+                                  re.search(r"CMP_CONS = new Set\(\[(.*?)\]\)",
+                                            app, re.S).group(1)))
         n_cmp = 0
         for m in re.finditer(r"\{ g: '[^']*', k: '([a-z0-9_]+)'(.*?)\}", block.group(1), re.S):
             key, rest = m.group(1), m.group(2)
@@ -474,7 +479,8 @@ def main():
             for level in ("municipio", "freguesia"):
                 if only and only.group(1) != level:
                     continue
-                skey = "%s.%s" % (level, "housing" if key in house else key)
+                skey = "%s.%s" % (level, "housing" if key in house
+                                  else "cons_pct" if key in cons_set else key)
                 if skey not in sources["fields"]:
                     fail("the comparison screen offers %s at %s, and %s has no "
                          "source record" % (key, level, skey))

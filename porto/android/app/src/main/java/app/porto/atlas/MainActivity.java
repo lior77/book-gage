@@ -139,22 +139,37 @@ public class MainActivity extends Activity {
                                              FileChooserParams params) {
                 if (pendingFiles != null) pendingFiles.onReceiveValue(null);
                 pendingFiles = cb;
+                // Naming the chooser is a nicety; it must never be able to
+                // take the picker down with it, because a picker that does not
+                // open is a file input that does nothing when tapped and says
+                // nothing about why.
+                boolean image = true;
+                try { image = wantsImage(params); } catch (Exception ignored) { }
+                int title = image ? R.string.pick_photo : R.string.pick_file;
                 try {
                     Intent pick = params.createIntent();
                     pick.addCategory(Intent.CATEGORY_OPENABLE);
-                    // the same picker serves two inputs now, and the title over
-                    // it should say which one asked
-                    startActivityForResult(
-                        Intent.createChooser(pick, getString(
-                            wantsImage(params) ? R.string.pick_photo : R.string.pick_file)),
-                        REQ_FILE);
+                    startActivityForResult(Intent.createChooser(pick, getString(title)),
+                                           REQ_FILE);
                     return true;
                 } catch (Exception e) {
-                    // no app on the phone can answer the intent; tell the page
-                    // nothing was chosen rather than leaving it waiting forever
-                    pendingFiles = null;
-                    cb.onReceiveValue(null);
-                    return false;
+                    // createIntent() can hand back something no activity on this
+                    // phone will answer. Ask for the plainest thing that could
+                    // work before giving up on the input altogether.
+                    try {
+                        Intent plain = new Intent(Intent.ACTION_GET_CONTENT);
+                        plain.addCategory(Intent.CATEGORY_OPENABLE);
+                        plain.setType(image ? "image/*" : "*/*");
+                        startActivityForResult(Intent.createChooser(plain, getString(title)),
+                                               REQ_FILE);
+                        return true;
+                    } catch (Exception e2) {
+                        // nothing on the phone can answer either; tell the page
+                        // nothing was chosen rather than leaving it waiting
+                        pendingFiles = null;
+                        cb.onReceiveValue(null);
+                        return false;
+                    }
                 }
             }
 

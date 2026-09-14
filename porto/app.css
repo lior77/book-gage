@@ -552,7 +552,12 @@ body[data-view="text"] .map-only{display:none}
 #mineDesc{line-height:1.5; min-height:calc(2 * 1.5em + 14px); resize:none; overflow-y:auto}
 
 /* Two buttons over the map while a place is being chosen on it. */
-.pick-bar{position:absolute; z-index:700; inset-block-end:calc(var(--mapy) + 18px);
+/* 18px clear of the map's bottom, plus whatever the device keeps for itself.
+   Without the inset these two buttons — the only way to finish placing a point
+   — sit under a gesture bar on a phone that draws edge to edge, and the flow
+   cannot be completed at all. */
+.pick-bar{position:absolute; z-index:700;
+      inset-block-end:calc(var(--mapy) + 18px + var(--safe-b));
       inset-inline:0; display:flex; justify-content:center; gap:var(--s3);
       pointer-events:none}
 .pick-bar .chip{pointer-events:auto; padding:var(--s3) var(--s6); font-size:.9rem;
@@ -572,7 +577,8 @@ body[data-view="text"] .map-only{display:none}
       border-block-end:1px solid var(--line); background:var(--card)}
 .sheet-h h2{flex:1 1 auto; min-width:0}
 .sheet-b{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-      display:flex; flex-direction:column; gap:var(--s3); padding:10px}
+      display:flex; flex-direction:column; gap:var(--s3);
+      padding:10px 10px calc(10px + var(--safe-b))}
 /* Every field keeps its own height: in a flex column they were shrunk to a
    sliver by whatever else wanted the room. */
 .sheet-b > *{flex:0 0 auto}
@@ -776,15 +782,22 @@ body[data-view="text"] .map-only{display:none}
    Every colour here is the same hex the map paints, read from CONS_COLOUR in
    app.js and written inline — a legend whose swatch is defined separately from
    the thing it names is a legend that can quietly stop being true. */
-/* Three plates, each carrying its own name on its own colour. The word and the
-   swatch are the same object, so there is no pairing left for the reader to
-   make and none for the code to get wrong. White on all three clears 5:1. */
+/* Three plates, each carrying its own name on its own colour, and each one a
+   switch: pressing it takes that class off the map and out of the bars. The
+   plate is painted the colour the MAP shows — the class at 40% over the map's
+   ground, composited in app.js — so the key is a sample of the thing it indexes
+   and not a brighter cousin of it. Switched off it keeps the outline and loses
+   the fill, which is the same "present but empty" the layer switches use. */
 .cons-key{display:flex; gap:var(--s2); margin-block-end:var(--s4)}
-.cons-k{flex:1 1 0; min-width:0; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:1px;
-  padding:var(--s3) var(--s2); border-radius:var(--r-ctl); color:#fff;
-  font-size:.78rem; font-weight:700; line-height:1.25; text-align:center}
-.cons-k i{font-style:normal; display:block}
+.cons-k{flex:1 1 0; min-width:0; display:flex; align-items:center;
+  justify-content:center; min-height:38px; padding:var(--s2) var(--s2);
+  border:1px solid transparent; border-radius:var(--r-ctl);
+  font-size:.82rem; font-weight:700; line-height:1.2; text-align:center;
+  cursor:pointer}
+.cons-k[aria-pressed="false"]{background:transparent; color:var(--ink-2);
+  border-style:dashed}
+.cons-k:active{transform:translateY(1px)}
+@media (prefers-reduced-motion:reduce){.cons-k:active{transform:none}}
 
 /* the download, which happens once and then never again */
 .cons-prog{height:8px; border-radius:var(--r-pill); background:var(--bg);
@@ -824,9 +837,15 @@ body[data-view="text"] .map-only{display:none}
 .cons-head .row-t{flex:1 1 auto; min-width:0; overflow:hidden;
   text-overflow:ellipsis; white-space:nowrap}
 .cons-head .chev{flex:0 0 auto; width:16px; height:16px; color:var(--miss)}
-.cons-bar{display:flex; width:100%; height:14px; border-radius:4px;
+/* The bar and the number it stands for, on one line: the bar takes the width
+   that is left and the figure sits at the end of it. Nothing else — the row is
+   a share, and a share needs one number. */
+.cons-line{display:flex; align-items:center; gap:var(--s3); width:100%}
+.cons-bar{display:flex; flex:1 1 auto; min-width:0; height:14px; border-radius:4px;
   overflow:hidden; background:var(--bg); border:1px solid var(--line)}
 .cons-bar i{display:block; height:100%}
+.cons-pct{flex:0 0 auto; min-width:3.6em; text-align:end; font-size:.82rem;
+  font-weight:700; font-variant-numeric:tabular-nums}
 .cons-val{display:block; width:100%; text-align:end; font-size:.8rem;
   color:var(--ink-2); font-variant-numeric:tabular-nums}
 .cons-row.no .cons-val{color:var(--miss)}
