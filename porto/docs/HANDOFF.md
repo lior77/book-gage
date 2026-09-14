@@ -52,10 +52,13 @@ cd "$PORTO"
 |---|---|
 | `CLAUDE.md` | חוזה הדיוק. **חל על `porto/`** |
 | `.github/workflows/` | ‏workflow בניית ה-APK |
-| `porto_pdm_claude/` | פרויקט אחר. **לא קשור לפורטולנד — אין לגעת** |
+| `porto_pdm_claude/` | **‏PDM של מחוז פורטו — כן קשור.** מחקר מקורות על Maia, Gondomar (וקטור מאומת), Gaia, Felgueiras (לא נפתרו). משלים את `GPT/PDM_RAW` שב-SharePoint. ראה §8 |
 | `index.html`, `thankyou.html`, `background*.jpg`, `favicon.png`, `staticwebapp.config.json` | אתר סטטי נפרד בשורש. **לא חלק מהאפליקציה** |
 
 טעות קלה לעשות: לערוך את `index.html` שבשורש במקום את `porto/index.html`.
+
+‏`porto_pdm_claude/` נראה כמו פרויקט זר לפי השם והוא אינו — הוא **החצי השני**
+של עבודת ה-PDM. אין לו קשר ללולאת הבנייה, ואין למחוק אותו.
 
 ---
 
@@ -362,17 +365,134 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 ---
 
-## 8. עבודה פתוחה, לפי סדר השפעה
+## 8. חומר חיצוני — SharePoint: `GPT/` ו-`גדול/`
+
+**‏https://lioravital.sharepoint.com/sites/lioravital/DocLib1/Portoland**
+
+שתי תיקיות שם מחזיקות חומר שחלקו **אינו במאגר ואינו ניתן לשחזור**. נגישות
+דרך מחבר Microsoft 365 (`sharepoint_folder_search` ואז `read_resource`).
+נבדקו פריט-פריט ב-2026-09-14.
+
+> **הן אינן גיבוי של המאגר ואינן פסולת.** חלקן הוטמע וחלקן לא, והחלק שלא
+> הוא העבודה היחידה שקיימת על PDM ועל שיטפונות.
+
+### ‏`GPT/` — ‏כ-160MB. העבודה שקדמה למאגר
+
+| מה | מצב מול המאגר |
+|---|---|
+| ‏INE מחירים ושכירות (`ine_precos_venda.csv` 595KB) | **הוטמע ועודכן.** במאגר `data/raw/ine/ine_precos_venda.csv` עם **72,618 שורות** מול 9,282; אותה תקופה, עם `sha256` ו-`fetch_report.json`. גרסת המאגר מחליפה |
+| `REN_FINAL/` ‏(19.9MB), `RAN_RAW/`, `dgadr_ran.gpkg` ‏(15.4MB) | **התוצר הוטמע, הגלם לא.** במאגר `data/raw/constraints_caop2025.json` ו-`data/layers/`, מאומת מול `area_ha` של DGT עד 0.0032%. ה-gpkg עצמם אינם במאגר |
+| `apa_zonas_inundaveis.gpkg` ‏(37.7MB, **157 מצולעים**, EPSG:3763) | **לא הוטמע.** במאגר רק שלושה zip של ה-`limite` ‏(4.7MB), ו**האפליקציה אינה משתמשת בשיטפונות כלל** — `layers_manifest.json` מכיל `ren` ו-`ran` בלבד |
+| `icnf_perigosidade_*` (מטא-דאטה ו-WFS capabilities) | **המסקנה הוטמעה, הראיה לא.** ‏`missing.items` מתעד למה סכנת שריפה אינה באפליקציה; קובצי הראיה רק שם |
+| `sources_ren.json` ‏(106KB), `sources_ran.json` ‏(30KB), `ren_download_manifest.json` ‏(62KB), `checksums.sha256` | **לא הוטמע.** תיעוד מקור ברזולוציה של מאפיין בודד. כל `data/sources.json` של האפליקציה הוא 80KB |
+| `PROJECT_HANDOFF_PORTO_REAL_ESTATE.md` | הכללים 1–4, 9, 10 שבו הם במהותם חוזה הדיוק. **ארבעה לא עברו** — ראה למטה |
+| `ine_raw_quarters/` ‏(17.3MB) | גלם רבעוני. לא במאגר |
+
+#### ‏`GPT/PDM_RAW/` — ‏114KB, ו**זה רק הרישום**
+
+הנקודה הכי קלה לטעות בה: התיקייה מחזיקה `pdm_source_inventory.json`,
+`pdm_phase1_vector_services.json`, `pdm_legal_status_updates_2026-09-08.json`,
+שני `PDM_PHASE1_STATUS*.md`, ארבעה notebooks ו-README. **אין בה נתונים
+וקטוריים.**
+
+הנתונים שהיא מתעדת יושבים ב-**Google Drive** (המסמך כותב
+`/Google Drive/עבור got/PDM_RAW`, ו-`PDM_PHASE1_STATUS_AFTER_RUN.md` אומר
+״Drive size observed״):
+
+```
+Matosinhos                 89/89   ok
+Paredes                   101/101  ok
+Valongo — Ordenamento       24/24   ok
+Valongo — Condicionantes    30/30   ok
+                          ───────
+                          244/244
+Porto   porto_carta_qualificacao_solo_pdm2021.gpkg   139,554,816 bytes
+Póvoa de Varzim  — timeout. מסומן **לנסות שוב**, לא ״לא זמין״
+```
+
+**‏`porto_pdm_claude/` שבשורש המאגר מכסה עיריות אחרות לגמרי:** ‏Maia
+ו-Gondomar (וקטור מאומת, `VERIFIED_VECTOR`), ‏Gaia ו-Felgueiras
+(`UNRESOLVED` — השרתים לא נגישים מהסביבה). **אפס חפיפה.** יחד: 6–7 מתוך 18.
+
+### ‏`גדול/` — ‏כ-800MB. קובצי המקור הלאומיים
+
+| קובץ | גודל | מצב |
+|---|---|---|
+| `portugal2021.zip` | 258.6MB | מפקד 2021 מלא |
+| `CAOP_Continente_2025-gpkg.zip` | 111.6MB | **‏CAOP 2025 הארצי.** במאגר יש את חתך מחוז 13 בלבד |
+| `C2021_SECCOES_PT.zip` | 67.6MB | מקטעי מפקד |
+| `LUGARES21_PORTUGAL.zip` | 61.6MB | יישובים |
+| `C21_LUGF_PT.zip` + תיקייה | 60.8MB + 122MB | |
+| `Portugal_Property_Baseline_v2.gpkg` / `.csv` | 55.3MB / 1.1MB | **לא במאגר. לא נבדק מה יש בו** |
+| `FS2021SubSeccaoTot.zip` | 44.5MB | תת-מקטעים |
+| `FS2021SeccaoTot.zip` | 13.4MB | |
+| `BGRID1K21_PORTUGAL.zip` | 11.3MB | רשת אוכלוסייה 1 ק״מ |
+| `C2021_FSINTESE_VARIAVEIS*.txt/.pdf` | 78KB | **מילון המשתנים של המפקד** |
+| `BGRI2021_to_CAOP2025_reassignment.csv` | 7.9KB | ‏`sources.json` מצטט אותו בשמו |
+
+**מחוז 13 כבר נגזר מכאן ונמצא במאגר** (‏`raw/dgt/caop_freguesias.geojson`
+‏275 רובעים, `raw/bgri2021_to_caop2025_d13.json` ‏21,337 תת-מקטעים,
+‏0 לא משויכים). מה שנשאר שם הוא **הכיסוי הארצי ומילון המשתנים** — הראשון
+נחוץ רק אם יורחב מעבר למחוז, השני שימושי בכל פעם שנוגעים בעמודה של המפקד.
+
+### ★ ממצא דיוק שעולה מההשוואה
+
+‏`GPT/PROJECT_HANDOFF_PORTO_REAL_ESTATE.md` מנסח כך:
+
+> Porto and Vila do Conde returned zero features from the official WFS
+> **at download time; this is not proof that no legal REN exists.**
+
+‏`data/sources.json` אומר: **״אין REN ואין RAN לפורטו, ואין REN לווילה דו
+קונדה״**. זו טענה **חזקה יותר ממה שהראיה מאפשרת** — WFS שהחזיר אפס
+מאפיינים ביום מסוים אינו היעדר תיחום חוקי. **זה בדיוק כלל הברזל הרביעי.**
+טרם תוקן.
+
+### ארבעה כללים מה-GPT שאינם ב-`CLAUDE.md`
+
+1. העדפת **EPSG:3763**; ‏4326 רק אם זה ה-CRS המקורי, ולא להמיר בלי ודאות.
+2. העדפת **GeoPackage** לתוצרי GIS.
+3. **‏SHA-256 לכל קובץ מקור.** במאגר יש את זה ב-`fetch_report.json`, לא כנוהג.
+4. **רק מסמכי תכנון שנכנסו לתוקף** — טיוטות ורוויזיות תלויות מוחרגות.
+   ולצידו: **לשאול לפני איסוף שכבת PDM מחוץ לליבה המאושרת** (סיווג
+   וייעוד קרקע בלבד).
+
+### מה לעשות עם זה
+
+**אל תמחק את אף אחת מהשתיים.** מה שראוי להעביר, לפי סדר:
+
+1. **רישום ה-PDM** — למזג את `pdm_source_inventory.json` עם
+   `porto_pdm_claude/reports/summary.tsv`. שני חצאים משלימים שאין בהם ערך
+   בנפרד.
+2. **קובצי ה-`sources_*.json` וה-`checksums`** — הם הראיה מאחורי מספרים
+   שהאפליקציה כבר מציגה.
+3. **מילון המשתנים של המפקד** (78KB) — קטן, ונדרש בכל נגיעה בעמודה.
+
+**ה-gpkg וה-zip הגדולים לא נכנסים ל-git.** הם גלם. המקום לרשום שהם קיימים,
+איפה, ומה ה-md5 שלהם הוא `data/source_files/INDEX.md`.
+
+---
+
+## 9. עבודה פתוחה, לפי סדר השפעה
 
 | # | מה | מצב |
 |---|---|---|
 | 1 | **מפתח חתימה** (`porto/android/SIGNING.md`) | ממתין למשתמש. כל שחרור מוחק נתונים בלעדיו |
 | 2 | **אימות תיקון בחירת התמונה** | ממתין למשוב על 1.41.4 |
-| 3 | **קליטת CAOP 2025** | הגבולות במאגר; `build.py` בנוי סביב 243 ומשייך **לפי שם**, לא לפי קוד |
-| 4 | **אוכלוסייה ל-57 הרובעים החדשים** | מפקד 2021 נספר לפי חלוקת 2013. `BGRI2021_to_CAOP2025_reassignment.csv` במאגר |
-| 5 | **CRUS** (שימושי קרקע, ~2.5MB לעירייה) | הוצע, לא נבחר |
-| 6 | **קישורי תקנון PDM** | הוצע, לא נבחר |
+| 3 | **‏PDM — למזג את שני החצאים** | ‏§8. ‏`porto_pdm_claude/` ו-`GPT/PDM_RAW` מכסים עיריות שונות ואפס חפיפה |
+| 4 | **‏CRUS** (שימושי קרקע, ~2.5MB לעירייה) | הוצע, לא נבחר |
+| 5 | **קישורי תקנון PDM** | הוצע, לא נבחר |
+| 6 | **ניסוח היעדר ה-REN בפורטו ובווילה דו קונדה** | ‏§8. הניסוח הנוכחי חזק מהראיה — כלל הברזל הרביעי |
 | 7 | **צמצום קו הרובעים ברמה 3** | `ownFeature()` צריכה ענף ל-`zone`. **מתבקש אך לא התבקש** |
+
+### נסגר — נשאר רשום, כי ״נבדק והושלם״ שווה כמו ״נבדק ונדחה״
+
+| מה | הראיה |
+|---|---|
+| **קליטת CAOP 2025** | ‏`raw/dgt/caop_freguesias.geojson` = **275 רובעים**, ‏`caop_municipios` = 18; `sources.json` מצטט ״CAOP 2025״. הערות ה-243 שנשארו ב-`build.py` הן שאריות טקסט, לא המצב |
+| **אוכלוסייה ל-57 הרובעים החדשים** | הבנייה מדפיסה **275/275** עם אוכלוסייה, שם עברי ושטח. ‏`raw/bgri2021_to_caop2025_d13.json`: ‏21,337 תת-מקטעים, **0 לא משויכים**, 275 סכומי רובע |
+
+> ‏`porto/docs/ARCHITECTURE.md` §12 עדיין מונה את שתי אלה כחסרות. **הוא
+> מיושן בשתי השורות האלה** — תוקן כאן ב-2026-09-14 לפי בדיקה בקבצים.
 
 `data/sources.json → missing.items` מחזיק **4 פריטים** שנחקרו ונדחו במפורש
 (מעלית, מחיר ברמת הרובע בתשע עיריות, גבול שכונה, שנת מפת השריפות).
@@ -380,7 +500,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 ---
 
-## 9. מוסכמות בקוד
+## 10. מוסכמות בקוד
 
 ### שפה
 
@@ -406,7 +526,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 ---
 
-## 10. הסביבה — ארבע מלכודות שעלו בזמן אמיתי
+## 11. הסביבה — ארבע מלכודות שעלו בזמן אמיתי
 
 ### ‏`pgrep -f` / `pkill -f` תופס את הפקודה שמריצה אותו
 
@@ -439,7 +559,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 ---
 
-## 11. עשר המלכודות שהכי כדאי להכיר
+## 12. עשר המלכודות שהכי כדאי להכיר
 
 ‏§11 ב-`porto/docs/ARCHITECTURE.md` מחזיק **83**. אלה הכי יקרות:
 
@@ -466,7 +586,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 ---
 
-## 12. איך לדעת שלא שברת כלום
+## 13. איך לדעת שלא שברת כלום
 
 ```bash
 cd "$PORTO"
@@ -484,7 +604,7 @@ python3 scripts/build.py && python3 scripts/checks.py \
 
 ---
 
-## 13. תחזוקת המסמך הזה
+## 14. תחזוקת המסמך הזה
 
 עדכן אותו כשמשתנה **מצב**, לא כשמשתנה קוד — לקוד יש את
 `porto/docs/ARCHITECTURE.md`.
