@@ -28,6 +28,7 @@ import json
 import io
 import os
 import re
+import xml.etree.ElementTree as ET
 import sys
 import unicodedata
 
@@ -1063,6 +1064,21 @@ def main():
             if HEBREW_RE.search(v) and v not in en_keys:
                 fail("%s carries %r and the English table does not answer it"
                      % (tbl, v))
+
+    # ---- 7v. the Android manifest is XML, and the build is not the reader ---
+    # 1.41.2 shipped a manifest whose explanatory comment sat INSIDE the
+    # <activity> start tag, between two attributes. XML forbids that, the
+    # manifest merger said only "Error parsing", and the failure surfaced
+    # eleven minutes later in a CI log rather than here. The manifest is a
+    # source file like any other: it gets parsed before it is pushed.
+    man = os.path.join(ROOT, "android", "app", "src", "main", "AndroidManifest.xml")
+    if not os.path.exists(man):
+        fail("the Android manifest is gone")
+    else:
+        try:
+            ET.parse(man)
+        except ET.ParseError as e:
+            fail("AndroidManifest.xml is not well-formed XML: %s" % e)
 
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
