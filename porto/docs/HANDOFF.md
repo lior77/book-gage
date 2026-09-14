@@ -1,11 +1,61 @@
 # פורטולנד — מסמך מסירה
 
 **למי שממשיך מכאן: אדם, מודל שפה, או שניהם.**
-נכתב ב-2026-09-14, בגרסה **1.41.4**, commit `983f601`.
+מתאר את המצב ב-2026-09-14, גרסה **1.41.4**, commit `983f601`
+(שהוא ה-commit של האפליקציה; המסמך עצמו נדחף אחריו).
 
-מסמך זה אינו מחליף את `docs/ARCHITECTURE.md` — הוא **נקודת הכניסה אליו**.
-אדריכלות, מקורות ומודל הנתונים נמצאים שם ורק שם. כאן נמצא מה שאינו שם:
-המצב הנוכחי, מה שפתוח, איך עובדים בפועל, ומה כבר עלה בזמן.
+מסמך זה אינו מחליף את `porto/docs/ARCHITECTURE.md` — הוא **נקודת הכניסה
+אליו**. אדריכלות, מקורות ומודל הנתונים נמצאים שם ורק שם. כאן נמצא מה שאינו
+שם: המצב הנוכחי, מה שפתוח, איך עובדים בפועל, ומה כבר עלה בזמן.
+
+---
+
+## ★ איפה הפרויקט
+
+**המאגר:** `lior77/book-gage` — ‏https://github.com/lior77/book-gage
+**ענף העבודה:** `claude/mobile-app-pdf-knowledge-aoomsp`
+
+| מה | נתיב |
+|---|---|
+| שורש המאגר | `/home/user/book-gage` |
+| **תיקיית הפרויקט — כאן כל העבודה** | **`/home/user/book-gage/porto`** |
+| מסמך האדריכלות | `/home/user/book-gage/porto/docs/ARCHITECTURE.md` |
+| חוזה הדיוק | `/home/user/book-gage/CLAUDE.md` |
+| המסמך הזה | `/home/user/book-gage/porto/docs/HANDOFF.md` |
+| ‏workflow ה-APK | `/home/user/book-gage/.github/workflows/porto-android-apk.yml` |
+
+**הנתיב המוחלט נכון לסביבה שבה נכתב המסמך.** ‏`/home/user/book-gage` הוא
+מקום השכפול במכולה המרוחקת; במחשב אחר הוא יהיה אחר. אם אינך יודע איפה אתה:
+
+```bash
+git rev-parse --show-toplevel        # שורש המאגר, מכל תיקייה בתוכו
+```
+
+**נוח לקבע את זה פעם אחת בתחילת סשן:**
+
+```bash
+export REPO="$(git rev-parse --show-toplevel)"
+export PORTO="$REPO/porto"
+cd "$PORTO"
+```
+
+כל הפקודות במסמך מניחות `cd "$PORTO"`.
+
+> **מוסכמת נתיבים במסמך הזה:** נתיב שמתחיל ב-`porto/` הוא **יחסית לשורש
+> המאגר**; נתיב בלי הקידומת (למשל `scripts/checks.py`) הוא **יחסית לתיקיית
+> הפרויקט**, כלומר `$PORTO`. ההבחנה אינה קוסמטית: בשורש המאגר יש `index.html`
+> משלו, ו-`porto/index.html` הוא קובץ אחר לגמרי.
+
+**‏`porto/` היא תיקיית העבודה היחידה.** מה שיש בשורש המאגר מלבדה:
+
+| | |
+|---|---|
+| `CLAUDE.md` | חוזה הדיוק. **חל על `porto/`** |
+| `.github/workflows/` | ‏workflow בניית ה-APK |
+| `porto_pdm_claude/` | פרויקט אחר. **לא קשור לפורטולנד — אין לגעת** |
+| `index.html`, `thankyou.html`, `background*.jpg`, `favicon.png`, `staticwebapp.config.json` | אתר סטטי נפרד בשורש. **לא חלק מהאפליקציה** |
+
+טעות קלה לעשות: לערוך את `index.html` שבשורש במקום את `porto/index.html`.
 
 ---
 
@@ -38,20 +88,59 @@
 ## 2. איפה הכול נמצא
 
 ```
-book-gage/                      ← שורש המאגר
-├── CLAUDE.md                   ← חוזה הדיוק. קרא ראשון
+/home/user/book-gage/                     ← $REPO — שורש המאגר
+├── CLAUDE.md                             ← חוזה הדיוק. קרא ראשון
 ├── .github/workflows/
-│   └── porto-android-apk.yml   ← בונה APK. רץ רק מהענף שלמטה
-└── porto/                      ← ★ הפרויקט. כל העבודה כאן
-    ├── VERSION                 ← מקור האמת היחיד למספר הגרסה
-    ├── app.js                  ← 6,434 שורות. כל לוגיקת הלקוח
-    ├── app.css                 ← 853 שורות
-    ├── index.html              ← 110 שורות. שלד בלבד
-    ├── porto-standalone.html   ← תוצר של bundle_standalone.py
-    ├── data/                   ← ראה ARCHITECTURE §3 ו-§4
-    ├── scripts/                ← כל העיבוד והבדיקות
-    ├── docs/                   ← ARCHITECTURE.md ואחיו
-    └── android/                ← פרויקט WebView + SIGNING.md
+│   └── porto-android-apk.yml             ← בונה APK. רק מענף העבודה
+└── porto/                                ← $PORTO ★ כל העבודה כאן
+    ├── VERSION                           ← מקור האמת היחיד לגרסה
+    ├── index.html                        ← 110 שורות. שלד בלבד
+    ├── app.js                            ← 6,434 שורות. כל לוגיקת הלקוח
+    ├── app.css                           ← 853 שורות
+    ├── sw.js                             ← Service Worker — עבודה בלי רשת
+    ├── manifest.webmanifest              ← הגדרות PWA
+    ├── porto-standalone.html             ← תוצר של bundle_standalone.py
+    ├── vendor/                           ← Leaflet 1.9.4, מקומי. לא CDN
+    ├── icons/
+    ├── data/
+    │   ├── sources.json                  ← ★ מקור לכל שדה + מה חסר ולמה
+    │   ├── prose_en.json                 ← הפרוזה באנגלית
+    │   ├── layers_manifest.json
+    │   ├── source_files/   (84M)         ← ארכיון. לא נוגעים
+    │   ├── raw/            (94M)         ← קלט מנורמל
+    │   ├── processed/     (1.6M)         ← ★ נוצר. לא עורכים ביד
+    │   └── layers/         (22M)         ← שכבות להורדה לפי דרישה
+    ├── scripts/                          ← כל העיבוד והבדיקות
+    │   ├── build.py                      ← raw → processed
+    │   ├── checks.py                     ← ★ 29 בדיקות. exit 1 עוצר
+    │   ├── crosscheck_baseline.py
+    │   ├── bundle_standalone.py
+    │   ├── test_ui_menu.js               ← 382 בדיקות Playwright
+    │   ├── test_exif.js
+    │   ├── check_network.py              ← מה באמת נגיש דרך ה-proxy
+    │   ├── build_constraints.py          ← REN/RAN לפי CAOP 2025
+    │   ├── fetch_*.py  import_*.py       ← משיכה וקליטה לפי מקור
+    │   └── ingest_*.py
+    ├── docs/
+    │   ├── ARCHITECTURE.md               ← ★ מקור האמת על המבנה
+    │   ├── HANDOFF.md                    ← המסמך הזה
+    │   ├── DATA-ACQUIRED.md              ← מה נמשך בפועל
+    │   ├── DATA-REQUEST.md
+    │   ├── NETWORK-ALLOWLIST.md          ← מה שנשאר לפתוח
+    │   ├── WORKPLAN.md
+    │   ├── DELIVERY.md
+    │   └── DESIGN.html
+    └── android/
+        ├── SIGNING.md                    ← ★ פער החתימה. ראה §6
+        ├── RELEASE_NOTES.md              ← גוף ה-release בגיטהאב
+        ├── build.gradle
+        └── app/
+            ├── build.gradle              ← קורא את VERSION
+            └── src/main/
+                ├── AndroidManifest.xml   ← בדיקה 7v מפרסרת אותו
+                ├── res/values/strings.xml
+                └── java/app/porto/atlas/
+                    └── MainActivity.java ← המעטפת. שלושת הגשרים
 ```
 
 **ענף העבודה:** `claude/mobile-app-pdf-knowledge-aoomsp`.
@@ -78,14 +167,14 @@ book-gage/                      ← שורש המאגר
 ועוד שניים שנלמדו בדרך הקשה:
 
 8. **`data/processed/` נוצר.** לעולם לא עורכים ביד — הבנייה הבאה תמחק.
-9. **`docs/ARCHITECTURE.md` מתעדכן באותו commit** ששינה את מה שהוא מתאר.
+9. **`porto/docs/ARCHITECTURE.md` מתעדכן באותו commit** ששינה את מה שהוא מתאר.
 
 ---
 
 ## 4. לולאת הפיתוח — הפקודות שעובדות היום
 
 ```bash
-cd porto
+cd "$PORTO"                           # /home/user/book-gage/porto
 
 # 1. עריכה: scripts/*.py או app.js או app.css או index.html
 
@@ -141,10 +230,11 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 
 ```bash
 D=/tmp/bugtest; rm -rf $D; mkdir -p $D
-for f in /path/to/porto/*; do ln -s "$f" "$D/$(basename "$f")"; done
+for f in "$PORTO"/*; do ln -s "$f" "$D/$(basename "$f")"; done
 rm $D/app.js                       # ואז כותבים גרסה משוכתבת במקומו
 cd $D && python3 -m http.server 8235 &
-URL=http://127.0.0.1:8235/index.html node /path/to/porto/scripts/test_ui_menu.js
+cd "$PORTO"
+URL=http://127.0.0.1:8235/index.html node scripts/test_ui_menu.js
 ```
 
 שינוי-במקום ברקע תוך כדי עריכה של אותו קובץ **הרס עריכות** בפרויקט הזה
@@ -187,7 +277,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 נחתמת במפתח debug אחר, ואנדרואיד **לא יתקין עדכון על גבי הישן**. כל שחרור
 דורש הסרה והתקנה, **וההסרה מוחקת את המקומות, התמונות והשכבות**.
 
-`android/SIGNING.md` מסביר את התיקון — חמש דקות, פעם אחת.
+`porto/android/SIGNING.md` מסביר את התיקון — חמש דקות, פעם אחת.
 **המפתח הפרטי לא עובר דרך שום צ׳אט ולא נכנס למאגר.** זה נאמר במפורש שם.
 
 **זה הפריט הפתוח בעל ההשפעה הגדולה ביותר על המשתמש.**
@@ -276,7 +366,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 | # | מה | מצב |
 |---|---|---|
-| 1 | **מפתח חתימה** (`android/SIGNING.md`) | ממתין למשתמש. כל שחרור מוחק נתונים בלעדיו |
+| 1 | **מפתח חתימה** (`porto/android/SIGNING.md`) | ממתין למשתמש. כל שחרור מוחק נתונים בלעדיו |
 | 2 | **אימות תיקון בחירת התמונה** | ממתין למשוב על 1.41.4 |
 | 3 | **קליטת CAOP 2025** | הגבולות במאגר; `build.py` בנוי סביב 243 ומשייך **לפי שם**, לא לפי קוד |
 | 4 | **אוכלוסייה ל-57 הרובעים החדשים** | מפקד 2021 נספר לפי חלוקת 2013. `BGRI2021_to_CAOP2025_reassignment.csv` במאגר |
@@ -286,7 +376,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 `data/sources.json → missing.items` מחזיק **4 פריטים** שנחקרו ונדחו במפורש
 (מעלית, מחיר ברמת הרובע בתשע עיריות, גבול שכונה, שנת מפת השריפות).
-‏`ARCHITECTURE.md` §12 מסביר כל אחד. **אלה לא משימות פתוחות — אלה החלטות.**
+‏`porto/docs/ARCHITECTURE.md` §12 מסביר כל אחד. **אלה לא משימות פתוחות — אלה החלטות.**
 
 ---
 
@@ -351,7 +441,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 
 ## 11. עשר המלכודות שהכי כדאי להכיר
 
-‏§11 ב-`ARCHITECTURE.md` מחזיק **83**. אלה הכי יקרות:
+‏§11 ב-`porto/docs/ARCHITECTURE.md` מחזיק **83**. אלה הכי יקרות:
 
 1. **‏Activity שנהרס בזמן שהבוחר בחזית** — §7 כאן. שני תיקונים נכונים לשני
    באגים אמיתיים לא הזיזו את התסמין.
@@ -379,7 +469,7 @@ https://github.com/lior77/book-gage/releases/download/porto-atlas/portoland-late
 ## 12. איך לדעת שלא שברת כלום
 
 ```bash
-cd porto
+cd "$PORTO"
 python3 scripts/build.py && python3 scripts/checks.py \
   && python3 scripts/crosscheck_baseline.py \
   && node --check app.js && node scripts/test_exif.js \
@@ -396,7 +486,8 @@ python3 scripts/build.py && python3 scripts/checks.py \
 
 ## 13. תחזוקת המסמך הזה
 
-עדכן אותו כשמשתנה **מצב**, לא כשמשתנה קוד — לקוד יש את `ARCHITECTURE.md`.
+עדכן אותו כשמשתנה **מצב**, לא כשמשתנה קוד — לקוד יש את
+`porto/docs/ARCHITECTURE.md`.
 כלומר: גרסה, מה נסגר, מה נפתח, ומה נלמד שעולה זמן לחזור עליו.
 
 אם פריט ב-§8 נסגר — הזז אותו, אל תמחק. הידיעה ש**נבדק ונדחה** שווה בדיוק
