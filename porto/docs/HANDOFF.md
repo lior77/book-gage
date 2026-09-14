@@ -1,7 +1,7 @@
 # פורטולנד — מסמך מסירה
 
 **למי שממשיך מכאן: אדם, מודל שפה, או שניהם.**
-מתאר את המצב ב-2026-09-14, גרסה **1.44.0**, commit `7790d6c` ואילך.
+מתאר את המצב ב-2026-09-14, גרסה **1.45.0**, commit `2470e0e` ואילך.
 ‏`portoland-latest.apk` שב-release כבר נושא אותו — נבדק בתוך הקובץ.
 
 מסמך זה אינו מחליף את `porto/docs/ARCHITECTURE.md` — הוא **נקודת הכניסה
@@ -69,7 +69,7 @@ cd "$PORTO"
 | 1 | `CLAUDE.md` (בשורש המאגר) | חוזה הדיוק. שבעה כללים שאינם ניתנים למשא ומתן |
 | 2 | `porto/docs/ARCHITECTURE.md` | **מקור האמת.** מבנה, מקורות, מודל נתונים, מנגנוני אימות |
 | 3 | הקובץ הזה | מצב, עבודה פתוחה, נוהג עבודה, מלכודות סביבה |
-| 4 | ‏`porto/docs/ARCHITECTURE.md` §11 | **83 מלכודות ידועות.** כל אחת נכתבה אחרי שמשהו נשבר באמת |
+| 4 | ‏`porto/docs/ARCHITECTURE.md` §11 | **87 מלכודות ידועות.** כל אחת נכתבה אחרי שמשהו נשבר באמת |
 
 **אל תתחיל לכתוב קוד לפני 1 ו-2.** רוב הטעויות בפרויקט הזה לא היו טעויות
 תכנות — הן היו הנחות על הנתונים.
@@ -118,7 +118,7 @@ cd "$PORTO"
     │   ├── checks.py                     ← ★ 29 בדיקות. exit 1 עוצר
     │   ├── crosscheck_baseline.py
     │   ├── bundle_standalone.py
-    │   ├── test_ui_menu.js               ← 420 בדיקות Playwright
+    │   ├── test_ui_menu.js               ← 428 בדיקות Playwright
     │   ├── test_exif.js
     │   ├── check_network.py              ← מה באמת נגיש דרך ה-proxy
     │   ├── build_constraints.py          ← REN/RAN לפי CAOP 2025
@@ -190,7 +190,7 @@ node scripts/test_exif.js
 
 # בדיקות הדפדפן צריכות origin אמיתי — לא file://
 python3 -m http.server 8234 &
-URL=http://127.0.0.1:8234/index.html node scripts/test_ui_menu.js   # 420 בדיקות
+URL=http://127.0.0.1:8234/index.html node scripts/test_ui_menu.js   # 428 בדיקות
 
 python3 scripts/bundle_standalone.py  # → porto-standalone.html
 ```
@@ -212,7 +212,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 >
 > ‏`requirements.txt` הוא ההצהרה, והסקריפט מוסיף את מה ש-pip אינו יכול לתת:
 > ‏`playwright` כמודול **node**, שהוא דבר אחר מחבילת הפייתון באותו שם. הוא גם
-> **בודק ש-Chromium במקומו ונופל אם לא** — אחרת חוסר הדפדפן מתגלה 420 בדיקות
+> **בודק ש-Chromium במקומו ונופל אם לא** — אחרת חוסר הדפדפן מתגלה 428 בדיקות
 > מאוחר יותר כ-timeout. **הוא לעולם לא מריץ `playwright install`.**
 
 ‏Chromium ל-Playwright: `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
@@ -233,7 +233,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 
 | קובץ | מה | כמה |
 |---|---|---|
-| `scripts/test_ui_menu.js` | פריסה, תפריט, גבולות, נ.צ., תמונות, שפה, מגבלות בנייה | 420 |
+| `scripts/test_ui_menu.js` | פריסה, תפריט, גבולות, נ.צ., תמונות, שפה, מגבלות בנייה | 428 |
 | `scripts/test_exif.js` | קורא ה-EXIF, כולל מקרה ה-GPS הריק | — |
 
 ### ★ הנוהג: בדיקה חדשה חייבת להוכיח שהיא יכולה ליפול
@@ -597,7 +597,7 @@ Póvoa de Varzim  — timeout. מסומן **לנסות שוב**, לא ״לא ז�
 
 ### המכולה קופאת בין תורים
 
-תהליכי רקע מתקדמים בעיקר **בזמן שפקודה רצה**. חבילה של 420 בדיקות יכולה
+תהליכי רקע מתקדמים בעיקר **בזמן שפקודה רצה**. חבילה של 428 בדיקות יכולה
 להיראות תקועה. פתרון: לולאת המתנה **בחזית** (עד 600 שניות), עם `time.sleep`
 של פייתון — ‏`sleep` בחזית חסום בהארנס.
 
@@ -618,7 +618,7 @@ Póvoa de Varzim  — timeout. מסומן **לנסות שוב**, לא ״לא ז�
 
 ## 12. שתים-עשרה המלכודות שהכי כדאי להכיר
 
-‏§11 ב-`porto/docs/ARCHITECTURE.md` מחזיק **85**. אלה הכי יקרות:
+‏§11 ב-`porto/docs/ARCHITECTURE.md` מחזיק **87**. אלה הכי יקרות:
 
 1. **משתנה מקומי בשם `t` שהצל על פונקציית התרגום `t()`** — ‏`const t =
    term.trim().toLowerCase()` יושב ב-`placeHits()` וב-`runSearch()` מאז

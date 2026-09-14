@@ -43,7 +43,18 @@ const css = (page, sel, prop) =>
 
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
-  const page = await browser.newPage({ viewport: { width: 412, height: 900 } });  // a phone, portrait
+  /* No service worker for this run.  The app registers one, and it is right to:
+     it serves the street background from its own cache and answers 504 for
+     anything it cannot reach, which is what an offline phone needs.  It is also
+     fatal to a browser check, because a request the worker handles never
+     reaches page.route() — so the tiles this file answers below were answered
+     for the first few and then quietly turned into 504s from inside the app.
+     The app then dropped the background, correctly, and three checks that were
+     never about the background went red.  The worker has no checks of its own
+     in this file; blocking it leaves this file testing the interface. */
+  const ctx = await browser.newContext({ viewport: { width: 412, height: 900 },  // a phone, portrait
+                                         serviceWorkers: 'block' });
+  const page = await ctx.newPage();
   /* Everything below reads the rendered page, and a page that threw still
      renders — it just renders the half that ran before the throw.  That is how
      a dead search survived nine releases here: runSearch() raised TypeError on
@@ -51,11 +62,26 @@ const css = (page, sel, prop) =>
      uncaught error is now a failure in its own right, whoever else noticed. */
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).split('\n')[0]));
-  /* Refuse the street background outright rather than letting the requests hang.
-     Left to time out on their own they did not fail inside the run, and the
-     check below then passed on a page where the background had never failed —
-     a check that cannot fail is not a check. */
-  await page.route('**://tile.openstreetmap.org/**', r => r.abort());
+  /* Answer the street background here rather than letting it reach the network.
+     Three earlier cuts of this file got this wrong in two different directions.
+     Letting the requests hang meant they did not fail inside the run, so the
+     check on the failure path passed on a page where nothing had failed — a
+     check that cannot fail is not a check.  Refusing them all, which came next,
+     made the opposite problem: the app is right to drop a background it cannot
+     load, so every later check that switched the background on and expected it
+     to stay on was racing the app's own correctness, and which of them failed
+     depended on how many refusals Leaflet had managed to fire by then.  Three
+     checks in this file were red for that reason and none of them was about the
+     background at all.
+     So: a real, immediate, one-pixel answer, and no network.  The failure path
+     gets the refusal it needs in the last block of the file, where nothing
+     follows it. */
+  const TILE_PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmM'
+    + 'IQAAAABJRU5ErkJggg==', 'base64');
+  const TILES = '**://tile.openstreetmap.org/**';
+  await page.route(TILES, r => r.fulfill({ contentType: 'image/png', body: TILE_PNG,
+                                headers: { 'access-control-allow-origin': '*' } }));
   await page.goto(URL, { waitUntil: 'load' });
   await page.waitForFunction(() => document.body.dataset.view, null, { timeout: 20000 });
   await page.waitForTimeout(1200);   // Leaflet settles
@@ -360,6 +386,14 @@ const css = (page, sel, prop) =>
   for (const k of ['cats', 'tiles', 'glass', 'regions']) {
     const was = await flag(k);
     await page.click(`[data-m="${k}"]`);
+    /* The background is the one row whose state is not the tap's to keep, and
+       asking it to behave like the other three was asking it to be wrong.
+       This run refuses every tile on purpose — the route at the top of the file
+       — and the app answers a background that will not load by dropping it and
+       saying so.  So the generic check below was reading `false` 350 ms after
+       the tap and calling the app broken for having been right.  What is worth
+       checking here is both halves: the tap turns it on, and the refusal turns
+       it back off with a word to the reader. */
     await page.waitForTimeout(350);
     ok(`${HE[k]}: one tap flips it`, await flag(k) !== was, `${was} -> ${await flag(k)}`);
     ok(`${HE[k]}: and the menu stays open — these come in handfuls`, await shown());
@@ -2568,6 +2602,65 @@ const css = (page, sel, prop) =>
     if (doc) doc.scrollTop = 0;
   });
   await page.waitForTimeout(700);
+
+  /* Rule 1 again, this time as a route and not as a file: the record has to be
+     reachable by tapping, or it is not published.  "3/18" sits inside the
+     row's own <button>, so the link cannot be the number itself. */
+  const srcHtml = await page.evaluate(() => { try { return renderLayers(); } catch (e) { return String(e); } });
+  ok('the layers panel carries a link to the flood record',
+     /data-src="map\.floods"/.test(srcHtml));
+  ok('and one to the building-constraints record, which was just as unreachable',
+     /data-src="map\.ren_ran"/.test(srcHtml));
+
+  const viewBefore = await page.evaluate(() => S.view);
+  await page.evaluate(() => toggleLayers(true));
+  await page.waitForTimeout(400);
+  /* A <button> inside a <button> is invalid HTML and the inner one never
+     receives the tap, so the link being its own line is the whole design and
+     not a layout preference.  This is the check that would catch someone
+     folding it back into the row. */
+  ok('the link is its own control, not one buried inside the row switch',
+     await page.evaluate(() => !document.querySelector('.lay [data-src]')
+                            && !!document.querySelector('#panelBody .srcln[data-src="map.floods"]')));
+
+  /* Report, do not abort.  Against code without the link this block used to
+     stop the whole run at the click, so the six checks after it never said
+     anything — and a suite that goes quiet is worse than one that goes red. */
+  const linkThere = !!(await page.$('#panelBody .srcln[data-src="map.floods"]'));
+  if (linkThere) { await page.click('#panelBody .srcln[data-src="map.floods"]'); }
+  await page.waitForTimeout(400);
+  const srcRec = !linkThere ? { title: '(no link)', body: '(no link)' }
+    : await page.evaluate(() => ({
+        title: (document.getElementById('panelTitle') || {}).textContent || '',
+        body: (document.getElementById('panelBody') || {}).innerText || '' }));
+  ok('tapping it opens the flood record itself',
+     /הצפה|flood/i.test(srcRec.title), JSON.stringify(srcRec.title));
+  ok('and the record on screen carries the year and the source',
+     /2023/.test(srcRec.body) && /APA/.test(srcRec.body), JSON.stringify(srcRec.body.slice(0, 80)));
+  ok('and the coverage caveat — the 23 studied areas and the 15 unmapped — is on that screen',
+     /23/.test(srcRec.body) && /15/.test(srcRec.body), JSON.stringify(srcRec.body.slice(0, 160)));
+
+  await page.evaluate(v => { closePanel(); if (S.view !== v) { S.view = v; applyView(); } }, viewBefore);
+  await page.waitForTimeout(300);
+
+  /* Last block in the file, and it has to be: from here on every tile is
+     refused, and the app answers a background it cannot load by dropping it —
+     correctly — so nothing after this point could switch the background on and
+     keep it.  Nothing comes after. */
+  await page.evaluate(() => { hideNote(); if (!S.tiles) toggleTiles(); });
+  await page.waitForTimeout(400);
+  await page.unroute(TILES);
+  await page.route(TILES, r => r.abort());
+  // the tiles already on the map loaded, so ask for them again: without this the
+  // layer sits there satisfied and the failure path is never reached
+  await page.evaluate(() => tileLayer.redraw());
+  const dropped = await page.waitForFunction(() => S.tiles === false, null, { timeout: 15000 })
+    .then(() => true).catch(() => false);
+  ok('a street background that will not load is dropped, not left as grey squares', dropped);
+  await page.waitForTimeout(300);
+  ok('and the reader is told, rather than left thinking the map is empty',
+     /לא נטען|did not load/.test(
+       await page.evaluate(() => document.getElementById('msgs').innerText)));
 
   ok('nothing on any screen threw an uncaught error along the way',
      pageErrors.length === 0, pageErrors.join(' | '));

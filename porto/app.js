@@ -4734,6 +4734,18 @@ function renderLayers() {
        ${n === undefined ? '' : `<span class="lay-k">${n}</span>`}
      </button>`;
 
+  /* The first rule of this project is that every number on screen opens the
+     record behind it.  "3/18" on the flood row is such a number, and so is the
+     megabyte figure on the constraints row — but both sit inside the row's own
+     <button>, and a button may not contain a button.  So the link is its own
+     line beneath the row.  Until it existed the coverage caveat — which is the
+     whole honesty of the flood layer — lived in a file no reader ever opens. */
+  const srcLine = key =>
+    `<p class="note" style="margin-block-start:2px">
+       <button class="srcln" type="button" data-src="${html(key)}">${
+         t('מקור, שנת ייחוס ומה לא ממופה')}</button>
+     </p>`;
+
   let h = t('<h3>שכבות</h3>') +
     row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
     row(S.muncol, 'muncol', t('צבעי 18 העיריות'), 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
@@ -4742,6 +4754,7 @@ function renderLayers() {
        two numbers, and it is on screen before the switch is ever touched. */
     row(S.floods, 'floods', t('אזורי הצפה ממופים'), FLOOD_COLOUR[100], true,
         (D.bFl ? Object.keys(D.bFl.coverage || {}).length : 0) + '/18') +
+    srcLine('map.floods') +
     row(S.mine, 'mine', t('המקומות שלי'), MINE_COLOUR, true, D.mine.length) +
     (S.wp ? t('<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ') +
             t('חוזרת לפעול ביציאה ממנו.</p>') : '');
@@ -4758,7 +4771,8 @@ function renderLayers() {
             ? ' · ' + consMB(consBytes(miss)) + ' MB'
             : ''),
           LAYER_STYLE.ren.fillColor, true) +
-      t('<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>');
+      t('<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>') +
+      srcLine('map.ren_ran');
   }
 
   // Which of these are black and which are grey is the level's decision, not
@@ -5269,6 +5283,10 @@ function wire() {
       else if (e.target.closest('#impPick')) pickData();
       return;
     }
+    /* The same delegation the text half has, because the panel is a second
+       screen with records behind it and it is not inside #doc. */
+    const src = e.target.closest('[data-src]');
+    if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
     const b = e.target.closest('[data-lay]');
     if (!b) return;
     const k = b.dataset.lay;
@@ -6437,6 +6455,8 @@ Object.assign(EN, {
     'no published delimitation',
   'אזורי הצפה ממופים':
     'Mapped flood zones',
+  'מקור, שנת ייחוס ומה לא ממופה':
+    'Source, reference year and what is not mapped',
   '‏APA לא מיפתה את העירייה הזאת. היעדר שכבה אינו אומר שאין סכנת הצפה.':
     'APA did not map this municipality. No layer does not mean no flood risk.',
   '18 העיריות — לפי שיעור השטח המוגבל':

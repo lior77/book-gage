@@ -430,6 +430,16 @@ body[data-view="text"] .map-only{display:none}
        color:var(--accent-ink)}
 .lay[aria-pressed="false"] .lay-n{color:var(--ink-2)}
 .lay-k{flex:0 0 auto; font-size:.72rem; color:var(--ink-2); font-variant-numeric:tabular-nums}
+/* The record behind a switch.  It is a link and says so, and it starts where
+   the row's name starts — the check box and the colour chip above it are
+   19px and 14px with a gap on either side — so it reads as belonging to the
+   row rather than as a new item in the list.  24px of height is the AA floor
+   of SC 2.5.8 for a target this small. */
+.srcln{color:var(--accent); font-weight:700; text-decoration:underline;
+       text-underline-offset:3px; text-decoration-thickness:1px;
+       font-size:.74rem; min-height:24px; text-align:start;
+       margin-inline-start:calc(var(--s2) + 19px + var(--s3) + 14px + var(--s3))}
+.srcln:active{color:var(--ink)}
 
 .fld-l{display:block; font-size:.8rem; font-weight:700; color:var(--ink-2);
        margin-block:8px 3px}
