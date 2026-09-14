@@ -59,6 +59,17 @@
     <div class="menu-in" id="menuIn"></div>
   </nav>
 
+  <!-- The two file inputs live HERE, outside everything that is re-rendered,
+       and never move.  Android answers a file picker through the element the
+       picker was opened from, and that answer arrives after the app has come
+       back to the foreground — by which time an input that lived inside a
+       panel's innerHTML has been replaced, the change event fires on a node
+       nobody is listening to, and choosing a photo does nothing at all. -->
+  <input id="photoIn" class="ph-in" type="file" accept="image/*" multiple
+         aria-hidden="true" tabindex="-1">
+  <input id="dataIn" class="ph-in" type="file" accept="application/json,.json"
+         aria-hidden="true" tabindex="-1">
+
   <!-- Two buttons on the map while a place is being chosen there.  The map is
        on both halves then, so a note in the text half would be off screen. -->
   <div class="pick-bar" id="pickBar" hidden>

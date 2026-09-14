@@ -671,7 +671,7 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(400);
   await page.click('.way-why [data-wpway="photo"]');
   await page.waitForTimeout(400);
-  await page.setInputFiles('#wpPhotoIn', { name: 'a.jpg', mimeType: 'image/jpeg',
+  await page.setInputFiles('#photoIn', { name: 'a.jpg', mimeType: 'image/jpeg',
     buffer: Buffer.from(TINY_JPEG, 'base64') });
   await page.waitForTimeout(2500);
   ok('מתמונה opens the form for a place of its own',
@@ -1898,8 +1898,9 @@ const css = (page, sel, prop) =>
          }));
       await page.evaluate(() => document.querySelector('#pickBar [data-wpact="fix"]').click());
     } else {
-      const input = await page.$('#wpSheet input[type=file]');
-      ok('the photo way offers a real file input', !!input);
+      const input = await page.$('#photoIn');
+      ok('the photo way offers a real file input, outside the re-rendered sheet',
+         !!input && await page.evaluate(() => !document.getElementById('photoIn').closest('#wpSheet')));
       await input.setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg',
                                   buffer: Buffer.from(TINY_JPEG, 'base64') });
     }
@@ -1916,7 +1917,64 @@ const css = (page, sel, prop) =>
          await page.evaluate(async () => {
            const b = await getPhoto(D.mine[0].id); return !!b && b.size > 0; }));
   }
+
+  /* THE ONE THAT WAS ACTUALLY BROKEN ON THE PHONE.
+     Android answers a file picker through the element the picker was opened
+     from, and that answer arrives after the app has come back to the
+     foreground. While it was away, anything that re-renders the sheet replaced
+     that element — so the change event fired on a node nobody was listening to
+     and choosing a photo did nothing at all: the picker closed and the reader
+     was returned to the unchanged "new place" screen, with no fields and no
+     save. The inputs live in index.html now and are never re-rendered.
+
+     This is the reproduction, and it produced that exact screen before. */
   await page.evaluate(() => { D.mine = []; saveMine(); if (S.wp) toggleWp(); });
+  await page.evaluate(() => { if (!S.wp) toggleWp(); });
+  await page.waitForTimeout(500);
+  ok('both file inputs live outside everything that gets re-rendered',
+     await page.evaluate(() => {
+       const ph = document.getElementById('photoIn'), dt = document.getElementById('dataIn');
+       return !!ph && !!dt && !ph.closest('#wpSheet') && !ph.closest('#doc')
+         && !ph.closest('#panelBody') && !dt.closest('#panelBody') && !dt.closest('#doc');
+     }));
+  await page.evaluate(() => document.querySelector('#doc [data-wpact="new"]').click());
+  await page.waitForTimeout(500);
+  await page.evaluate(() => pickWay('photo'));
+  await page.waitForTimeout(400);
+  const held = await page.$('#photoIn');
+  // everything the app could redraw while the picker had the screen
+  await page.evaluate(() => { renderWaypoints(); renderWpSheet(); redrawText(); });
+  await page.waitForTimeout(300);
+  ok('the input the picker was opened from survives a full re-render',
+     await held.evaluate(e => document.contains(e)));
+  await held.setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg',
+                             buffer: Buffer.from(TINY_JPEG, 'base64') });
+  await page.waitForTimeout(1500);
+  ok('and the photo picked after it still opens the form',
+     await page.$$eval('#wpSheet input[type=text], #wpSheet textarea', e => e.length) === 2
+       && !!(await page.$('#wpSheet [data-wpact="save"]')),
+     await page.$eval('#wpSheet', e => JSON.stringify(e.innerText.replace(/\s+/g, ' ').slice(0, 70))));
+  await page.evaluate(() => document.querySelector('#wpSheet [data-wpact="save"]').click());
+  await page.waitForTimeout(900);
+  ok('and saving it keeps the picture',
+     await page.evaluate(async () => {
+       if (D.mine.length !== 1) return false;
+       const b = await getPhoto(D.mine[0].id);
+       return !!b && b.size > 0;
+     }));
+  /* The same file twice: an input that still holds it fires no change event,
+     and the reader gets silence. */
+  await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); });
+  await page.evaluate(() => document.querySelector('#doc [data-wpact="new"]').click());
+  await page.waitForTimeout(500);
+  await page.evaluate(() => pickWay('photo'));
+  await page.waitForTimeout(300);
+  await (await page.$('#photoIn')).setInputFiles({ name: 'p.jpg', mimeType: 'image/jpeg',
+                                                   buffer: Buffer.from(TINY_JPEG, 'base64') });
+  await page.waitForTimeout(1500);
+  ok('choosing the same file a second time still answers',
+     await page.$$eval('#wpSheet input[type=text]', e => e.length) === 1);
+  await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); if (S.wp) toggleWp(); });
   await page.waitForTimeout(400);
 
   /* 13d starts from one municipality rather than the district: the export

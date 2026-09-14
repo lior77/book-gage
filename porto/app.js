@@ -2417,12 +2417,14 @@ function renderPhotoBox(msg) {
   const box = $('#minePhotoBox');
   if (!box || !mineEditing) return;
   const meta = minePending || mineEditing.photo;
-  // the native control labels itself in the browser's language, not the app's,
-  // so it is kept off screen and driven by a label — which comes after it in
-  // the markup so a plain sibling selector can show the focus ring
-  const input = '<input id="minePhotoIn" class="ph-in" type="file" accept="image/*" multiple>' +
-    `<label class="chip ph-pick" for="minePhotoIn">${
-      meta ? t('החלפת התמונה') : t('בחירת תמונות')}</label>`;
+  /* A button, not an input: the one file input in this app lives in index.html
+     and never moves, because this box is re-rendered the moment a photo is
+     picked — and on Android the picker answers the element it was opened from,
+     long after that. The native control also labels itself in the browser's
+     language rather than the app's, which is the other reason it is off
+     screen and driven from here. */
+  const input = `<button type="button" class="chip ph-pick" data-wpact="photo">${
+      meta ? t('החלפת התמונה') : t('בחירת תמונות')}</button>`;
   if (!meta) {
     box.innerHTML = `<div class="chips">${input}</div>` +
       `<p class="note ph-note">${msg ? html(msg)
@@ -2795,7 +2797,7 @@ function renderWpSheet() {
       <label class="fld-l" for="mineDesc">${t('תיאור')}</label>
       <textarea id="mineDesc" rows="2"
         placeholder="${t('מה שחשוב לזכור על המקום הזה')}">${html(p.desc || '')}</textarea>
-      <label class="fld-l" for="minePhotoIn">${t('תמונה')}</label>
+      <span class="fld-l">${t('תמונה')}</span>
       <div id="minePhotoBox"></div>
       <div class="chips"><button class="chip" data-wpact="pick">${t('בחירת מקום במפה')}</button></div>`;
 
@@ -2812,7 +2814,6 @@ function renderWpSheet() {
     <div class="sheet-b">
       ${fresh ? why : ''}
       ${fields}
-      <input id="wpPhotoIn" type="file" accept="image/*" multiple hidden>
     </div>`;
   sizeSheet();
   if (placed) { renderPhotoBox(); growDesc(); }
@@ -2939,6 +2940,16 @@ function closeNewSheet() {
   wpArmed = null;
   renderWaypoints();
 }
+/* The one way to open the photo picker.  Clearing the value first is what lets
+   the same file be chosen twice: a file input that already holds it fires no
+   change event the second time, and the reader gets silence. */
+function pickPhoto() {
+  const i = $('#photoIn');
+  if (!i) return;
+  i.value = '';
+  i.click();
+}
+
 function pickWay(k) {
   wpWay = k;
   if (k === 'map') {
@@ -2949,7 +2960,7 @@ function pickWay(k) {
     return;
   }
   renderWaypoints();
-  if (k === 'photo') { const i = $('#wpPhotoIn'); if (i) i.click(); }
+  if (k === 'photo') pickPhoto();
   if (k === 'place') { const q = $('#wpQ'); if (q) q.focus(); }
 }
 
@@ -3047,6 +3058,7 @@ function wpClick(e) {
     if (act === 'cancel') { closeNewSheet(); return true; }
     if (act === 'save') { commitMine(); return true; }
     if (act === 'pick') { harvestWp(); toggleAdd(); return true; }
+    if (act === 'photo') { harvestWp(); pickPhoto(); return true; }
     if (act === 'fix') { fixPlacing(); return true; }
     if (act === 'del') {
       // two taps, because a card is the only copy of what is on it and the
@@ -3340,8 +3352,7 @@ function openImport(prefill) {
     <p class="note" id="impNote">${prefill
       ? t('לא הצלחתי להעתיק ללוח. אפשר לסמן את הטקסט כאן ולהעתיק ידנית.')
       : t('בחרו קובץ שנשמר קודם, או הדביקו כאן נקודות. מה שכבר קיים לא ישוכפל.')}</p>
-    ${prefill ? '' : `<div class="btns"><button class="cta" id="impPick">${t('בחירת קובץ')}</button></div>
-    <input id="impFile" type="file" accept="application/json,.json" hidden>`}
+    ${prefill ? '' : `<div class="btns"><button class="cta" id="impPick">${t('בחירת קובץ')}</button></div>`}
     <textarea id="impText" rows="7" dir="ltr" spellcheck="false">${html(prefill || '')}</textarea>
     <div class="btns"><button class="cta" id="impSave">${t('ייבוא')}</button></div>`);
 }
@@ -5089,9 +5100,9 @@ function wire() {
     }
     if (panelIs('import')) {
       if (e.target.closest('#impSave')) commitImport();
-      // the file input is hidden and the button in front of it is what is seen;
-      // a WebView needs the click to land on the input itself
-      else if (e.target.closest('#impPick')) { const f = $('#impFile'); if (f) f.click(); }
+      // the input itself is in index.html and never moves; this is the button
+      // in front of it
+      else if (e.target.closest('#impPick')) { const f = $('#dataIn'); if (f) { f.value = ''; f.click(); } }
       return;
     }
     const b = e.target.closest('[data-lay]');
@@ -5125,13 +5136,19 @@ function wire() {
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
-  $('#panelBody').addEventListener('change', e => {
-    if (e.target.id === 'impFile') importPickFile(e.target.files && e.target.files[0]);
+  /* Both file inputs are in index.html and are never re-rendered, so these two
+     listeners are bound once to the element the picker will actually answer.
+     They used to be delegated onto panels whose innerHTML is rebuilt, which is
+     a listener that works until the moment it matters. */
+  $('#photoIn').addEventListener('change', e => {
+    const files = e.target.files;
+    if (files && files.length) takePhotos(files);
+    e.target.value = '';
   });
-  // the photo picker lives on the form sheet now; the one on the מקומות screen
-  // is the "בחירת מקום מתמונה" way in and starts a place rather than adding to one
-  $('#wpSheet').addEventListener('change', e => {
-    if (e.target.id === 'minePhotoIn' || e.target.id === 'wpPhotoIn') takePhotos(e.target.files);
+  $('#dataIn').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) importPickFile(f);
+    e.target.value = '';
   });
   $('#wpSheet').addEventListener('input', e => {
     if (e.target.id === 'wpQ') runPlaceSearch(e.target.value);
