@@ -10,6 +10,11 @@ source, the data model, and the verification machinery. Read it before changing
 anything under `porto/`, and update it in the same commit that changes what it
 describes.
 
+**`porto/docs/HANDOFF.md`** is where to start in a fresh session: current
+version and state, what is open, how the loop is actually run, and the
+environment traps that have already cost real time. It tracks state; the
+architecture document tracks structure.
+
 ## The accuracy contract
 
 This project is about being right, not about being complete. These rules are not
