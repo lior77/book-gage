@@ -44,6 +44,13 @@ const css = (page, sel, prop) =>
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 412, height: 900 } });  // a phone, portrait
+  /* Everything below reads the rendered page, and a page that threw still
+     renders — it just renders the half that ran before the throw.  That is how
+     a dead search survived nine releases here: runSearch() raised TypeError on
+     every keystroke, #qres stayed empty, and no check was looking at #qres.  An
+     uncaught error is now a failure in its own right, whoever else noticed. */
+  const pageErrors = [];
+  page.on('pageerror', e => pageErrors.push(String(e).split('\n')[0]));
   /* Refuse the street background outright rather than letting the requests hang.
      Left to time out on their own they did not fail inside the run, and the
      check below then passed on a page where the background had never failed —
@@ -933,6 +940,66 @@ const css = (page, sel, prop) =>
      gf && !gf.chips[0].missing, gf && gf.chips[0].value);
   ok('and it does not carry the seven-municipality note',
      gf && !gf.note.includes('אינו מפרסם ברמת הרובע'));
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+
+  /* Which boundaries are the subject, at each of the three levels.
+     ARCHITECTURE.md carried this as open work for several versions — "at level
+     3 all the parishes are still black, and ownFeature() needs a branch for
+     zone".  Measured here on 2026-09-14 it was already false, and the branch
+     would have been dead code: the narrowing happens a step earlier, in
+     freHere, which builds the parish layer out of the one parish being looked
+     at.  ownFeature() therefore only ever sees features that are its own and
+     has nothing left to decide.
+
+     Which is exactly why this is worth a test rather than a note.  The
+     behaviour is correct by the shape of the layer, not by an explicit rule
+     about colour, so widening freHere — one plausible edit away — would black
+     out all 275 parishes with nothing anywhere saying that is wrong. */
+  const drawnLines = () => page.evaluate(() => {
+    const tally = g => {
+      if (!LG[g]) return { n: 0, black: 0 };
+      let n = 0, black = 0;
+      LG[g].eachLayer(l => { n++; if (l.options.color === '#000000') black++; });
+      return { n, black };
+    };
+    return { fre: tally('lnFre'), mun: tally('lnMun') };
+  });
+
+  const L1 = await drawnLines();
+  ok('level 1 draws no parish outline at all — 275 over eighteen is noise',
+     L1.fre.n === 0, JSON.stringify(L1.fre));
+  ok('and every municipality there is the subject, so every one is black',
+     L1.mun.n === 18 && L1.mun.black === 18, JSON.stringify(L1.mun));
+
+  const munOfFirst = await page.evaluate(() => {
+    const f = D.bF.features[0].properties;
+    goMun(f.mun_num);
+    return { num: f.mun_num,
+             parishes: D.bF.features.filter(x => x.properties.mun_num === f.mun_num).length };
+  });
+  await page.waitForTimeout(700);
+  const L2 = await drawnLines();
+  ok('level 2 draws that municipality\'s own parishes and no others',
+     L2.fre.n === munOfFirst.parishes, `${L2.fre.n} drawn, ${munOfFirst.parishes} in it`);
+  ok('and all of them are black, because all of them belong to it',
+     L2.fre.black === L2.fre.n, JSON.stringify(L2.fre));
+  ok('while exactly one of the eighteen municipalities is black — the chosen one',
+     L2.mun.n === 18 && L2.mun.black === 1, JSON.stringify(L2.mun));
+
+  await page.evaluate(() => {
+    const f = D.bF.features[0].properties;
+    goZone(f.mun_num + '|' + f.name);
+  });
+  await page.waitForTimeout(700);
+  const L3 = await drawnLines();
+  ok('level 3 narrows the parish line to the one parish being looked at',
+     L3.fre.n === 1, `${L3.fre.n} parish outlines drawn`);
+  ok('and it is the black one, because it is the subject',
+     L3.fre.black === 1, JSON.stringify(L3.fre));
+  ok('and no municipality is black there — the parish is the subject, not its municipality',
+     L3.mun.black === 0, JSON.stringify(L3.mun));
+
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
 
@@ -2273,6 +2340,113 @@ const css = (page, sel, prop) =>
      /16/.test(emptyText) && /17/.test(emptyText), JSON.stringify(emptyText.slice(0, 120)));
   ok('and says plainly where to go instead',
      /עירייה אחרת/.test(emptyText), JSON.stringify(emptyText.slice(-140)));
+
+  /* ---- 14. the two searches, both of which were dead --------------------
+     One root cause, found on 2026-09-14 while covering the two new-place ways
+     that had never been exercised: `const t = term.trim().toLowerCase()`, in
+     both runSearch() and placeHits(), shadowed the translation function t()
+     that 1.32.0 introduced.  Every t('עירייה') in those two bodies was then a
+     call on a string, and the app has shipped with both searches dead since.
+
+     The two failed differently, and the difference is why it lasted.  The main
+     search threw before rendering anything — the throw is inside the "two
+     letters or more" guard, so even that line never appeared.  The address way
+     threw only once a query MATCHED something, because the throw is in the
+     branch that builds a result row; a search with no hits returned cleanly.
+     The path that worked was the empty one, which is the path a quick try
+     takes. */
+  await page.evaluate(() => { closeNewSheet(); if (S.wp) toggleWp(); goDistrict(); });
+  await page.waitForTimeout(700);
+  const errsBefore = pageErrors.length;
+  /* Caught in the page rather than let through: a throw inside page.evaluate
+     rejects in node and ends the whole run, and a suite that dies on the first
+     broken thing reports one line about 405 checks. */
+  const openThrew = await page.evaluate(() => {
+    try { openSearch(); return null; } catch (e) { return String(e); }
+  });
+  await page.waitForTimeout(600);
+  ok('opening the search panel raises nothing',
+     openThrew === null && pageErrors.length === errsBefore,
+     openThrew || pageErrors.slice(errsBefore).join(' | '));
+  ok('and it puts a search box on the screen', await page.$('#q') !== null);
+
+  await page.fill('#q', 'פ');
+  await page.waitForTimeout(400);
+  ok('one letter asks for two, rather than leaving the panel blank',
+     await page.evaluate(() => document.getElementById('qres').innerText.trim().length > 0),
+     await page.evaluate(() => JSON.stringify(document.getElementById('qres').innerText.slice(0, 60))));
+
+  const munQuery = await page.evaluate(() => (D.mun[0].he || D.mun[0].pt).slice(0, 4));
+  await page.fill('#q', munQuery);
+  await page.waitForTimeout(500);
+  const rows = await page.$$('#qres [data-jump]');
+  ok(`typing ${munQuery} really returns rows — this is what threw`,
+     rows.length > 0, `${rows.length} rows`);
+  ok('and typing raised nothing either',
+     pageErrors.length === errsBefore, pageErrors.slice(errsBefore).join(' | '));
+  const jumpTo = rows.length
+    ? await page.$eval('#qres [data-jump]', e => e.dataset.jump) : null;
+  if (jumpTo) { await page.click('#qres [data-jump]'); await page.waitForTimeout(900); }
+  ok('and choosing a row goes to the place it names, which is the point of it',
+     jumpTo !== null && await page.evaluate(spec => {
+       const [kind, rest] = [spec.slice(0, spec.indexOf(':')), spec.slice(spec.indexOf(':') + 1)];
+       return kind === 'mun' ? S.level === 'mun' && S.mun === Number(rest)
+            : kind === 'zone' ? S.level === 'zone' && S.zone === rest
+            : S.level !== 'district';
+     }, jumpTo), jumpTo === null ? 'no row to choose' : jumpTo);
+
+  /* מכתובת: the second of the two ways whose flow had never been checked.  It
+     is not the Android picker at all — it searches the app's own gazetteer,
+     which is why the picker fix confirmed on 2026-09-14 says nothing about it. */
+  await page.evaluate(() => { goDistrict(); D.mine = []; saveMine(); if (!S.wp) toggleWp(); });
+  await page.waitForTimeout(600);
+  await page.click('[data-wpact="new"]');
+  await page.waitForTimeout(500);
+  await page.click('[data-wpway="place"]');
+  await page.waitForTimeout(500);
+  ok('מכתובת opens a search box and asks for nothing else yet',
+     await page.$('#wpQ') !== null && await page.$('#mineName') === null);
+  ok('and says plainly that it is not a street-address search',
+     /כתובות רחוב/.test(await page.$eval('#wpQres', e => e.innerText)),
+     await page.$eval('#wpQres', e => e.innerText.slice(0, 70)));
+
+  const errsBeforePlace = pageErrors.length;
+  await page.fill('#wpQ', munQuery);
+  await page.waitForTimeout(500);
+  ok('a query that matches returns rows — the case that threw',
+     (await page.$$('#wpQres [data-wpplace]')).length > 0,
+     `${(await page.$$('#wpQres [data-wpplace]')).length} rows`);
+  ok('and it raised nothing doing it',
+     pageErrors.length === errsBeforePlace, pageErrors.slice(errsBeforePlace).join(' | '));
+
+  const placeRow = await page.$('#wpQres [data-wpplace]');
+  const chosen = placeRow
+    ? await page.$eval('#wpQres [data-wpplace] .row-t', e => e.textContent.trim()) : null;
+  if (placeRow) { await page.click('#wpQres [data-wpplace]'); await page.waitForTimeout(900); }
+  ok('choosing one opens the form for a place of its own',
+     await page.$('#mineName') !== null && await page.evaluate(() => !!mineEditing));
+  const nameShown = await page.$('#mineName')
+    ? await page.$eval('#mineName', e => e.value) : null;
+  ok('with the record it came from already named on it',
+     chosen !== null && nameShown !== null && nameShown.trim() === chosen,
+     `${nameShown} vs ${chosen}`);
+  ok('and that record\'s own coordinate, not a blank one',
+     await page.evaluate(() => !!mineEditing && Array.isArray(mineEditing.ll)
+       && mineEditing.ll.length === 2
+       && Number.isFinite(mineEditing.ll[0]) && Number.isFinite(mineEditing.ll[1])),
+     await page.evaluate(() => JSON.stringify(mineEditing && mineEditing.ll)));
+  const wantLl = await page.evaluate(() => mineEditing ? mineEditing.ll.slice() : null);
+  if (wantLl) { await page.click('#wpSheet [data-wpact="save"]'); await page.waitForTimeout(900); }
+  ok('and saving really puts the place there',
+     wantLl !== null && await page.evaluate(ll => D.mine.length === 1
+       && Math.abs(D.mine[0].ll[0] - ll[0]) < 1e-9
+       && Math.abs(D.mine[0].ll[1] - ll[1]) < 1e-9, wantLl),
+     await page.evaluate(() => JSON.stringify(D.mine.map(m => [m.name, m.ll]))));
+  await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); if (S.wp) toggleWp(); goDistrict(); });
+  await page.waitForTimeout(600);
+
+  ok('nothing on any screen threw an uncaught error along the way',
+     pageErrors.length === 0, pageErrors.join(' | '));
 
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();

@@ -2664,7 +2664,7 @@ let wpNew = false;         // the new-place screen is open, with or without a wa
 
 /* Not a street geocoder — the app carries no address database and reaches no
    network.  What it can search is its own gazetteer: the eighteen
-   municipalities, the 243 parishes, and the localities and named sites inside
+   municipalities, the 275 parishes, and the localities and named sites inside
    whichever parish they belong to.  Picking one puts the place at that record's
    own coordinate, and the form says which record it came from. */
 function placePickerHtml() {
@@ -2675,9 +2675,9 @@ function placePickerHtml() {
     </div>`;
 }
 function placeHits(term) {
-  const t = term.trim().toLowerCase();
-  if (t.length < 2) return null;
-  const hit = x => String(x || '').toLowerCase().includes(t);
+  const q = term.trim().toLowerCase();
+  if (q.length < 2) return null;
+  const hit = x => String(x || '').toLowerCase().includes(q);
   const out = [];
   D.mun.forEach(m => {
     if (hit(m.he) || hit(m.pt) || hit(m.dicofre)) out.push(
@@ -5001,12 +5001,12 @@ function panelSearchClick(e) {
 }
 
 function runSearch(term) {
-  const t = term.trim().toLowerCase();
-  if (t.length < 2) {
+  const q = term.trim().toLowerCase();
+  if (q.length < 2) {
     $('#qres').innerHTML = t('<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>');
     return;
   }
-  const hit = s => String(s || '').toLowerCase().includes(t);
+  const hit = s => String(s || '').toLowerCase().includes(q);
   const out = [];
   D.mun.forEach(m => {
     if (hit(m.he) || hit(m.pt) || hit(m.en) || hit(m.dicofre)) out.push({
@@ -5020,7 +5020,7 @@ function runSearch(term) {
       k: f.mun_num === 1 ? t('רובע בפורטו') : t('רובע'),
       go: `data-jump="zone:${html(D.freKey(f))}"` });
   });
-  // 1,773 localities and 1,530 dots across the district; stop once the list is
+  // 1,773 localities and 1,531 dots across the district; stop once the list is
   // long enough rather than walk all of them for every keystroke
   const CAP = 60;
   for (const key of Object.keys(D.zones)) {

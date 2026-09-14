@@ -27,9 +27,10 @@ honest — these range from 1995 to 2026 and there is no single year for "REN".
 WHAT IS NOT HERE.  Fire hazard (perigosidade de incêndio rural) is excluded,
 and not for size: its serv_data is the date of the law that ordered the map
 rather than the year the map was drawn, so it has no reference year and the
-first rule of the accuracy contract refuses it. Porto has no REN and no RAN in
-this collection, and Vila do Conde no REN. The reason is not published, so
-none is given here.
+first rule of the accuracy contract refuses it. The collection returned no REN
+and no RAN for Porto, and no REN for Vila do Conde, on the day it was read —
+an absence from the register, which is not the same finding as no delimitation
+existing. The reason is not published, so none is given here.
 """
 import argparse
 import gzip

@@ -1,0 +1,42 @@
+# What scripts/*.py import from outside the standard library.
+#
+# There is no virtualenv here and no lockfile: the container is rebuilt from
+# scratch each session, so "installed" is never a state that survives.  This
+# file exists because the alternative was reading a paragraph of prose and
+# guessing — build.py dies on `ModuleNotFoundError: geographiclib` before it
+# reads a single byte of data, and in two cases below the name that fails to
+# import is not the name of the package that provides it.
+#
+#     pip install -r requirements.txt
+#
+# Floors, not pins.  The geometry is validated against DGT's own published
+# area_ha to 0.05% precisely so that a shapely release which rounds
+# differently still passes; pinning exactly would trade that tolerance for a
+# resolver failure the first time one of these is yanked.  The versions in
+# the right-hand comments are what the suite was last green on: 2026-09-14,
+# 29 checks and 382 browser tests, 0 failures.
+#
+# sqlite3 is absent because it ships with Python — GeoPackage is read as
+# SQLite plus shapely.wkb, since this environment has neither GDAL nor
+# geopandas and is not getting them.  porto_city, porto_freg2, porto_freg3
+# and porto_pages are absent because they are ours, in data/raw/pdf_source/.
+
+# --- the build and the checks: without these, nothing runs at all ---
+shapely>=2.0        # 2.1.2 — geometry; make_valid and grid_size overlays
+pyproj>=3.6         # 3.7.2 — EPSG:4326 <-> EPSG:3763
+pyshp>=2.3          # 3.1.6 — imports as `shapefile`, not as `pyshp`
+openpyxl>=3.1       # 3.1.5 — the INE workbooks
+geographiclib>=2.0  # 2.1   — distances on the ellipsoid
+numpy>=1.24         # 2.4.6 — checks.py imports it directly.  It also arrives
+                    #         as a shapely dependency, which is exactly why it
+                    #         is written down: a direct import that is only
+                    #         ever installed by accident breaks on the day
+                    #         shapely stops needing it.
+
+# --- only for re-fetching sources or regenerating icons, not for a build ---
+# Left out of the line above so that a session which just wants a green suite
+# does not install a browser driver and an image library it will never call.
+#     pip install playwright pillow
+# playwright        # fetch_pordata.py — the Python package, which is NOT the
+#                   # node module the browser suite needs.  See setup_env.sh.
+# pillow            # make_icons.py — imports as `PIL`

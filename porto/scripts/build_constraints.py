@@ -36,10 +36,13 @@ rule rather than a preference:
     Porto part is the surface of the Douro.  Neither is a statement about a
     neighbour, so neither crosses the line.
 
-WHAT IS NOT PUBLISHED.  Porto has no REN and no RAN delimitation; Vila do
-Conde has no REN.  Those units get no key at all, so the app renders אין נתון
-and never a zero.  The reason DGT does not publish them is not published
-either, and none is invented here.
+WHAT THE REGISTER DID NOT RETURN.  DGT's register returned no REN and no RAN
+polygons for Porto, and no REN for Vila do Conde, in the fetch these layers
+were built from.  Say that, and not "Porto has no REN": a collection that
+answers with zero features is not a collection that says none exists, and the
+difference is the whole of rule 4.  Those units get no key at all, so the app
+renders אין נתון and never a zero.  The reason DGT does not publish them is
+not published either, and none is invented here.
 """
 import datetime
 import gzip
