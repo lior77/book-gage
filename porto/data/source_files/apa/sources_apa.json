@@ -1,0 +1,22 @@
+[
+  {
+    "file": "apa_zonas_inundaveis.gpkg",
+    "dataset": "Carta de zonas inundáveis - Portugal continental - Limite da área de inundação",
+    "source_org": "APA — Agência Portuguesa do Ambiente, I.P.",
+    "source_url": "https://sniambgeoviewer.apambiente.pt/Geodocs/shpzips/d312_apa_ai_2c_limite_pc.zip",
+    "api_call": "https://inspire.apambiente.pt/getogc/services/INSPIRE/NZ_Diretiva200760CE_ptcont_20/MapServer/WFSServer?request=GetCapabilities&service=WFS",
+    "indicator_code": null,
+    "downloaded": "2026-09-07",
+    "publication_date": "2023-08-17",
+    "reference_period": "2.º Ciclo da Diretiva 2007/60/CE",
+    "geo_level": "polígono de zona inundável",
+    "geo_code_system": null,
+    "units": null,
+    "crs": "EPSG:3763",
+    "licence": "Sem restrições; acesso público sem restrições (conforme metadados ISO incluídos no ficheiro de origem)",
+    "definition_pt": "Este conjunto de dados integra os Conjuntos de Dados de Elevado Valor/HVD identificados de acordo com o Regulamento de Execução n.º 2023/138 da Diretiva (UE) 2019/1024, relativa aos dados abertos e à reutilização de informações do setor público.\n\nA Directiva 2007/60/CE, relativa à avaliação e gestão dos riscos de inundações (2º Ciclo), estabelece que os Estados-Membro devem elaborar cartas de zonas inundáveis e cartas de riscos de associadas a diferentes cenários de inundações, de modo a disporem de um instrumento de informação eficaz, bem como de uma base valiosa para estabelecer prioridades e para tomar decisões técnicas, financeiras e políticas em matéria de gestão de riscos de inundações.\n\nO serviço de visualização (WMS) disponivel em \"sniambgeoogc.apambiente.pt\", permite o acesso à informação classificada e com a simbologia oficial do tema.",
+    "missing_marker": null,
+    "notes": "Ficheiro convertido do Shapefile oficial para GeoPackage sem cálculos. Os registos foram apenas separados pelo valor original do campo 'pretorno' em três camadas: T0020, T0100 e T1000. Os restantes campos e geometrias foram preservados.",
+    "sha256": "cd2816ab1af9856976ca30999e3e101696b5561f40875209c965c9664c41cdf9"
+  }
+]

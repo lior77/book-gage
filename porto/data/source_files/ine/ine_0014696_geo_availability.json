@@ -1,0 +1,92 @@
+[
+  {
+    "municipio": "Amarante",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Baião",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Felgueiras",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Gondomar",
+    "source_geo_level": "freguesia",
+    "count": 7
+  },
+  {
+    "municipio": "Lousada",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Maia",
+    "source_geo_level": "freguesia",
+    "count": 10
+  },
+  {
+    "municipio": "Marco de Canaveses",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Matosinhos",
+    "source_geo_level": "freguesia",
+    "count": 4
+  },
+  {
+    "municipio": "Paços de Ferreira",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Paredes",
+    "source_geo_level": "freguesia",
+    "count": 18
+  },
+  {
+    "municipio": "Penafiel",
+    "source_geo_level": "municipio",
+    "count": 1
+  },
+  {
+    "municipio": "Porto",
+    "source_geo_level": "freguesia",
+    "count": 7
+  },
+  {
+    "municipio": "Póvoa de Varzim",
+    "source_geo_level": "freguesia",
+    "count": 7
+  },
+  {
+    "municipio": "Santo Tirso",
+    "source_geo_level": "freguesia",
+    "count": 14
+  },
+  {
+    "municipio": "Trofa",
+    "source_geo_level": "freguesia",
+    "count": 5
+  },
+  {
+    "municipio": "Valongo",
+    "source_geo_level": "freguesia",
+    "count": 4
+  },
+  {
+    "municipio": "Vila do Conde",
+    "source_geo_level": "freguesia",
+    "count": 21
+  },
+  {
+    "municipio": "Vila Nova de Gaia",
+    "source_geo_level": "freguesia",
+    "count": 15
+  }
+]

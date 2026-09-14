@@ -1,0 +1,161 @@
+{
+  "dataset": "Municipal Master Plans (PDM) - Porto district target municipalities",
+  "project_folder": "Google Drive / עבור got / PDM_RAW",
+  "created": "2026-09-08",
+  "status": "source_discovery_in_progress",
+  "method_rules": [
+    "Use only official municipal, DGT/SNIT/SNIG, or official legal-publication sources.",
+    "Prefer original municipal PDM vector data over harmonized national products.",
+    "Preserve source classifications and attributes; do not normalize classes.",
+    "No raster-to-vector conversion.",
+    "Only legally effective plans are final; draft/revision procedures are documented but excluded until effective.",
+    "Prefer EPSG:3763 and do not transform unless source CRS is unambiguous.",
+    "Retain original legal regulation and publication references when obtainable."
+  ],
+  "municipalities": [
+    {
+      "dtcc": "1301",
+      "municipality": "Amarante",
+      "official_pdm": "https://www.cm-amarante.pt/servicos/urbanismo/plano-diretor-municipal-de-amarante/",
+      "official_geoportal": "https://websig.cm-amarante.pt/geoportal/",
+      "vector_status": "official_geoportal_found_endpoint_pending",
+      "legal_note": "Current plan page found; 4th alteration published in 2026. Exact effective cartographic version still to be matched to service layers."
+    },
+    {
+      "dtcc": "1302",
+      "municipality": "Baião",
+      "official_pdm": "https://cm-baiao.pt/docs/viver/urbanismo/plano-diretor-municipal/",
+      "official_geoportal": null,
+      "vector_status": "official_pdm_and_geoportal_link_found_endpoint_pending",
+      "legal_note": "2nd revision published in 2025; exact service endpoint still to be identified."
+    },
+    {
+      "dtcc": "1303",
+      "municipality": "Felgueiras",
+      "official_pdm": "https://cm-felgueiras.pt/territorio-e-gestao/ordenamento-do-territorio/pdm-plano-diretor-municipal/revisao-do-pdm-em-vigor/",
+      "official_geoportal": "https://sig.cm-felgueiras.pt/",
+      "vector_status": "official_geoportal_found_endpoint_pending",
+      "legal_note": "Revision effective since 2021; later alterations exist. Pending third alteration must not be treated as effective until publication."
+    },
+    {
+      "dtcc": "1304",
+      "municipality": "Gondomar",
+      "official_pdm": "https://www.cm-gondomar.pt/atividade-municipal/planeamento-e-ordenamento/plano-diretor-municipal/",
+      "official_geoportal": null,
+      "vector_status": "official_pdm_found_vector_endpoint_pending",
+      "legal_note": "Current effective plan/version still being verified against municipal and legal publication."
+    },
+    {
+      "dtcc": "1305",
+      "municipality": "Lousada",
+      "official_pdm": "https://app.cm-lousada.pt/servicos/urbanismo-e-habitacao/gestao-urbanistica/planeamento-territorial/pdm",
+      "official_geoportal": "https://app.cm-lousada.pt/servicos/urbanismo-e-habitacao/sig-sistema-de-informacao-geografica",
+      "vector_status": "official_geoportal_found_endpoint_pending",
+      "legal_note": "PDM page and official GIS found; exact current effective cartographic service still to be matched."
+    },
+    {
+      "dtcc": "1306",
+      "municipality": "Maia",
+      "official_pdm": "https://www.cm-maia.pt/institucional/planos-municipais-de-ordenamento-do-territorio/planos-em-vigor/plano-diretor-municipal",
+      "official_geoportal": null,
+      "vector_status": "official_pdm_found_vector_endpoint_pending",
+      "legal_note": "2nd revision published in 2025; 2026 adaptation/material correction found. Exact effective service layers pending."
+    },
+    {
+      "dtcc": "1307",
+      "municipality": "Marco de Canaveses",
+      "official_pdm": "https://www.cm-marco-canaveses.pt/servicos/documentos/plano-diretor-municipal/",
+      "official_geoportal": null,
+      "vector_status": "official_pdm_and_geoportal_reference_found_endpoint_pending",
+      "legal_note": "Current legally effective revision remains the published plan while a newer revision procedure is ongoing."
+    },
+    {
+      "dtcc": "1308",
+      "municipality": "Matosinhos",
+      "official_pdm": null,
+      "official_geoportal": "https://infosig.cm-matosinhos.pt/server/rest/services",
+      "vector_status": "official_arcgis_rest_verified",
+      "legal_note": "Official ArcGIS REST directory exposes PDM-related vector services; exact current effective PDM service/layers are being enumerated."
+    },
+    {
+      "dtcc": "1309",
+      "municipality": "Paços de Ferreira",
+      "official_pdm": "https://cm-pacosdeferreira.pt/2869/plano-diretor-municipal",
+      "official_geoportal": "https://websig.cm-pacosdeferreira.pt/geoportal",
+      "vector_status": "official_geoportal_verified_endpoint_pending",
+      "legal_note": "Municipal page labels the existing PDM as in force and a revision as ongoing. The page lists a 4th alteration regulation dated 2025."
+    },
+    {
+      "dtcc": "1310",
+      "municipality": "Paredes",
+      "official_pdm": "https://www.cm-paredes.pt/pages/1784",
+      "official_geoportal": "https://sig.cm-paredes.pt/arcgis/rest/services/Planeamento/PLA_AGS_PMOTS_PDM2024/MapServer",
+      "vector_status": "official_arcgis_rest_verified",
+      "legal_note": "2nd revision published in 2024. Official municipal ArcGIS service for PDM 2024 found."
+    },
+    {
+      "dtcc": "1311",
+      "municipality": "Penafiel",
+      "official_pdm": null,
+      "official_geoportal": "https://websig.cm-penafiel.pt/geoportal/pt/Home/Index",
+      "vector_status": "official_geoportal_verified_endpoint_pending",
+      "legal_note": "Official geoportal is active. A simplified alteration procedure was under public consultation in 2026; it must not be treated as effective unless formally published."
+    },
+    {
+      "dtcc": "1312",
+      "municipality": "Porto",
+      "official_pdm": "https://pdm.cm-porto.pt/",
+      "official_geoportal": null,
+      "vector_status": "official_open_data_wfs_found_exact_layer_urls_pending_validation",
+      "legal_note": "PDM 2021 with later adaptation found. Official Porto open-data records expose PDM map services/WFS; exact layer endpoints are being validated."
+    },
+    {
+      "dtcc": "1313",
+      "municipality": "Póvoa de Varzim",
+      "official_pdm": null,
+      "official_geoportal": "https://sigonline.cm-pvarzim.pt/arcgis/rest/services/Inter_Intra/PLANOS_TOTAIS/MapServer",
+      "vector_status": "official_arcgis_rest_verified",
+      "legal_note": "Official ArcGIS service exposes PDM ordering and conditioning feature layers in EPSG:3763 with GeoJSON query support."
+    },
+    {
+      "dtcc": "1314",
+      "municipality": "Santo Tirso",
+      "official_pdm": null,
+      "official_geoportal": "https://websig.cm-stirso.pt/geoportal/webforms/menu_territorio.aspx?separador=&xml=menu_webdis.xml",
+      "vector_status": "official_geoportal_found_endpoint_pending",
+      "legal_note": "A 2nd revision was approved locally in 2026 but was reported as awaiting formal publication; only the legally effective plan will be collected."
+    },
+    {
+      "dtcc": "1318",
+      "municipality": "Trofa",
+      "official_pdm": null,
+      "official_geoportal": "https://sig.mun-trofa.pt/1RPDMT",
+      "vector_status": "official_geoportal_catalog_found_endpoint_pending",
+      "legal_note": "Official municipal GIS and 1st PDM revision application found; catalog/service endpoints still being enumerated."
+    },
+    {
+      "dtcc": "1315",
+      "municipality": "Valongo",
+      "official_pdm": null,
+      "official_geoportal": "https://sig.cm-valongo.pt/arcgis/rest/services/PDM2024/2RevPDMORD_ClassificacaoQualificacaoSolo/MapServer",
+      "vector_status": "official_arcgis_rest_verified",
+      "legal_note": "Official PDM2024 ArcGIS services found for classification/qualification, execution, safeguards, risks, mobility and conditioning; legal publication date still being cross-checked."
+    },
+    {
+      "dtcc": "1316",
+      "municipality": "Vila do Conde",
+      "official_pdm": "https://www.cm-viladoconde.pt/",
+      "official_geoportal": null,
+      "vector_status": "official_site_found_vector_endpoint_pending",
+      "legal_note": "Existing PDM and revision process documented by municipality; exact current effective GIS/vector service still unresolved."
+    },
+    {
+      "dtcc": "1317",
+      "municipality": "Vila Nova de Gaia",
+      "official_pdm": null,
+      "official_geoportal": "https://sig.gaiurb.pt/geoportal/webforms/menu_territorio.aspx?separador=&xml=menu_webpdm.xml",
+      "vector_status": "official_geoportal_verified_endpoint_pending",
+      "legal_note": "Official Gaiurb geoportal exposes PDM ordering and many conditioning themes; underlying downloadable service endpoints still being identified."
+    }
+  ]
+}

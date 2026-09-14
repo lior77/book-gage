@@ -1,0 +1,42 @@
+[
+  {
+    "file": "ine_precos_venda.csv",
+    "dataset": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) por Localização geográfica (NUTS - 2024) e Categoria do alojamento familiar; Trimestral - INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022)",
+    "source_org": "INE — Instituto Nacional de Estatística",
+    "source_url": "https://www.ine.pt/xurl/indx/0012234/PT",
+    "api_call": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012234&Dim1=<period_code>&lang=PT",
+    "indicator_code": "0012234",
+    "downloaded": "2026-09-10",
+    "publication_date": null,
+    "reference_period": "2019Q4–2026Q1",
+    "geo_level": "freguesia where published by INE; otherwise município",
+    "geo_code_system": "INE Localização geográfica (NUTS - 2024), versão 05431; categ_cod preserved exactly",
+    "units": "Euro/ Metro quadrado (€/ m²)",
+    "crs": null,
+    "licence": null,
+    "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) por Localização geográfica (NUTS - 2024) e Categoria do alojamento familiar; Trimestral - INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022)",
+    "missing_marker": "- = Dado nulo ou não aplicável; value_eur_m2 left blank",
+    "notes": "Indicador de janela móvel dos últimos 12 meses, conforme designação oficial. Nenhuma alteração, média, interpolação ou cálculo de tendência foi efetuado. DataUltimaAtualizacao INE: 2026-07-17.",
+    "sha256": "e13cad6daf9b2f15a9b49e5c0da94a6f25f9b75e65239cfae89c98f8594b0a8a"
+  },
+  {
+    "file": "ine_rendas.csv",
+    "dataset": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²) por Localização geográfica (NUTS - 2024); Trimestral - INE, Estatísticas de Rendas da Habitação ao nível local",
+    "source_org": "INE — Instituto Nacional de Estatística",
+    "source_url": "https://www.ine.pt/xurl/indx/0014696/PT",
+    "api_call": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0014696&Dim1=<period_code>&lang=PT",
+    "indicator_code": "0014696",
+    "downloaded": "2026-09-10",
+    "publication_date": null,
+    "reference_period": "2020Q1–2026Q1",
+    "geo_level": "freguesia where published by INE; otherwise município",
+    "geo_code_system": "INE Localização geográfica (NUTS - 2024), versão 05433; categ_cod preserved exactly",
+    "units": "Euro/ Metro quadrado (€/ m²)",
+    "crs": null,
+    "licence": null,
+    "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²) por Localização geográfica (NUTS - 2024); Trimestral - INE, Estatísticas de Rendas da Habitação ao nível local",
+    "missing_marker": "- = Dado nulo ou não aplicável; value_eur_m2 left blank",
+    "notes": "Indicador de janela móvel dos últimos 12 meses, conforme designação oficial. Nenhuma alteração, média, interpolação ou cálculo de tendência foi efetuado. DataUltimaAtualizacao INE: 2026-06-26.",
+    "sha256": "9a1764691b00f01d679749f105c089fb6893503bd662ad01a12545d038e658e9"
+  }
+]

@@ -1,0 +1,1973 @@
+{
+  "schema_version": "1.0",
+  "created": "2026-09-08",
+  "dataset_metadata": {
+    "title": "SRUP - Reserva Ecológica Nacional - Região Norte",
+    "source_org": "Direção-Geral do Território",
+    "catalog_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+    "dgt_srup_url": "https://www.dgterritorio.gov.pt/atividades/ordenamento/sgt/srup",
+    "wfs_capabilities_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/WFService.aspx?service=WFS&request=getcapabilities",
+    "wfs_getfeature_endpoint": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+    "wfs_version": "2.0.0",
+    "catalog_last_update": "2021-11-24",
+    "catalog_metadata_text_updated": "2026-03-06",
+    "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+    "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+    "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89)."
+  },
+  "files": [
+    {
+      "dataset": "SRUP - Reserva Ecológica Nacional - Região Norte",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "36 pedidos GetFeature municipais; URLs completas em wfs_requests / ren_download_manifest.json",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": "AREA_HA em hectares quando presente; coordenadas do CRS em metros",
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "A DGT alerta que a informação vetorial REN deve ser confirmada com a imagem georreferenciada publicada em Diário da República; essa publicação prevalece em caso de dúvida. FeatureCollections vazias foram preservadas como resultados vazios, sem estimativa ou inferência de ausência legal.",
+      "file": "dgt_ren.gpkg",
+      "sha256": "accbd1ae066669603d8212f38f25967966b128573171e2de261937cbb1cf886b",
+      "layers": {
+        "ren_norte": {
+          "feature_type": "gmgml:REN_Norte",
+          "feature_count": 31,
+          "geometry_type": "GEOMETRYCOLLECTION",
+          "crs": "EPSG:3763",
+          "fields": [
+            "AREA_HA",
+            "CONCELHO",
+            "DEPOSITO",
+            "DESIGNACAO",
+            "DINAMICA",
+            "DTCC",
+            "GEOMETRIA_AUTOR",
+            "GEOMETRIA_DATA",
+            "GEOMETRIA_RIGOR",
+            "ID",
+            "IDESTADO",
+            "LEI_TIPO",
+            "ORIGEM_REN",
+            "REGIAO",
+            "SERVIDAO",
+            "SERV_DR",
+            "SERV_HIPERLINK",
+            "SERV_LEI",
+            "TIPOLOGIA",
+            "TUTELA"
+          ],
+          "extent": [
+            -57193.2033216102,
+            148063.015797624,
+            21587.8027999983,
+            200495.111500001
+          ],
+          "municipalities_with_features": [
+            "AMARANTE",
+            "BAIÃO",
+            "FELGUEIRAS",
+            "GONDOMAR",
+            "LOUSADA",
+            "MAIA",
+            "MARCO DE CANAVESES",
+            "MATOSINHOS",
+            "PAREDES",
+            "PAÇOS DE FERREIRA",
+            "PENAFIEL",
+            "PÓVOA DE VARZIM",
+            "SANTO TIRSO",
+            "TROFA",
+            "VALONGO",
+            "VILA NOVA DE GAIA"
+          ]
+        },
+        "linhas_de_agua_norte": {
+          "feature_type": "gmgml:Linhas_de_Agua_Norte",
+          "feature_count": 14,
+          "geometry_type": "GEOMETRYCOLLECTION",
+          "crs": "EPSG:3763",
+          "fields": [
+            "ID",
+            "SERVIDAO",
+            "REGIAO",
+            "DTCC",
+            "CONCELHO",
+            "TIPOLOGIA",
+            "DINAMICA",
+            "ESTADO"
+          ],
+          "extent": [
+            -54450.7190999894,
+            148529.0831,
+            18982.4843875859,
+            200334.077500002
+          ],
+          "municipalities_with_features": [
+            "BAIÃO",
+            "FELGUEIRAS",
+            "GONDOMAR",
+            "LOUSADA",
+            "MAIA",
+            "MARCO DE CANAVESES",
+            "MATOSINHOS",
+            "PAREDES",
+            "PAÇOS DE FERREIRA",
+            "PÓVOA DE VARZIM",
+            "SANTO TIRSO",
+            "TROFA",
+            "VALONGO",
+            "VILA NOVA DE GAIA"
+          ]
+        }
+      },
+      "validation": {
+        "ren_norte": {
+          "feature_count": 31,
+          "crs_epsg": 3763,
+          "geometry_wkb_exact": true,
+          "attributes_exact": true,
+          "field_names_exact": true
+        },
+        "linhas_de_agua_norte": {
+          "feature_count": 14,
+          "crs_epsg": 3763,
+          "geometry_wkb_exact": true,
+          "attributes_exact": true,
+          "field_names_exact": true
+        }
+      },
+      "source_raw_location": "../REN_RAW",
+      "structural_geometry_issues_preserved": [
+        {
+          "raw_file": "dgt_ren_felgueiras.geojson",
+          "feature_index": 0,
+          "feature_id": "REN_Norte.173010",
+          "path": "geometry.geometries[164].coordinates[0]",
+          "issue": "polygon_ring_has_fewer_than_4_coordinate_tuples",
+          "coordinate_tuple_count": 3,
+          "coordinates": [
+            [
+              -10117.0540999992,
+              188283.834100001
+            ],
+            [
+              -10117.0540999992,
+              188283.834100001
+            ],
+            [
+              -10117.0540999992,
+              188283.834100001
+            ]
+          ],
+          "action": "preserved_without_repair"
+        },
+        {
+          "raw_file": "dgt_ren_paredes.geojson",
+          "feature_index": 0,
+          "feature_id": "REN_Norte.173016",
+          "path": "geometry.geometries[147].coordinates[1]",
+          "issue": "polygon_ring_has_fewer_than_4_coordinate_tuples",
+          "coordinate_tuple_count": 2,
+          "coordinates": [
+            [
+              -18469.8981999956,
+              166907.609500001
+            ],
+            [
+              -18469.8981999956,
+              166907.609500001
+            ]
+          ],
+          "action": "preserved_without_repair"
+        }
+      ]
+    },
+    {
+      "dataset": "Manifesto de descarregamento das 36 chamadas WFS municipais",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "A DGT alerta que a informação vetorial REN deve ser confirmada com a imagem georreferenciada publicada em Diário da República; essa publicação prevalece em caso de dúvida. FeatureCollections vazias foram preservadas como resultados vazios, sem estimativa ou inferência de ausência legal.",
+      "file": "ren_download_manifest.json",
+      "sha256": "6234fb1b327e1de019ecfd9950dbec0bc644775c6be13db5872f6cd1a90ca020"
+    },
+    {
+      "dataset": "WFS GetCapabilities original",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "A DGT alerta que a informação vetorial REN deve ser confirmada com a imagem georreferenciada publicada em Diário da República; essa publicação prevalece em caso de dúvida. FeatureCollections vazias foram preservadas como resultados vazios, sem estimativa ou inferência de ausência legal.",
+      "file": "dgt_ren_norte_wfs_capabilities.xml",
+      "sha256": "a68bc8709690be18e67c65e420bb4e1c1e6bd649c4923f57ae7418e393419150"
+    },
+    {
+      "dataset": "DescribeFeatureType original de gmgml:REN_Norte",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "A DGT alerta que a informação vetorial REN deve ser confirmada com a imagem georreferenciada publicada em Diário da República; essa publicação prevalece em caso de dúvida. FeatureCollections vazias foram preservadas como resultados vazios, sem estimativa ou inferência de ausência legal.",
+      "file": "dgt_ren_norte_schema_ren.xsd",
+      "sha256": "b93638d3313ca9a66b20adabf9e37f1d24c66037f4b687cfe74874a1c093bc34"
+    },
+    {
+      "dataset": "DescribeFeatureType original de gmgml:Linhas_de_Agua_Norte",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "A DGT alerta que a informação vetorial REN deve ser confirmada com a imagem georreferenciada publicada em Diário da República; essa publicação prevalece em caso de dúvida. FeatureCollections vazias foram preservadas como resultados vazios, sem estimativa ou inferência de ausência legal.",
+      "file": "dgt_ren_norte_schema_linhas_agua.xsd",
+      "sha256": "6212e00ed7ee6c6b2ced3e6abc246672d0e7efe7b80a31b112510fa25a9f40de"
+    },
+    {
+      "dataset": "Documentação detalhada do produto REN_FINAL",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "A DGT alerta que a informação vetorial REN deve ser confirmada com a imagem georreferenciada publicada em Diário da República; essa publicação prevalece em caso de dúvida. FeatureCollections vazias foram preservadas como resultados vazios, sem estimativa ou inferência de ausência legal.",
+      "file": "README.md",
+      "sha256": "b7acf932efa365fb6fa5cb80efe61e61706573f896f372f9f71f88d3b4b27852"
+    },
+    {
+      "dataset": "Registo de proveniência e metadados do produto REN_FINAL",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "Hash próprio não é embutido para evitar autorreferência; consta em checksums.sha256.",
+      "file": "sources_ren.json",
+      "sha256": null
+    },
+    {
+      "dataset": "Checksums SHA-256 dos ficheiros finais",
+      "source_org": "Direção-Geral do Território",
+      "source_url": "https://dados.gov.pt/pt/datasets/srup-reserva-ecologica-nacional/",
+      "api_call": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get",
+      "indicator_code": null,
+      "downloaded": "2026-09-08",
+      "publication_date": null,
+      "reference_period": "Em vigor; snapshot do serviço WFS descarregado em 2026-09-08",
+      "geo_level": "Região Norte; extrações filtradas por município (DTCC)",
+      "geo_code_system": "DTCC (campo de origem, 4 caracteres)",
+      "units": null,
+      "crs": "EPSG:3763 (PT-TM06/ETRS89)",
+      "licence": "Creative Commons Attribution 4.0 - CC BY 4.0",
+      "definition_pt": "A Reserva Ecológica Nacional (REN) é uma restrição de utilidade pública. A informação geográfica fornecida através do presente serviço WFS, relativa à área da Região Norte, foi produzida pela DGT a partir de informação legalmente depositada no SNIT relativa à delimitação da REN, sendo que a REN é uma estrutura biofísica que integra as áreas que são objeto de proteção especial por causa do seu valor e sensibilidade ecológicos ou pela sua susceptibilidade a riscos naturais. Informação no sistema de referência EPSG: 3763 (PT-TM06/ETRS89).",
+      "missing_marker": null,
+      "notes": "O próprio ficheiro checksums.sha256 não inclui o seu próprio hash.",
+      "file": "checksums.sha256",
+      "sha256": null
+    }
+  ],
+  "municipal_results": [
+    {
+      "municipality": "Amarante",
+      "dtcc": "1301",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 0,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 4954/2024/2",
+          "serv_dr": "48 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 4954_2024_2.pdf",
+          "geometria_data": "2024-05-17T00:00:00",
+          "deposito": "01.13.01/REN/06/2024/7"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 4954/2024/2",
+          "serv_dr": "48 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 4954_2024_2.pdf",
+          "geometria_data": "2024-05-17T00:00:00",
+          "deposito": "01.13.01/REN/06/2024/7"
+        }
+      ]
+    },
+    {
+      "municipality": "Baião",
+      "dtcc": "1302",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 20794/2025/2",
+          "serv_dr": "159 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 20794_2025_2.pdf",
+          "geometria_data": "2026-04-08T00:00:00",
+          "deposito": "01.13.02/REN/02/2025/44"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 20794/2025/2",
+          "serv_dr": "159 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 20794_2025_2.pdf",
+          "geometria_data": "2026-04-08T00:00:00",
+          "deposito": "01.13.02/REN/02/2025/44"
+        }
+      ]
+    },
+    {
+      "municipality": "Felgueiras",
+      "dtcc": "1303",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 7304/2024/2",
+          "serv_dr": "68 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 7304_2024_2.pdf",
+          "geometria_data": "2024-04-05T00:00:00",
+          "deposito": "01.13.03/REN/02/2024/13"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 7304/2024/2",
+          "serv_dr": "68 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 7304_2024_2.pdf",
+          "geometria_data": "2024-04-05T00:00:00",
+          "deposito": "01.13.03/REN/02/2024/13"
+        }
+      ]
+    },
+    {
+      "municipality": "Gondomar",
+      "dtcc": "1304",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 19207/2019",
+          "serv_dr": "230 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 19207_2019.pdf",
+          "geometria_data": "2023-02-23T00:00:00",
+          "deposito": "\n01.13.04/REN/02/2019/48"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 19207/2019",
+          "serv_dr": "230 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 19207_2019.pdf",
+          "geometria_data": "2023-02-23T00:00:00",
+          "deposito": "\n01.13.04/REN/02/2019/48"
+        }
+      ]
+    },
+    {
+      "municipality": "Lousada",
+      "dtcc": "1305",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "DESPACHO 3725/2024",
+          "serv_dr": "68 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 3725_2024.pdf",
+          "geometria_data": "2024-10-09T00:00:00",
+          "deposito": "01.13.05/REN/10/2024/11"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "DESPACHO 3725/2024",
+          "serv_dr": "68 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 3725_2024.pdf",
+          "geometria_data": "2024-09-26T00:00:00",
+          "deposito": "01.13.05/REN/10/2024/11"
+        }
+      ]
+    },
+    {
+      "municipality": "Maia",
+      "dtcc": "1306",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 23434/2025/2",
+          "serv_dr": "183 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 23434_2025_2.pdf",
+          "geometria_data": "2026-04-09T00:00:00",
+          "deposito": "011306/REN/02/2025/47"
+        },
+        {
+          "tipologia": null,
+          "serv_lei": "AVISO 23434/2025/2",
+          "serv_dr": "183 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 23434_2025_2.pdf",
+          "geometria_data": "2026-04-09T00:00:00",
+          "deposito": "011306/REN/02/2025/47"
+        }
+      ]
+    },
+    {
+      "municipality": "Marco de Canaveses",
+      "dtcc": "1307",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "PORTARIA 144/2016",
+          "serv_dr": "95 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/PORT 144_2016.pdf",
+          "geometria_data": "2021-01-01T00:00:00",
+          "deposito": "01.13.07/PDM/03/2015/149"
+        },
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "PORTARIA 144/2016",
+          "serv_dr": "95 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/PORT 144_2016.pdf",
+          "geometria_data": "2021-01-01T00:00:00",
+          "deposito": "01.13.07/PDM/03/2015/149"
+        }
+      ]
+    },
+    {
+      "municipality": "Matosinhos",
+      "dtcc": "1308",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 11601/2023",
+          "serv_dr": "116 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 11601_2023.pdf",
+          "geometria_data": "2023-07-21T00:00:00",
+          "deposito": "01.13.08/REN/02/2023/9"
+        },
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 11601/2023",
+          "serv_dr": "116 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 11601_2023.pdf",
+          "geometria_data": "2023-07-21T00:00:00",
+          "deposito": "01.13.08/REN/02/2023/9"
+        }
+      ]
+    },
+    {
+      "municipality": "Paços de Ferreira",
+      "dtcc": "1309",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "DESPACHO 13583/2025",
+          "serv_dr": "222 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 13583_2025.pdf",
+          "geometria_data": "2026-04-10T00:00:00",
+          "deposito": "01.13.09/REN/10/2025/59"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "DESPACHO 13583/2025",
+          "serv_dr": "222 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 13583_2025.pdf",
+          "geometria_data": "2026-04-10T00:00:00",
+          "deposito": "01.13.09/REN/10/2025/59"
+        }
+      ]
+    },
+    {
+      "municipality": "Paredes",
+      "dtcc": "1310",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 9299/2024/2",
+          "serv_dr": "86 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 9299_2024_2.pdf",
+          "geometria_data": "2024-11-26T00:00:00",
+          "deposito": "01.13.10/REN/02/2024/16"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 9299/2024/2",
+          "serv_dr": "86 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 9299_2024_2.pdf",
+          "geometria_data": "2024-11-26T00:00:00",
+          "deposito": "01.13.10/REN/02/2024/16"
+        }
+      ]
+    },
+    {
+      "municipality": "Penafiel",
+      "dtcc": "1311",
+      "ren_feature_count": 1,
+      "linhas_agua_feature_count": 0,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "RCM 187/2007",
+          "serv_dr": "246 IS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/RCM 187_2007.pdf",
+          "geometria_data": "2022-09-16T00:00:00",
+          "deposito": "01.13.11/58/2008/PDM/03"
+        }
+      ]
+    },
+    {
+      "municipality": "Porto",
+      "dtcc": "1312",
+      "ren_feature_count": 0,
+      "linhas_agua_feature_count": 0,
+      "legal_source_records": []
+    },
+    {
+      "municipality": "Póvoa de Varzim",
+      "dtcc": "1313",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 1345/2020",
+          "serv_dr": "18 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 1345_2020.pdf",
+          "geometria_data": "2022-09-06T00:00:00",
+          "deposito": "01.13.13/REN/02/2020/2"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 1345/2020",
+          "serv_dr": "18 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 1345_2020.pdf",
+          "geometria_data": "2022-09-06T00:00:00",
+          "deposito": "01.13.13/REN/02/2020/2"
+        }
+      ]
+    },
+    {
+      "municipality": "Santo Tirso",
+      "dtcc": "1314",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "DESPACHO 9867/2023",
+          "serv_dr": "186 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 9867_2023.pdf",
+          "geometria_data": "2023-12-06T00:00:00",
+          "deposito": "01.13.14/REN/10/2023/19"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "DESPACHO 9867/2023",
+          "serv_dr": "186 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 9867_2023.pdf",
+          "geometria_data": "2023-12-06T00:00:00",
+          "deposito": "01.13.14/REN/10/2023/19"
+        }
+      ]
+    },
+    {
+      "municipality": "Trofa",
+      "dtcc": "1318",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 11583/2025/2",
+          "serv_dr": "87 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 11583_2025_2.pdf",
+          "geometria_data": "2025-09-24T00:00:00",
+          "deposito": "01.13.18/REN/22/2025/23"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 11583/2025/2",
+          "serv_dr": "87 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 11583_2025_2.pdf",
+          "geometria_data": "2025-09-24T00:00:00",
+          "deposito": "01.13.18/REN/22/2025/23"
+        }
+      ]
+    },
+    {
+      "municipality": "Valongo",
+      "dtcc": "1315",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "AVISO 4789/2025/2",
+          "serv_dr": "36 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 4789_2025_2.pdf",
+          "geometria_data": "2025-09-22T00:00:00",
+          "deposito": "01.13.15/REN/22/2025/4"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "AVISO 4789/2025/2",
+          "serv_dr": "36 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/AVISO 4789_2025_2.pdf",
+          "geometria_data": "2025-09-22T00:00:00",
+          "deposito": "01.13.15/REN/22/2025/4"
+        }
+      ]
+    },
+    {
+      "municipality": "Vila do Conde",
+      "dtcc": "1316",
+      "ren_feature_count": 0,
+      "linhas_agua_feature_count": 0,
+      "legal_source_records": []
+    },
+    {
+      "municipality": "Vila Nova de Gaia",
+      "dtcc": "1317",
+      "ren_feature_count": 2,
+      "linhas_agua_feature_count": 1,
+      "legal_source_records": [
+        {
+          "tipologia": "Reserva Ecológica Nacional",
+          "serv_lei": "DESPACHO 1991/2024",
+          "serv_dr": "37 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 1991_2024.pdf",
+          "geometria_data": "2024-03-04T00:00:00",
+          "deposito": "01.13.17/REN/10/2024/4"
+        },
+        {
+          "tipologia": "Exclusões",
+          "serv_lei": "DESPACHO 1991/2024",
+          "serv_dr": "37 IIS",
+          "serv_hiperlink": "https://snit-mais.dgterritorio.gov.pt/SRUP/DESPACHO 1991_2024.pdf",
+          "geometria_data": "2024-03-04T00:00:00",
+          "deposito": "01.13.17/REN/10/2024/4"
+        }
+      ]
+    }
+  ],
+  "wfs_requests": [
+    {
+      "file": "dgt_ren_amarante.geojson",
+      "municipality": "Amarante",
+      "dtcc_requested": "1301",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1301%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1301%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1301"
+      ],
+      "concelho_values_returned": [
+        "AMARANTE"
+      ],
+      "size_bytes": 4906165,
+      "sha256": "19d143533619397e14502504d30a86f87ed2bb6bcb53e89bec5193ddd4b8211f",
+      "downloaded_utc": "2026-09-08T00:43:22.874209+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_amarante.geojson",
+      "municipality": "Amarante",
+      "dtcc_requested": "1301",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1301%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1301%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 0,
+      "dtcc_values_returned": [],
+      "concelho_values_returned": [],
+      "size_bytes": 172,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250",
+      "downloaded_utc": "2026-09-08T00:43:30.548842+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_baiao.geojson",
+      "municipality": "Baião",
+      "dtcc_requested": "1302",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1302%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1302%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1302"
+      ],
+      "concelho_values_returned": [
+        "BAIÃO"
+      ],
+      "size_bytes": 3410207,
+      "sha256": "c4acd7c1bce3b8922ca3154f76fb7943ab7834251a22c4b0d9d443b14eac285c",
+      "downloaded_utc": "2026-09-08T00:43:41.156532+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_baiao.geojson",
+      "municipality": "Baião",
+      "dtcc_requested": "1302",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1302%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1302%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1302"
+      ],
+      "concelho_values_returned": [
+        "BAIÃO"
+      ],
+      "size_bytes": 226894,
+      "sha256": "7812d285c440acdff2c336f254d20e9163ab09fd90b9bccc65722682c28a79f2",
+      "downloaded_utc": "2026-09-08T00:43:48.224517+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_felgueiras.geojson",
+      "municipality": "Felgueiras",
+      "dtcc_requested": "1303",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1303%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1303%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1303"
+      ],
+      "concelho_values_returned": [
+        "FELGUEIRAS"
+      ],
+      "size_bytes": 5822881,
+      "sha256": "bca3a73d654487d25ad0fcae7f3997602fb9ed96eb689665a0571d9a878f4664",
+      "downloaded_utc": "2026-09-08T00:44:01.837802+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_felgueiras.geojson",
+      "municipality": "Felgueiras",
+      "dtcc_requested": "1303",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1303%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1303%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1303"
+      ],
+      "concelho_values_returned": [
+        "FELGUEIRAS"
+      ],
+      "size_bytes": 19692,
+      "sha256": "add975ddc45e69e77442d6fbf45cfe4164b5a86d936917899749778f5ea1d98a",
+      "downloaded_utc": "2026-09-08T00:44:07.578793+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_gondomar.geojson",
+      "municipality": "Gondomar",
+      "dtcc_requested": "1304",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1304%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1304%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1304"
+      ],
+      "concelho_values_returned": [
+        "GONDOMAR"
+      ],
+      "size_bytes": 3709625,
+      "sha256": "0f8c2a661d4249feb07ea5e6ce06963889111c20d30ad3429c7baa6e81bb2777",
+      "downloaded_utc": "2026-09-08T00:44:17.603755+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_gondomar.geojson",
+      "municipality": "Gondomar",
+      "dtcc_requested": "1304",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1304%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1304%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1304"
+      ],
+      "concelho_values_returned": [
+        "GONDOMAR"
+      ],
+      "size_bytes": 1934837,
+      "sha256": "af2114d1b2846e2d04267679a1c6af24679ef04461a2067217a6d9d8a8d31fdf",
+      "downloaded_utc": "2026-09-08T00:44:25.700748+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_lousada.geojson",
+      "municipality": "Lousada",
+      "dtcc_requested": "1305",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1305%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1305%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1305"
+      ],
+      "concelho_values_returned": [
+        "LOUSADA"
+      ],
+      "size_bytes": 823320,
+      "sha256": "ca9a1db20335eb5d89536f0bb37dd483296f33962a95a397057dfe36e3cbfb50",
+      "downloaded_utc": "2026-09-08T00:44:31.964672+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_lousada.geojson",
+      "municipality": "Lousada",
+      "dtcc_requested": "1305",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1305%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1305%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1305"
+      ],
+      "concelho_values_returned": [
+        "LOUSADA"
+      ],
+      "size_bytes": 596693,
+      "sha256": "4b4f28e0f654d454cf85e74e55fca156f3ea07580988414b2da7467e7fbc1f93",
+      "downloaded_utc": "2026-09-08T00:44:38.939161+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_maia.geojson",
+      "municipality": "Maia",
+      "dtcc_requested": "1306",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1306%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1306%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1306"
+      ],
+      "concelho_values_returned": [
+        "MAIA"
+      ],
+      "size_bytes": 4608830,
+      "sha256": "898e295cd0778c5b35297673e0bce6e6b2c3025fd282c8c1fdfb900f1e5d80f9",
+      "downloaded_utc": "2026-09-08T00:44:48.856110+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_maia.geojson",
+      "municipality": "Maia",
+      "dtcc_requested": "1306",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1306%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1306%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1306"
+      ],
+      "concelho_values_returned": [
+        "MAIA"
+      ],
+      "size_bytes": 158746,
+      "sha256": "1a6bc087a2edbfabbc7c97e1072a75079a4f76ccf14310c0e7e6a738ea92b993",
+      "downloaded_utc": "2026-09-08T00:44:55.577135+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_marco_canaveses.geojson",
+      "municipality": "Marco de Canaveses",
+      "dtcc_requested": "1307",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1307%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1307%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1307"
+      ],
+      "concelho_values_returned": [
+        "MARCO DE CANAVESES"
+      ],
+      "size_bytes": 1972782,
+      "sha256": "d86925639ec4aab19952c2e91cb3199153aed4efaf8cc1467fd4d1d803992bc1",
+      "downloaded_utc": "2026-09-08T00:45:04.410582+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_marco_canaveses.geojson",
+      "municipality": "Marco de Canaveses",
+      "dtcc_requested": "1307",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1307%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1307%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1307"
+      ],
+      "concelho_values_returned": [
+        "MARCO DE CANAVESES"
+      ],
+      "size_bytes": 1687356,
+      "sha256": "05fabc5bc79d9d79e4b90c69227a7590a5b151fd4c11016541d01c09b3e383cb",
+      "downloaded_utc": "2026-09-08T00:45:14.565313+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_matosinhos.geojson",
+      "municipality": "Matosinhos",
+      "dtcc_requested": "1308",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1308%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1308%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1308"
+      ],
+      "concelho_values_returned": [
+        "MATOSINHOS"
+      ],
+      "size_bytes": 442137,
+      "sha256": "1f0f00467442dc49099db9c7a533c6e956d7d390a797280a6acfac1bb31af979",
+      "downloaded_utc": "2026-09-08T00:45:26.473293+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_matosinhos.geojson",
+      "municipality": "Matosinhos",
+      "dtcc_requested": "1308",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1308%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1308%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1308"
+      ],
+      "concelho_values_returned": [
+        "MATOSINHOS"
+      ],
+      "size_bytes": 747850,
+      "sha256": "a218e3937b96e9e115f36985f2ae691474c378281c906bc8e37bd7478a5bd17c",
+      "downloaded_utc": "2026-09-08T00:45:33.312085+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_pacos_ferreira.geojson",
+      "municipality": "Paços de Ferreira",
+      "dtcc_requested": "1309",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1309%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1309%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1309"
+      ],
+      "concelho_values_returned": [
+        "PAÇOS DE FERREIRA"
+      ],
+      "size_bytes": 573540,
+      "sha256": "e3f4f4c4cdd96fb869255268f9a2d4500ee263653fa39d8bf86dd2096bde2a64",
+      "downloaded_utc": "2026-09-08T00:45:40.157673+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_pacos_ferreira.geojson",
+      "municipality": "Paços de Ferreira",
+      "dtcc_requested": "1309",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1309%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1309%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1309"
+      ],
+      "concelho_values_returned": [
+        "PAÇOS DE FERREIRA"
+      ],
+      "size_bytes": 519540,
+      "sha256": "7ca4e3283d18b1bd36519ed095858585011dc20bab73b982a4dfdc7730e24c8c",
+      "downloaded_utc": "2026-09-08T00:45:47.386452+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_paredes.geojson",
+      "municipality": "Paredes",
+      "dtcc_requested": "1310",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1310%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1310%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1310"
+      ],
+      "concelho_values_returned": [
+        "PAREDES"
+      ],
+      "size_bytes": 2432352,
+      "sha256": "d4c08c3bda2a411bb7980c71cb827db9964a681a335caf6d2ca7dbf272175e7d",
+      "downloaded_utc": "2026-09-08T00:45:54.855798+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_paredes.geojson",
+      "municipality": "Paredes",
+      "dtcc_requested": "1310",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1310%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1310%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1310"
+      ],
+      "concelho_values_returned": [
+        "PAREDES"
+      ],
+      "size_bytes": 708045,
+      "sha256": "60b25631aed5267e8314ea8570a400ed4746ddc63694c78f447e5b6fe15f7db5",
+      "downloaded_utc": "2026-09-08T00:46:02.366257+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_penafiel.geojson",
+      "municipality": "Penafiel",
+      "dtcc_requested": "1311",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1311%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1311%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1311"
+      ],
+      "concelho_values_returned": [
+        "PENAFIEL"
+      ],
+      "size_bytes": 547354,
+      "sha256": "e1791627d9c808eee3faf2cb2cc2d8c2761806c3905ae3d70083d483ad9b6ebe",
+      "downloaded_utc": "2026-09-08T00:46:08.906193+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_penafiel.geojson",
+      "municipality": "Penafiel",
+      "dtcc_requested": "1311",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1311%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1311%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 0,
+      "dtcc_values_returned": [],
+      "concelho_values_returned": [],
+      "size_bytes": 172,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250",
+      "downloaded_utc": "2026-09-08T00:46:15.380441+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_porto.geojson",
+      "municipality": "Porto",
+      "dtcc_requested": "1312",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1312%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1312%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 0,
+      "dtcc_values_returned": [],
+      "concelho_values_returned": [],
+      "size_bytes": 172,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250",
+      "downloaded_utc": "2026-09-08T00:46:21.846725+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_porto.geojson",
+      "municipality": "Porto",
+      "dtcc_requested": "1312",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1312%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1312%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 0,
+      "dtcc_values_returned": [],
+      "concelho_values_returned": [],
+      "size_bytes": 172,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250",
+      "downloaded_utc": "2026-09-08T00:46:27.796719+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_povoa_varzim.geojson",
+      "municipality": "Póvoa de Varzim",
+      "dtcc_requested": "1313",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1313%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1313%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1313"
+      ],
+      "concelho_values_returned": [
+        "PÓVOA DE VARZIM"
+      ],
+      "size_bytes": 219312,
+      "sha256": "2ba558df0400e26c003b1cc85a9cb8e95534b1dc41e216846220d2a1388d0aa4",
+      "downloaded_utc": "2026-09-08T00:46:34.551393+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_povoa_varzim.geojson",
+      "municipality": "Póvoa de Varzim",
+      "dtcc_requested": "1313",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1313%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1313%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1313"
+      ],
+      "concelho_values_returned": [
+        "PÓVOA DE VARZIM"
+      ],
+      "size_bytes": 1087135,
+      "sha256": "daa1b32981fa803156b62ce8eb25fb8a5050c1c80bc0988930b7b42c59fe09fb",
+      "downloaded_utc": "2026-09-08T00:46:42.135089+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_santo_tirso.geojson",
+      "municipality": "Santo Tirso",
+      "dtcc_requested": "1314",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1314%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1314%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1314"
+      ],
+      "concelho_values_returned": [
+        "SANTO TIRSO"
+      ],
+      "size_bytes": 1116284,
+      "sha256": "410b059414466259cc808d347c71fc150d2cf3b6bfee7a60f4840e7216147703",
+      "downloaded_utc": "2026-09-08T00:46:49.226768+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_santo_tirso.geojson",
+      "municipality": "Santo Tirso",
+      "dtcc_requested": "1314",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1314%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1314%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1314"
+      ],
+      "concelho_values_returned": [
+        "SANTO TIRSO"
+      ],
+      "size_bytes": 509557,
+      "sha256": "cdc6069caafd3cb50bccbc4ea461445a925abb4e8c0a51a6f6583861e541a9a1",
+      "downloaded_utc": "2026-09-08T00:46:56.459530+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_trofa.geojson",
+      "municipality": "Trofa",
+      "dtcc_requested": "1318",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1318%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1318%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1318"
+      ],
+      "concelho_values_returned": [
+        "TROFA"
+      ],
+      "size_bytes": 1498535,
+      "sha256": "511d9b8c87ea23eea60ee3170062c2905f663a82d45767978b996fb774c4dc10",
+      "downloaded_utc": "2026-09-08T00:47:03.985929+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_trofa.geojson",
+      "municipality": "Trofa",
+      "dtcc_requested": "1318",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1318%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1318%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1318"
+      ],
+      "concelho_values_returned": [
+        "TROFA"
+      ],
+      "size_bytes": 243667,
+      "sha256": "28ede8809248fb9a6a87bdfeee45d7cb7338b2c318fd324243e0286ed43c5bd3",
+      "downloaded_utc": "2026-09-08T00:47:10.135523+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_valongo.geojson",
+      "municipality": "Valongo",
+      "dtcc_requested": "1315",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1315%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1315%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1315"
+      ],
+      "concelho_values_returned": [
+        "VALONGO"
+      ],
+      "size_bytes": 2025163,
+      "sha256": "a58174285d7811668e8a4bf99677ece2b9e2c7ea365351e86cb8a0d7c5fa2e84",
+      "downloaded_utc": "2026-09-08T00:47:18.045882+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_valongo.geojson",
+      "municipality": "Valongo",
+      "dtcc_requested": "1315",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1315%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1315%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1315"
+      ],
+      "concelho_values_returned": [
+        "VALONGO"
+      ],
+      "size_bytes": 250422,
+      "sha256": "d0e3e893d73f75f97903ff6682c5bea864b0b829336b731bded442294bbdd2a2",
+      "downloaded_utc": "2026-09-08T00:47:25.073206+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_vila_conde.geojson",
+      "municipality": "Vila do Conde",
+      "dtcc_requested": "1316",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1316%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1316%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 0,
+      "dtcc_values_returned": [],
+      "concelho_values_returned": [],
+      "size_bytes": 172,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250",
+      "downloaded_utc": "2026-09-08T00:47:31.172341+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_vila_conde.geojson",
+      "municipality": "Vila do Conde",
+      "dtcc_requested": "1316",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1316%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1316%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 0,
+      "dtcc_values_returned": [],
+      "concelho_values_returned": [],
+      "size_bytes": 172,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250",
+      "downloaded_utc": "2026-09-08T00:47:37.798546+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_vila_nova_gaia.geojson",
+      "municipality": "Vila Nova de Gaia",
+      "dtcc_requested": "1317",
+      "feature_type": "gmgml:REN_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1317%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3AREN_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1317%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 2,
+      "dtcc_values_returned": [
+        "1317"
+      ],
+      "concelho_values_returned": [
+        "VILA NOVA DE GAIA"
+      ],
+      "size_bytes": 1557789,
+      "sha256": "fd90f5b79afd805f6f72260208aafe35daba0a05de3a8ac14a71081d072e153a",
+      "downloaded_utc": "2026-09-08T00:47:45.968190+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_vila_nova_gaia.geojson",
+      "municipality": "Vila Nova de Gaia",
+      "dtcc_requested": "1317",
+      "feature_type": "gmgml:Linhas_de_Agua_Norte",
+      "crs_requested": "EPSG:3763",
+      "source_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&srsName=EPSG%3A3763&outputFormat=application%2Fvnd.geo%2Bjson&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1317%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "hits_url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_REN_NORTE/service.svc/get?service=WFS&version=2.0.0&request=GetFeature&typeNames=gmgml%3ALinhas_de_Agua_Norte&resultType=hits&FILTER=%3Cfes%3AFilter+xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsEqualTo%3E%3Cfes%3AValueReference%3EDTCC%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E1317%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsEqualTo%3E%3C%2Ffes%3AFilter%3E",
+      "number_matched_hits": null,
+      "hits_error": null,
+      "http_status": 200,
+      "content_type": "application/vnd.geo+json; charset=utf-8",
+      "feature_count": 1,
+      "dtcc_values_returned": [
+        "1317"
+      ],
+      "concelho_values_returned": [
+        "VILA NOVA DE GAIA"
+      ],
+      "size_bytes": 1966955,
+      "sha256": "a4a2016fea1ccc8bfbd0da2c7b00f3d7f0a89612a8a43278ba3a0034fc9c6d3e",
+      "downloaded_utc": "2026-09-08T00:47:54.303315+00:00",
+      "count_check": "ok",
+      "dtcc_check": "ok",
+      "status": "ok"
+    }
+  ],
+  "verification": [
+    {
+      "file": "dgt_ren_amarante.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "19d143533619397e14502504d30a86f87ed2bb6bcb53e89bec5193ddd4b8211f"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_amarante.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 0,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250"
+    },
+    {
+      "file": "dgt_ren_baiao.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "c4acd7c1bce3b8922ca3154f76fb7943ab7834251a22c4b0d9d443b14eac285c"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_baiao.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "7812d285c440acdff2c336f254d20e9163ab09fd90b9bccc65722682c28a79f2"
+    },
+    {
+      "file": "dgt_ren_felgueiras.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "bca3a73d654487d25ad0fcae7f3997602fb9ed96eb689665a0571d9a878f4664"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_felgueiras.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "add975ddc45e69e77442d6fbf45cfe4164b5a86d936917899749778f5ea1d98a"
+    },
+    {
+      "file": "dgt_ren_gondomar.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "0f8c2a661d4249feb07ea5e6ce06963889111c20d30ad3429c7baa6e81bb2777"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_gondomar.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "af2114d1b2846e2d04267679a1c6af24679ef04461a2067217a6d9d8a8d31fdf"
+    },
+    {
+      "file": "dgt_ren_lousada.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "ca9a1db20335eb5d89536f0bb37dd483296f33962a95a397057dfe36e3cbfb50"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_lousada.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "4b4f28e0f654d454cf85e74e55fca156f3ea07580988414b2da7467e7fbc1f93"
+    },
+    {
+      "file": "dgt_ren_maia.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "898e295cd0778c5b35297673e0bce6e6b2c3025fd282c8c1fdfb900f1e5d80f9"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_maia.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "1a6bc087a2edbfabbc7c97e1072a75079a4f76ccf14310c0e7e6a738ea92b993"
+    },
+    {
+      "file": "dgt_ren_marco_canaveses.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "d86925639ec4aab19952c2e91cb3199153aed4efaf8cc1467fd4d1d803992bc1"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_marco_canaveses.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "05fabc5bc79d9d79e4b90c69227a7590a5b151fd4c11016541d01c09b3e383cb"
+    },
+    {
+      "file": "dgt_ren_matosinhos.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "1f0f00467442dc49099db9c7a533c6e956d7d390a797280a6acfac1bb31af979"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_matosinhos.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "a218e3937b96e9e115f36985f2ae691474c378281c906bc8e37bd7478a5bd17c"
+    },
+    {
+      "file": "dgt_ren_pacos_ferreira.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "e3f4f4c4cdd96fb869255268f9a2d4500ee263653fa39d8bf86dd2096bde2a64"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_pacos_ferreira.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "7ca4e3283d18b1bd36519ed095858585011dc20bab73b982a4dfdc7730e24c8c"
+    },
+    {
+      "file": "dgt_ren_paredes.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "d4c08c3bda2a411bb7980c71cb827db9964a681a335caf6d2ca7dbf272175e7d"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_paredes.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "60b25631aed5267e8314ea8570a400ed4746ddc63694c78f447e5b6fe15f7db5"
+    },
+    {
+      "file": "dgt_ren_penafiel.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "e1791627d9c808eee3faf2cb2cc2d8c2761806c3905ae3d70083d483ad9b6ebe"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_penafiel.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 0,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250"
+    },
+    {
+      "file": "dgt_ren_porto.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 0,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_porto.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 0,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250"
+    },
+    {
+      "file": "dgt_ren_povoa_varzim.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "2ba558df0400e26c003b1cc85a9cb8e95534b1dc41e216846220d2a1388d0aa4"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_povoa_varzim.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "daa1b32981fa803156b62ce8eb25fb8a5050c1c80bc0988930b7b42c59fe09fb"
+    },
+    {
+      "file": "dgt_ren_santo_tirso.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "410b059414466259cc808d347c71fc150d2cf3b6bfee7a60f4840e7216147703"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_santo_tirso.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "cdc6069caafd3cb50bccbc4ea461445a925abb4e8c0a51a6f6583861e541a9a1"
+    },
+    {
+      "file": "dgt_ren_trofa.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "511d9b8c87ea23eea60ee3170062c2905f663a82d45767978b996fb774c4dc10"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_trofa.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "28ede8809248fb9a6a87bdfeee45d7cb7338b2c318fd324243e0286ed43c5bd3"
+    },
+    {
+      "file": "dgt_ren_valongo.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "a58174285d7811668e8a4bf99677ece2b9e2c7ea365351e86cb8a0d7c5fa2e84"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_valongo.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "d0e3e893d73f75f97903ff6682c5bea864b0b829336b731bded442294bbdd2a2"
+    },
+    {
+      "file": "dgt_ren_vila_conde.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 0,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_vila_conde.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 0,
+      "sha256": "01330ee5312f93b72521578feaf5cb5670382fa79d9dfdba38f20f2fad8b1250"
+    },
+    {
+      "file": "dgt_ren_vila_nova_gaia.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 2,
+      "sha256": "fd90f5b79afd805f6f72260208aafe35daba0a05de3a8ac14a71081d072e153a"
+    },
+    {
+      "file": "dgt_ren_linhas_agua_vila_nova_gaia.geojson",
+      "sha256_ok": true,
+      "feature_count_ok": true,
+      "dtcc_ok": true,
+      "feature_count": 1,
+      "sha256": "a4a2016fea1ccc8bfbd0da2c7b00f3d7f0a89612a8a43278ba3a0034fc9c6d3e"
+    }
+  ],
+  "structural_geometry_issues_preserved": [
+    {
+      "raw_file": "dgt_ren_felgueiras.geojson",
+      "feature_index": 0,
+      "feature_id": "REN_Norte.173010",
+      "path": "geometry.geometries[164].coordinates[0]",
+      "issue": "polygon_ring_has_fewer_than_4_coordinate_tuples",
+      "coordinate_tuple_count": 3,
+      "coordinates": [
+        [
+          -10117.0540999992,
+          188283.834100001
+        ],
+        [
+          -10117.0540999992,
+          188283.834100001
+        ],
+        [
+          -10117.0540999992,
+          188283.834100001
+        ]
+      ],
+      "action": "preserved_without_repair"
+    },
+    {
+      "raw_file": "dgt_ren_paredes.geojson",
+      "feature_index": 0,
+      "feature_id": "REN_Norte.173016",
+      "path": "geometry.geometries[147].coordinates[1]",
+      "issue": "polygon_ring_has_fewer_than_4_coordinate_tuples",
+      "coordinate_tuple_count": 2,
+      "coordinates": [
+        [
+          -18469.8981999956,
+          166907.609500001
+        ],
+        [
+          -18469.8981999956,
+          166907.609500001
+        ]
+      ],
+      "action": "preserved_without_repair"
+    }
+  ]
+}

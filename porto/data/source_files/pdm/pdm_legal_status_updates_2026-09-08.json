@@ -1,0 +1,47 @@
+{
+  "checked_utc": "2026-09-08T05:07:32.153540+00:00",
+  "purpose": "Verified legal-version updates before PDM vector acquisition.",
+  "items": [
+    {
+      "municipality": "Felgueiras",
+      "legal_status": "effective",
+      "current_change": "2.ª alteração à 1.ª revisão do PDM",
+      "publication": "Aviso n.º 12589/2026/2, 26-05-2026",
+      "official_url": "https://cm-felgueiras.pt/2-a-alteracao-a-1-a-revisao-do-plano-diretor-municipal/",
+      "notes": "The municipality states that the Diário da República publication confers effectiveness. The alteration changes the regulation and specified ordering/conditioning map sheets."
+    },
+    {
+      "municipality": "Matosinhos",
+      "legal_status": "effective",
+      "current_change_verified": "1.ª alteração à 1.ª revisão",
+      "publication": "Aviso n.º 3787/2023, 20-02-2023",
+      "official_url": "https://www.cm-matosinhos.pt/cmmatosinhos2020/uploads/document/file/9675/1_aalteracao_a_1_a_revisao_do_plano_diretor_municipal_de_matosinhos.pdf",
+      "notes": "Publication states the alteration enters into force on the next working day after publication."
+    },
+    {
+      "municipality": "Paredes",
+      "legal_status": "effective",
+      "current_plan": "2.ª revisão do PDM",
+      "publication": "Aviso n.º 10688/2024/2, 17-05-2024",
+      "effective_from": "2024-05-18",
+      "official_url": "https://www.cm-paredes.pt/pages/1784",
+      "notes": "Municipality confirms the second revision is in force."
+    },
+    {
+      "municipality": "Porto",
+      "legal_status": "effective",
+      "current_change": "2.ª Alteração por Adaptação ao PDM",
+      "publication": "Aviso n.º 14529/2025/2, 06-06-2025",
+      "official_url": "https://pdm.cm-porto.pt/",
+      "notes": "Official documentation page labels the regulation as updated in 2025 and lists the current PDM ordering/conditioning maps."
+    },
+    {
+      "municipality": "Valongo",
+      "legal_status": "effective",
+      "current_plan": "2.ª revisão do PDM",
+      "publication": "Aviso n.º 5073/2025/2, 21-02-2025",
+      "official_url": "https://diariodarepublica.pt/dr/detalhe/aviso/5073-2025-908253867",
+      "notes": "The Diário da República publication gives effect to the approved second revision and identifies five ordering maps and three conditioning maps."
+    }
+  ]
+}

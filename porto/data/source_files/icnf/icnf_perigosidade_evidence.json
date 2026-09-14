@@ -1,0 +1,67 @@
+{
+  "note": "Distilled from icnf_perigosidade_metadata_original.html (SNIG record 97ff884a-b0a8-41a7-865f-129b88110988) and icnf_perigosidade_wfs_capabilities.xml, both held only in the SharePoint GPT/ folder. The full originals are re-fetchable from snig_record and wfs_capabilities below; what is kept here is every fact the project's decision rests on.",
+  "distilled_on": "2026-09-14",
+  "title": "SRUP - Carta de Perigosidade de Incêndio Rural",
+  "alternate_title": "SRUP - CPIR",
+  "reference_date": "2022-03-28, Criação",
+  "metadata_date": "2022-04-11",
+  "custodian": "Instituto da Conservação da Natureza e das Florestas, I.P. (ICNF)",
+  "distributor": "Direção-Geral do Território (DGT)",
+  "legal_basis": "Decreto-Lei n.º 82/2021, de 13 de outubro, artigo 41.º",
+  "classes": [
+    "muito baixa",
+    "baixa",
+    "média",
+    "alta",
+    "muito alta"
+  ],
+  "wfs_feature_types": [
+    "gmgml:Classe_de_Perigosidade_Nula",
+    "gmgml:Classe_de_Perigosidade_Muito_Baixa",
+    "gmgml:Classe_de_Perigosidade_Baixa",
+    "gmgml:Classe_de_Perigosidade_Média",
+    "gmgml:Classe_de_Perigosidade_Alta",
+    "gmgml:Classe_de_Perigosidade_Muito_Alta"
+  ],
+  "crs": "EPSG:3763",
+  "equivalent_scale_denominator": 25000,
+  "extent": "Portugal Continental (W -9.51702908, E -6.189159307, S 36.961710466, N 42.154311127)",
+  "use_restriction_pt": "A informação disponibilizada no SNIT destina-se à consulta e visualização, sendo interdita a sua comercialização. A informação obtida através do SNIT, nomeadamente utilizando a funcionalidade de impressão, não se destina a ser utilizada para a instrução de procedimentos administrativos, salvo autorização expressa por parte da entidade pública responsável pelo procedimento. A sua incorporação em documentos publicados implica sempre a citação da fonte nos moldes usuais. Qualquer outra utilização carece de autorização expressa da DGT.",
+  "why_the_app_excludes_it": "The app rejected fire hazard because the only date on the SRUP feature, serv_data, is the date of the law that ordered the map and not the year of the map, and rule 1 of the accuracy contract requires a reference year. That reasoning is recorded in data/sources.json -> missing.items.",
+  "evidence_found_2026-09-14_that_may_reopen_it": [
+    "The ICNF service this record points to is named perigosidade_estrutural_2020_2030, i.e. it carries a 2020-2030 validity period rather than only a law date.",
+    "The SNIG record itself states a dataset reference date of 2022-03-28 (Criação) and a metadata date of 2022-04-11.",
+    "A direct national download exists at the URL below, so the data is obtainable without scraping the WFS class by class.",
+    "NOT ACTED ON. Whether a service name and a creation date satisfy rule 1 is a judgement about the product, not a fact about the data, and it was not made here."
+  ],
+  "urls_checked_live": {
+    "snig_record": {
+      "url": "https://snig.dgterritorio.gov.pt/rndg/srv/api/records/97ff884a-b0a8-41a7-865f-129b88110988/formatters/snig-view",
+      "checked": "2026-09-14",
+      "http": 200
+    },
+    "wfs_capabilities": {
+      "url": "https://servicos.dgterritorio.pt/SDISNITWFSSRUP_CPIR_PT1/WFService.aspx?service=WFS&request=getcapabilities&VERSION=2.0.0",
+      "checked": "2026-09-14",
+      "http": null,
+      "error": "TimeoutError"
+    },
+    "wms_capabilities": {
+      "url": "https://servicos.dgterritorio.pt/SDISNITWMSSRUP_CPIR_PT1/WMService.aspx?service=WMS&request=getcapabilities&VERSION=1.3.0",
+      "checked": "2026-09-14",
+      "http": null,
+      "error": "TimeoutError"
+    },
+    "direct_download_zip": {
+      "url": "https://www.dgterritorio.gov.pt/download/CARTA_PERIGOSIDADE_INCENDIO_RURAL/PERIGOSIDADE_INCENDIO_RURAL.zip",
+      "checked": "2026-09-14",
+      "http": null,
+      "error": "HTTPError"
+    },
+    "icnf_wms": {
+      "url": "https://si.icnf.pt/wms/perigosidade_estrutural_2020_2030?service=wms&version=1.3.0&request=GetCapabilities",
+      "checked": "2026-09-14",
+      "http": 200
+    }
+  }
+}
