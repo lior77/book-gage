@@ -114,6 +114,7 @@ const S = {
   viewBefore: null,    // the layout to restore after placing a point
   letters: true,       // draw the locality letters
   water: false,        // rivers and lakes — off until asked for
+  floods: false,       // APA's mapped flood outlines — off until asked for
   // The district-wide constraint view: REN and RAN for all 18 municipalities
   // at once.  The switch is display and the download is storage, and they are
   // deliberately not the same thing — switching this off deletes nothing.
@@ -190,6 +191,14 @@ const MINE_COLOUR = '#d32f2f';
    and the hierarchy survives the thinning because it was never carried by
    width alone. */
 const LINE_W = { region: 3.2, district: 2.4, mun: 2.4, fre: 1.2 };
+/* The flood outlines, darkest for the period that comes round most often.  An
+   indigo rather than another blue: these are drawn over the Douro, where the
+   river layer is already #4a9ad4, and two blues on the same water would read as
+   one thing.  Nested on purpose — the 1000-year outline contains the 100-year
+   contains the 20-year — so the widest is drawn first and the stack itself
+   darkens towards the core, which is the direction the meaning runs. */
+const FLOOD_COLOUR = { 20: '#3d2fb8', 100: '#6a5ae0', 1000: '#9d93ee' };
+
 /* The two NUTS III regions are the one line that is not a shade of the ink.
    They are neither the subject of any level nor part of the district's own
    hierarchy, and a fourth grey among three greys said nothing about that. */
@@ -536,7 +545,7 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, zones, bW, sources, bM, bB, bF, bC, proseEn,
+  const [ind, mun, fre, city, zones, bW, bFl, sources, bM, bB, bF, bC, proseEn,
          layersManifest] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
@@ -544,6 +553,10 @@ async function load() {
     j('data/processed/porto_city.json'),
     j('data/processed/zones.json'),
     j('data/processed/boundaries_water.geojson'),
+    /* APA's flood outlines. 76 KB gzipped for all three return periods, so it
+       ships here rather than through the on-demand layer store REN and RAN
+       need — nothing to download, and it works on the first run offline. */
+    j('data/processed/boundaries_floods.geojson'),
     j('data/sources.json'),
     j('data/processed/boundaries_municipios.geojson'),
     j('data/processed/boundaries_belts.geojson'),
@@ -568,9 +581,9 @@ async function load() {
   D.sources = sources;
   D.generated = mun.generated;
   D.version = ind.app_version || '';
-  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW;
+  D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW; D.bFl = bFl;
   // an undefined layer renders as nothing at all, in silence; say so instead
-  for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW })) {
+  for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW, bFl })) {
     if (!v || !Array.isArray(v.features)) throw new Error('layer ' + k + ' did not load');
   }
 
@@ -693,10 +706,41 @@ function initNature() {
       ? { color: '#2f7fc1', weight: 1.8, opacity: .85, fill: false }
       : { color: '#2f7fc1', weight: .8, opacity: .8, fillColor: '#4a9ad4', fillOpacity: .55 },
   });
+  /* Widest first: sorting descending by return period puts the 1000-year
+     outline at the bottom of the stack and the 20-year on top. */
+  NAT.floods = L.geoJSON(
+    { type: 'FeatureCollection',
+      features: [...D.bFl.features].sort(
+        (a, b) => b.properties.return_years - a.properties.return_years) },
+    { pane: 'nature', interactive: false,
+      style: ft => {
+        const c = FLOOD_COLOUR[ft.properties.return_years] || FLOOD_COLOUR[100];
+        return { color: c, weight: 1, opacity: .9, fillColor: c, fillOpacity: .3 };
+      } });
+
   applyNature();
 }
+/* Is there a mapped flood outline over this municipality at all?  `coverage` is
+   keyed by the four-digit code and holds only the three that APA studied, so a
+   miss is the answer to a different question than "does it flood" — see the
+   note this drives, and the caveat on the source record. */
+const floodsMapped = dicofre => !!(D.bFl && D.bFl.coverage && D.bFl.coverage[dicofre]);
+
+/* Switching the layer on while looking at one of the fifteen unmapped
+   municipalities would otherwise draw nothing at all, and nothing at all is the
+   most confident thing a map can say.  A function of its own rather than three
+   lines inside the tap handler, because this is the behaviour the layer exists
+   for and a behaviour with no name cannot be tested. */
+function floodNote() {
+  if (!S.floods || S.level === 'district') return false;
+  const m = D.munByNum.get(S.mun);
+  if (!m || floodsMapped(m.dicofre)) return false;
+  mapNote(t('‏APA לא מיפתה את העירייה הזאת. היעדר שכבה אינו אומר שאין סכנת הצפה.'));
+  return true;
+}
+
 function applyNature() {
-  [['water', S.water]].forEach(([k, on]) => {
+  [['water', S.water], ['floods', S.floods]].forEach(([k, on]) => {
     if (!NAT[k]) return;
     if (on && !map.hasLayer(NAT[k])) NAT[k].addTo(map);
     if (!on && map.hasLayer(NAT[k])) map.removeLayer(NAT[k]);
@@ -4694,6 +4738,10 @@ function renderLayers() {
     row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
     row(S.muncol, 'muncol', t('צבעי 18 העיריות'), 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
     row(S.water, 'water', t('נהרות ומים'), '#4a9ad4', true) +
+    /* The count is the point, not decoration: 3 of 18 is the whole caveat in
+       two numbers, and it is on screen before the switch is ever touched. */
+    row(S.floods, 'floods', t('אזורי הצפה ממופים'), FLOOD_COLOUR[100], true,
+        (D.bFl ? Object.keys(D.bFl.coverage || {}).length : 0) + '/18') +
     row(S.mine, 'mine', t('המקומות שלי'), MINE_COLOUR, true, D.mine.length) +
     (S.wp ? t('<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ') +
             t('חוזרת לפעול ביציאה ממנו.</p>') : '');
@@ -4941,7 +4989,8 @@ function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
-      letters: S.letters, mine: S.mine, water: S.water, cons: S.cons,
+      letters: S.letters, mine: S.mine, water: S.water, floods: S.floods,
+      cons: S.cons,
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, wpList: S.wpList,
@@ -4971,6 +5020,7 @@ function restore() {
     });
     if (o.lang === 'he' || o.lang === 'en') S.lang = o.lang;
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
+    if (typeof o.floods === 'boolean') S.floods = o.floods;
     if (typeof o.cons === 'boolean') S.cons = o.cons;
     if (o.consShow && typeof o.consShow === 'object')
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
@@ -5232,6 +5282,7 @@ function wire() {
     }
     else if (k === 'letters') { S.letters = !S.letters; }
     else if (k === 'water') { S.water = !S.water; applyNature(); }
+    else if (k === 'floods') { S.floods = !S.floods; applyNature(); floodNote(); }
     else if (k === 'muncol') { if (!toggleFills()) return; }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
     else if (k.startsWith('ln:')) {
@@ -6384,6 +6435,10 @@ Object.assign(EN, {
     'The municipality',
   'אין תיחום מפורסם':
     'no published delimitation',
+  'אזורי הצפה ממופים':
+    'Mapped flood zones',
+  '‏APA לא מיפתה את העירייה הזאת. היעדר שכבה אינו אומר שאין סכנת הצפה.':
+    'APA did not map this municipality. No layer does not mean no flood risk.',
   '18 העיריות — לפי שיעור השטח המוגבל':
     'The 18 municipalities — by the share of the area under restriction',
   'DGT אינו מפרסם תיחום לעירייה הזאת. הסיבה אינה מתפרסמת, ולכן אינה נאמרת כאן.':

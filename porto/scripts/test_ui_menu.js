@@ -2445,6 +2445,130 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); if (S.wp) toggleWp(); goDistrict(); });
   await page.waitForTimeout(600);
 
+  /* ---- 13d. the flood layer, and the fifteen municipalities it is silent
+     about ------------------------------------------------------------------
+     APA maps flood extent only inside 23 designated ARPSI study areas, and one
+     of them is Porto.  Three municipalities of the eighteen are covered; the
+     other fifteen have no polygon, which means they were not studied and NOT
+     that they do not flood.  Amarante, Baião and Marco de Canaveses are on the
+     Tâmega and are among the fifteen.
+
+     That is the whole risk of shipping this layer: an empty map is the most
+     confident-looking thing a map can show.  So the checks below are less
+     about the polygons than about what the app says where there are none. */
+  await page.evaluate(() => { goDistrict(); if (S.floods) { S.floods = false; applyNature(); } });
+  await page.waitForTimeout(500);
+
+  const fl = await page.evaluate(() => {
+    const o = { present: typeof D !== 'undefined' && !!D.bFl };
+    if (!o.present) return o;
+    o.periods = (D.bFl.features || []).map(f => f.properties.return_years).sort((a, b) => a - b);
+    o.coverage = Object.keys(D.bFl.coverage || {}).sort();
+    o.defaultOff = S.floods === false;
+    o.built = typeof NAT !== 'undefined' && !!NAT.floods;
+    return o;
+  });
+  ok('the flood outlines ship with the app rather than needing a download',
+     fl.present && fl.periods.join() === '20,100,1000', JSON.stringify(fl.periods));
+  ok('and they are off until they are asked for', fl.defaultOff === true);
+  ok('APA mapped three of the eighteen municipalities, and the data says which',
+     fl.present && fl.coverage.join() === '1304,1312,1317', JSON.stringify(fl.coverage));
+
+  const drawn = await page.evaluate(() => {
+    if (typeof NAT === 'undefined' || !NAT.floods) return null;
+    S.floods = true; applyNature();
+    const stack = NAT.floods.getLayers().map(l => l.feature.properties.return_years);
+    const cols = NAT.floods.getLayers().map(l => l.options.color);
+    const on = map.hasLayer(NAT.floods);
+    S.floods = false; applyNature();
+    return { stack, cols, on, off: !map.hasLayer(NAT.floods) };
+  });
+  ok('switching it on draws all three return periods',
+     drawn && drawn.stack.length === 3 && drawn.on, JSON.stringify(drawn && drawn.stack));
+  /* The 1000-year outline contains the 100-year contains the 20-year.  Drawn in
+     that order the stack darkens towards the core on its own; drawn the other
+     way the rarest flood would cover the commonest one. */
+  ok('widest first, so the stack darkens towards the flood that comes often',
+     drawn && drawn.stack.join() === '1000,100,20', JSON.stringify(drawn && drawn.stack));
+  ok('and switching it off takes them off the map', drawn && drawn.off === true);
+  /* Two blues over the same river read as one thing.  This is why the outlines
+     are indigo and not another shade of the water layer. */
+  ok('no flood colour is the river colour',
+     drawn && !drawn.cols.some(c => ['#4a9ad4', '#2f7fc1'].includes(String(c).toLowerCase())),
+     JSON.stringify(drawn && drawn.cols));
+
+  const layHtml = await page.evaluate(() =>
+    typeof renderLayers === 'function' ? renderLayers() : '');
+  const floodRow = (layHtml.match(/<button[^>]*data-lay="floods"[\s\S]*?<\/button>/) || [''])[0];
+  ok('the menu row carries the coverage as a count, before the switch is touched',
+     /3\/18/.test(floodRow), JSON.stringify(floodRow.replace(/<[^>]+>/g, ' ').trim().slice(0, 70)));
+
+  /* The case the layer exists for.  Porto is mapped; Amarante is not, and
+     turning the layer on there must not leave a reader with a clean map and no
+     explanation. */
+  ok('the app can tell a mapped municipality from an unmapped one',
+     await page.evaluate(() => {
+       try {
+         return typeof floodsMapped === 'function'
+           && floodsMapped('1312') === true && floodsMapped('1301') === false;
+       } catch (e) { return false; }
+     }));
+  const amarante = await page.evaluate(() => (D.mun.find(m => m.dicofre === '1301') || {}).num);
+  await page.evaluate(n => { goMun(n); hideNote(); if (S.floods) { S.floods = false; applyNature(); } },
+                      amarante);
+  await page.waitForTimeout(700);
+  /* The tap handler is an anonymous delegated listener, so the behaviour it
+     drives lives in floodNote() — which is the thing worth checking anyway, and
+     giving it a name is what made it checkable. */
+  const noted = await page.evaluate(() => {
+    try { S.floods = true; applyNature(); return floodNote(); } catch (e) { return String(e); }
+  });
+  await page.waitForTimeout(600);
+  ok('the app knows it owes the reader a word here', noted === true,
+     noted === true ? '' : String(noted));
+  const said = await page.evaluate(() => document.getElementById('msgs').innerText);
+  ok('turning it on over an unmapped municipality says so, instead of showing a clean map',
+     /לא מיפתה|did not map/.test(said), JSON.stringify(said.slice(0, 90)));
+  ok('and it says plainly that this is not a clearance',
+     /אינו אומר שאין|does not mean no/.test(said), JSON.stringify(said.slice(0, 120)));
+
+  /* Rule 1 of the accuracy contract, on a record that did not exist yesterday. */
+  const floodRec = await page.evaluate(() => (D.sources.fields || {})['map.floods'] || null);
+  ok('the source record carries a source and a reference year, like every other',
+     floodRec && floodRec.source && String(floodRec.reference_year).length === 4,
+     floodRec && `${String(floodRec.source).slice(0, 40)} / ${floodRec.reference_year}`);
+  ok('and its caveat names the limit rather than burying it',
+     floodRec && /23/.test(floodRec.caveat_he) && /15/.test(floodRec.caveat_he),
+     floodRec && JSON.stringify(String(floodRec.caveat_he).slice(0, 80)));
+
+  /* Leave the app exactly as this block found it.  The menu was opened here to
+     tap the switch, and a menu left open covers the screen the next block taps
+     on — which is the kind of coupling that makes a suite fail somewhere that
+     has nothing to do with the change. */
+  /* And over Porto, which APA DID map, it must say nothing — a warning that
+     fires everywhere teaches the reader to ignore it. */
+  const portoMapped = await page.evaluate(() => (D.mun.find(m => m.dicofre === '1312') || {}).num);
+  await page.evaluate(n => { hideNote(); goMun(n); S.floods = true; applyNature(); }, portoMapped);
+  await page.waitForTimeout(700);
+  ok('and stays quiet over a municipality APA did map',
+     await page.evaluate(() => {
+       try {
+         return floodNote() === false
+           && document.getElementById('msgs').innerText.trim() === '';
+       } catch (e) { return false; }
+     }));
+
+  /* Leave the reading half where this block found it.  Walking to a
+     municipality and back scrolls it, and a scrolled pane puts the next
+     block's buttons under the fixed home and menu controls — a failure that
+     lands far away from its cause. */
+  await page.evaluate(() => {
+    S.floods = false; applyNature(); hideNote(); goDistrict();
+    const doc = document.getElementById('doc');
+    if (doc) doc.scrollTop = 0;
+  });
+  await page.waitForTimeout(700);
+
   ok('nothing on any screen threw an uncaught error along the way',
      pageErrors.length === 0, pageErrors.join(' | '));
 

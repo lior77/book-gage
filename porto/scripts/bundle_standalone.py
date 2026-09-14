@@ -29,6 +29,7 @@ DATA_FILES = [
     "data/layers_manifest.json",
     "data/processed/boundaries_municipios.geojson",
     "data/processed/boundaries_water.geojson",
+    "data/processed/boundaries_floods.geojson",
     "data/processed/boundaries_belts.geojson",
     "data/processed/boundaries_freguesias.geojson",
     "data/processed/boundaries_porto_city.geojson",
