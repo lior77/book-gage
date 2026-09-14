@@ -395,6 +395,113 @@ def read_constraints():
     return pick(raw.get("municipios", {})), pick(raw.get("freguesias", {}))
 
 
+# CRUS speaks the vocabulary of the Portuguese planning law, and every one of
+# these is the source's own term.  The Hebrew beside each is a translation and
+# never a reading: `Solo Rústico` is not "agricultural land" — it is everything
+# outside the urban perimeter, which includes forest, quarries and scattered
+# housing — and `Discrepância` is the source's own name for ground its own
+# harmonisation did not reconcile.  A term with no line here stops the build
+# rather than reaching a screen in Portuguese or, worse, in a guess.
+CRUS_HE = {
+    # The classes.  There are five in this district and not two: besides the
+    # pair the law is built on, DGT also publishes a transitional urbanisable
+    # class, a class for ground its own harmonisation did not reconcile, and
+    # one for ground it did not assign.  Folding any of them into `Solo Urbano`
+    # or `Solo Rústico` would be this project answering a question the source
+    # left open.
+    "Solo Urbano": "קרקע עירונית",
+    "Solo Rústico": "קרקע לא-עירונית",
+    "Solo Urbano (urbanizável – transitório)":
+        "קרקע עירונית — מיועדת לעיור, הוראת מעבר",
+    "Não Atribuída": "לא שויכה",
+    # the categories, as DGT writes them
+    "Espaço Florestal": "שטח יער",
+    "Espaço Agrícola": "שטח חקלאי",
+    "Espaço Natural e Paisagístico": "שטח טבעי ונופי",
+    "Aglomerado Rural": "מקבץ כפרי",
+    "Área de Edificação Dispersa": "אזור בנייה מפוזרת",
+    "Espaço Habitacional": "שטח מגורים",
+    "Espaço Central": "שטח מרכזי",
+    "Espaço de Atividades Económicas": "שטח לפעילות כלכלית",
+    "Espaço Urbano de Baixa Densidade": "שטח עירוני בצפיפות נמוכה",
+    "Espaço Verde": "שטח ירוק",
+    "Espaço de Uso Especial Equipamentos e Infraestruturas":
+        "שטח לשימוש מיוחד — מוסדות ותשתיות",
+    "Espaço de Uso Especial - Turístico": "שטח לשימוש מיוחד — תיירות",
+    "Espaço de Equipamentos e Infraestruturas": "שטח מוסדות ותשתיות",
+    "Espaço Cultural": "שטח תרבות",
+    "Espaço de Exploração de Recursos Energéticos e Geológicos":
+        "שטח להפקת משאבי אנרגיה וגאולוגיה",
+    "Espaço de Atividades Industriais": "שטח לפעילות תעשייתית",
+    "Espaço de Ocupação Turística": "שטח לתפוסה תיירותית",
+    "Espaço Agrícola ou Florestal (transitório)":
+        "שטח חקלאי או יערני — הוראת מעבר",
+    "Discrepância": "אי-התאמה",
+}
+
+# The class each colour on the card belongs to is the app's business; what the
+# build owes is the order, and the order is the source's: largest first.
+
+# Below this share of the municipality a category is still listed, because the
+# list is the source's own and dropping its tail would be an edit; the app
+# decides how many rows to draw, not the build.
+def read_crus():
+    """The land-use regime of each municipality, as hectares per class.
+
+    Written by scripts/import_crus.py from DGT's CRUS. The polygons are not
+    here and will not be: 15,194 of them, 369 MB of GeoJSON for this district.
+    What is here is DGT's own published `area_ha` for each of them, added up —
+    so the hectares are sums of published values and the shares are computed
+    against CRUS's own total for that municipality, never against a boundary
+    from another source. That leaves the comparison with CAOP's area a real
+    cross-check, which checks.py makes.
+
+    The reference year is the publication date of that municipality's PDM, and
+    they range across a decade: there is no single CRUS year, exactly as there
+    is no single REN year."""
+    raw = load_raw("crus_porto.json")
+    if not raw:
+        return {}
+    out = {}
+    for code, rec in raw.get("municipios", {}).items():
+        total = rec.get("total_ha") or 0
+        if not total:
+            continue
+        classes = rec.get("classes", {})
+        unknown = [k for k in classes if k not in CRUS_HE]
+        unknown += [c["categoria"] for c in rec.get("categorias", [])
+                    if c["categoria"] not in CRUS_HE]
+        if unknown:
+            sys.exit("CRUS term with no Hebrew in CRUS_HE (scripts/build.py): "
+                     + ", ".join(sorted(set(unknown))))
+        pct = lambda ha: round(100.0 * ha / total, 1)
+        out[code] = {
+            "total_ha": rec["total_ha"],
+            "polygons": rec["polygons"],
+            # No "urban vs rural" pair.  A headline of two numbers over five
+            # classes is a summary this project is not entitled to write: the
+            # transitional class is neither, and `Não Atribuída` is the source
+            # saying it does not know.  The classes are listed as they are.
+            "classes": [{"pt": k, "lbl": CRUS_HE[k], "ha": round(v, 1),
+                         "pct": pct(v)}
+                        for k, v in sorted(classes.items(), key=lambda kv: -kv[1])],
+            "pdm_year": rec.get("pdm_year"),
+            "pdm_date": rec.get("pdm_date"),
+            "registo": rec.get("registo_ou_deposito"),
+            "situacao": rec.get("situacao_pdm"),
+            "escala": rec.get("escala_origem"),
+            # NOT "he".  Check 7o skips a key called `he` because those are
+            # place names that stay Portuguese in English; a category label is
+            # a translated term and has to reach prose_en.json like every other
+            # string on the screen.  Named `lbl`, it does.
+            "cats": [{"pt": c["categoria"], "lbl": CRUS_HE[c["categoria"]],
+                      "cls": c["classe"], "cls_lbl": CRUS_HE[c["classe"]],
+                      "ha": c["ha"], "pct": pct(c["ha"])}
+                     for c in rec.get("categorias", [])],
+        }
+    return out
+
+
 def read_censos_2025():
     """The 2021 census rebuilt on the 2025 boundaries, by DICOFRE.
 
@@ -944,6 +1051,7 @@ def main():
     ine_mun, ine_fre = read_censos()
     ine_2025, mun25 = read_censos_2025()
     cons_mun, cons_fre = read_constraints()
+    crus_mun = read_crus()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
     translit_2025 = read_translit_2025()
     # what each 2025 parish was part of before the reform, so a new parish can
@@ -1215,6 +1323,20 @@ def main():
         cons = cons_mun.get(rec.get("dicofre", ""))
         if cons:
             rec["cons"] = cons
+        crus = crus_mun.get(rec.get("dicofre", ""))
+        if crus:
+            # CRUS tiles a whole municipality, so its own total ought to be that
+            # municipality's area — and for sixteen of the eighteen it is, to
+            # within 0.04%. Where it is not, the gap is the finding: it is
+            # written here so the app can say it on the card rather than let a
+            # reader assume the two numbers agree. The shares are unaffected,
+            # because they are taken against CRUS's own total and never against
+            # this one.
+            if rec.get("area_km2"):
+                gap = 100.0 * (crus["total_ha"] / (rec["area_km2"] * 100.0) - 1)
+                crus = dict(crus, caop_ha=round(rec["area_km2"] * 100.0, 1),
+                            caop_gap_pct=round(gap, 2))
+            rec["crus"] = crus
         if rec.get("pop2021"):
             rec["density"] = round(rec["pop2021"] / area, 1)
         municipios.append(rec)

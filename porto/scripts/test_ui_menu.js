@@ -2643,6 +2643,70 @@ const css = (page, sel, prop) =>
   await page.evaluate(v => { closePanel(); if (S.view !== v) { S.view = v; applyView(); } }, viewBefore);
   await page.waitForTimeout(300);
 
+  /* ---- CRUS: the land-use regime, and the two municipalities whose numbers
+     come with a warning.  This is the first block in the app whose reference
+     year belongs to the unit rather than to the field, and the first whose
+     source publishes a class meaning "we did not classify this". */
+  const munNum = async dicofre => page.evaluate(
+    d => (D.mun.find(m => m.dicofre === d) || {}).num, dicofre);
+  const goAndRead = async dicofre => {
+    await page.evaluate(n => { hideNote(); goMun(n); }, await munNum(dicofre));
+    await page.waitForTimeout(700);
+    return page.evaluate(() => {
+      const card = document.getElementById('crusCard');
+      return card ? { html: card.innerHTML, text: card.innerText } : null;
+    });
+  };
+
+  const gaia = await goAndRead('1317');
+  ok('every municipality has a land-use card', !!gaia);
+  ok('and its numbers open the record behind them, like every other number',
+     !!gaia && /data-src="municipio\.crus"/.test(gaia.html));
+  ok('the classes are the source\'s own and are named in Portuguese too',
+     !!gaia && /Solo Urbano/.test(gaia.text) && /Solo Rústico/.test(gaia.text));
+  ok('including the transitional class, which is neither of the two',
+     !!gaia && /urbanizável/.test(gaia.text));
+  ok('the card refuses to call Solo Rústico agricultural land',
+     !!gaia && !/קרקע חקלאית(?!״)/.test(gaia.text.replace(/״קרקע חקלאית״/g, '')));
+  ok('and it says the plan itself governs, not this map',
+     !!gaia && /PDM|plan/.test(gaia.text));
+
+  const classSum = await page.evaluate(() => {
+    const c = (D.mun.find(m => m.dicofre === '1317') || {}).crus || {};
+    return (c.classes || []).reduce((a, x) => a + x.pct, 0);
+  });
+  ok('the classes on screen add up to the whole municipality',
+     Math.abs(classSum - 100) < 0.3, String(classSum));
+
+  /* Santo Tirso's plan is marked Não vigente. Every figure on its card
+     describes ground nobody is bound by, and silence would leave it looking
+     exactly as authoritative as the other seventeen. */
+  const tirso = await goAndRead('1314');
+  ok('a municipality whose plan is not in force says so, above the numbers',
+     !!tirso && /אינה בתוקף|not in force/.test(tirso.text), tirso && tirso.text.slice(0, 80));
+  ok('and it says it in the source\'s own word, not a paraphrase',
+     !!tirso && /Não vigente/.test(tirso.text));
+  ok('and the warning is a warning and not a footnote',
+     !!tirso && /<div class="warn"/.test(tirso.html));
+
+  /* And Paços de Ferreira, where CRUS does not add up to the municipality. */
+  const pacos = await goAndRead('1309');
+  ok('where CRUS and CAOP disagree the card says so',
+     !!pacos && /2\.71|2,71/.test(pacos.text), pacos && pacos.text.slice(0, 120));
+  ok('and gives no reason, because DGT publishes none',
+     !!pacos && /אינו מפרסם סיבה|publishes no reason/.test(pacos.text));
+
+  const crusPorto = await goAndRead('1312');
+  ok('a municipality whose plan is in force carries neither warning',
+     !!crusPorto && !/אינה בתוקף|not in force/.test(crusPorto.text)
+       && !/CAOP:/.test(crusPorto.text));
+  ok('and Porto, which is all urban, still shows a class and not a blank',
+     !!crusPorto && /Solo Urbano/.test(crusPorto.text));
+
+  await page.evaluate(() => { hideNote(); goDistrict();
+    const doc = document.getElementById('doc'); if (doc) doc.scrollTop = 0; });
+  await page.waitForTimeout(700);
+
   /* Last block in the file, and it has to be: from here on every tile is
      refused, and the app answers a background it cannot load by dropping it —
      correctly — so nothing after this point could switch the background on and

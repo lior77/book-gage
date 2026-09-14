@@ -1,0 +1,1503 @@
+{
+ "coverage": "18/18",
+ "endpoint": "https://ogcapi.dgterritorio.gov.pt/collections/crus/items",
+ "generated": "2026-09-14",
+ "licence": "CC BY 4.0",
+ "missing": [],
+ "municipios": {
+  "1301": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 16099.2
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 6183.2
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 3442.3
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 2958.8
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 369.9
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 280.5
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 253.2
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 129.1
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 124.5
+    },
+    {
+     "categoria": "Área de Edificação Dispersa",
+     "classe": "Solo Rústico",
+     "ha": 110.0
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 68.0
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 56.5
+    },
+    {
+     "categoria": "Espaço de Atividades Industriais",
+     "classe": "Solo Rústico",
+     "ha": 26.7
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano",
+     "ha": 18.8
+    },
+    {
+     "categoria": "Discrepância",
+     "classe": "Solo Rústico",
+     "ha": 11.8
+    },
+    {
+     "categoria": "Discrepância",
+     "classe": "Solo Urbano",
+     "ha": 0.6
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 25940.6,
+    "Solo Urbano": 4192.5
+   },
+   "data_pub_origem": "2017-08-23 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2017-08-23",
+   "pdm_year": 2017,
+   "polygons": 1035,
+   "pt": "Amarante",
+   "registo_ou_deposito": "01.13.01/PDM/03/2017/144",
+   "situacao_pdm": "Vigente",
+   "total_ha": 30133.2
+  },
+  "1302": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 8447.4
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 5288.7
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 2075.5
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 1052.6
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 231.2
+    },
+    {
+     "categoria": "Área de Edificação Dispersa",
+     "classe": "Solo Rústico",
+     "ha": 95.3
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 63.1
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 60.7
+    },
+    {
+     "categoria": "Espaço Cultural",
+     "classe": "Solo Rústico",
+     "ha": 51.1
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 29.5
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 24.2
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano",
+     "ha": 19.5
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 14.0
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 16203.2,
+    "Solo Urbano": 1249.7
+   },
+   "data_pub_origem": "2025-07-17 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2025-07-17",
+   "pdm_year": 2025,
+   "polygons": 588,
+   "pt": "Baião",
+   "registo_ou_deposito": "01.13.02/PDM/03/2025/138",
+   "situacao_pdm": "Vigente",
+   "total_ha": 17452.8
+  },
+  "1303": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 3966.2
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 3838.5
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 1827.0
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 493.2
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 435.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 338.2
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 326.8
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 114.2
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 87.2
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 71.5
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 50.0
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 25.7
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 8512.8,
+    "Solo Urbano": 3061.0
+   },
+   "data_pub_origem": "2021-11-02 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2021-11-02",
+   "pdm_year": 2021,
+   "polygons": 805,
+   "pt": "Felgueiras",
+   "registo_ou_deposito": "01.13.03/PDM/03/2021/238",
+   "situacao_pdm": "Vigente",
+   "total_ha": 11573.7
+  },
+  "1304": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 6443.2
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 3055.6
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 1803.0
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 590.7
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 214.8
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 201.3
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 157.3
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 152.3
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 122.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 104.7
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 97.2
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 91.9
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 58.7
+    },
+    {
+     "categoria": "Espaço Cultural",
+     "classe": "Solo Rústico",
+     "ha": 46.9
+    },
+    {
+     "categoria": "Espaço de Ocupação Turística",
+     "classe": "Solo Rústico",
+     "ha": 35.6
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 10.7
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 8988.8,
+    "Solo Urbano": 3813.1,
+    "Solo Urbano (urbanizável – transitório)": 384.2
+   },
+   "data_pub_origem": "2015-11-09 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2015-11-09",
+   "pdm_year": 2015,
+   "polygons": 610,
+   "pt": "Gondomar",
+   "registo_ou_deposito": "01.13.04/PDM/03/2015/202",
+   "situacao_pdm": "Vigente",
+   "total_ha": 13186.1
+  },
+  "1305": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 3345.6
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 2932.8
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 2429.0
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 322.7
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 180.7
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 120.9
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 118.2
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 61.3
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 59.1
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 32.2
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Não Atribuída",
+     "ha": 2.9
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 2.2
+    },
+    {
+     "categoria": "Discrepância",
+     "classe": "Discrepância",
+     "ha": 0.3
+    }
+   ],
+   "classes": {
+    "Discrepância": 0.3,
+    "Não Atribuída": 2.9,
+    "Solo Rústico": 5361.8,
+    "Solo Urbano": 3999.4,
+    "Solo Urbano (urbanizável – transitório)": 243.5
+   },
+   "data_pub_origem": "2012-02-03 00:00:00+00:00",
+   "escala_origem": "1/25000",
+   "fonte": "CM - Raster",
+   "pdm_date": "2012-02-03",
+   "pdm_year": 2012,
+   "polygons": 526,
+   "pt": "Lousada",
+   "registo_ou_deposito": "01.13.05/PDM/03/2012/20",
+   "situacao_pdm": "Vigente",
+   "total_ha": 9607.8
+  },
+  "1306": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 1733.7
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 1518.4
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 1224.2
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 1172.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 914.4
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 641.8
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 587.3
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 296.3
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 142.4
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 47.5
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 17.3
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 3708.1,
+    "Solo Urbano": 4587.3
+   },
+   "data_pub_origem": "2025-02-19 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2025-02-19",
+   "pdm_year": 2025,
+   "polygons": 345,
+   "pt": "Maia",
+   "registo_ou_deposito": "01.13.06/PDM/03/2025/32",
+   "situacao_pdm": "Vigente",
+   "total_ha": 8295.4
+  },
+  "1307": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 8928.2
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 6717.7
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 2036.2
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 703.4
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 541.0
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 510.4
+    },
+    {
+     "categoria": "Área de Edificação Dispersa",
+     "classe": "Solo Rústico",
+     "ha": 151.3
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 139.6
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 106.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 84.4
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 82.2
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 58.0
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 55.1
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 23.3
+    },
+    {
+     "categoria": "Espaço de Ocupação Turística",
+     "classe": "Solo Rústico",
+     "ha": 19.9
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 9.3
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 8.6
+    },
+    {
+     "categoria": "Espaço Cultural",
+     "classe": "Solo Rústico",
+     "ha": 7.8
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano",
+     "ha": 6.5
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 17151.8,
+    "Solo Urbano": 2379.9,
+    "Solo Urbano (urbanizável – transitório)": 657.2
+   },
+   "data_pub_origem": "2015-08-31 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2015-08-31",
+   "pdm_year": 2015,
+   "polygons": 1221,
+   "pt": "Marco de Canaveses",
+   "registo_ou_deposito": "01.13.07/PDM/03/2015/149",
+   "situacao_pdm": "Vigente",
+   "total_ha": 20189.0
+  },
+  "1308": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 1632.4
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 1365.1
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 1339.9
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 1193.4
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 346.0
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 255.7
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 60.3
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Não Atribuída",
+     "ha": 49.2
+    }
+   ],
+   "classes": {
+    "Não Atribuída": 49.2,
+    "Solo Rústico": 1966.8,
+    "Solo Urbano": 4226.0
+   },
+   "data_pub_origem": "2019-08-21 00:00:00+00:00",
+   "escala_origem": "1/15000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2019-08-21",
+   "pdm_year": 2019,
+   "polygons": 368,
+   "pt": "Matosinhos",
+   "registo_ou_deposito": "01.13.08/PDM/03/2019/166",
+   "situacao_pdm": "Vigente",
+   "total_ha": 6242.0
+  },
+  "1309": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Urbano",
+     "ha": 3347.8
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 1921.1
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 1484.7
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 206.0
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 156.9
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 71.0
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 61.7
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 27.5
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Rústico",
+     "ha": 15.0
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 3448.2,
+    "Solo Urbano": 3575.6,
+    "Solo Urbano (urbanizável – transitório)": 267.7
+   },
+   "data_pub_origem": "2007-12-05 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Raster",
+   "pdm_date": "2007-12-05",
+   "pdm_year": 2007,
+   "polygons": 320,
+   "pt": "Paços de Ferreira",
+   "registo_ou_deposito": "01.13.09/169/2011/PDM/03",
+   "situacao_pdm": "Vigente",
+   "total_ha": 7291.5
+  },
+  "1310": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 5813.4
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 3561.6
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 2471.5
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 1322.4
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 1066.1
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 980.1
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 222.9
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 108.0
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 81.2
+    },
+    {
+     "categoria": "Espaço de Ocupação Turística",
+     "classe": "Solo Rústico",
+     "ha": 15.8
+    },
+    {
+     "categoria": "Área de Edificação Dispersa",
+     "classe": "Solo Rústico",
+     "ha": 13.4
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 11.3
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 5.2
+    },
+    {
+     "categoria": "Espaço Cultural",
+     "classe": "Solo Rústico",
+     "ha": 3.0
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 10559.6,
+    "Solo Urbano": 5116.1
+   },
+   "data_pub_origem": "2024-05-17 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2024-05-17",
+   "pdm_year": 2024,
+   "polygons": 1239,
+   "pt": "Paredes",
+   "registo_ou_deposito": "01.13.10/PDM/03/2024/74",
+   "situacao_pdm": "Vigente",
+   "total_ha": 15675.7
+  },
+  "1311": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 7978.0
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 6686.9
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 4022.4
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 855.9
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 554.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 258.3
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 220.6
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 214.1
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 141.5
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 129.3
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 87.7
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 74.1
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 16162.8,
+    "Solo Urbano": 4586.4,
+    "Solo Urbano (urbanizável – transitório)": 473.9
+   },
+   "data_pub_origem": "2007-10-12 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial",
+   "pdm_date": "2007-10-12",
+   "pdm_year": 2007,
+   "polygons": 857,
+   "pt": "Penafiel",
+   "registo_ou_deposito": "01.13.11/58/2008/PDM/03",
+   "situacao_pdm": "Vigente",
+   "total_ha": 21223.2
+  },
+  "1312": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 2507.3
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 802.4
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 632.5
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 172.0
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 28.0
+    }
+   ],
+   "classes": {
+    "Solo Urbano": 4142.2
+   },
+   "data_pub_origem": "2021-07-08 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2021-07-08",
+   "pdm_year": 2021,
+   "polygons": 800,
+   "pt": "Porto",
+   "registo_ou_deposito": "01.13.12/PDM/03/2021/93",
+   "situacao_pdm": "Vigente",
+   "total_ha": 4142.2
+  },
+  "1313": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 3817.9
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 1956.6
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 804.9
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 360.8
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 266.2
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 162.5
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 140.4
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 137.0
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 131.5
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 112.0
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 101.3
+    },
+    {
+     "categoria": "Espaço de Ocupação Turística",
+     "classe": "Solo Rústico",
+     "ha": 91.0
+    },
+    {
+     "categoria": "Espaço de Atividades Industriais",
+     "classe": "Solo Rústico",
+     "ha": 51.9
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 20.7
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 17.7
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano",
+     "ha": 17.5
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 9.7
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 3.1
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 5004.1,
+    "Solo Urbano": 2875.7,
+    "Solo Urbano (urbanizável – transitório)": 323.2
+   },
+   "data_pub_origem": "2015-02-26 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial",
+   "pdm_date": "2015-02-26",
+   "pdm_year": 2015,
+   "polygons": 582,
+   "pt": "Póvoa de Varzim",
+   "registo_ou_deposito": "01.13.13/PDM/03/2015/30",
+   "situacao_pdm": "Vigente",
+   "total_ha": 8203.0
+  },
+  "1314": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 5236.6
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 3604.2
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 3435.9
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 533.8
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 348.6
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 151.2
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 148.9
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano",
+     "ha": 127.9
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Urbano",
+     "ha": 72.9
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 21.0
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 8844.7,
+    "Solo Urbano": 4836.2
+   },
+   "data_pub_origem": "2011-01-18 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial",
+   "pdm_date": "2011-01-18",
+   "pdm_year": 2011,
+   "polygons": 578,
+   "pt": "Santo Tirso",
+   "registo_ou_deposito": "01.13.14/157/2011/PDM/05",
+   "situacao_pdm": "Não vigente",
+   "total_ha": 13680.9
+  },
+  "1315": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 3250.1
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 1398.2
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 892.0
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 732.7
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 588.2
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 376.1
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 170.5
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 75.9
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 22.6
+    },
+    {
+     "categoria": "Espaço Cultural",
+     "classe": "Solo Rústico",
+     "ha": 4.1
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 2.0
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 4558.2,
+    "Solo Urbano": 2954.2
+   },
+   "data_pub_origem": "2025-02-21 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2025-02-21",
+   "pdm_year": 2025,
+   "polygons": 203,
+   "pt": "Valongo",
+   "registo_ou_deposito": "01.13.15/PDM/03/2025/37",
+   "situacao_pdm": "Vigente",
+   "total_ha": 7512.4
+  },
+  "1316": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 5650.9
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 3128.6
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 2395.0
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 1529.9
+    },
+    {
+     "categoria": "Espaço Agrícola ou Florestal (transitório)",
+     "classe": "Solo Rústico",
+     "ha": 1070.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 643.1
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 411.7
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Urbano",
+     "ha": 74.4
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 5.8
+    },
+    {
+     "categoria": "Discrepância",
+     "classe": "Discrepância",
+     "ha": 0.3
+    }
+   ],
+   "classes": {
+    "Discrepância": 0.3,
+    "Solo Rústico": 10651.8,
+    "Solo Urbano": 4257.8
+   },
+   "data_pub_origem": "1995-12-12 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Raster",
+   "pdm_date": "1995-12-12",
+   "pdm_year": 1995,
+   "polygons": 1376,
+   "pt": "Vila do Conde",
+   "registo_ou_deposito": " 01.13.16.00/OA-95.PD",
+   "situacao_pdm": "Vigente",
+   "total_ha": 14909.9
+  },
+  "1317": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 4424.3
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 2101.1
+    },
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 2029.5
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 1379.2
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 1352.0
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Urbano",
+     "ha": 1329.3
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 994.1
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 804.0
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 486.0
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 476.2
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 429.0
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 425.5
+    },
+    {
+     "categoria": "Não Atribuída",
+     "classe": "Solo Rústico",
+     "ha": 415.3
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 71.4
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano (urbanizável – transitório)",
+     "ha": 56.2
+    },
+    {
+     "categoria": "Espaço de Uso Especial - Turístico",
+     "classe": "Solo Urbano",
+     "ha": 17.2
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 12.2
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 5255.9,
+    "Solo Urbano": 8099.3,
+    "Solo Urbano (urbanizável – transitório)": 3447.3
+   },
+   "data_pub_origem": "2009-08-12 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2009-08-12",
+   "pdm_year": 2009,
+   "polygons": 3520,
+   "pt": "Vila Nova de Gaia",
+   "registo_ou_deposito": "01.13.17/177/2009/PDM/03",
+   "situacao_pdm": "Vigente",
+   "total_ha": 16802.5
+  },
+  "1318": {
+   "autor": "DGT",
+   "categorias": [
+    {
+     "categoria": "Espaço Florestal",
+     "classe": "Solo Rústico",
+     "ha": 3026.8
+    },
+    {
+     "categoria": "Espaço Agrícola",
+     "classe": "Solo Rústico",
+     "ha": 1657.2
+    },
+    {
+     "categoria": "Espaço Habitacional",
+     "classe": "Solo Urbano",
+     "ha": 841.0
+    },
+    {
+     "categoria": "Espaço de Atividades Económicas",
+     "classe": "Solo Urbano",
+     "ha": 650.9
+    },
+    {
+     "categoria": "Espaço Central",
+     "classe": "Solo Urbano",
+     "ha": 358.3
+    },
+    {
+     "categoria": "Espaço Urbano de Baixa Densidade",
+     "classe": "Solo Urbano",
+     "ha": 347.5
+    },
+    {
+     "categoria": "Espaço de Uso Especial Equipamentos e Infraestruturas",
+     "classe": "Solo Urbano",
+     "ha": 131.3
+    },
+    {
+     "categoria": "Espaço Natural e Paisagístico",
+     "classe": "Solo Rústico",
+     "ha": 86.8
+    },
+    {
+     "categoria": "Espaço de Atividades Industriais",
+     "classe": "Solo Rústico",
+     "ha": 37.4
+    },
+    {
+     "categoria": "Aglomerado Rural",
+     "classe": "Solo Rústico",
+     "ha": 32.8
+    },
+    {
+     "categoria": "Espaço Verde",
+     "classe": "Solo Urbano",
+     "ha": 14.4
+    },
+    {
+     "categoria": "Espaço Cultural",
+     "classe": "Solo Rústico",
+     "ha": 8.4
+    },
+    {
+     "categoria": "Espaço de Equipamentos e Infraestruturas",
+     "classe": "Solo Rústico",
+     "ha": 5.3
+    },
+    {
+     "categoria": "Espaço de Exploração de Recursos Energéticos e Geológicos",
+     "classe": "Solo Rústico",
+     "ha": 2.2
+    }
+   ],
+   "classes": {
+    "Solo Rústico": 4856.9,
+    "Solo Urbano": 2343.4
+   },
+   "data_pub_origem": "2025-03-31 00:00:00+00:00",
+   "escala_origem": "1/10000",
+   "fonte": "CM - Vectorial e Raster",
+   "pdm_date": "2025-03-31",
+   "pdm_year": 2025,
+   "polygons": 221,
+   "pt": "Trofa",
+   "registo_ou_deposito": "01.13.18/PDM/03/2025/82",
+   "situacao_pdm": "Vigente",
+   "total_ha": 7200.3
+  }
+ },
+ "note": "Attributes only. The polygons are 369 MB of GeoJSON for this district and stay at DGT; area_ha is DGT's own published area for each polygon, so these totals are sums of published values and nothing here was measured off a geometry.",
+ "source": "Direção-Geral do Território (DGT), Carta do Regime de Uso do Solo (CRUS), OGC API Features"
+}

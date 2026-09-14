@@ -1197,6 +1197,7 @@ function renderMun(num) {
     ${marketStats(m, 'municipio')}
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
+    ${crusCard(m)}
     ${layerCard(m.num)}
 
     <div class="grp">${rows.length} ${isPorto ? t('רבעי העיר') : t('הרובעים')} ${t('— לפי המספור במפה')}</div>
@@ -1750,6 +1751,112 @@ function layerDelRows(num) {
     ? `<p class="note">${t('כיבוי התצוגה אינו מוחק כלום: השכבה נשארת במכשיר ועובדת בלי רשת. מחיקה היא פעולה נפרדת, וזאת היא:')}</p>
        <div class="chips">${chips}</div>`
     : '';
+}
+
+/* ---- CRUS — what this ground may be used for --------------------------- */
+/* The two constraint layers answer "what may not happen here".  CRUS answers
+   the question that comes before it: which of the two legal classes the ground
+   is in at all — `Solo Urbano` or `Solo Rústico` — and under which category.
+   For a reader looking for property that is the first question, and until now
+   the app had no answer to it.
+
+   WHY THE NUMBERS AND NOT A LAYER.  The same 15,194 polygons are 369 MB of
+   GeoJSON for this district, 39 MB gzipped, against 22.8 MB for REN and RAN
+   together — and those already download on demand rather than ship.  What is
+   here is DGT's own published area for each polygon, added up.
+
+   WHY MUNICIPALITY AND NOT DISTRICT.  Every municipality's CRUS is its own
+   PDM, published in its own year, and those years are a decade apart.  A
+   district figure would be one number over eighteen different plans, and the
+   reader could not tell which.  So the year sits on the row, and there is no
+   district total. */
+/* Five classes, not two.  Besides the pair the planning law is built on, DGT
+   publishes a transitional urbanisable class, a class for ground its own
+   harmonisation did not reconcile, and one it did not assign — and each of the
+   last three is the source declining to answer, which is not the same as an
+   answer.  They get their own colour and their own row; grey is for the two
+   that say "unknown", because a colour that reads like a land use would be the
+   card claiming one. */
+const CRUS_COLOUR = {
+  'Solo Urbano': '#c2603a',
+  'Solo Urbano (urbanizável – transitório)': '#d9926b',
+  'Solo Rústico': '#6f8f4e',
+  'Discrepância': '#8a8f98',
+  'Não Atribuída': '#8a8f98',
+};
+const crusColour = cls => CRUS_COLOUR[cls] || '#8a8f98';
+
+/* CRUS tiles a whole municipality, so its own hectares ought to add up to that
+   municipality's area — and in sixteen of the eighteen they do, to within
+   0.04%.  Where they do not, silence would let the reader assume the two
+   numbers agree.  So the gap is said, with its size and without a cause: DGT
+   publishes none, and a plausible one — a plan drawn on an older boundary,
+   polygons that overlap — is still a guess.  The shares above are unaffected;
+   they are taken against CRUS's own total and never against CAOP's. */
+/* `situacao_pdm` is the one field here that can make every number above it
+   describe a plan nobody is bound by.  Santo Tirso's says `Não vigente`.  It
+   is not a footnote and it is not ours to soften: the rows stay — they are
+   what DGT publishes — and the line says the plan behind them is not in force,
+   in the source's own word. */
+function crusPlanNote(c) {
+  if (!c || !c.situacao || c.situacao === 'Vigente') return '';
+  return `<div class="warn">${t('תוכנית המתאר שממנה מגיעים המספרים האלה מסומנת אצל DGT כ-')}<span class="lat" dir="ltr">${
+    html(c.situacao)}</span>${t(' — כלומר אינה בתוקף. השורות נשארות כפי ש-DGT מפרסם אותן, אבל אין להסתמך עליהן כעל ייעוד תקף. יש לבדוק מול העירייה מה התוכנית שבתוקף היום.')}</div>`;
+}
+
+const CRUS_GAP_SAY = 0.5;      // below this it is rounding, not a finding
+
+function crusGapNote(c) {
+  if (!c || c.caop_gap_pct === undefined || c.caop_gap_pct === null) return '';
+  if (Math.abs(c.caop_gap_pct) < CRUS_GAP_SAY) return '';
+  return `<div class="warn">${t('סכום ההקטרים של CRUS בעירייה הזאת אינו שווה לשטחה לפי CAOP: ')}<span class="num">${
+    nf(c.total_ha, 1)}</span>${t(' מול ')}<span class="num">${nf(c.caop_ha, 1)}</span>${
+    t(' הקטר, הפרש של ')}<span class="num">${nf(Math.abs(c.caop_gap_pct), 2)}</span>${
+    t('%. ‏DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן. השיעורים שלמעלה אינם מושפעים — הם מחושבים מול הסכום של CRUS עצמו.')}</div>`;
+}
+
+function crusCard(m) {
+  const c = m.crus;
+  if (!c) return '';
+  const key = 'municipio.crus';
+  /* The same row the constraints page uses, for the same reason: a share, the
+     hectares behind it, and the year and the legal reference that make the
+     share mean something — on the row, before anyone has to ask. */
+  const row = (he, pt, ha, pc, colour, small) =>
+    `<button class="crow${small ? ' crow-sub' : ''}" data-src="${html(key)}">
+       <span class="crow-c" style="background:${html(colour)}"></span>
+       <span class="crow-b">
+         <span class="crow-l">${html(t(he))} <span class="lat" dir="ltr">${html(pt)}</span></span>
+         <span class="crow-m"><span class="num">${nf(ha, 1)}</span> ${t('הקטר')}${
+           !small && c.pdm_year ? ' · ' + t('שנת ייחוס') + ' <span class="num">'
+             + html(c.pdm_year) + '</span>' : ''}${
+           !small && c.registo ? ' · <span class="lat" dir="ltr">' + html(c.registo) + '</span>' : ''}</span>
+       </span>
+       <span class="crow-p"><span class="num">${nf(pc, 1)}</span>%</span>
+     </button>`;
+
+  const classes = (c.classes || []).map(x =>
+    row(x.lbl, x.pt, x.ha, x.pct, crusColour(x.pt))).join('');
+  const cats = (c.cats || []).map(x =>
+    row(x.lbl, x.pt, x.ha, x.pct, crusColour(x.cls), true)).join('');
+
+  return `<div class="card" id="crusCard">
+    <h2>${t('ייעוד קרקע')} <span class="lat" dir="ltr">CRUS</span></h2>
+    <p class="sub">${t('לאיזה משני מעמדות הקרקע של חוק התכנון הפורטוגלי שייך כל שטח בעירייה, ובאיזו קטגוריה בתוכו. זה מה שקובע אם בכלל אפשר לבנות, לפני כל שאלה על מגבלה.')}</p>
+    <div class="crows">${classes}</div>
+    <p class="note">${t('‏Solo Rústico אינו ״קרקע חקלאית״: זה כל מה שמחוץ למתחם העירוני — יער, מחצבות, בנייה מפוזרת וגם חקלאות. הקטגוריה היא שאומרת מה מתוכם.')}</p>
+    <p class="note">${t('‏״לא שויכה״ ו״אי-התאמה״ הן המילים של DGT עצמו לשטח שההרמוניזציה שלו לא יישבה או לא שייכה. הן נשארות כאן בשמן ואינן מחולקות בין המעמדות האחרים.')}</p>
+    <div class="grp">${(c.cats || []).length} ${t('קטגוריות — כפי ש-DGT מפרסם אותן')}</div>
+    <div class="crows">${cats}</div>
+    ${crusPlanNote(c)}
+    ${crusGapNote(c)}
+    <p class="note">${t('התוכנית:')} ${c.situacao ? '<span class="lat" dir="ltr">' + html(c.situacao) + '</span>' : miss()}${
+      c.pdm_date ? t(' · פורסמה ב-') + '<span class="lat num" dir="ltr">' + html(c.pdm_date) + '</span>' : ''}${
+      c.escala ? t(' · קנה מידה ') + '<span class="lat num" dir="ltr">' + html(c.escala) + '</span>' : ''}${
+      c.polygons ? ' · <span class="num">' + nf(c.polygons) + '</span>' + t(' מצולעים') : ''}.</p>
+    <p class="note">${t('המקור: Direção-Geral do Território (DGT), Carta do Regime de Uso do Solo, רישיון CC BY 4.0. ההקטרים הם השטח ש-DGT מפרסם לכל מצולע, מחוברים — לא נמדד כאן דבר מגאומטריה. השיעורים מחושבים מול הסכום של CRUS עצמו לעירייה, ולכן ההשוואה לשטח CAOP היא בדיקה אמיתית ולא מעגלית.')}</p>
+    <p class="note">${t('‏CRUS הוא הרמוניזציה של תוכניות העיריות למפה אחת, ואינו מחליף את ה-PDM עצמו. לנכס מסוים קובעת התוכנית של העירייה כפי שפורסמה.')}</p>
+  </div>`;
 }
 
 function layerCard(num) {
@@ -6455,6 +6562,40 @@ Object.assign(EN, {
     'no published delimitation',
   'אזורי הצפה ממופים':
     'Mapped flood zones',
+  'ייעוד קרקע':
+    'Land-use regime',
+  '‏״לא שויכה״ ו״אי-התאמה״ הן המילים של DGT עצמו לשטח שההרמוניזציה שלו לא יישבה או לא שייכה. הן נשארות כאן בשמן ואינן מחולקות בין המעמדות האחרים.':
+    '"Not assigned" and "discrepancy" are DGT\'s own words for ground its harmonisation did not reconcile or did not assign. They keep their names here and are not divided among the other classes.',
+  'תוכנית המתאר שממנה מגיעים המספרים האלה מסומנת אצל DGT כ-':
+    'The plan these figures come from is marked at DGT as ',
+  ' — כלומר אינה בתוקף. השורות נשארות כפי ש-DGT מפרסם אותן, אבל אין להסתמך עליהן כעל ייעוד תקף. יש לבדוק מול העירייה מה התוכנית שבתוקף היום.':
+    ' — that is, not in force. The rows stay as DGT publishes them, but they must not be relied on as the land-use regime in force. Check with the municipality which plan is in force today.',
+  'סכום ההקטרים של CRUS בעירייה הזאת אינו שווה לשטחה לפי CAOP: ':
+    'CRUS\'s hectares for this municipality do not add up to its CAOP area: ',
+  ' מול ':
+    ' against ',
+  ' הקטר, הפרש של ':
+    ' hectares, a gap of ',
+  '%. ‏DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן. השיעורים שלמעלה אינם מושפעים — הם מחושבים מול הסכום של CRUS עצמו.':
+    '%. DGT publishes no reason, so none is given here. The shares above are unaffected — they are computed against CRUS\'s own total.',
+  'לאיזה משני מעמדות הקרקע של חוק התכנון הפורטוגלי שייך כל שטח בעירייה, ובאיזו קטגוריה בתוכו. זה מה שקובע אם בכלל אפשר לבנות, לפני כל שאלה על מגבלה.':
+    'Which of the two land classes of Portuguese planning law each piece of ground in the municipality is in, and under which category. This is what decides whether building is possible at all, before any question about a restriction.',
+  '‏Solo Rústico אינו ״קרקע חקלאית״: זה כל מה שמחוץ למתחם העירוני — יער, מחצבות, בנייה מפוזרת וגם חקלאות. הקטגוריה היא שאומרת מה מתוכם.':
+    'Solo Rústico is not "agricultural land": it is everything outside the urban perimeter — forest, quarries, scattered building, and farmland too. The category is what says which.',
+  'קטגוריות — כפי ש-DGT מפרסם אותן':
+    'categories — as DGT publishes them',
+  'התוכנית:':
+    'The plan:',
+  ' · פורסמה ב-':
+    ' · published ',
+  ' · קנה מידה ':
+    ' · scale ',
+  ' מצולעים':
+    ' polygons',
+  'המקור: Direção-Geral do Território (DGT), Carta do Regime de Uso do Solo, רישיון CC BY 4.0. ההקטרים הם השטח ש-DGT מפרסם לכל מצולע, מחוברים — לא נמדד כאן דבר מגאומטריה. השיעורים מחושבים מול הסכום של CRUS עצמו לעירייה, ולכן ההשוואה לשטח CAOP היא בדיקה אמיתית ולא מעגלית.':
+    'Source: Direção-Geral do Território (DGT), Carta do Regime de Uso do Solo, CC BY 4.0. The hectares are the area DGT publishes for each polygon, added up — nothing here was measured off a geometry. The shares are computed against CRUS\'s own total for the municipality, which leaves the comparison with the CAOP area a real check and not a circular one.',
+  '‏CRUS הוא הרמוניזציה של תוכניות העיריות למפה אחת, ואינו מחליף את ה-PDM עצמו. לנכס מסוים קובעת התוכנית של העירייה כפי שפורסמה.':
+    'CRUS is a harmonisation of the municipalities\' own plans into one map; it does not replace the PDM itself. For a particular property, the municipality\'s plan as published is what governs.',
   'מקור, שנת ייחוס ומה לא ממופה':
     'Source, reference year and what is not mapped',
   '‏APA לא מיפתה את העירייה הזאת. היעדר שכבה אינו אומר שאין סכנת הצפה.':

@@ -835,6 +835,15 @@ body[data-view="text"] .map-only{display:none}
 .crow-tot{border-block-end:0; border-block-start:2px solid var(--line);
   margin-block-start:2px}
 .crow-tot .crow-l{font-size:.92rem}
+/* The categories under the two classes: the same row, one step quieter, so the
+   eye reads two numbers first and the breakdown second.  They are still rows
+   and still open the record — a list of eighteen categories nobody can tap is
+   a picture of data, not data. */
+.crow-sub{padding:5px 0}
+.crow-sub .crow-l{font-size:.78rem; font-weight:400}
+.crow-sub .crow-m{font-size:.7rem}
+.crow-sub .crow-p{font-size:.86rem; font-weight:600}
+.crow-sub .crow-c{width:9px; height:9px; opacity:.75}
 
 /* One unit on the list. The bar runs the full width of the card, because what
    it is for is the filled part against the whole — a 74px stub beside a line of

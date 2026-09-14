@@ -1043,6 +1043,134 @@ def main():
             fail("app.js calls REN/RAN an outright ban (%r). They are "
                  "restrictions with an exception regime." % bad)
 
+    # ---- 7v. CRUS: the land-use regime, and where it does not add up -------
+    # This is the only block in the app whose reference year is the date a
+    # municipality published its own plan, and whose hectares are the source's
+    # own rather than anything measured here. Two things can therefore go wrong
+    # quietly: a share taken against the wrong denominator, and a total that
+    # does not equal the municipality it describes.
+    #
+    # The second one is real. CRUS tiles a whole municipality, so its hectares
+    # ought to be that municipality's area, and for seventeen of the eighteen
+    # they are to within 0.04%. Paços de Ferreira is 2.7% larger. The app says
+    # so on the card; this table is what makes a NEW outlier fail the build
+    # instead of joining it silently.
+    CRUS_GAP_KNOWN = {"1309": 2.71}      # dicofre → the gap, in per cent
+    CRUS_GAP_QUIET = 0.5                 # below this it is rounding
+    # The other finding in this table, and the more serious one: a plan that is
+    # not in force. DGT marks Santo Tirso's `Não vigente`, which makes every
+    # figure above it a description of something nobody is bound by. The app
+    # says so. A municipality joining this list is a change of meaning, not of
+    # data, so it fails the build until someone has looked.
+    CRUS_NOT_IN_FORCE = {"1314"}
+    crus_n = 0
+    for r in mun:
+        c = r.get("crus")
+        name = r.get("he") or r.get("pt")
+        code = r.get("dicofre", "")
+        if not c:
+            fail("municipio %s has no crus block" % name)
+            continue
+        crus_n += 1
+        for want in ("total_ha", "classes", "cats", "pdm_year", "registo",
+                     "situacao", "escala", "polygons"):
+            if c.get(want) in (None, "", [], {}):
+                fail("crus %s: no %s" % (name, want))
+        if not (1990 <= (c.get("pdm_year") or 0) <= 2030):
+            fail("crus %s: pdm_year is %r" % (name, c.get("pdm_year")))
+        classes = c.get("classes") or []
+        # Five classes in this district, not two: `Solo Urbano`, `Solo Rústico`,
+        # the transitional urbanisable one, and the two that are the source
+        # saying it does not know. Adding only the first two to 100 is the
+        # mistake this replaces — it was in here for an afternoon.
+        if abs(sum(x["pct"] for x in classes) - 100) > 0.3:
+            fail("crus %s: the classes add to %.1f%% and not to a whole"
+                 % (name, sum(x["pct"] for x in classes)))
+        # Every hectare figure here is rounded to one place, so a sum of n of
+        # them can be 0.05n away from the total before anything is wrong. A
+        # flat tolerance failed Póvoa de Varzim on eighteen categories that
+        # were right.
+        slack = lambda n: max(0.3, 0.05 * n)
+        if abs(sum(x["ha"] for x in classes)
+               - (c.get("total_ha") or 0)) > slack(len(classes)):
+            fail("crus %s: the class hectares do not add to the total" % name)
+        for x in classes:
+            if not x.get("lbl"):
+                fail("crus %s: class %r has no label" % (name, x.get("pt")))
+            if not (0 <= x.get("pct", -1) <= 100):
+                fail("crus %s: class %r is %r%%" % (name, x.get("pt"), x.get("pct")))
+        cats = c.get("cats") or []
+        if not cats:
+            fail("crus %s: no categories at all" % name)
+        if abs(sum(x["ha"] for x in cats)
+               - (c.get("total_ha") or 0)) > slack(len(cats)):
+            fail("crus %s: the categories do not add to the total" % name)
+        for x in classes:
+            mine = [y for y in cats if y["cls"] == x["pt"]]
+            got = sum(y["ha"] for y in mine)
+            if abs(got - x["ha"]) > slack(len(mine)):
+                fail("crus %s: %s categories add to %.1f, the class is %.1f"
+                     % (name, x["pt"], got, x["ha"]))
+        for x in cats:
+            # a category reaching the screen in Portuguese, or with no label at
+            # all, is how the constraint page nearly shipped its class names
+            if not x.get("lbl") or not x.get("cls_lbl"):
+                fail("crus %s: category %r has no label" % (name, x.get("pt")))
+            if not (0 <= x.get("pct", -1) <= 100):
+                fail("crus %s: category %r is %r%%" % (name, x.get("pt"), x.get("pct")))
+        in_force = c.get("situacao") == "Vigente"
+        if in_force and code in CRUS_NOT_IN_FORCE:
+            fail("crus %s: it was marked %r and now says Vigente — if DGT "
+                 "published a new plan, take it out of CRUS_NOT_IN_FORCE"
+                 % (name, "Não vigente"))
+        if not in_force and code not in CRUS_NOT_IN_FORCE:
+            fail("crus %s: the plan is %r and nothing says so. A municipality "
+                 "whose PDM is not in force describes ground nobody is bound "
+                 "by, and that has to be on the card before it is in a table"
+                 % (name, c.get("situacao")))
+        gap = c.get("caop_gap_pct")
+        if gap is None:
+            fail("crus %s: no comparison with the CAOP area" % name)
+        elif abs(gap) >= CRUS_GAP_QUIET:
+            known = CRUS_GAP_KNOWN.get(code)
+            if known is None:
+                fail("crus %s: CRUS is %.2f%% away from the CAOP area and this "
+                     "is a new finding — put it in CRUS_GAP_KNOWN once it is "
+                     "understood, and make sure the card says it" % (name, gap))
+            elif abs(gap - known) > 0.1:
+                fail("crus %s: the CAOP gap moved from %.2f%% to %.2f%%"
+                     % (name, known, gap))
+    if crus_n != 18:
+        fail("CRUS covers %d of 18 municipalities" % crus_n)
+
+    entry = sources["fields"].get("municipio.crus") or {}
+    for want in ("source", "reference_year", "confidence", "coverage",
+                 "caveat_he", "validation_he", "definitions_he", "url"):
+        if not entry.get(want):
+            fail("municipio.crus: no %s recorded" % want)
+    # The hectares are DGT's; the share is a division this project did. Rule 3
+    # calls anything derived approx, and the temptation here is to call it
+    # reported because the inputs are published.
+    if entry.get("confidence") != "approx":
+        fail("municipio.crus: the share is derived, so it is approx")
+    if "Solo Rústico" not in (entry.get("definitions_he") or {}):
+        fail("municipio.crus: the two legal classes are not defined")
+
+    # Rule 4, where this data is most likely to break it. `Solo Rústico` is not
+    # agricultural land — it is everything outside the urban perimeter — and
+    # `Solo Urbano` is not permission to build on a particular plot.
+    appjs5 = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    for bad in ("קרקע חקלאית'", "'קרקע זמינה לבנייה", "מותר לבנות כאן",
+                "אדמה חקלאית"):
+        if bad in appjs5:
+            fail("app.js restates CRUS into something stronger (%r)" % bad)
+    # Both findings above are only findings if the app says them. These are the
+    # two functions that do; a card that stopped calling them would leave the
+    # table looking exactly as authoritative as the other seventeen.
+    for fn in ("crusPlanNote", "crusGapNote"):
+        if appjs5.count(fn) < 2:
+            fail("app.js does not both define and use %s()" % fn)
+
     # ---- 7u. a label carried in a table still has to reach the translator ---
     # 7n reads every literal t('...') in app.js. It cannot see t(CONS_HE[k]),
     # and that is exactly how the constraint page's three class names would

@@ -5,7 +5,7 @@
 וישרוד. הקבצים המעובדים שהאפליקציה קוראת יושבים ב-`data/raw/`; כאן שמור
 המקור, כדי שתמיד אפשר יהיה לבנות הכל מחדש מאפס ולבדוק מה בדיוק הגיע.
 
-סך הכל 63 קבצים, 88.2 MB.
+סך הכל 81 קבצים, 91.8 MB.
 
 
 ## INE — מפקד 2021
@@ -114,6 +114,18 @@
 | `dgt/README_RAN.md` | 14 KB | 26 קובצי RAN עם SHA-256 — 17 במחוז ו-9 מחוצה לו. |
 | `dgt/dgt_ren_norte_wfs_capabilities.xml` | 18 KB | ‏GetCapabilities המקורי. הורד מחדש מהשירות החי ב-2026-09-14 וחזר **בדיוק 18,494 בתים**. |
 | `dgt/dgt_ren_norte_schema_ren.xsd`, `dgt/dgt_ren_norte_schema_linhas_agua.xsd` | 10 KB | ‏DescribeFeatureType המקוריים. |
+
+## ‏DGT — CRUS, משטר השימוש בקרקע
+
+נמשך ישירות מ-OGC API של DGT ב-2026-09-14 על ידי `scripts/import_crus.py`.
+זו טבלת הנתונים של CRUS למחוז, **בלי גאומטריה**: אותם 15,194 מצולעים
+כ-GeoJSON הם 369 מגה-בייט, ולכן ירדו דרך פלט ה-CSV של נקודת הקצה `items`.
+‏`skipGeometry=true` ו-`properties=` — שתי הדרכים המתבקשות לאותו דבר —
+מחזירות 500 בשרת הזה, שוב ושוב, על בקשה שבצורת GeoJSON עובדת.
+
+| קובץ | גודל | מה זה |
+| --- | ---: | --- |
+| `dgt/crus/crus_13NN.csv` × 18 | 3.6 MB | קובץ לעירייה, שורה למצולע: ‏`designacao_no_plano` (הניסוח של תוכנית המתאר העירונית עצמה), `classe_2021`, `categoria_2021`, `area_ha` ש-DGT מפרסם, `data_pub_origem` ו-`registo_ou_deposito` של אותה עירייה, `situacao_pdm` ו-`escala_origem`. **מהם נבנה `data/raw/crus_porto.json` וממנו הכרטיס באפליקציה.** הרצה חוזרת של הסקריפט משתמשת בקבצים האלה ואינה פונה לשרת. |
 
 ## ‏APA — זונות שיטפון
 
