@@ -1988,8 +1988,13 @@ const css = (page, sel, prop) =>
        && /לא החזיר/.test(document.getElementById('msgs').innerText)));
   await page.evaluate(() => { hideNote(); window.__portoPicker('cancelled:0'); });
   await page.waitForTimeout(300);
-  ok('but a cancel says nothing — the reader knows they cancelled',
-     await page.evaluate(() => document.getElementById('msgs').innerText.trim() === ''));
+  /* A cancel used to say nothing, on the reasoning that the reader knows they
+     cancelled. That reasoning cost two rounds of this bug: a picker that ate a
+     photo and answered RESULT_CANCELED is INDISTINGUISHABLE from a cancel, so
+     the one outcome that was kept quiet was the failure itself. It speaks now,
+     briefly. */
+  ok('and a cancel is named too, because a failure looks exactly like one',
+     await page.evaluate(() => /לא נבחר קובץ/.test(document.getElementById('msgs').innerText)));
   /* Handed over and then lost between the wrapper and the input: the one case
      the page can name but not fix. */
   await page.evaluate(() => { hideNote(); window.__portoPicker('ok:1:content'); });
@@ -2002,6 +2007,106 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(3400);
   ok('while a file that does arrive is never complained about',
      await page.evaluate(() => document.getElementById('msgs').innerText.trim() === ''));
+
+  /* ---- 13c-bis. the picker that survives the page that opened it ----------
+     On the phone the wrapper's answer can arrive at a page that no longer
+     exists: Android destroys this activity while the system picker is in front,
+     restores the screen the reader was on, and every object either side was
+     holding is gone. That is why two correct fixes to two real bugs both left
+     the symptom exactly where it was. The answer is now left on disk and the
+     page COLLECTS it, so the page that asked and the page that acts do not have
+     to be the same page. These tests stand in for the wrapper. */
+  await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); hideNote(); });
+  await page.waitForTimeout(300);
+  const FAKE_BRIDGE = j => {
+    window.__fake = { opened: [], answer: '' };
+    window.PortoPick = {
+      open: k => { window.__fake.opened.push(k); },
+      take: () => { const a = window.__fake.answer; window.__fake.answer = ''; return a; },
+      trail: () => '',
+    };
+    window.__fake.jpeg = 'data:image/jpeg;base64,' + j;
+  };
+  await page.evaluate(FAKE_BRIDGE, TINY_JPEG);
+  await page.evaluate(() => { if (!S.wp) toggleWp(); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => document.querySelector('#doc [data-wpact="new"]').click());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => pickWay('photo'));
+  await page.waitForTimeout(300);
+  ok('with the wrapper present the photo way asks IT, not the file input',
+     await page.evaluate(() => window.__fake.opened.join() === 'photo'));
+
+  /* The case that was silent: nothing on this page asked for anything — as far
+     as it knows it has only just loaded — and an answer is waiting. */
+  await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); hideNote();
+                              pickWaiting = null; });
+  await page.evaluate(() => document.querySelector('#doc [data-wpact="new"]').click());
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    window.__fake.answer = JSON.stringify({ kind: 'photo', files: [
+      { url: window.__fake.jpeg, name: 'IMG_1.jpg', type: 'image/jpeg', size: 64 }] });
+    drainPick();
+  });
+  await page.waitForTimeout(1800);
+  ok('an answer waiting for a page that never asked is still collected',
+     await page.evaluate(() => D.mine.length === 1 || !!mineEditing));
+  ok('and it opens the form, which is the whole thing that used to not happen',
+     await page.$$eval('#wpSheet input[type=text]', e => e.length) === 1);
+  await page.evaluate(() => { const b = document.querySelector('#wpSheet [data-wpact="save"]');
+                              if (b) b.click(); });
+  await page.waitForTimeout(900);
+  ok('and the photo that came through the wrapper is really on the point',
+     await page.evaluate(async () => {
+       if (!D.mine.length) return false;
+       const b = await getPhoto(D.mine[D.mine.length - 1].id);
+       return !!b && b.size > 0;
+     }));
+
+  /* And it reopens wherever it left off, which need not be this screen: a
+     photo that quietly becomes a point nobody is looking at is the same
+     failure in different clothes. */
+  await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); hideNote();
+                              pickWaiting = null; if (S.wp) toggleWp(); });
+  await page.waitForTimeout(500);
+  ok('and the places screen really is shut before the answer arrives',
+     await page.evaluate(() => S.wp === false));
+  await page.evaluate(() => {
+    window.__fake.answer = JSON.stringify({ kind: 'photo', files: [
+      { url: window.__fake.jpeg, name: 'IMG_2.jpg', type: 'image/jpeg', size: 64 }] });
+    drainPick();
+  });
+  await page.waitForTimeout(1800);
+  ok('a photo collected on another screen brings its own screen with it',
+     await page.evaluate(() => S.wp === true)
+     && await page.$$eval('#wpSheet input[type=text]', e => e.length) === 1);
+  await page.evaluate(() => { closeNewSheet(); D.mine = []; saveMine(); hideNote(); });
+  await page.waitForTimeout(300);
+
+  /* Every other outcome is named. None of them may be silence. */
+  const says = async (answer, re) => {
+    await page.evaluate(a => { hideNote(); window.__fake.answer = a; drainPick(); }, answer);
+    await page.waitForTimeout(400);
+    return page.evaluate(r => new RegExp(r).test(document.getElementById('msgs').innerText), re);
+  };
+  ok('a picker that never came back is named, not waited on forever',
+     await says('lost:photo', 'סוגר את האפליקציה'));
+  ok('a picker that answered with no file is named',
+     await says('empty:no-uris', 'בלי קובץ'));
+  ok('and so is a wrapper that could not open a picker at all',
+     await says('err:no-chooser', 'נכשלה'));
+  ok('a cancel through the wrapper says so too',
+     await says('cancelled:0', 'לא נבחר קובץ'));
+  ok('and an answer whose bytes cannot be fetched does not fail in silence',
+     await page.evaluate(async () => {
+       hideNote();
+       window.__fake.answer = JSON.stringify({ kind: 'photo', files: [
+         { url: '/__picked/gone.jpg', name: 'g.jpg', type: 'image/jpeg', size: 1 }] });
+       drainPick();
+       await new Promise(r => setTimeout(r, 900));
+       return document.getElementById('msgs').innerText.trim() !== '';
+     }));
+  await page.evaluate(() => { delete window.PortoPick; delete window.__fake; hideNote(); });
 
   await page.evaluate(() => { D.mine = []; saveMine(); closeNewSheet(); if (S.wp) toggleWp(); });
   await page.waitForTimeout(400);

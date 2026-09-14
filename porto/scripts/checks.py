@@ -1080,6 +1080,41 @@ def main():
         except ET.ParseError as e:
             fail("AndroidManifest.xml is not well-formed XML: %s" % e)
 
+    # ---- 7w. the page and the wrapper agree on every word between them ------
+    # The photo picker failed three times running, and each time the symptom was
+    # the same: NOTHING HAPPENED AND NOTHING WAS SAID. The channel between the
+    # page and the Android wrapper is now a handful of bare strings — a bridge
+    # name, the method names on it, the path the picked bytes are served from,
+    # the function the wrapper calls to nudge the page, and the prefixes that
+    # say what went wrong. Every one of them is spelled out separately on each
+    # side, in a different language, and a typo in any of them is silence again.
+    # So both files are read and required to say the same thing.
+    java = os.path.join(ROOT, "android", "app", "src", "main", "java",
+                        "app", "porto", "atlas", "MainActivity.java")
+    if not os.path.exists(java):
+        fail("MainActivity.java is gone")
+    else:
+        jv = io.open(java, encoding="utf-8").read()
+        if '"PortoPick"' not in jv:
+            fail("the wrapper does not register the PortoPick bridge")
+        if "window.PortoPick" not in appjs4:
+            fail("app.js never looks for the PortoPick bridge")
+        if '"/__picked/"' not in jv:
+            fail("the wrapper does not serve the picked bytes under /__picked/")
+        if "window.__portoPicked" not in jv or "window.__portoPicked" not in appjs4:
+            fail("the nudge window.__portoPicked is not on both sides")
+        for m in ("open", "take"):
+            if ('public void %s(' % m) not in jv and ('public String %s(' % m) not in jv:
+                fail("the bridge has no %s() for the page to call" % m)
+            if ("b.%s(" % m) not in appjs4:
+                fail("app.js never calls the bridge's %s()" % m)
+        # Every outcome the wrapper can write has to be one the page can read.
+        said = set(re.findall(r'finishPick\("([a-z]+):', jv))
+        heard = set(re.findall(r"s\.indexOf\('([a-z]+):'\)", appjs4))
+        heard.add("err")          # the catch-all branch, which needs no prefix test
+        for w in sorted(said - heard):
+            fail("the wrapper can answer %r and app.js has no branch for it" % (w + ":"))
+
     # ---- 7j. the crime rate is the municipality's, and stays there ---------
     # DGPJ publishes Taxa de criminalidade by municipality and nothing finer.
     # The temptation is the same one the housing prices already have: give a

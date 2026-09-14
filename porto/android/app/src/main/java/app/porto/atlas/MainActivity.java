@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.GeolocationPermissions;
@@ -21,6 +23,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.app.Activity;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -28,7 +31,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -63,8 +68,18 @@ public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 1;
     private static final int REQ_FIRST_RUN = 2;
     private static final int REQ_FILE = 3;
+    private static final int REQ_PICK = 4;
     private static final String PREFS = "porto";
     private static final String ASKED = "asked-permissions";
+    /** A pick that has been started and not yet answered. Survives the process. */
+    private static final String PICK_KIND = "pick-kind";
+    /** The answer, waiting for the page to come and get it. Survives the process. */
+    private static final String PICK_RESULT = "pick-result";
+    /** What actually happened, in order, so that nothing is ever only silence. */
+    private static final String PICK_TRAIL = "pick-trail";
+    /** Served from the cache directory, so the page reads bytes over http and
+     *  no photo has to cross the JavaScript bridge as base64. */
+    private static final String PICKED_PATH = "/__picked/";
 
     private WebView web;
     /** Set while the page is waiting to hear whether it may have a position. */
@@ -110,7 +125,9 @@ public class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest req) {
                 Uri u = req.getUrl();
                 if (!HOST.equals(u.getHost())) return null;   // tiles and the rest go to the network
-                return fromAssets(u.getPath());
+                String path = u.getPath();
+                if (path != null && path.startsWith(PICKED_PATH)) return fromPicked(path);
+                return fromAssets(path);
             }
 
             @Override
@@ -198,6 +215,7 @@ public class MainActivity extends Activity {
         // shouldOverrideUrlLoading sends every other host to the browser, so
         // nothing but this app's own code ever reaches the bridge.
         web.addJavascriptInterface(new Saver(), "PortoSave");
+        web.addJavascriptInterface(new Picker(), "PortoPick");
 
         if (state != null) {
             web.restoreState(state);
@@ -248,6 +266,228 @@ public class MainActivity extends Activity {
                                Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_FIRST_RUN);
     }
 
+    /* ---------------------------------------------------------------------
+     * Picking a file, in a way that survives the activity being destroyed.
+     *
+     * WHAT WENT WRONG THREE TIMES.  The web way to pick a file is an <input
+     * type="file">, which a WebView answers through onShowFileChooser by
+     * handing back a ValueCallback.  That callback is an object in this
+     * activity's memory.  While the system photo picker is in front, THIS
+     * ACTIVITY CAN BE DESTROYED — by memory pressure, or by "don't keep
+     * activities" — and this app is a fat one: the whole district's geometry
+     * and up to 21.7 MB of REN/RAN outlines live in the WebView's heap, with
+     * the picker's own process alongside it.  When that happens the callback
+     * is gone, onCreate runs restoreState() and repaints the very screen the
+     * reader was last looking at, and the result arrives at an activity that
+     * has nothing left to give it to.  The reader sees the screen they started
+     * from and not one word about why.
+     *
+     * Two earlier fixes aimed at the wrong layer: moving the input out of
+     * re-rendered HTML (real, but not this), and singleTop instead of
+     * singleTask (also real, and also not this).  Neither could help, because
+     * nothing that lives in memory can.
+     *
+     * SO NOTHING HERE LIVES IN MEMORY.  The request is written to preferences
+     * before the picker opens; the answer is written to preferences and the
+     * bytes to the cache directory; the page comes and collects whatever is
+     * waiting whenever it loads or comes back to the front.  A destroyed
+     * activity costs nothing: the new one finds the same two records on disk.
+     *
+     * And every outcome is recorded, including the ones that used to return
+     * without a word — a cancel, a result for a pick nobody is waiting for, a
+     * result that never comes at all.  Silence was the actual bug for three
+     * rounds; it is not a state this can reach any more.
+     * ------------------------------------------------------------------- */
+
+    private android.content.SharedPreferences prefs() {
+        return getSharedPreferences(PREFS, MODE_PRIVATE);
+    }
+
+    /** A short, bounded record of what the picker did, readable from the page. */
+    private void note(String line) {
+        android.content.SharedPreferences p = prefs();
+        String all = p.getString(PICK_TRAIL, "") + line + "\n";
+        int cut = all.length() - 1200;
+        if (cut > 0) {
+            int nl = all.indexOf('\n', cut);
+            all = nl >= 0 ? all.substring(nl + 1) : "";
+        }
+        p.edit().putString(PICK_TRAIL, all).apply();
+    }
+
+    /** The answer, on disk, and a nudge to the page in case it is already up. */
+    private void finishPick(String payload) {
+        prefs().edit().putString(PICK_RESULT, payload).remove(PICK_KIND).apply();
+        note("ready " + (payload.length() > 90 ? payload.substring(0, 90) + "…" : payload));
+        if (web != null) web.post(new Runnable() {
+            @Override public void run() {
+                web.evaluateJavascript("window.__portoPicked && window.__portoPicked()", null);
+            }
+        });
+    }
+
+    /** Every uri the picker handed back, whether one or many. */
+    private static List<Uri> urisOf(Intent data) {
+        List<Uri> out = new ArrayList<>();
+        if (data == null) return out;
+        android.content.ClipData clip = data.getClipData();
+        if (clip != null) {
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                Uri u = clip.getItemAt(i).getUri();
+                if (u != null) out.add(u);
+            }
+        } else if (data.getData() != null) {
+            out.add(data.getData());
+        }
+        return out;
+    }
+
+    /**
+     * Copy what was picked into the app's own cache and describe it.
+     *
+     * The copy is not an optimisation: a content:// uri is granted to THIS
+     * activity instance, and the whole point here is that the instance may not
+     * be the one that reads it.  A file in the app's cache belongs to the app.
+     */
+    private String describe(String kind, List<Uri> uris) {
+        File dir = new File(getCacheDir(), "picked");
+        if (!dir.isDirectory() && !dir.mkdirs()) return "err:no-cache-dir";
+        JSONArray files = new JSONArray();
+        for (int i = 0; i < uris.size(); i++) {
+            Uri u = uris.get(i);
+            String type = null;
+            try { type = getContentResolver().getType(u); } catch (Exception ignored) { }
+            if (type == null) type = "photo".equals(kind) ? "image/jpeg" : "application/json";
+            String name = "pick-" + System.nanoTime() + "-" + i
+                        + ("photo".equals(kind) ? ".jpg" : ".json");
+            File copy = new File(dir, name);
+            try (InputStream in = open(u, "photo".equals(kind));
+                 OutputStream to = new FileOutputStream(copy)) {
+                if (in == null) throw new IOException("no stream");
+                byte[] buf = new byte[64 * 1024];
+                for (int n; (n = in.read(buf)) > 0; ) to.write(buf, 0, n);
+            } catch (Exception e) {
+                note("copy failed " + e);
+                if (copy.exists() && !copy.delete()) { /* cache, not fatal */ }
+                continue;
+            }
+            try {
+                JSONObject f = new JSONObject();
+                f.put("url", PICKED_PATH + name);
+                f.put("name", nameOf(u, name));
+                f.put("type", type);
+                f.put("size", copy.length());
+                files.put(f);
+            } catch (Exception ignored) { }
+        }
+        if (files.length() == 0) return "err:nothing-copied";
+        try {
+            JSONObject out = new JSONObject();
+            out.put("kind", kind);
+            out.put("files", files);
+            return out.toString();
+        } catch (Exception e) {
+            return "err:" + e;
+        }
+    }
+
+    /**
+     * The bytes as they are on disk where that is allowed, so a photo keeps the
+     * coordinates it was taken with; the plain stream otherwise.  Losing the
+     * coordinates is a smaller failure than losing the photo.
+     */
+    private InputStream open(Uri u, boolean photo) throws IOException {
+        if (photo && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hasMediaLocation()) {
+            try {
+                return getContentResolver().openInputStream(MediaStore.setRequireOriginal(u));
+            } catch (Exception e) {
+                note("original refused, using the redacted copy");
+            }
+        }
+        return getContentResolver().openInputStream(u);
+    }
+
+    private String nameOf(Uri u, String fallback) {
+        try (android.database.Cursor c = getContentResolver()
+                 .query(u, new String[]{android.provider.OpenableColumns.DISPLAY_NAME},
+                        null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                String n = c.getString(0);
+                if (n != null && !n.isEmpty()) return n;
+            }
+        } catch (Exception ignored) { }
+        return fallback;
+    }
+
+    /** A picked file, served to the page over the origin it already runs on. */
+    private WebResourceResponse fromPicked(String path) {
+        String name = path.substring(PICKED_PATH.length());
+        if (name.isEmpty() || name.indexOf('/') >= 0 || name.contains(".."))
+            return new WebResourceResponse("text/plain", "utf-8", 400, "Bad Request",
+                    new HashMap<String, String>(), null);
+        File f = new File(new File(getCacheDir(), "picked"), name);
+        try {
+            WebResourceResponse r = new WebResourceResponse(
+                    name.endsWith(".json") ? "application/json" : "image/jpeg",
+                    null, new java.io.FileInputStream(f));
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Cache-Control", "no-store");
+            r.setResponseHeaders(headers);
+            return r;
+        } catch (IOException e) {
+            return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found",
+                    new HashMap<String, String>(), null);
+        }
+    }
+
+    /** What the page calls instead of tapping a file input. */
+    public class Picker {
+        @JavascriptInterface
+        public void open(final String kind) {
+            final boolean photo = !"data".equals(kind);
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    prefs().edit().putString(PICK_KIND, photo ? "photo" : "data")
+                                  .remove(PICK_RESULT).apply();
+                    note("open " + (photo ? "photo" : "data"));
+                    Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                    pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    // */* for the data file: a picker that filters on
+                    // application/json hides .json files written by apps that
+                    // label them text/plain, and then there is nothing to tap.
+                    pick.setType(photo ? "image/*" : "*/*");
+                    if (photo) pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    try {
+                        startActivityForResult(Intent.createChooser(pick,
+                                getString(photo ? R.string.pick_photo : R.string.pick_file)),
+                                REQ_PICK);
+                    } catch (Exception e) {
+                        note("no chooser " + e);
+                        finishPick("err:no-chooser");
+                    }
+                }
+            });
+        }
+
+        /** Whatever is waiting, once. Empty string when there is nothing. */
+        @JavascriptInterface
+        public String take() {
+            android.content.SharedPreferences p = prefs();
+            String r = p.getString(PICK_RESULT, "");
+            if (!r.isEmpty()) {
+                p.edit().remove(PICK_RESULT).apply();
+                note("taken");
+            }
+            return r;
+        }
+
+        /** The record, for a reader who is being asked what the app did. */
+        @JavascriptInterface
+        public String trail() {
+            return prefs().getString(PICK_TRAIL, "");
+        }
+    }
+
     /**
      * Everything between a photo being chosen and the page's input receiving it
      * happens out here, where the page cannot see it.  When it goes wrong the
@@ -266,8 +506,22 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int code, int result, Intent data) {
         super.onActivityResult(code, result, data);
+        if (code == REQ_PICK) {
+            List<Uri> uris = result == RESULT_OK ? urisOf(data) : new ArrayList<Uri>();
+            note("result " + result + " uris " + uris.size());
+            if (result != RESULT_OK) finishPick("cancelled:" + result);
+            else if (uris.isEmpty()) finishPick("empty:" + (data == null ? "no-intent" : "no-uris"));
+            else finishPick(describe(prefs().getString(PICK_KIND, "photo"), uris));
+            return;
+        }
         if (code != REQ_FILE) return;
-        if (pendingFiles == null) return;
+        // The legacy path: a file input somewhere that does not go through the
+        // bridge. It answers where it can and says so where it cannot; it is no
+        // longer the way a photo or a saved file arrives.
+        if (pendingFiles == null) {
+            note("a chooser answered with nothing left to answer to");
+            return;
+        }
         // A cancelled picker still has to answer, or the input stays stuck and
         // the next tap on it does nothing.
         Uri[] picked = result == RESULT_OK
@@ -332,6 +586,11 @@ public class MainActivity extends Activity {
 
     /** Cached copies of picked photos, cleared so they do not accumulate. */
     private void clearPickedCache() {
+        // Except when one of them IS the answer the page has not collected yet.
+        // A fresh launch after the app was killed mid-pick is exactly when that
+        // file matters most, and deleting it would hand the page a url that
+        // 404s — the same silence, one layer down.
+        if (!prefs().getString(PICK_RESULT, "").isEmpty()) return;
         File dir = new File(getCacheDir(), "picked");
         File[] old = dir.listFiles();
         if (old == null) return;
@@ -458,6 +717,27 @@ public class MainActivity extends Activity {
                 value -> {
                     if (!"\"1\"".equals(value) && !"1".equals(value)) finish();
                 });
+    }
+
+    /**
+     * A pick that is still marked in flight once the app is back in front and
+     * settled has lost its answer — the picker was killed, or the result went
+     * to an activity instance that no longer exists.  That is a thing to say,
+     * not a thing to wait for forever.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (prefs().getString(PICK_KIND, "").isEmpty()) return;
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() {
+                String kind = prefs().getString(PICK_KIND, "");
+                if (kind.isEmpty()) return;              // answered in the meantime
+                if (!prefs().getString(PICK_RESULT, "").isEmpty()) return;
+                note("lost " + kind);
+                finishPick("lost:" + kind);
+            }
+        }, 1500);
     }
 
     @Override

@@ -2940,16 +2940,99 @@ function closeNewSheet() {
   wpArmed = null;
   renderWaypoints();
 }
+/* ---- picking a file ----
+   Two ways, and the app's own comes first.
+
+   In a browser a file input is the whole story: the picker runs in the same
+   process, the change event fires, and nothing can happen in between.
+
+   On the phone it is another app in front of this one, and THIS ONE CAN BE
+   DESTROYED while it is there — the WebView is holding the district's geometry
+   and up to 21.7MB of outlines, and the picker is not a small program either.
+   When that happens every object this page and the wrapper were holding is
+   gone: the callback the WebView was going to answer through, the input the
+   answer would have been delivered to, the page's own state. Android restores
+   the screen and the reader sees exactly what they left, with nothing said.
+
+   That is what the first two attempts at this bug both failed to fix, because
+   both were about objects in memory. So the wrapper now writes the request and
+   the answer to disk and the page COLLECTS what is waiting — on load, on being
+   shown again, and when nudged. A destroyed page costs nothing: the next one
+   finds the same answer. */
+function pickBridge() {
+  const b = window.PortoPick;
+  return b && typeof b.open === 'function' && typeof b.take === 'function' ? b : null;
+}
+
 /* The one way to open the photo picker.  Clearing the value first is what lets
    the same file be chosen twice: a file input that already holds it fires no
    change event the second time, and the reader gets silence. */
 function pickPhoto() {
+  const b = pickBridge();
+  if (b) { pickWaiting = 'photo'; b.open('photo'); return; }
   const i = $('#photoIn');
   if (!i) return;
   pickerDone();
   i.value = '';
   i.click();
 }
+
+/* The same, for the saved-points file on the import screen. */
+function pickData() {
+  const b = pickBridge();
+  if (b) { pickWaiting = 'data'; b.open('data'); return; }
+  const f = $('#dataIn');
+  if (f) { f.value = ''; f.click(); }
+}
+
+/* What the wrapper left on disk, collected and acted on.  Called at startup,
+   whenever the page is shown again, and when the wrapper nudges it — all three,
+   because any one of them alone has a case it misses. */
+let pickWaiting = null;
+function drainPick() {
+  const b = pickBridge();
+  if (!b) return;
+  let s = '';
+  try { s = String(b.take() || ''); } catch (e) { s = 'err:' + (e.message || e); }
+  if (!s) return;
+  if (s.charAt(0) !== '{') { pickFailed(s); return; }
+  let got;
+  try { got = JSON.parse(s); } catch (e) { pickFailed('err:unreadable answer'); return; }
+  const list = (got && got.files) || [];
+  if (!list.length) { pickFailed('empty:no-files'); return; }
+  pickWaiting = null;
+  /* After the app was closed mid-pick it reopens wherever it left off, which
+     need not be the places screen — and a photo that quietly becomes a point
+     the reader cannot see is the same failure wearing different clothes. */
+  if (got.kind !== 'data' && !S.wp) toggleWp();
+  Promise.all(list.map(f => fetch(f.url)
+      .then(r => r.ok ? r.blob() : Promise.reject(new Error('http ' + r.status)))
+      .then(bl => new File([bl], f.name || 'file', { type: f.type || bl.type }))))
+    .then(files => {
+      if (got.kind === 'data') importPickFile(files[0]);
+      else takePhotos(files);
+    })
+    .catch(e => pickFailed('err:' + (e.message || e)));
+}
+
+/* Whatever went wrong, named.  Silence is the one answer this is not allowed to
+   give: three rounds of this bug were spent on a screen that did not change and
+   did not say why. A cancel is named too — briefly, because the reader knows
+   they cancelled, but not by saying nothing, because an answer that LOOKS like
+   a cancel is exactly what the failure looks like. */
+function pickFailed(s) {
+  const kind = pickWaiting;
+  pickWaiting = null;
+  if (s.indexOf('cancelled:') === 0) { mapNote(t('לא נבחר קובץ.'), false); return; }
+  const why = s.indexOf('lost:') === 0
+    ? t('הבוחר נסגר בלי לחזור לאפליקציה. זה קורה כשאנדרואיד סוגר את האפליקציה בזמן שהבוחר פתוח; נסו שוב.')
+    : s.indexOf('empty:') === 0
+      ? t('הבוחר חזר בלי קובץ.')
+      : t('בחירת הקובץ נכשלה.');
+  mapNote(why + ' <span class="lat" dir="ltr">' + html(s) + '</span>', true);
+  if (kind === 'data' && $('#impNote')) $('#impNote').textContent = why;
+}
+window.__portoPicked = drainPick;
 
 /* ---- what the picker did, said out loud ----
    On a phone the picker is another app: it opens, the reader chooses a photo,
@@ -2967,7 +3050,7 @@ function pickerDone() {
 window.__portoPicker = function (what) {
   const s = String(what || '');
   pickerDone();
-  if (s.indexOf('cancelled') === 0) return;
+  if (s.indexOf('cancelled:') === 0) { mapNote(t('לא נבחר קובץ.'), false); return; }
   if (s.indexOf('ok:') !== 0) {
     mapNote(t('בוחר הקבצים לא החזיר קובץ. ') + '<span class="lat" dir="ltr">' + html(s) + '</span>', true);
     return;
@@ -5133,7 +5216,7 @@ function wire() {
       if (e.target.closest('#impSave')) commitImport();
       // the input itself is in index.html and never moves; this is the button
       // in front of it
-      else if (e.target.closest('#impPick')) { const f = $('#dataIn'); if (f) { f.value = ''; f.click(); } }
+      else if (e.target.closest('#impPick')) pickData();
       return;
     }
     const b = e.target.closest('[data-lay]');
@@ -5181,6 +5264,15 @@ function wire() {
     const f = e.target.files && e.target.files[0];
     if (f) importPickFile(f);
     e.target.value = '';
+  });
+  /* Three triggers, and each covers a case the others miss: the nudge is the
+     fast path when the page survived; pageshow catches a page restored from the
+     back-forward cache; visibility catches the app coming back to the front
+     after the wrapper answered while it was away — which is the case that was
+     silent, because it is the one where the page that asked no longer exists. */
+  window.addEventListener('pageshow', drainPick);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) drainPick();
   });
   $('#wpSheet').addEventListener('input', e => {
     if (e.target.id === 'wpQ') runPlaceSearch(e.target.value);
@@ -5332,6 +5424,10 @@ function wire() {
   if (S.level === 'zone' && D.freByKey.has(S.zone)) goZone(S.zone);
   else if (S.level === 'mun' && D.munByNum.has(S.mun)) goMun(S.mun);
   else goDistrict();
+
+  /* Last, because a photo collected here is drawn into the level document and
+     onto the map, and neither exists until the three lines above have run. */
+  drainPick();
 
   $('#boot').remove();
 
@@ -6326,4 +6422,13 @@ Object.assign(EN, {
     'The file picker returned no file. ',
   'הקובץ נבחר אך לא הגיע לעמוד. ':
     'The file was chosen but never reached the page. ',
+  'לא נבחר קובץ.':
+    'No file was chosen.',
+  'הבוחר נסגר בלי לחזור לאפליקציה. זה קורה כשאנדרואיד סוגר את האפליקציה בזמן שהבוחר פתוח; נסו שוב.':
+    'The picker closed without returning to the app. That happens when Android '
+    + 'shuts the app down while the picker is open; try again.',
+  'הבוחר חזר בלי קובץ.':
+    'The picker came back with no file.',
+  'בחירת הקובץ נכשלה.':
+    'Choosing the file failed.',
 });
