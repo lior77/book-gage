@@ -126,12 +126,8 @@ const S = {
   mine: true,          // draw the points the user added
   // The four boundary layers.  Each is drawn at every level and switched on
   // its own; the level decides which of them are black and which recede.
-  lnRegion: false,     // the two NUTS III regions — off until asked for
   sortDesc: false,     // ranked lists run smallest first; the chip flips the reading order only
   dense: false,        // one list/expanded state for every mode; false = expanded
-  lnDistrict: true,    // Porto district
-  lnMun: true,         // the 18 municipalities
-  lnFre: true,         // the 275 parishes
   adding: false,       // waiting for a tap on the map to place a new point
   wp: false,           // נ.צ. management: the cards in the text half
   wpSel: null,         // the id of the card and pin being looked at
@@ -192,7 +188,7 @@ const MINE_COLOUR = '#d32f2f';
    municipality outline was thick enough to eat the shape behind it on a phone,
    and the hierarchy survives the thinning because it was never carried by
    width alone. */
-const LINE_W = { region: 3.2, district: 2.4, mun: 2.4, fre: 1.2 };
+const LINE_W = { region: 3.2, mun: 2.4, fre: 1.2 };
 /* The flood outlines, darkest for the period that comes round most often.  An
    indigo rather than another blue: these are drawn over the Douro, where the
    river layer is already #4a9ad4, and two blues on the same water would read as
@@ -213,30 +209,33 @@ const REGION_COLOUR = '#e2761b';
    and nothing else.  So the colour is decided per feature there, not per
    layer, which is what `own` in the table below is for. */
 const LINE_BLACK = {
-  district: ['district', 'mun'],   // level 1: the district and its municipalities
+  district: ['mun'],               // level 1: the municipalities (their outer edge is the district)
   mun: ['mun', 'fre'],             // level 2: but only the chosen one — see own()
-  zone: ['fre'],                   // level 3: the parishes
+  zone: ['fre'],                   // level 3: but only the chosen parish — see own()
 };
 
 /* Does this particular feature belong to what is on screen?  Only level 2
    narrows a layer down; everywhere else the whole layer is one or the other. */
 function ownFeature(kind, props) {
-  if (S.level !== 'mun') return true;
-  if (kind === 'mun') return props.num === S.mun;
-  if (kind === 'fre') return props.mun_num === S.mun;
+  if (S.level === 'mun') {
+    if (kind === 'mun') return props.num === S.mun;
+    if (kind === 'fre') return props.mun_num === S.mun;
+  }
+  if (S.level === 'zone' && kind === 'fre')
+    return props.mun_num + '|' + props.name === S.zone;
   return true;
 }
-const LINE_ON = { region: 'lnRegion', district: 'lnDistrict',
-                  mun: 'lnMun', fre: 'lnFre' };
 // bottom to top — the array order IS the stacking order.  Parishes lowest,
 // the orange NUTS III regions highest: they are the one line that marks a
 // body reaching beyond the district, and for a year they were painted under
 // every other line.  test_ui_menu.js reads the stack back off the panes.
-const LINE_PANE = ['ln-fre', 'ln-mun', 'ln-district', 'ln-region'];
-const PANE_OF = { region: 'ln-region', district: 'ln-district',
-                  mun: 'ln-mun', fre: 'ln-fre' };
-const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מחוז פורטו',
-                  mun: 'גבולות העיריות', fre: 'גבולות הרובעים' };
+const LINE_PANE = ['ln-fre', 'ln-mun', 'ln-region'];
+const PANE_OF = { region: 'ln-region', mun: 'ln-mun', fre: 'ln-fre' };
+/* There is no district line.  The district is the outer edge of the eighteen
+   municipalities — build.py defines it as their union — so drawing it again was
+   the same fact twice, 420 m inside itself where it ran beside a region border,
+   with a gap that grew with the zoom.  The municipality layer's outer edge is
+   that line, at that weight. */
 
 /* Black, and black at 50% for the rest — a grey of its own would be a third
    colour to keep in step, and half of the line is exactly what "recedes" means.
@@ -247,8 +246,11 @@ const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מ�
    background.  The same 50% then does the same job. */
 const lineColour = (kind, props) => {
   if (kind === 'region') return REGION_COLOUR;
+  // while comparing, and on the constraints page, every unit on the level is
+  // the subject, so below level 1 none is singled out
   const own = kind !== 'region'
     && (LINE_BLACK[S.level] || []).indexOf(kind) >= 0
+    && !((S.cmp || S.cons) && S.level !== 'district')
     && (!props || ownFeature(kind, props));
   /* While comparing, every unit is a filled colour and the black lines the map
      normally uses read as a second, competing layer over them.  White separates
@@ -276,8 +278,7 @@ const lineColour = (kind, props) => {
    half its weight, so what the eye reads is still a single thin boundary — the
    white is a casing, not a second line. */
 const CMP_CORE = '#1b2532';
-const LINE_KEYS = ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre',
-                   'lnRegionC', 'lnDistrictC', 'lnMunC', 'lnFreC'];
+const LINE_KEYS = ['lnRegion', 'lnMun', 'lnFre', 'lnRegionC', 'lnMunC', 'lnFreC'];
 
 function drawLines() {
   LINE_KEYS.forEach(k => {
@@ -305,28 +306,40 @@ function drawLines() {
     return LG[key];
   };
 
-  /* The parish lines are not a district-wide layer any more.  At level 2 they
-     are the chosen municipality's own parishes and nothing else; at level 3 the
-     one parish being looked at, which still needs an outline — the fill under
-     it carries none.  At level 1 they are not drawn at all: 243 outlines over
-     eighteen municipalities was noise, not context.
+  /* The parish lines are not a district-wide layer any more.  At levels 2 and
+     3 they are the chosen municipality's own parishes and nothing else — at 3
+     the one being looked at is black and its siblings are the context around
+     it.  At level 1 they are not drawn at all: 275 outlines over eighteen
+     municipalities was noise, not context.
 
      The comparison screen is the exception, and only when the parishes are what
      is being compared.  There all 243 carry a value and a colour of their own,
      and a fill with no edge is not a unit — it is a stain that runs into its
      neighbour.  They stay the receding line, not the black one: the
      municipality outline above them is what says where you are looking. */
+  /* What is drawn is a function of the level and the mode — there is no switch
+     and nothing saved.  Level 2: the chosen municipality's parishes, its own
+     one black; level 3: the same parishes as context, the chosen parish black;
+     level 1: none, except while comparing parishes. */
+  const zoneMun = S.level === 'zone' ? Number(String(S.zone).split('|')[0]) : null;
   const freHere = S.level === 'mun'
     ? ft => ft.properties.mun_num === S.mun
     : S.level === 'zone'
-      ? ft => ft.properties.mun_num + '|' + ft.properties.name === S.zone
+      ? ft => ft.properties.mun_num === zoneMun
       : S.cmp && S.cmpScope === 'fre'
         ? () => true
         : null;
-  if (S.lnFre && freHere) {
+  if (freHere) {
     add('lnFre', { type: 'FeatureCollection', features: D.bF.features.filter(freHere) }, 'fre');
+    // the chosen parish's own outline above its siblings', for the same reason
+    // the chosen municipality's is below
+    if (S.level === 'zone') {
+      const mine = l => l.feature && l.feature.properties.mun_num + '|' + l.feature.properties.name === S.zone;
+      LG.lnFre.eachLayer(l => { if (mine(l)) l.bringToFront(); });
+      if (LG.lnFreC) LG.lnFreC.eachLayer(l => { if (mine(l)) l.bringToFront(); });
+    }
   }
-  if (S.lnMun) {
+  {
     /* While comparing at level 2 only one municipality is on the plate, and
        there is no street map under the others to tie their outlines to
        anything.  Drawing them would be eighteen shapes' worth of line around a
@@ -347,18 +360,17 @@ function drawLines() {
       });
     }
   }
-  // The regions and the district share one file; each feature says which it is.
-  const pick = kind => ({ type: 'FeatureCollection',
-    features: D.bB.features.filter(ft => (ft.properties.kind === 'nuts3'
-      ? 'region' : 'district') === kind) });
+  const regions = { type: 'FeatureCollection',
+    features: D.bB.features.filter(ft => ft.properties.kind === 'nuts3') };
   /* Same reason as the neighbouring municipalities: while comparing one
      municipality the plate holds that municipality and nothing else, and the
      district edge crossing the empty corner is a line to nowhere.  On the
      ordinary map it is context over a street background; here there is no
      background for it to be context on. */
+  // The regions are context at levels 1 and 2 and nothing at level 3, where the
+  // screen is one parish and a line that leaves the district is noise.
   const wide = !(S.cmp && S.level === 'mun');
-  if (S.lnRegion && wide) add('lnRegion', pick('region'), 'region');
-  if (S.lnDistrict && wide) add('lnDistrict', pick('district'), 'district');
+  if (wide && S.level !== 'zone') add('lnRegion', regions, 'region');
 }
 
 function isDark() {
@@ -998,7 +1010,7 @@ function drawDistrict() {
    made it a paragraph about something that was not on the map.  Now it is the
    last thing in the reading half at every level, and only while אזורים is on. */
 function regionsDoc() {
-  if (!S.lnRegion || !D.belts) return '';
+  if (S.level === 'zone' || !D.belts) return '';
   const rows = D.belts.map(b => `<div class="belt">
       <span class="belt-sw" style="--c:${html(b.colour)}"></span>
       <span class="row-body">
@@ -1983,7 +1995,7 @@ async function tapLayerFetch(kind, code) {
    carry better. */
 let consBefore = null;
 function consEnter() {
-  consBefore = { tiles: S.tiles, muncol: S.muncol, lnMun: S.lnMun };
+  consBefore = { tiles: S.tiles, muncol: S.muncol };
   /* No street background by default.  Three flat colour classes have to be
      told apart from each other, and a photograph of roofs under them is one
      more thing competing for the same pixels.  It can still be switched on by
@@ -1991,7 +2003,6 @@ function consEnter() {
      fourth colour field in the same place. */
   if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
   if (S.muncol) { S.muncol = false; redrawLevel(); }
-  if (!S.lnMun) { S.lnMun = true; drawLines(); }
   // a note about the street background is stale the moment it is switched off,
   // and this page opens with it off
   hideNote();
@@ -2002,7 +2013,6 @@ function consRestore() {
   if (!b) return;
   if (b.muncol && !S.muncol) { S.muncol = true; redrawLevel(); }
   if (b.tiles && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
-  if (!b.lnMun && S.lnMun) { S.lnMun = false; drawLines(); }
 }
 
 /* Every layer the district has, fetched one after another, with the progress
@@ -4028,33 +4038,6 @@ function toggleFills() {
   applySwitches(); save();
   return true;
 }
-/* Four states, not two.  All three levels drawn, then each one dropped in turn,
-   outside in: מחוז, then עיריות, then רובעים, then everything back.  The state
-   is the three flags themselves — the same ones the layer panel sets one by one
-   — so there is no cycle counter to drift out of step with what is on the map.
-   A combination the panel made that is not one of the four lands on "all on"
-   next, which is the one step from anywhere that is easy to predict. */
-const BOUNDS_CYCLE = [
-  [true,  true,  true ],   // הכל
-  [false, true,  true ],   // בלי גבול המחוז
-  [true,  false, true ],   // בלי גבולות העיריות
-  [true,  true,  false],   // בלי גבולות הרובעים
-];
-function boundsStep() {
-  const now = [S.lnDistrict, S.lnMun, S.lnFre];
-  const i = BOUNDS_CYCLE.findIndex(c => c.every((v, n) => v === now[n]));
-  return i < 0 ? 0 : (i + 1) % BOUNDS_CYCLE.length;
-}
-function cycleBounds() {
-  [S.lnDistrict, S.lnMun, S.lnFre] = BOUNDS_CYCLE[boundsStep()];
-  drawLines(); applySwitches(); renderLayers(); save();
-}
-// The explanation at the foot of the page belongs to this line, so the text
-// half is redrawn with it rather than only the map.
-function toggleRegions() {
-  S.lnRegion = !S.lnRegion;
-  drawLines(); redrawText(); applySwitches(); save();
-}
 
 /* Redraw whichever level is on screen, because the fill belongs to the level
    and each level draws its own. */
@@ -4069,19 +4052,9 @@ function applySwitches() {
   const set = (id, on) => { const b = $(id); if (b) b.setAttribute('aria-pressed', String(!!on)); };
   set('#layersBtn', S.tiles);
   set('#fillsBtn', S.muncol);
-  set('#regionsBtn', S.lnRegion);
-  paintBounds();
   renderMenu();
 }
 
-/* The rings read straight off the flags, so the button tells the truth whether
-   the change came from itself or from a row in the layer panel. */
-const BOUNDS_HE = { d: t('המחוז'), m: t('העיריות'), f: t('הרובעים') };
-/* Four states cannot be a tick, so the row says which one it is in. */
-function boundsOff() {
-  return [['d', S.lnDistrict], ['m', S.lnMun], ['f', S.lnFre]]
-    .filter(([, on]) => !on).map(([k]) => k);
-}
 /* What the menu row says after the name: what is still to download, or
    nothing at all once the district is here.  The price is on the control
    before it is pressed. */
@@ -4089,17 +4062,6 @@ function consHe() {
   if (!D.layers) return '';
   const miss = consMissing();
   return miss.length ? ' · ' + consMB(consBytes(miss)) + ' MB' : '';
-}
-
-function boundsHe() {
-  const off = boundsOff();
-  return off.length ? t(' · בלי ') + off.map(k => BOUNDS_HE[k]).join(', ') : t(' · הכל');
-}
-function paintBounds() {
-  const b = $('#bordersBtn'); if (!b) return;
-  const off = boundsOff();
-  b.setAttribute('data-b', off.join(' '));
-  b.setAttribute('aria-label', t('גבולות') + boundsHe());
 }
 
 /* ------------------------------------------------------------------ menu --- */
@@ -4676,14 +4638,7 @@ const menuRows = () => [
      it draws them over.  The row carries what is still to download, so the
      price is on it before it is pressed. */
   { k: 'cons', he: t('מגבלות בנייה') + consHe(), icon: 'cons', kind: 'tog' },
-  // Not on the list that was asked for, and kept anyway: the three-ring cycle
-  // was designed row by row two versions ago, and the full panel is the only
-  // way to נהרות, אותיות and one border kind at a time.  Dropping a control
-  // because a later list did not repeat it is how a feature disappears.
-  { k: 'borders', he: t('גבולות') + boundsHe(), icon: 'borders', kind: 'act' },
   { k: 'more', he: t('עוד שכבות'), icon: 'more', kind: 'act' },
-  { grp: '' },
-  { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
   { grp: t('נתונים') },
   // The points the user marked, and only those — everything else in the app
   // ships with it and needs no saving.  Both were reachable only from inside
@@ -4709,7 +4664,6 @@ function menuState(k) {
   if (k === 'tiles') return S.tiles;
   if (k === 'glass') return S.muncol;
   if (k === 'cons') return S.cons;
-  if (k === 'regions') return S.lnRegion;
   if (k === 'locate') return !!meWatch;
   if (k === 'mine') return S.wp;
   if (k === 'cmp') return S.cmp;
@@ -4817,9 +4771,7 @@ function menuPick(k) {
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
     case 'cons':    toggleCons(); break;
-    case 'borders': cycleBounds(); renderMenu(); break;
     case 'more':    openMenu(false); toggleLayers(true); break;
-    case 'regions': toggleRegions(); renderMenu(); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
     case 'info':    openMenu(false); openInfo('about'); break;
@@ -4910,13 +4862,13 @@ function renderLayers() {
   }
 
   // Which of these are black and which are grey is the level's decision, not
-  // the user's; the switch is only whether the line is there at all.
+  // No rows here since 2.0.0: which boundaries are drawn is a function of
+  // the level and the mode, and the note says the rule rather than offering
+  // a switch.
   h += t('<h3>קווי גבול</h3>') +
-    ['region', 'district', 'mun', 'fre'].map(k =>
-      row(S[LINE_ON[k]], 'ln:' + k, t(LINE_HE[k]), lineColour(k), true)).join('') +
-    t('<p class="note" style="margin-block-start:6px">הקווים ששייכים למה שעל ') +
-    t('המסך מוצגים בשחור, והשאר באפור. קו האזורים ') +
-    t('אפור תמיד.</p>');
+    t('<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה, ואין להם מתג: ') +
+    t('מה ששייך למה שעל המסך שחור, והשאר אפור. קו האזורים הכתום מצויר ברמות 1–2, ') +
+    t('וגבול המחוז הוא הקצה החיצוני של העיריות.</p>');
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
@@ -5143,8 +5095,6 @@ function save() {
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
-      lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
-      lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles,
     }));
   } catch (e) { /* private mode */ }
@@ -5164,9 +5114,6 @@ function restore() {
     if (typeof o.tiles === 'boolean') S.tiles = o.tiles;
     if (typeof o.letters === 'boolean') S.letters = o.letters;
     if (typeof o.mine === 'boolean') S.mine = o.mine;
-    ['lnRegion', 'lnDistrict', 'lnMun', 'lnFre'].forEach(k => {
-      if (typeof o[k] === 'boolean') S[k] = o[k];
-    });
     if (o.lang === 'he' || o.lang === 'en') S.lang = o.lang;
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
     if (typeof o.floods === 'boolean') S.floods = o.floods;
@@ -5461,11 +5408,6 @@ function wire() {
     else if (k === 'floods') { S.floods = !S.floods; applyNature(); floodNote(); }
     else if (k === 'muncol') { if (!toggleFills()) return; }
     else if (k === 'mine') { S.mine = !S.mine; drawMine(); }
-    else if (k.startsWith('ln:')) {
-      const key = LINE_ON[k.slice(3)];
-      S[key] = !S[key];
-      drawLines();
-    }
     else if (k.startsWith('cat:')) {
       const c = k.slice(4);
       if (S.cats.has(c)) S.cats.delete(c); else S.cats.add(c);
@@ -5740,6 +5682,9 @@ Object.assign(EN, {
   'שנת ייחוס': 'reference year',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   'רובע מ-2025': 'a 2025 parish',
+  '<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה, ואין להם מתג: ': '<p class="note" style="margin-block-start:6px">The boundaries follow the level and have no switch: ',
+  'מה ששייך למה שעל המסך שחור, והשאר אפור. קו האזורים הכתום מצויר ברמות 1–2, ': 'what belongs to what is on screen is black, the rest grey. The regions\' orange line is drawn at levels 1–2, ',
+  'וגבול המחוז הוא הקצה החיצוני של העיריות.</p>': 'and the district boundary is the outer edge of the municipalities.</p>',
   'על האפליקציה': 'About the app',
   'מאחורי הקלעים': 'Behind the scenes',
   'תנאים והגבלות': 'Terms and limits',

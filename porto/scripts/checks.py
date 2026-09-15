@@ -1401,10 +1401,11 @@ def main():
             if b.get("ll") and not b.get("confidence"):
                 fail("bairro %s has a point but no confidence" % b["en"])
     # ---- the level-1 outlines ---------------------------------------------
-    # Two NUTS III regions and the district, each split into the stretch that
-    # is its own and the stretch it shares with a neighbour.  The split is
-    # what makes three lines readable where they run together, so it is worth
-    # checking that both halves of it survived the build.
+    # Two NUTS III regions, each split into the stretch that is its own and
+    # the stretch it shares with the other.  The split is what makes two lines
+    # readable where they run together, so it is worth checking that both
+    # halves survived the build.  The district is not here any more: it is
+    # the municipalities' outer edge and is drawn once, by them (2.0.0).
     belts = load("boundaries_belts.geojson")["features"]
     nuts = [f for f in belts if f["properties"].get("kind") == "nuts3"]
     dist = [f for f in belts if f["properties"].get("kind") == "district"]
@@ -1423,8 +1424,9 @@ def main():
             fail("NUTS III %s has no stepped-in line along the shared border, "
                  "so the two regions would draw one line on top of the other"
                  % code)
-    if {f["properties"]["part"] for f in dist} != {"solo", "inset"}:
-        fail("the district outline is not split into solo and inset")
+    if dist:
+        fail("boundaries_belts.geojson carries a district outline again; the district "
+             "is the municipalities' outer edge and is drawn once, by them")
     for f in belts:
         if f["geometry"]["type"] not in ("LineString", "MultiLineString"):
             fail("outline %s/%s is a %s; these are lines, not areas"

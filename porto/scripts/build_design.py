@@ -826,10 +826,10 @@ footer{margin-block-start:52px; padding-block-start:18px;
             % (esc(he), esc(lines["w"][k]), role)
             for k, he, role in (
                 ("region", "region — שני אזורי NUTS III",
-                 'כתום <code dir="ltr">%s</code>, בכל רמה, כשהמתג דלוק'
+                 'כתום <code dir="ltr">%s</code>, ברמות 1–2, בלי מתג'
                  % lines["region"]),
-                ("district", "district — גבול מחוז פורטו", "שחור ברמה 1, נסוג אחר כך"),
-                ("mun", "mun — גבולות 18 העיריות", "שחור ברמות 1 ו-2, לפי הפיצ׳ר"),
+                ("mun", "mun — גבולות 18 העיריות; הקצה החיצוני שלהן הוא גבול המחוז",
+                 "שחור ברמה 1; ברמה 2 הנבחרת בלבד; אפור ברמה 3"),
                 ("fre", "fre — גבולות הרובעים",
                  "רמות 2 ו-3, וברמה 1 רק בהשוואה עם ״רובעים״"))),
         "lnhead": "".join('<th dir="ltr">%s</th>' % c for c in BLUES),

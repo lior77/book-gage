@@ -118,7 +118,7 @@ cd "$PORTO"
     │   ├── checks.py                     ← ★ 29 בדיקות. exit 1 עוצר
     │   ├── crosscheck_baseline.py
     │   ├── bundle_standalone.py
-    │   ├── test_ui_menu.js               ← 465 בדיקות Playwright
+    │   ├── test_ui_menu.js               ← 461 בדיקות Playwright
     │   ├── test_exif.js
     │   ├── check_network.py              ← מה באמת נגיש דרך ה-proxy
     │   ├── build_constraints.py          ← REN/RAN לפי CAOP 2025
@@ -190,7 +190,7 @@ node scripts/test_exif.js
 
 # בדיקות הדפדפן צריכות origin אמיתי — לא file://
 python3 -m http.server 8234 &
-URL=http://127.0.0.1:8234/index.html node scripts/test_ui_menu.js   # 465 בדיקות
+URL=http://127.0.0.1:8234/index.html node scripts/test_ui_menu.js   # 461 בדיקות
 
 python3 scripts/bundle_standalone.py  # → porto-standalone.html
 ```
@@ -212,7 +212,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 >
 > ‏`requirements.txt` הוא ההצהרה, והסקריפט מוסיף את מה ש-pip אינו יכול לתת:
 > ‏`playwright` כמודול **node**, שהוא דבר אחר מחבילת הפייתון באותו שם. הוא גם
-> **בודק ש-Chromium במקומו ונופל אם לא** — אחרת חוסר הדפדפן מתגלה 465 בדיקות
+> **בודק ש-Chromium במקומו ונופל אם לא** — אחרת חוסר הדפדפן מתגלה 461 בדיקות
 > מאוחר יותר כ-timeout. **הוא לעולם לא מריץ `playwright install`.**
 
 ‏Chromium ל-Playwright: `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
@@ -233,7 +233,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 
 | קובץ | מה | כמה |
 |---|---|---|
-| `scripts/test_ui_menu.js` | פריסה, תפריט, גבולות, נ.צ., תמונות, שפה, מגבלות בנייה | 442 |
+| `scripts/test_ui_menu.js` | פריסה, תפריט, גבולות, נ.צ., תמונות, שפה, מגבלות בנייה | 461 |
 | `scripts/test_exif.js` | קורא ה-EXIF, כולל מקרה ה-GPS הריק | — |
 
 ### ★ הנוהג: בדיקה חדשה חייבת להוכיח שהיא יכולה ליפול
@@ -598,7 +598,7 @@ Póvoa de Varzim  — timeout. מסומן **לנסות שוב**, לא ״לא ז�
 
 ### המכולה קופאת בין תורים
 
-תהליכי רקע מתקדמים בעיקר **בזמן שפקודה רצה**. חבילה של 465 בדיקות יכולה
+תהליכי רקע מתקדמים בעיקר **בזמן שפקודה רצה**. חבילה של 461 בדיקות יכולה
 להיראות תקועה. פתרון: לולאת המתנה **בחזית** (עד 600 שניות), עם `time.sleep`
 של פייתון — ‏`sleep` בחזית חסום בהארנס.
 

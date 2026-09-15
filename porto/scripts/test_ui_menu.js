@@ -95,9 +95,9 @@ const css = (page, sel, prop) =>
      the value, and the fact that a stored true does not survive a bump. */
   ok('the rivers are off until they are asked for',
      await page.evaluate(() => S.water) === false);
-  ok('and no boundary is drawn thicker than a municipality',
-     await page.evaluate(() => LINE_W.mun === 2.4 && LINE_W.district === 2.4
-       && LINE_W.fre === 1.2 && LINE_W.region === 3.2),
+  ok('and the three line widths are the documented ones, with no district width left',
+     await page.evaluate(() => LINE_W.mun === 2.4 && LINE_W.fre === 1.2
+       && LINE_W.region === 3.2 && !('district' in LINE_W)),
      await page.evaluate(() => JSON.stringify(LINE_W)));
   ok('a river switch stored by an older build does not come back',
      await page.evaluate(() => {
@@ -289,7 +289,7 @@ const css = (page, sel, prop) =>
   const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'cons', 'borders', 'more', 'regions', 'save', 'load', 'info', 'dev', 'terms'];
+    'tiles', 'glass', 'cons', 'more', 'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -359,7 +359,7 @@ const css = (page, sel, prop) =>
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
     'theme:light': 'תצוגת יום', 'theme:dark': 'תצוגת לילה',
     'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
-    'regions': 'אזורים', 'save': 'שמירת נתונים', 'load': 'ייבוא נתונים',
+    'save': 'שמירת נתונים', 'load': 'ייבוא נתונים',
     'info': 'על האפליקציה', 'dev': 'מאחורי הקלעים', 'terms': 'תנאים והגבלות' };
   const labels = await page.$$eval('#menuIn [data-m]',
     els => Object.fromEntries(els.filter(e => e.querySelector('.mrow-l'))
@@ -367,8 +367,6 @@ const css = (page, sel, prop) =>
   const wrong = Object.entries(HE).filter(([k, v]) => labels[k] !== v);
   ok('every row reads what it was asked to read', wrong.length === 0,
      wrong.map(([k, v]) => `${k}: "${labels[k]}" ≠ "${v}"`).join(' | '));
-  ok('the גבולות row says which of the four states it is in',
-     /^גבולות · /.test(labels.borders), labels.borders);
   ok('every row carries an icon, and it is the first thing on the line — the right',
      await page.$$eval('#menuIn [data-m] .mrow-l', els => els.every(lab => {
        const e = lab.closest('[data-m]');
@@ -384,7 +382,7 @@ const css = (page, sel, prop) =>
   /* 5. the switches: a tap flips the row and the state behind it */
   const flag = k => page.$eval(`[data-m="${k}"]`,
     e => e.getAttribute('aria-pressed') || e.getAttribute('aria-current'));
-  for (const k of ['cats', 'tiles', 'glass', 'regions']) {
+  for (const k of ['cats', 'tiles', 'glass']) {
     const was = await flag(k);
     await page.click(`[data-m="${k}"]`);
     /* The background is the one row whose state is not the tap's to keep, and
@@ -454,30 +452,18 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(800);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
 
-  /* אזורים draws the orange line, 3.2 wide */
-  await page.click('[data-m="regions"]');
-  await page.waitForTimeout(700);
+  /* The boundaries are a function of the level and the mode: no switch, no
+     saved state, no cycle.  The regions' orange line is simply there at the
+     district, 3.2 wide, and the paragraph that explains them is there too. */
   const region = await page.evaluate(() => {
     const p = [...document.querySelectorAll('#map path')]
       .find(el => (el.getAttribute('stroke') || '').toLowerCase() === '#e2761b');
     return p ? Number(p.getAttribute('stroke-width')) : null;
   });
-  ok('אזורים draws the orange line at width 3.2', region === 3.2, String(region));
-  await page.click('[data-m="regions"]');
-  await page.waitForTimeout(400);
-
-  /* The regions paragraph belongs to the line that draws them: at the foot of
-     the reading half while the layer is on, and nowhere at all while it is off.
-     It used to sit in the district card either way — a paragraph about
-     something that was not on the map. */
-  const regionsOff = await page.evaluate(() => { if (S.lnRegion) menuPick('regions'); return !!S.lnRegion; });
-  await page.waitForTimeout(600);
-  ok('with אזורים off there is no regions block', await page.$('#regionsDoc') === null);
-  ok('and the district card does not carry one either',
-     !(await page.$eval('#doc', el => el.textContent)).includes('NUTS III'));
-  await page.evaluate(() => menuPick('regions'));
-  await page.waitForTimeout(700);
-  ok('turning אזורים on brings the explanation', await page.$('#regionsDoc') !== null);
+  ok('the regions\' orange line is drawn at the district without any switch, 3.2 wide', region === 3.2, String(region));
+  ok('and there is no row for it, nor a boundaries row — the level decides',
+     (await page.$('[data-m="regions"]')) === null && (await page.$('[data-m="borders"]')) === null);
+  ok('the regions block is on the district page', await page.$('#regionsDoc') !== null);
   ok('and it is the last thing on the page',
      await page.evaluate(() => document.querySelector('#doc').lastElementChild.id) === 'regionsDoc');
   const rtxt = await page.$eval('#regionsDoc', el => el.textContent);
@@ -488,15 +474,6 @@ const css = (page, sel, prop) =>
      (await page.waitForTimeout(800), await page.$('#regionsDoc') !== null));
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
-  if (!regionsOff) { await page.evaluate(() => menuPick('regions')); await page.waitForTimeout(500); }
-
-  /* גבולות is a cycle, and the row's own text is what reports it */
-  const bl = () => page.$eval('[data-m="borders"] .mrow-l', e => e.textContent);
-  ok('גבולות starts on הכל', (await bl()).includes('הכל'), await bl());
-  await page.click('[data-m="borders"]'); await page.waitForTimeout(450);
-  ok('one tap drops גבול המחוז', (await bl()).includes('בלי המחוז'), await bl());
-  for (let i = 0; i < 3; i++) { await page.click('[data-m="borders"]'); await page.waitForTimeout(400); }
-  ok('four taps come back to הכל', (await bl()).includes('הכל'), await bl());
 
   /* 6. day and night are a choice, not only the phone's setting */
   await page.click('[data-m="theme:dark"]');
@@ -838,11 +815,9 @@ const css = (page, sel, prop) =>
   ok('home comes back to the district', await page.evaluate(() => S.level) === 'district');
   ok('and the whole district is inside the view',
      await page.evaluate(() => {
-       // bB holds the two NUTS III regions as well, and they spill past the
-       // district — fit is to the district's own outline.
-       const d = { type: 'FeatureCollection',
-         features: D.bB.features.filter(f => f.properties.kind !== 'nuts3') };
-       return map.getBounds().contains(L.geoJSON(d).getBounds().pad(-0.02));
+       // the district has no outline of its own any more: it is the outer
+       // edge of the 18 municipalities, and fit is to that
+       return map.getBounds().contains(L.geoJSON(D.bM).getBounds().pad(-0.02));
      }));
   /* at level 1 it still refits, so a panned map has a way back */
   await page.evaluate(() => map.setView([41.0, -8.0], 12));
@@ -1030,9 +1005,9 @@ const css = (page, sel, prop) =>
   });
   await page.waitForTimeout(700);
   const L3 = await drawnLines();
-  ok('level 3 narrows the parish line to the one parish being looked at',
-     L3.fre.n === 1, `${L3.fre.n} parish outlines drawn`);
-  ok('and it is the black one, because it is the subject',
+  ok('level 3 keeps the same municipality\'s parishes as the context around the one being looked at',
+     L3.fre.n === munOfFirst.parishes, `${L3.fre.n} drawn, ${munOfFirst.parishes} in the municipality`);
+  ok('and exactly one of them is black, because it is the subject',
      L3.fre.black === 1, JSON.stringify(L3.fre));
   ok('and no municipality is black there — the parish is the subject, not its municipality',
      L3.mun.black === 0, JSON.stringify(L3.mun));
@@ -1186,7 +1161,7 @@ const css = (page, sel, prop) =>
   const strokesIn = p => page.evaluate(pane => [...new Set(
     [...document.querySelectorAll(`.leaflet-${pane}-pane path`)]
       .map(x => (x.getAttribute('stroke') || '').toLowerCase()).filter(Boolean))], p);
-  for (const pane of ['ln-mun', 'ln-district']) {
+  for (const pane of ['ln-mun']) {
     const c = await strokesIn(pane);
     ok(`${pane}: the boundary is cased — white outside, dark core inside`,
        c.includes('#ffffff') && c.includes('#1b2532'), c.join(' | '));
@@ -1204,8 +1179,7 @@ const css = (page, sel, prop) =>
      cased.dark > 0 && cased.dark < cased.white,
      `casing ${cased.white}, core ${cased.dark}`);
   ok('no boundary is left black while comparing',
-     !(await strokesIn('ln-mun')).includes('#000000')
-       && !(await strokesIn('ln-district')).includes('#000000'));
+     !(await strokesIn('ln-mun')).includes('#000000'));
 
   /* רובעים at level 1 must draw ALL 243, not a sample.  An earlier cut drew the
      twenty ends and hatched the eighteen municipalities underneath them, which
@@ -1260,9 +1234,9 @@ const css = (page, sel, prop) =>
   ok('and the plate holds that municipality alone — no neighbours, no district',
      await page.evaluate(() => {
        const n = p => document.querySelectorAll(`.leaflet-${p}-pane path`).length;
-       return n('ln-mun') <= 2 && n('ln-district') === 0;
+       return n('ln-mun') <= 2;
      }),
-     await page.evaluate(() => JSON.stringify(['ln-mun', 'ln-district']
+     await page.evaluate(() => JSON.stringify(['ln-mun']
        .map(p => [p, document.querySelectorAll(`.leaflet-${p}-pane path`).length]))));
   ok('but החלפת נתון is still there', await page.$('[data-cmppick="1"]') !== null);
   const p2 = await cmpRows();
@@ -1648,7 +1622,7 @@ const css = (page, sel, prop) =>
      JSON.stringify(mrows.slice(mrows.indexOf('tiles'), mrows.indexOf('tiles') + 5)));
   ok('and it sits under שכבות, above the boundaries row',
      mrows.indexOf('cons') === mrows.indexOf('glass') + 1
-       && mrows.indexOf('cons') === mrows.indexOf('borders') - 1);
+       && mrows.indexOf('cons') === mrows.indexOf('more') - 1);
   const consLabel = await page.evaluate(() =>
     document.querySelector('#menuIn [data-m="cons"]').innerText);
   ok('the row says what is still to download before it is pressed',
@@ -1694,7 +1668,7 @@ const css = (page, sel, prop) =>
   ok('and so is the level\'s own colour fill',
      await page.evaluate(() => S.muncol === false));
   ok('while the municipality boundaries are on and drawn',
-     await page.evaluate(() => S.lnMun === true && !!LG.mun));
+     await page.evaluate(() => !!LG.lnMun));
   ok('nothing is drawn as a constraint yet — the data has not arrived',
      await page.evaluate(() => consPhase !== 'ready' && consVertices() < 1556351));
 
@@ -2740,12 +2714,13 @@ const css = (page, sel, prop) =>
      a body reaching beyond the district was painted under every other line.
      Read back from the panes the browser actually made, not from the array. */
   {
+    const document_has_district = await page.$('.leaflet-ln-district-pane') !== null;
     const z = await page.evaluate(() => {
       const zi = n => Number(getComputedStyle(document.querySelector(`.leaflet-${n}-pane`)).zIndex);
-      return { region: zi('ln-region'), district: zi('ln-district'), mun: zi('ln-mun'), fre: zi('ln-fre') };
+      return { region: zi('ln-region'), mun: zi('ln-mun'), fre: zi('ln-fre') };
     });
-    ok('boundary stack: regions above district above municipalities above parishes',
-       z.region > z.district && z.district > z.mun && z.mun > z.fre, JSON.stringify(z));
+    ok('boundary stack: regions above municipalities above parishes — and no district pane',
+       z.region > z.mun && z.mun > z.fre && !document_has_district, JSON.stringify(z));
   }
 
   /* ---- running numbers: the map, the pins and the legend say the same thing
@@ -2851,6 +2826,33 @@ const css = (page, sel, prop) =>
        terms.includes('OpenStreetMap contributors') && terms.includes('ODbL') && terms.includes('CC BY 4.0')
          && terms.includes('אינה ייעוץ') && terms.includes('אינו נושא באחריות'), terms.slice(0, 80));
     await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
+  }
+
+  /* ---- boundaries as a function of (level, mode) --------------------------
+     Read off the layers the map holds, level by level: what is drawn, and
+     which single unit is black. */
+  {
+    await page.evaluate(async () => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) await toggleCons(); });
+    const tally = () => page.evaluate(() => {
+      const t = g => { if (!LG[g]) return { n: 0, black: 0 }; let n = 0, black = 0;
+        LG[g].eachLayer(l => { n++; if (l.options.color === '#000000') black++; }); return { n, black }; };
+      return { region: t('lnRegion'), mun: t('lnMun'), fre: t('lnFre') };
+    });
+    await page.evaluate(() => goDistrict()); await page.waitForTimeout(600);
+    const l1 = await tally();
+    ok('level 1: regions and 18 black municipalities, no parish, no district line',
+       l1.region.n > 0 && l1.mun.n === 18 && l1.mun.black === 18 && l1.fre.n === 0 && !(await page.evaluate(() => !!LG.lnDistrict)), JSON.stringify(l1));
+    await page.evaluate(() => goMun(14)); await page.waitForTimeout(600);
+    const l2 = await tally();
+    ok('level 2: regions still there, one black municipality of 18, its 16 parishes drawn, one of them… none black',
+       l2.region.n > 0 && l2.mun.n === 18 && l2.mun.black === 1 && l2.fre.n === 16, JSON.stringify(l2));
+    await page.evaluate(() => goZone(D.freKey(D.freByMun.get(14)[0]))); await page.waitForTimeout(700);
+    const l3 = await tally();
+    ok('level 3: no regions, 18 grey municipalities, the 16 sibling parishes with exactly one black',
+       l3.region.n === 0 && l3.mun.n === 18 && l3.mun.black === 0 && l3.fre.n === 16 && l3.fre.black === 1, JSON.stringify(l3));
+    ok('and nothing about boundaries is saved', await page.evaluate(() => {
+      try { const o = JSON.parse(localStorage.getItem('porto') || '{}'); return !('lnMun' in o) && !('lnRegion' in o); } catch (e) { return true; } }));
+    await page.evaluate(() => goDistrict()); await page.waitForTimeout(500);
   }
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();

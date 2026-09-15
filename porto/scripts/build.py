@@ -655,9 +655,7 @@ def number_parishes(freguesias):
 # Where the two regions meet they share one border, and a single line there
 # would have to belong to one of them.  It is split instead: each region's own
 # stretch stays on the true boundary, and the shared stretch is drawn twice,
-# each copy stepped into its own region so the two run side by side.  The
-# district outline gets the same treatment against both — where it follows a
-# region border it steps inside, so all three lines stay legible at once.
+# each copy stepped into its own region so the two run side by side.
 #
 # THE OFFSET IS IN METRES, WHICH IS A COMPROMISE.  A line drawn a fixed number
 # of metres inside another separates by a number of pixels that depends on the
@@ -667,7 +665,6 @@ def number_parishes(freguesias):
 # machinery for a line; this is the honest version of the cheap answer.
 NUTS3_SRC = "caop_nuts3.geojson"
 OFFSET_M = 150.0        # each region steps this far in along the shared border
-DISTRICT_M = 420.0      # the district steps this far in along a region border
 CORRIDOR_M = 600.0      # how close counts as "the same border"
 TOUCH_M = 60.0          # tolerance for two boundaries being the same line
 SIMPLIFY_M = 20.0       # coordinate thinning, in metres
@@ -742,14 +739,12 @@ def belt_outlines(belts, mun_geom, name_of):
         add(poly.buffer(-OFFSET_M).boundary.intersection(corridor),
             dict(base, part="shared"))
 
-    # The district follows a region border for most of its length.  Where it
-    # does, it steps inside; where it does not — the coast, and the borders
-    # with Aveiro, Viseu, Vila Real and Braga — it stays where it is.
-    near = unary_union([r.boundary for r in regions]).buffer(TOUCH_M)
-    d_line = district.boundary
-    add(d_line.difference(near), {"kind": "district", "part": "solo"})
-    add(district.buffer(-DISTRICT_M).boundary.intersection(near),
-        {"kind": "district", "part": "inset"})
+    # No district line.  The district is the outer edge of the eighteen
+    # municipalities — `district` above is their union — and the app draws
+    # that edge once, as the municipality layer, at the district's weight.
+    # Until 2.0.0 this file also emitted the union's boundary, stepped 420 m
+    # inside wherever it ran beside a region border: the same fact drawn
+    # twice, with a gap that widened as you zoomed in.
 
     return fc
 
