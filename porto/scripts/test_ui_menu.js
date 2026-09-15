@@ -2767,6 +2767,41 @@ const css = (page, sel, prop) =>
          && await page.$$eval('#doc [data-fre]', els => els.every(e => /\b1305\d\d\b/.test(e.textContent))),
        (await pins()).join(','));
   }
+
+  /* ---- the sort chip: a reading order, never a fact ----------------------
+     Comparison mode, parishes, the INE price (70 of 275 have one, so there is
+     a real "no data" block).  One tap reverses the ranked rows and nothing
+     else: every unit keeps its colour, the map keeps every fill, and the units
+     with no value stay after the ranked ones. */
+  {
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); });
+    await page.click('#homeBtn'); await page.waitForTimeout(400);      // the district, plain
+    await page.evaluate(() => toggleCmp()); await page.waitForTimeout(400);
+    const scopeThere = await page.waitForSelector('[data-cmpscope="fre"]', { timeout: 5000 }).then(() => true, () => false);
+    ok('sort chip: comparison mode opened at the district, with its scope buttons', scopeThere,
+       await page.evaluate(() => `level ${S.level}, cmp ${S.cmp}`));
+    if (await page.evaluate(() => S.sortDesc)) { await page.click('[data-sortdir]'); await page.waitForTimeout(300); }
+    if (scopeThere) await page.click('[data-cmpscope="fre"]'); await page.waitForTimeout(400);
+    if (await page.evaluate(() => !S.cmpPick)) { await page.click('[data-cmppick="1"]'); await page.waitForTimeout(300); }
+    await page.click('#doc [data-cmpf="price_eur_m2"]'); await page.waitForTimeout(500);
+    const rows = () => page.$$eval('#doc .cmp-row', els => els.map(e => ({ id: e.dataset.cmpu, no: e.classList.contains('no'),
+      c: getComputedStyle(e.querySelector('.cmp-sw')).backgroundColor })));
+    const fills = () => page.$$eval('.leaflet-overlay-pane path', els => els.map(e => e.getAttribute('fill') || '').sort());
+    const aria = () => page.$eval('#doc .cmp-rows', e => e.getAttribute('aria-sort'));
+    const b = await rows(), fb = await fills();
+    await page.click('[data-sortdir]'); await page.waitForTimeout(400);
+    const a = await rows(), fa = await fills();
+    const rb = b.filter(r => !r.no), ra = a.filter(r => !r.no);
+    ok('sort chip: the ranked rows come back in the opposite order',
+       rb.length > 10 && JSON.stringify(ra.map(r => r.id)) === JSON.stringify(rb.map(r => r.id).reverse()), `${rb.length} rows`);
+    ok('sort chip: every unit keeps its colour', ra.every(r => rb.find(x => x.id === r.id).c === r.c));
+    ok('sort chip: the map keeps every fill', JSON.stringify(fa) === JSON.stringify(fb));
+    ok('sort chip: "no data" stays after the ranked rows, and aria-sort says descending',
+       a.filter(r => r.no).length === b.filter(r => r.no).length && a.length && a[a.length - 1].no && await aria() === 'descending',
+       `none ${a.filter(r => r.no).length}, aria ${await aria()}`);
+    await page.click('[data-sortdir]'); await page.waitForTimeout(300);
+    await page.evaluate(() => { if (S.cmp) toggleCmp(); });
+  }
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);

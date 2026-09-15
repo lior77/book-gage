@@ -127,6 +127,7 @@ const S = {
   // The four boundary layers.  Each is drawn at every level and switched on
   // its own; the level decides which of them are black and which recede.
   lnRegion: false,     // the two NUTS III regions — off until asked for
+  sortDesc: false,     // ranked lists run smallest first; the chip flips the reading order only
   lnDistrict: true,    // Porto district
   lnMun: true,         // the 18 municipalities
   lnFre: true,         // the 275 parishes
@@ -2177,14 +2178,17 @@ const consNone = o => !o || !o.cons || o.cons.either_pct === undefined;
    the end — it has no share to be smallest or largest of, and dropping it in at
    zero would put "nothing is restricted here" at the head of the list. */
 function consSort(rows) {
-  return rows.slice().sort((a, b) => {
-    const x = (consOf(a) || {}).either_pct, y = (consOf(b) || {}).either_pct;
-    if (x === undefined && y === undefined) return 0;
-    if (x === undefined) return 1;
-    if (y === undefined) return -1;
-    return x - y;
-  });
+  const has = rows.filter(o => !consNone(o)).sort((a, b) => consOf(a).either_pct - consOf(b).either_pct);
+  const none = rows.filter(consNone);
+  // the flip reverses only the ranked part — nothing is the largest or smallest
+  return (S.sortDesc ? has.reverse() : has).concat(none);
 }
+/* One chip above every ranked list, the same in every mode: it names the order
+   the next tap gives you (as the נ.צ. chips do), and it changes nothing but
+   the reading order. */
+const sortBar = () => `<div class="chips"><button class="chip${S.sortDesc ? ' is-on' : ''}" data-sortdir
+    aria-pressed="${S.sortDesc}">${S.sortDesc ? t('מהנמוך לגבוה') : t('מהגבוה לנמוך')}</button></div>`;
+const sortAria = () => `aria-sort="${S.sortDesc ? 'descending' : 'ascending'}"`;
 const consSrc = () => S.level === 'district' || S.level === 'mun'
   ? 'municipio.cons_pct' : 'freguesia.cons_pct';
 
@@ -2238,14 +2242,14 @@ function renderCons() {
   } else if (S.level === 'district') {
     sub = t('שתי שכבות שקובעות איפה הבנייה מוגבלת בשל עתודת הקרקע החקלאית הלאומית ורשת העתודה האקולוגית הלאומית. הן חופפות זו לזו, ולכן שני השיעורים אינם מתחברים — ״סך הכול״ הוא האיחוד.');
     body = `<div class="grp">${t('18 העיריות — לפי שיעור השטח המוגבל')}</div>
-      <div class="rows">${consSort(D.mun)
+      ${sortBar()}<div class="rows" ${sortAria()}>${consSort(D.mun)
         .map(m => consUnitRow(m, 'mun', m.num)).join('')}</div>`;
   } else if (S.level === 'mun') {
     const m = D.munByNum.get(S.mun);
     title = nmPair(m, m.en);
     body = consNumbers(m, 'municipio.cons_pct') +
       `<div class="grp">${t('הרובעים')}</div>
-       <div class="rows">${consSort(D.freByMun.get(S.mun) || [])
+       ${sortBar()}<div class="rows" ${sortAria()}>${consSort(D.freByMun.get(S.mun) || [])
          .map(f => consUnitRow(f, 'fre', D.freKey(f))).join('')}</div>`;
   } else {
     const f = D.freByKey.get(S.zone);
@@ -4324,7 +4328,13 @@ function cmpRank(field) {
    level 1, because 243 shades of one hue is not a map anyone can read — but
    that was the continuous ramp's problem, and five classes do not have it.
    275 shapes in five colours is exactly the picture the screen is for. */
-function cmpShown(rk) { return { list: rk.have, cut: 0 }; }
+/* Reversing is a reading order, not a fact: rank and band were fixed in
+   cmpRank() on the smallest-first list and stay on the unit, so the colour and
+   "3rd smallest of 275" mean the same thing in both directions — and the map,
+   which colours by band, does not change at all.  Units with no value are not
+   in this list; they are drawn after it under their own heading, so they are
+   last either way and never read as "the most". */
+function cmpShown(rk) { return { list: S.sortDesc ? rk.have.slice().reverse() : rk.have, cut: 0 }; }
 
 /* ------------------------------------------------------------ the map --- */
 function cmpGeo(o) {
@@ -4511,7 +4521,7 @@ function renderCmp() {
       </div>` : ''}
     </div>`;
 
-  const list = `<div class="cmp-rows">${sh.list
+  const list = `${sortBar()}<div class="cmp-rows" ${sortAria()}>${sh.list
     .map(r => cmpRowHtml(r, field, lvl, rk)).join('')}</div>`;
 
   const none = rk.none.length ? `
@@ -4540,7 +4550,7 @@ function renderCmp() {
          : t('18 עיריות המחוז'))
       : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`
         + t(' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים')}
-      ${t('· מהקטן לגדול')}</p>
+      ${S.sortDesc ? t('· מהגדול לקטן') : t('· מהקטן לגדול')}</p>
     ${key}
     ${list}
     ${none}
@@ -5120,7 +5130,7 @@ function save() {
       cons: S.cons,
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
-      muncol: S.muncol, wpList: S.wpList,
+      muncol: S.muncol, wpList: S.wpList, sortDesc: S.sortDesc,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles,
@@ -5153,6 +5163,7 @@ function restore() {
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
     if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
+    if (typeof o.sortDesc === 'boolean') S.sortDesc = o.sortDesc;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (o.theme === 'light' || o.theme === 'dark' || o.theme === 'auto') S.theme = o.theme;
     // an older build stored a Porto quarter number under `quarter`; it has no
@@ -5492,6 +5503,8 @@ function wire() {
   $('#doc').addEventListener('click', e => {
     // the נ.צ. cards come first: while they are on screen they are the screen
     if (S.wp && wpClick(e)) return;
+    // the sort chip: reading order only, so the text is redrawn and the map is not
+    if (e.target.closest('[data-sortdir]')) { S.sortDesc = !S.sortDesc; save(); redrawText(); return; }
     const src = e.target.closest('[data-src]');
     if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
     if (S.cmp && cmpClick(e)) return;
@@ -5688,6 +5701,9 @@ Object.assign(EN, {
   'שנת ייחוס': 'reference year',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   'רובע מ-2025': 'a 2025 parish',
+  'מהנמוך לגבוה': 'lowest first',
+  'מהגבוה לנמוך': 'highest first',
+  '· מהגדול לקטן': '· largest first',
   'המספר על כל רובע הוא מספר רץ של האפליקציה, בסדר הקוד הרשמי; הקוד הרשמי המלא כתוב לצד השם. רובע שמסומן':
     'The number on each parish is the app\'s own running number, in official-code order; the full official code is printed beside the name. A parish marked',
   'המספר שמופיע על כל עירייה ועל כל רובע במפה הוא': 'The number on every municipality and parish on the map is',
