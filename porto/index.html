@@ -78,6 +78,10 @@
   </div>
 
   <section class="pane pane-text" id="paneText" aria-label="נתונים">
+    <!-- The mode switcher: a fixed row at the head of the text half, one tab per
+         mode, the same row at every level.  A mode changes what the text half
+         talks about and what the map is coloured by, never where you are. -->
+    <nav class="modebar" id="modeBar" role="tablist" aria-label="מוד"></nav>
     <div class="msgs" id="msgs" role="status" aria-live="polite"></div>
     <div class="panel" id="panel" hidden role="region" aria-labelledby="panelTitle">
       <div class="panel-h">

@@ -315,7 +315,7 @@ const lineColour = (kind, props) => {
   // the subject, so below level 1 none is singled out
   const own = kind !== 'region'
     && (LINE_BLACK[S.level] || []).indexOf(kind) >= 0
-    && !((S.cmp || S.cons) && S.level !== 'district')
+    && !((S.cmp || S.cons) && S.level === 'mun')
     && (!props || ownFeature(kind, props));
   /* While comparing, every unit is a filled colour and the black lines the map
      normally uses read as a second, competing layer over them.  White separates
@@ -405,7 +405,7 @@ function drawLines() {
        there is no street map under the others to tie their outlines to
        anything.  Drawing them would be eighteen shapes' worth of line around a
        picture of one. */
-    const munData = S.cmp && S.level === 'mun'
+    const munData = S.cmp && S.level !== 'district'
       ? { type: 'FeatureCollection',
           features: D.bM.features.filter(ft => ft.properties.num === S.mun) }
       : D.bM;
@@ -430,7 +430,7 @@ function drawLines() {
      background for it to be context on. */
   // The regions are context at levels 1 and 2 and nothing at level 3, where the
   // screen is one parish and a line that leaves the district is noise.
-  const wide = !(S.cmp && S.level === 'mun');
+  const wide = !(S.cmp && S.level !== 'district');
   if (wide && S.level !== 'zone') add('lnRegion', regions, 'region');
 }
 
@@ -2152,10 +2152,8 @@ async function toggleCons() {
   applyCons();
   openMenu(false);
   if (S.view === 'map') { S.view = 'split'; applyView(); }
-  /* The page opens on the district: eighteen municipalities on the map and
-     eighteen names under the title. Opening it inside whichever parish the
-     reader happened to be in would answer a question they had not asked yet. */
-  if (S.level !== 'district') goDistrict();
+  // The page opens at whatever level the reader is on: the mode is a question
+  // about the place, and the place does not change because the question did.
   applySwitches(); renderLayers(); redrawText();
 
   if (consMissing().length && !await consFetchAll()) { consOff(); return; }
@@ -2773,7 +2771,6 @@ function dropWpUrls() { wpUrls.forEach(u => URL.revokeObjectURL(u)); wpUrls = []
 
 function toggleWp() {
   if (S.adding) stopPlacing();
-  if (!S.wp && S.cmp) toggleCmp();
   S.wp = !S.wp;
   renderMenu();
   if (!S.wp) {
@@ -3120,18 +3117,16 @@ function autoName() {
    come from somewhere before there is anything to name. */
 /* The one way back, from anywhere. */
 function goHome() {
-  const busy = S.adding || ghost || mineEditing || wpNew || S.wp || S.cmp || S.cons;
+  const busy = S.adding || ghost || mineEditing || wpNew || S.wp;
   if (S.adding || ghost) stopPlacing();
   wpWay = null; wpNew = false;
   mineEditing = null; minePending = null; dropPhotoUrl();
   wpArmed = null;
   if (S.wp) toggleWp();
-  if (S.cmp) toggleCmp();   // it puts the street background back as it was
-  /* Home is the way out of a mode, not a way up inside one.  From the
-     constraints page it used to do nothing at level 1 and climb to the page's
-     own level 1 from below — either way the reader was still on the page they
-     were trying to leave. */
-  if (S.cons) consOff();
+  /* Home is a level, not a mode: it goes to the district and leaves the mode
+     as it is, because the mode switcher is the one way between modes and the
+     trail and this button are the one way between levels.  Two axes, and a
+     control on each. */
   renderWpSheet();          // toggleWp redraws the level document, not the sheet
   if (S.level !== 'district') goDistrict();
   else if (!busy) refit();
@@ -4284,7 +4279,9 @@ function cmpField() {
    the parishes of the open municipality are the only thing there is to compare,
    which is why the two buttons are not drawn. */
 function cmpUnits() {
-  if (S.level === 'mun') {
+  // level 3 compares the parish with its siblings: the same list as level 2,
+  // with the one being looked at marked, because a parish alone is not a scale
+  if (S.level !== 'district') {
     return { kind: 'fre', all: false, rows: (D.freByMun.get(S.mun) || []).slice() };
   }
   if (S.cmpScope === 'fre') return { kind: 'fre', all: true, rows: D.fre.slice() };
@@ -4373,10 +4370,11 @@ function drawCmp() {
   if (rk) cmpShown(rk).list.forEach(r =>
     paint.set(cmpId(r.o), { c: r.c, rank: r.rank, v: r.v, band: r.band }));
 
-  const parishes = S.level === 'mun' || S.cmpScope === 'fre';
-  const base = S.level === 'mun' ? freFeatures(S.mun)
+  const inMun = S.level !== 'district';
+  const parishes = inMun || S.cmpScope === 'fre';
+  const base = inMun ? freFeatures(S.mun)
              : S.cmpScope === 'fre' ? D.bF : D.bM;
-  const unitOf = ft => S.level === 'mun'
+  const unitOf = ft => inMun
     ? freOfFeature(S.mun, ft.properties)
     : S.cmpScope === 'fre'
       ? D.freByKey.get(ft.properties.mun_num + '|' + ft.properties.name)
@@ -4394,9 +4392,13 @@ function drawCmp() {
       if (!o) return;
       const p = paint.get(cmpId(o));
       l.on('click', () => {
-        // a municipality opens — that is how level 2 is reached from here; a
-        // parish does not descend, because level 3 is not part of this screen
-        if (parishes) { cmpFocus(cmpId(o)); return; }
+        /* A tap on a unit opens it, in this mode as in every other: a
+           municipality at level 1, a parish below it.  The 275 parishes at
+           level 1 are the one exception — a tap there marks the row, because
+           descending two levels from a district-wide chart is not what a tap
+           on a chart means. */
+        if (parishes && !inMun) { cmpFocus(cmpId(o)); return; }
+        if (inMun) { goZone(D.freKey(o)); return; }
         goMun(o.num);
       });
       l.bindTooltip(`<b>${html(cmpName(o))}</b><br>${
@@ -4416,13 +4418,13 @@ function drawCmp() {
   /* At level 1 with the parishes chosen there are 275 shapes: a number on each
      is not a map.  The labels there name the eighteen municipalities that hold
      them, which is what tells you where you are looking. */
-  const rows = S.level === 'mun' ? (D.freByMun.get(S.mun) || []) : D.mun;
+  const rows = inMun ? (D.freByMun.get(S.mun) || []) : D.mun;
   LG.labels = L.layerGroup(rows.map(o => {
     const code = o.mun_num === undefined ? munNum(o) : freNum(o);
     const mk = L.marker(latlng(o.center), { icon: cmpIcon(code), keyboard: false,
       title: cmpCode(code) + ' · ' + cmpName(o), riseOnHover: true });
     mk.on('click', () => {
-      if (S.level === 'mun') { cmpFocus(cmpId(o)); return; }
+      if (inMun) { goZone(D.freKey(o)); return; }
       goMun(o.num);
     });
     return mk;
@@ -4446,8 +4448,9 @@ function cmpRowHtml(r, field, lvl, rk) {
   const ink = inkOn(r.c);
   const mun = r.o.mun_num === undefined;
   const code = mun ? munNum(r.o) : freNum(r.o);
-  return `<div class="cmp-row" data-cmpu="${html(cmpId(r.o))}"${
-      mun ? ` data-mun="${r.o.num}"` : ''}>
+  const here = !mun && S.level === 'zone' && D.freKey(r.o) === S.zone;
+  return `<div class="cmp-row${here ? ' is-hi' : ''}" data-cmpu="${html(cmpId(r.o))}"${
+      mun ? ` data-mun="${r.o.num}"` : ` data-fre="${html(D.freKey(r.o))}"`}>
     <span class="cmp-sw" style="background:${r.c};color:${ink}">${html(cmpCode(code))}</span>
     <span class="cmp-body">
       <span class="cmp-n">${html(cmpName(r.o))}
@@ -4456,15 +4459,15 @@ function cmpRowHtml(r, field, lvl, rk) {
     <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">
       <span class="num">${html(cmpFmt(r.v, field))}</span>${
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}
-    </button>${mun ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
+    </button>${mun || S.level !== 'district' ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
   </div>`;
 }
 
 function renderCmp() {
   const lvl = cmpLevelWord();
   const field = cmpField();
-  const atDistrict = S.level !== 'mun';
-  const m = S.level === 'mun' ? D.munByNum.get(S.mun) : null;
+  const atDistrict = S.level === 'district';
+  const m = atDistrict ? null : D.munByNum.get(S.mun);
 
   /* The field picker replaces the key and the list; it is the one screen that
      does, because choosing a field is the only thing you are doing while it is
@@ -4545,8 +4548,7 @@ function renderCmp() {
       ? (S.cmpScope === 'fre'
          ? t('275 רובעי המחוז')
          : t('18 עיריות המחוז'))
-      : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`
-        + t(' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים')}
+      : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`}
       ${S.sortDesc ? t('· מהגדול לקטן') : t('· מהקטן לגדול')}</p>
     ${key}
     ${list}
@@ -4562,8 +4564,6 @@ function toggleCmp() {
   if (S.adding) stopPlacing();
   S.cmp = !S.cmp;
   if (S.cmp) {
-    if (S.wp) { S.wp = false; S.wpSel = null; }
-    if (S.level === 'zone') { S.level = 'mun'; S.zone = null; S.hi = null; }
     if (S.view === 'map') { S.view = 'split'; applyView(); }
     S.cmpScope = 'mun';
     S.cmpField = S.cmpField || CMP_DEFAULT;
@@ -4575,7 +4575,6 @@ function toggleCmp() {
        the streets, and back with them if they were on. */
     cmpWaterWere = S.water;
     if (S.water) { S.water = false; applyNature(); }
-    if (S.level !== 'district') goDistrict();
   } else {
     S.cmpPick = false;
     if (cmpTilesWere && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
@@ -4614,9 +4613,12 @@ function cmpClick(e) {
     redrawLevel(); redrawText();
     return true;
   }
-  // a municipality row opens it, exactly as a tap on the map does
+  // a row opens its unit, exactly as a tap on the map does: a municipality at
+  // level 1, a parish at levels 2 and 3 (at level 1 the 275 stay a chart)
   const mn = e.target.closest('.cmp-row[data-mun]');
-  if (mn && S.level !== 'mun') { goMun(Number(mn.dataset.mun)); return true; }
+  if (mn && S.level === 'district') { goMun(Number(mn.dataset.mun)); return true; }
+  const fr = e.target.closest('.cmp-row[data-fre]');
+  if (fr && S.level !== 'district') { goZone(fr.dataset.fre); return true; }
   return false;
 }
 
@@ -4794,11 +4796,11 @@ function menuPick(k) {
   switch (k) {
     case 'search':  openMenu(false); openSearch(); break;
     case 'mine':    openMenu(false); toggleWp(); break;
-    case 'cmp':     openMenu(false); toggleCmp(); break;
+    case 'cmp':     openMenu(false); setMode(S.cmp ? 'overview' : 'cmp'); break;
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
-    case 'cons':    toggleCons(); break;
+    case 'cons':    setMode(S.cons ? 'overview' : 'cons'); break;
     case 'more':    openMenu(false); toggleLayers(true); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
@@ -4922,12 +4924,53 @@ function toggleLayers(force) {
 }
 
 // after a change that alters what the text half should say
+/* ------------------------------------------------------------- the modes --- */
+/* Three levels by three modes (four once the listings come), and every cell
+   exists.  A mode decides what the map is coloured by, what the text half talks
+   about and which source record stands behind the colour — and nothing else:
+   not the level, not the unit, not the zoom.  So switching mode never calls
+   goDistrict(), and navigating never leaves a mode.  Until 2.0.0 opening the
+   comparison jumped to the district and opening a parish left it; both were
+   the mode moving the reader. */
+const MODES = () => [
+  { k: 'overview', he: t('סקירה') },
+  { k: 'cons', he: t('מגבלות') },
+  { k: 'cmp', he: t('השוואה') },
+];
+const modeOf = () => (S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
+function renderModeBar() {
+  const bar = $('#modeBar');
+  if (!bar) return;
+  const now = modeOf();
+  bar.innerHTML = MODES().map(m => `<button class="mode" role="tab" data-mode="${m.k}"
+      aria-selected="${m.k === now}">${html(m.he)}</button>`).join('');
+}
+/* One mode on at a time.  The primitives (toggleCmp, toggleCons, consOff) each
+   know how to enter and leave their own screen; this is the only place that
+   knows they exclude each other.  The places list is not a mode — it is a
+   panel over the text half — so it simply closes. */
+function setMode(k) {
+  if (k === modeOf()) return;
+  if (S.adding) stopPlacing();
+  if (S.wp) toggleWp();
+  if (S.cmp) toggleCmp();
+  if (S.cons) consOff();
+  if (k === 'cmp') toggleCmp();
+  else if (k === 'cons') toggleCons();
+  renderModeBar();
+}
+
 function redrawText() {
   $('#doc').classList.toggle('dense', S.dense);
-  // management replaces the level document: the map is still at its level and
-  // still navigable, but the text half is the list of נ.צ. until it is closed
-  if (S.cmp) { $('#doc').innerHTML = renderCmp(); return; }
+  renderModeBar();
+  // the places list sits over the level document: the map is still at its
+  // level and still navigable, and the mode is still the mode, until it closes
   if (S.wp) { renderWaypoints(); return; }
+  if (S.cmp) {
+    $('#doc').innerHTML = renderCmp();
+    if (S.level === 'zone') cmpFocus('f' + S.zone);
+    return;
+  }
   /* The constraints page replaces the level document rather than adding a card
      to it: it is a screen about one question, and the population and the
      housing stock are a different one. */
@@ -4996,7 +5039,6 @@ function pick(hi, from) {
 // second argument is kept because the map and the list both call this.
 function pickFre(f) {
   if (S.adding || S.wp) return;
-  if (S.cmp) { cmpFocus('f' + D.freKey(f)); return; }
   if (isSecondTap('fre:' + D.freKey(f))) { openInGoogle(latlng(f.center), nm(f)); return; }
   goZone(D.freKey(f));
 }
@@ -5064,11 +5106,12 @@ function goMun(num) {
 function goZone(key) {
   const f = D.freByKey.get(key);
   if (!f) return;
-  // Level 3 is not part of the comparison screen; asking for it leaves it.
-  if (S.cmp) toggleCmp();
   S.level = 'zone'; S.mun = f.mun_num; S.zone = key; S.hi = null;
   S.cats = new Set(D.poiOrder);
-  drawZone(key); redrawText(); afterNav();
+  // the comparison paints its own map at every level — the parish among its
+  // siblings, on the ramp — so it is drawn by the mode, not by the level
+  if (S.cmp) redrawLevel(); else drawZone(key);
+  redrawText(); afterNav();
 }
 function goUp() {
   if (S.level === 'zone') goMun(S.mun);
@@ -5395,6 +5438,10 @@ function wire() {
   // places screen itself — and comes back to the district.  There is no cancel
   // button anywhere any more; this is it.
   $('#homeBtn').addEventListener('click', goHome);
+  $('#modeBar').addEventListener('click', e => {
+    const b = e.target.closest('[data-mode]');
+    if (b) setMode(b.dataset.mode);
+  });
   $('#menuBtn').addEventListener('click', menuTap);
   $('#menuClose').addEventListener('click', () => openMenu(false));
   $('#menuIn').addEventListener('click', e => {
@@ -6122,6 +6169,12 @@ Object.assign(EN, {
     'Parishes',
   'השוואת נתונים':
     'Compare data',
+  'השוואה':
+    'Compare',
+  'סקירה':
+    'Overview',
+  'מגבלות':
+    'Constraints',
   'השכלה גבוהה':
     'Higher education',
   'התמונה תוסר כשהנקודה תישמר.':

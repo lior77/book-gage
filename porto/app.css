@@ -200,6 +200,19 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    is this column and the inset belongs here. */
 .doc{padding:10px 10px calc(10px + var(--safe-b));
      display:flex; flex-direction:column; gap:var(--s4)}
+/* The mode switcher.  Sticky at the head of the text half, so it is in the
+   same place at every level and under every scroll: the matrix is three levels
+   by four modes, and this row is the mode axis made visible.  Tabs, not chips:
+   exactly one is ever selected, and the selected one is underlined in the
+   accent, which is the one colour reserved for what is interactive. */
+.modebar{position:sticky; inset-block-start:0; z-index:5; display:flex; gap:var(--s1);
+         padding:0 var(--s2); background:var(--card); border-block-end:1px solid var(--line)}
+.mode{flex:1 1 0; min-width:0; min-height:var(--ctl-size); padding:var(--s2) var(--s1);
+      font-family:inherit; font-size:var(--t-sm); font-weight:700; line-height:var(--lh-sm);
+      color:var(--ink-2); background:none; border:0; border-block-end:3px solid transparent;
+      cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.mode[aria-selected="true"]{color:var(--accent); border-block-end-color:var(--accent)}
+.mode:active{background:var(--bg)}
 
 /* The seam between the halves is a line, not a handle.  Dragging it is gone:
    the split is half and half, and the layout button is the only thing that

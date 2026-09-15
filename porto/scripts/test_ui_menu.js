@@ -1326,16 +1326,21 @@ const css = (page, sel, prop) =>
   ok('the key names the missing group too, with its own hatch',
      k2.some(k => k.nd && k.n === 8), JSON.stringify(k2));
 
-  /* home closes it and puts the background back as it was */
+  /* Home is the level axis: it goes to the district and leaves the mode alone.
+     The mode switcher is the way out, and that is what puts the background
+     back as it was. */
   await page.click('#homeBtn');
   await page.waitForTimeout(900);
-  ok('home closes the comparison', await page.evaluate(() => S.cmp) === false);
+  ok('home keeps the comparison open — it is a level, not a mode', await page.evaluate(() => S.cmp) === true);
+  ok('and comes back to the district', await page.evaluate(() => S.level) === 'district');
+  await page.click('#modeBar [data-mode="overview"]');
+  await page.waitForTimeout(700);
+  ok('the סקירה tab closes the comparison', await page.evaluate(() => S.cmp) === false);
   ok('and gives the street background back exactly as it was',
      await page.evaluate(() => S.tiles) === tilesBefore,
      `${tilesBefore} → ${await page.evaluate(() => S.tiles)}`);
   ok('and the rivers back too, since they were on going in',
      await page.evaluate(() => S.water) === true);
-  ok('and comes back to the district', await page.evaluate(() => S.level) === 'district');
 
   /* 11. landscape.  The map moves to the left half and the text beside it, so
      "the map's top corner" is no longer the screen's corner — an earlier cut of
@@ -1682,10 +1687,15 @@ const css = (page, sel, prop) =>
   await page.route('**/data/layers/*.gz', async r => {
     await new Promise(x => setTimeout(x, 40)); r.continue();
   });
-  await page.evaluate(() => { S.tiles = true; tileLayer.addTo(map); S.muncol = true; });
+  /* The page opens at the level the reader is on — so the test goes to the
+     district first, and then checks that opening the page did not move it. */
+  await page.evaluate(() => { goDistrict(); S.tiles = true; tileLayer.addTo(map); S.muncol = true; });
+  await page.evaluate(() => openMenu(true));
+  await page.waitForTimeout(250);
   page.evaluate(() => { document.querySelector('#menuIn [data-m="cons"]').click(); });
   await page.waitForFunction(() => S.cons === true, null, { timeout: 20000 });
   await page.waitForTimeout(500);
+  ok('opening the page does not move the level', await page.evaluate(() => S.level) === 'district');
 
   ok('one tap opens the page — no second tap to arm, the page is the asking',
      await page.evaluate(() => S.cons === true && consPhase !== 'off'));
@@ -1819,34 +1829,35 @@ const css = (page, sel, prop) =>
   ok('and it is still centred on the home button here',
      Math.abs(await crumbMid()) <= 1, `${await crumbMid()}px off centre`);
 
-  /* Home is the way out of a mode, not a way up inside one. From level 3 of
-     this page it used to climb to the page's own level 1 and stop there. */
+  /* Home is a level, not a mode: from level 3 of this page it goes to the
+     district and the page stays open there.  The סקירה tab is the way out,
+     and it is what gives the level fill back. */
   await page.evaluate(() => goHome());
   await page.waitForTimeout(900);
-  ok('home from level 3 of the page returns to the base display',
-     await page.evaluate(() => S.cons === false && S.level === 'district'
-       && !/מגבלה חקלאית/.test(document.getElementById('doc').innerText)));
+  ok('home from level 3 of the page goes to the district and keeps the page',
+     await page.evaluate(() => S.cons === true && S.level === 'district'
+       && /מגבלת בנייה/.test(document.getElementById("doc").innerText)));
+  await page.click('#modeBar [data-mode="overview"]');
+  await page.waitForTimeout(800);
+  ok('the סקירה tab leaves the page',
+     await page.evaluate(() => S.cons === false
+       && !/מגבלת בנייה/.test(document.getElementById("doc").innerText)));
   ok('and the level fill it had taken away is back',
      await page.evaluate(() => S.muncol === true));
-  /* And from level 1, where it used to do nothing at all. */
-  await page.evaluate(() => openMenu(true));
-  await page.waitForTimeout(250);
-  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
+  /* And back in from the tab, at level 1. */
+  await page.click('#modeBar [data-mode="cons"]');
   await page.waitForFunction(() => consPhase === 'ready', null, { timeout: 120000 });
   await page.waitForTimeout(600);
-  ok('the page reopens with no second download', await page.evaluate(() =>
+  ok('the page reopens from the tab with no second download', await page.evaluate(() =>
     S.cons === true && S.level === 'district' && consMissing().length === 0));
+  ok('and the tab row marks it as the mode in force',
+     await page.$eval('#modeBar [data-mode="cons"]', e => e.getAttribute('aria-selected')) === 'true');
   ok('and at level 1 the trail names the district, with nothing above it',
      (await page.$eval('#crumb', e => e.innerText)).trim().indexOf('\n') < 0);
   await page.evaluate(() => goHome());
   await page.waitForTimeout(800);
-  ok('home from level 1 of the page leaves it too',
-     await page.evaluate(() => S.cons === false && S.level === 'district'));
-  await page.evaluate(() => openMenu(true));
-  await page.waitForTimeout(250);
-  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
-  await page.waitForFunction(() => consPhase === 'ready', null, { timeout: 120000 });
-  await page.waitForTimeout(500);
+  ok('home at level 1 of the page changes nothing — it is already home, and home is not a way out',
+     await page.evaluate(() => S.cons === true && S.level === 'district'));
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
   await page.evaluate(() => {
@@ -2723,6 +2734,80 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { hideNote(); goDistrict();
     const doc = document.getElementById('doc'); if (doc) doc.scrollTop = 0; });
   await page.waitForTimeout(700);
+
+  /* THE MATRIX.  Three levels by three modes, every cell exists, and the two
+     axes never move each other: switching mode keeps the level and the unit,
+     navigating keeps the mode.  Read off S and the tab row after each step. */
+  {
+    const cell = () => page.evaluate(() => ({ level: S.level, mun: S.mun, zone: S.zone,
+      mode: S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview',
+      tab: (document.querySelector('#modeBar [aria-selected="true"]') || { dataset: {} }).dataset.mode,
+      tabs: document.querySelectorAll('#modeBar [role="tab"]').length,
+      text: document.getElementById('doc').innerText.length }));
+    const go = async level => {
+      await page.evaluate(l => {
+        if (l === 'district') goDistrict();
+        else if (l === 'mun') goMun(14);
+        else goZone(D.freKey(D.freByMun.get(14)[1]));
+      }, level);
+      await page.waitForTimeout(600);
+    };
+    const mode = async k => {
+      await page.click(`#modeBar [data-mode="${k}"]`);
+      await page.waitForFunction(() => !S.cons || consPhase === 'ready', null, { timeout: 120000 });
+      await page.waitForTimeout(600);
+    };
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); });
+    ok('the tab row offers the three modes', (await cell()).tabs === 3, JSON.stringify(await cell()));
+    ok('and it sits at the head of the text half',
+       await page.evaluate(() => {
+         const b = document.querySelector('#modeBar').getBoundingClientRect();
+         const p = document.querySelector('#paneText').getBoundingClientRect();
+         return Math.abs(b.top - p.top) <= 1 && b.height >= 44;
+       }));
+    for (const level of ['district', 'mun', 'zone']) {
+      await mode('overview'); await go(level);
+      const before = await cell();
+      for (const k of ['cons', 'cmp', 'overview']) {
+        await mode(k);
+        const c = await cell();
+        ok(`${level} × ${k}: the cell exists, the tab says so, and the text half says something`,
+           c.mode === k && c.tab === k && c.text > 40, JSON.stringify(c));
+        ok(`${level} × ${k}: switching to it kept the level and the unit`,
+           c.level === before.level && c.mun === before.mun && c.zone === before.zone,
+           JSON.stringify([before, c]));
+      }
+    }
+    /* the other axis: navigate inside a mode and the mode stays, home included */
+    for (const k of ['cons', 'cmp']) {
+      await go('district'); await mode(k);
+      await go('mun'); const a = await cell();
+      await go('zone'); const b = await cell();
+      await page.click('#homeBtn'); await page.waitForTimeout(700); const c = await cell();
+      ok(`${k}: two levels down and home again, and the mode never changed`,
+         a.mode === k && a.level === 'mun' && b.mode === k && b.level === 'zone'
+           && c.mode === k && c.level === 'district', JSON.stringify([a, b, c]));
+    }
+    /* level 3 of the comparison: the parish among its siblings, and marked */
+    await go('zone'); await mode('cmp');
+    ok('level 3 of the comparison lists the municipality\'s parishes with the open one marked',
+       await page.evaluate(() => document.querySelectorAll('#doc .cmp-row').length >= 2
+         && document.querySelectorAll('#doc .cmp-row.is-hi[data-fre]').length === 1
+         && document.querySelector('#doc .cmp-row.is-hi').dataset.fre === S.zone));
+    ok('and its outline is the marked one on the map — one black parish line among grey siblings',
+       await page.evaluate(() => { let black = 0, n = 0;
+         LG.lnFre.eachLayer(l => { n++; if (l.options.color === C.white) black++; });
+         return n >= 2 && black === 1; }));
+    /* the places list is not a mode: it opens over the comparison and closes back into it */
+    await page.evaluate(() => toggleWp()); await page.waitForTimeout(500);
+    const over = await cell();
+    await page.evaluate(() => toggleWp()); await page.waitForTimeout(500);
+    const back = await cell();
+    ok('the places list opens over the comparison without closing it, and closes back into it',
+       over.mode === 'cmp' && over.level === 'zone' && back.mode === 'cmp' && back.level === 'zone'
+         && back.text > 40, JSON.stringify([over, back]));
+    await mode('overview'); await go('district');
+  }
 
   /* Last block in the file, and it has to be: from here on every tile is
      refused, and the app answers a background it cannot load by dropping it —
