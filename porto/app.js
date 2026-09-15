@@ -155,6 +155,84 @@ const munCode = m => (m && m.code) || String(m && m.num || '');
 const bare = s => String(s || '').replace(/^União das freguesias de\s+/i, '');
 const latlng = c => [c[1], c[0]];   // *.center is [lon,lat]; *.ll is already [lat,lon]
 
+
+/* ---------------------------------------------------------------- palette --- */
+/* PALETTE-START — every colour app.js draws with lives between these two
+   marks, and checks.py section 7z fails if a hex or rgba literal appears
+   anywhere else in this file.  app.css holds the theme's colours in :root; this
+   block holds the ones the map is painted with, which do not follow the theme
+   because the tiles under them do not either.  The two are read together by
+   build_design.py into docs/DESIGN.html. */
+const C = {
+  white: '#ffffff', black: '#000000',
+  whiteHalf: 'rgba(255,255,255,.5)', whiteSoft: 'rgba(255,255,255,.7)', blackHalf: 'rgba(0,0,0,.5)',
+  ink: '#141b26',          // --ink in the light theme: the text on a pale plate
+  inkDeep: '#12212f',      // the text on a pale comparison band
+  mapInk: '#101010',       // --map-ink: a point with no category, the letter on a pin
+  hi: '#b7791f',           // --hi-line: the ring on the chosen point, the chosen parish
+  me: '#1a73e8',           // --me: the device's own position
+  water: '#2f7fc1', waterFill: '#4a9ad4',
+  fillDefault: '#dddddd',  // a parish with no colour of its own
+  letterSwatch: '#cfe0f2', // the key's swatch for neighbourhood letters
+  tilesSwatch: 'linear-gradient(135deg,#cfd9e6,#eef1f5)',
+  munSwatch: 'linear-gradient(135deg,#F9C784,#9CC7E8)',
+  probeRed: '#ff0000', probeGreen: '#00ff00',   // the two channels of the constraints canvas
+  pinShadow: 'rgba(0,0,0,.5)',
+};
+/* One kind of point, one pin.  A photo is something a point may carry, not a
+   different sort of point, so there is no second colour and no second layer. */
+const MINE_COLOUR = '#d32f2f';
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+/* Three classes, three hues.  The overlap is a class of its own and gets a
+   colour of its own — a blend of the other two reads as "somewhere between
+   them", which is the one thing ground inside BOTH reserves is not. */
+const CONS_RGB = {
+  ran: hex2rgb('#8a5a2b'),    // agricultural — brown
+  ren: hex2rgb('#1f7a4d'),    // ecological — green
+  both: hex2rgb('#8e4ea8'),   // inside both — purple
+};
+
+/* Five classes, not two.  Besides the pair the planning law is built on, DGT
+   publishes a transitional urbanisable class, a class for ground its own
+   harmonisation did not reconcile, and one it did not assign — and each of the
+   last three is the source declining to answer, which is not the same as an
+   answer.  They get their own colour and their own row; grey is for the two
+   that say "unknown", because a colour that reads like a land use would be the
+   card claiming one. */
+const CRUS_COLOUR = {
+  'Solo Urbano': '#c2603a',
+  'Solo Urbano (urbanizável – transitório)': '#d9926b',
+  'Solo Rústico': '#6f8f4e',
+  'Discrepância': '#8a8f98',
+  'Não Atribuída': '#8a8f98',
+};
+const crusColour = cls => CRUS_COLOUR[cls] || CRUS_COLOUR['Não Atribuída'];
+
+/* The flood outlines, darkest for the period that comes round most often.  An
+   indigo rather than another blue: these are drawn over the Douro, where the
+   river layer is already #4a9ad4, and two blues on the same water would read as
+   one thing.  Nested on purpose — the 1000-year outline contains the 100-year
+   contains the 20-year — so the widest is drawn first and the stack itself
+   darkens towards the core, which is the direction the meaning runs. */
+const FLOOD_COLOUR = { 20: '#3d2fb8', 100: '#6a5ae0', 1000: '#9d93ee' };
+
+/* The two NUTS III regions are the one line that is not a shade of the ink.
+   They are neither the subject of any level nor part of the district's own
+   hierarchy, and a fourth grey among three greys said nothing about that. */
+const REGION_COLOUR = '#e2761b';
+/* The dark half of the comparison line.  It is drawn inside the white one, at
+   half its weight, so what the eye reads is still a single thin boundary — the
+   white is a casing, not a second line. */
+const CMP_CORE = '#1b2532';
+
+const CMP_BLUES = ['#a1bbd9', '#82a8d3', '#4380c7', '#265b97', '#13365d'];
+const CMP_BANDS = CMP_BLUES.length;
+/* 1.2px diagonals 4px apart, in the same grey the map's own lines take for the
+   theme.  The pattern is injected into Leaflet's own SVG once per draw. */
+const CMP_HATCH = { light: '#9aa6b4', dark: '#6d7b90', w: 1.2, gap: 4 };
+const CMP_PAT = 'cmp-nodata';
+
 /* A colour per category, so a dot says what it is before it is tapped.  Nine
    hues that hold up on a light map, on a dark one, and on bare background when
    the tiles are off; landmarks keep the black they had, because they are the
@@ -164,9 +242,7 @@ const CAT_COLOUR = {
   museum: '#c2790b', culture: '#d81b60', market: '#f57c00',
   civic: '#455a64', landmark: '#101010', green: '#2e7d32',
 };
-/* One kind of point, one pin.  A photo is something a point may carry, not a
-   different sort of point, so there is no second colour and no second layer. */
-const MINE_COLOUR = '#d32f2f';
+/* PALETTE-END */
 
 /* ------------------------------------------------------------ boundaries --- */
 /* Four layers, one per kind of border, each drawn at every level and switched
@@ -189,18 +265,7 @@ const MINE_COLOUR = '#d32f2f';
    and the hierarchy survives the thinning because it was never carried by
    width alone. */
 const LINE_W = { region: 3.2, mun: 2.4, fre: 1.2 };
-/* The flood outlines, darkest for the period that comes round most often.  An
-   indigo rather than another blue: these are drawn over the Douro, where the
-   river layer is already #4a9ad4, and two blues on the same water would read as
-   one thing.  Nested on purpose — the 1000-year outline contains the 100-year
-   contains the 20-year — so the widest is drawn first and the stack itself
-   darkens towards the core, which is the direction the meaning runs. */
-const FLOOD_COLOUR = { 20: '#3d2fb8', 100: '#6a5ae0', 1000: '#9d93ee' };
 
-/* The two NUTS III regions are the one line that is not a shade of the ink.
-   They are neither the subject of any level nor part of the district's own
-   hierarchy, and a fourth grey among three greys said nothing about that. */
-const REGION_COLOUR = '#e2761b';
 /* Which lines are black at each level.  The regions are never in this list:
    they are context at every level, and drawn grey whenever they are on at all.
 
@@ -265,19 +330,15 @@ const lineColour = (kind, props) => {
      the line is drawn twice: a white casing with a dark core inside it.  Under
      every fill and both plates one of the two clears 3:1, which is what SC
      1.4.11 asks of a boundary that carries meaning. */
-  if (S.cmp) return own ? '#ffffff' : 'rgba(255,255,255,.7)';
+  if (S.cmp) return own ? C.white : C.whiteSoft;
   return isDark()
-    ? (own ? '#ffffff' : 'rgba(255,255,255,.5)')
-    : (own ? '#000000' : 'rgba(0,0,0,.5)');
+    ? (own ? C.white : C.whiteHalf)
+    : (own ? C.black : C.blackHalf);
 };
 
 /* Drawn after the filled shapes of whichever level is on screen, so a boundary
    is never buried under a fill.  The fills carry no stroke of their own any
    more — every line on the map comes from here. */
-/* The dark half of the comparison line.  It is drawn inside the white one, at
-   half its weight, so what the eye reads is still a single thin boundary — the
-   white is a casing, not a second line. */
-const CMP_CORE = '#1b2532';
 const LINE_KEYS = ['lnRegion', 'lnMun', 'lnFre', 'lnRegionC', 'lnMunC', 'lnFreC'];
 
 function drawLines() {
@@ -288,7 +349,7 @@ function drawLines() {
     weight: LINE_W[kind], opacity: .95, fill: false,
     lineJoin: 'round', lineCap: 'round' });
   const core = (kind, props) => ({ color: CMP_CORE,
-    weight: LINE_W[kind] / 2, opacity: lineColour(kind, props) === '#ffffff' ? .95 : .6,
+    weight: LINE_W[kind] / 2, opacity: lineColour(kind, props) === C.white ? .95 : .6,
     fill: false, lineJoin: 'round', lineCap: 'round' });
 
   /* One boundary, two strokes.  The casing goes in first and the core on top of
@@ -720,8 +781,8 @@ function initNature() {
   NAT.water = L.geoJSON(D.bW, {
     pane: 'nature', interactive: false,
     style: ft => /LineString/.test(ft.geometry.type)
-      ? { color: '#2f7fc1', weight: 1.8, opacity: .85, fill: false }
-      : { color: '#2f7fc1', weight: .8, opacity: .8, fillColor: '#4a9ad4', fillOpacity: .55 },
+      ? { color: C.water, weight: 1.8, opacity: .85, fill: false }
+      : { color: C.water, weight: .8, opacity: .8, fillColor: C.waterFill, fillOpacity: .55 },
   });
   /* Widest first: sorting descending by return period puts the 1000-year
      outline at the bottom of the stack and the 20-year on top. */
@@ -887,8 +948,8 @@ function showMe(pos) {
       interactive: false, keyboard: false, zIndexOffset: 900,
     }).addTo(map);
     // the accuracy circle is the honest part: a phone indoors can be 200 m out
-    meRing = L.circle(ll, { radius: acc, color: '#1a73e8', weight: 1,
-      fillColor: '#1a73e8', fillOpacity: .12, interactive: false }).addTo(map);
+    meRing = L.circle(ll, { radius: acc, color: C.me, weight: 1,
+      fillColor: C.me, fillOpacity: .12, interactive: false }).addTo(map);
   } else {
     meMark.setLatLng(ll);
     meRing.setLatLng(ll).setRadius(acc);
@@ -1445,17 +1506,6 @@ async function layerGeoJSON(kind, code) {
    is underneath — the street background, the level's fill, the page ground —
    and a legend cannot name a colour that moves. */
 const CONS_ORDER = ['ran', 'ren', 'both'];
-const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-const rgb2hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
-/* Three classes, three hues.  The overlap is a class of its own and gets a
-   colour of its own — a blend of the other two reads as "somewhere between
-   them", which is the one thing ground inside BOTH reserves is not. */
-const CONS_RGB = {
-  ran: hex2rgb('#8a5a2b'),    // agricultural — brown
-  ren: hex2rgb('#1f7a4d'),    // ecological — green
-  both: hex2rgb('#8e4ea8'),   // inside both — purple
-};
-
 /* What the reader sees on the map is the colour at 40% over the map's own
    ground, so that is what the key's plate is painted: the plate is a sample of
    the map, not a brighter relative of it.  Composited here rather than written
@@ -1473,7 +1523,7 @@ function consPlate(kind) {
 function consInk(rgb) {
   const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
   const L = .2126 * f(rgb[0]) + .7152 * f(rgb[1]) + .0722 * f(rgb[2]);
-  return (L + .05) / .05 >= 1.05 / (L + .05) ? '#141b26' : '#ffffff';
+  return (L + .05) / .05 >= 1.05 / (L + .05) ? C.ink : C.white;
 }
 const consShown = k => !S.consShow || S.consShow[k] !== false;
 const CONS_COLOUR = {};
@@ -1610,9 +1660,9 @@ const ConsLayer = L.Layer ? L.Layer.extend({
     mc.globalCompositeOperation = 'source-over';
     mc.clearRect(0, 0, w, h);
     mc.globalCompositeOperation = 'lighter';
-    mc.fillStyle = '#ff0000';
+    mc.fillStyle = C.probeRed;
     consData.ren.forEach(c => this._chunk(mc, c, k, ox, oy, w, h));
-    mc.fillStyle = '#00ff00';
+    mc.fillStyle = C.probeGreen;
     consData.ran.forEach(c => this._chunk(mc, c, k, ox, oy, w, h));
 
     /* Both channels are always painted, even when a class is switched off:
@@ -1790,22 +1840,6 @@ function layerDelRows(num) {
    district figure would be one number over eighteen different plans, and the
    reader could not tell which.  So the year sits on the row, and there is no
    district total. */
-/* Five classes, not two.  Besides the pair the planning law is built on, DGT
-   publishes a transitional urbanisable class, a class for ground its own
-   harmonisation did not reconcile, and one it did not assign — and each of the
-   last three is the source declining to answer, which is not the same as an
-   answer.  They get their own colour and their own row; grey is for the two
-   that say "unknown", because a colour that reads like a land use would be the
-   card claiming one. */
-const CRUS_COLOUR = {
-  'Solo Urbano': '#c2603a',
-  'Solo Urbano (urbanizável – transitório)': '#d9926b',
-  'Solo Rústico': '#6f8f4e',
-  'Discrepância': '#8a8f98',
-  'Não Atribuída': '#8a8f98',
-};
-const crusColour = cls => CRUS_COLOUR[cls] || '#8a8f98';
-
 /* CRUS tiles a whole municipality, so its own hectares ought to add up to that
    municipality's area — and in sixteen of the eighteen they do, to within
    0.04%.  Where they do not, silence would let the reader assume the two
@@ -2506,10 +2540,10 @@ function pinIcon(on) {
   const w = on ? 34 : 24, h = Math.round(w * 1.32);
   return L.divIcon({ className: 'me-pin', iconSize: [w, h], iconAnchor: [w / 2, h],
     html: `<svg viewBox="0 0 24 32" width="${w}" height="${h}" aria-hidden="true"
-        style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">
+        style="display:block;filter:drop-shadow(0 1px 2px ${C.pinShadow})">
         <path d="M12 31.2C12 31.2 1.6 18.6 1.6 11.4a10.4 10.4 0 1 1 20.8 0C22.4 18.6 12 31.2 12 31.2z"
-              fill="${MINE_COLOUR}" stroke="#ffffff" stroke-width="1.8"/>
-        <circle cx="12" cy="11.2" r="3.6" fill="#ffffff"/>
+              fill="${MINE_COLOUR}" stroke="${C.white}" stroke-width="1.8"/>
+        <circle cx="12" cy="11.2" r="3.6" fill="${C.white}"/>
       </svg>` });
 }
 const mineIcon = () => pinIcon(false);
@@ -3852,7 +3886,7 @@ function drawZone(key) {
   LG.edge = L.geoJSON({ type: 'FeatureCollection',
       features: D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === key) },
     { interactive: false,
-      style: { weight: 0, fillColor: f.colour || '#dddddd',
+      style: { weight: 0, fillColor: f.colour || C.fillDefault,
                fillOpacity: S.muncol ? .35 : 0 } }).addTo(map);
 
   drawLines();
@@ -3888,9 +3922,9 @@ function drawZone(key) {
 }
 
 const poiStyle = (on, cat) => on
-  ? { radius: 9, weight: 3, color: '#b7791f', fillColor: CAT_COLOUR[cat] || '#101010',
+  ? { radius: 9, weight: 3, color: C.hi, fillColor: CAT_COLOUR[cat] || C.mapInk,
       fillOpacity: 1, opacity: 1 }
-  : { radius: 4.5, weight: 1.4, color: '#ffffff', fillColor: CAT_COLOUR[cat] || '#101010',
+  : { radius: 4.5, weight: 1.4, color: C.white, fillColor: CAT_COLOUR[cat] || C.mapInk,
       fillOpacity: 1, opacity: 1 };
 
 function renderZone(key) {
@@ -3900,7 +3934,7 @@ function renderZone(key) {
   const curated = z.origin === 'pdf';
 
   const bairros = z.bairros.map(b => `<button class="row row-full" data-hi="bairro:${html(b.letter)}">
-      <span class="pin pin-sq" style="--c:#cfe0f2">${html(b.letter)}</span>
+      <span class="pin pin-sq" style="--c:${C.letterSwatch}">${html(b.letter)}</span>
       <span class="row-body">
         <span class="row-t">${nmPair(b, b.en)}
           ${b.ll ? '' : t('<span class="flag">אין נקודה במפה</span>')}</span>
@@ -3918,7 +3952,7 @@ function renderZone(key) {
   const pois = D.poiOrder.filter(c => byCat.has(c)).map(c => `<div class="grp">${html(poiLabel(c))}
       <span class="note num">${byCat.get(c).length}</span></div>
     <div class="rows">${byCat.get(c).map(x => `<button class="row" data-hi="poi:${x.i}">
-        <span class="dot" style="--c:${html(CAT_COLOUR[x.p.cat] || '#101010')}"></span>
+        <span class="dot" style="--c:${html(CAT_COLOUR[x.p.cat] || C.mapInk)}"></span>
         <span class="row-body"><span class="row-t lat">${html(x.p.name)}</span>
           <span class="row-m">${html(poiLabel(x.p.cat))} ·
             <span class="lat">${html(x.p.osm)}</span></span></span>
@@ -3926,7 +3960,7 @@ function renderZone(key) {
 
   const chips = D.poiOrder.filter(c => z.pois.some(p => p.cat === c)).map(c =>
     `<button class="chip${S.cats.has(c) ? ' is-on' : ''}" data-cat="${html(c)}">
-      <span class="chip-c" style="background:${html(CAT_COLOUR[c] || '#101010')}"></span>${html(poiLabel(c))}
+      <span class="chip-c" style="background:${html(CAT_COLOUR[c] || C.mapInk)}"></span>${html(poiLabel(c))}
       <span class="num">${z.pois.filter(p => p.cat === c).length}</span></button>`).join('');
 
   $('#doc').innerHTML = `${viewBar()}
@@ -4142,18 +4176,12 @@ const ICON = {
    ΔE 18.0 from the day ground and 14.8 from the night one.  Neither end is
    swallowed by the map behind it. */
 
-const CMP_BLUES = ['#a1bbd9', '#82a8d3', '#4380c7', '#265b97', '#13365d'];
-const CMP_BANDS = CMP_BLUES.length;
-/* 1.2px diagonals 4px apart, in the same grey the map's own lines take for the
-   theme.  The pattern is injected into Leaflet's own SVG once per draw. */
-const CMP_HATCH = { light: '#9aa6b4', dark: '#6d7b90', w: 1.2, gap: 4 };
-const CMP_PAT = 'cmp-nodata';
 
 // Black or white on top of a swatch, by its own luminance — not by the theme.
 function inkOn(hex) {
   const n = parseInt(hex.slice(1), 16);
   const l = (.299 * (n >> 16) + .587 * ((n >> 8) & 255) + .114 * (n & 255)) / 255;
-  return l > .58 ? '#12212f' : '#ffffff';
+  return l > .58 ? C.inkDeep : C.white;
 }
 
 const CMP_HOUSING = new Set(['dwellings', 'vacant_pct', 'second_home_pct', 'owner_pct',
@@ -4833,9 +4861,9 @@ function renderLayers() {
      </p>`;
 
   let h = t('<h3>שכבות</h3>') +
-    row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), 'linear-gradient(135deg,#cfd9e6,#eef1f5)', true) +
-    row(S.muncol, 'muncol', t('צבעי 18 העיריות'), 'linear-gradient(135deg,#F9C784,#9CC7E8)', true) +
-    row(S.water, 'water', t('נהרות ומים'), '#4a9ad4', true) +
+    row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), C.tilesSwatch, true) +
+    row(S.muncol, 'muncol', t('צבעי 18 העיריות'), C.munSwatch, true) +
+    row(S.water, 'water', t('נהרות ומים'), C.waterFill, true) +
     /* The count is the point, not decoration: 3 of 18 is the whole caveat in
        two numbers, and it is on screen before the switch is ever touched. */
     row(S.floods, 'floods', t('אזורי הצפה ממופים'), FLOOD_COLOUR[100], true,
@@ -4875,7 +4903,7 @@ function renderLayers() {
   if (z) {
     h += row(S.letters, 'letters',
       z.origin === 'pdf' ? t('אותיות השכונות') : t('אותיות היישובים'),
-      '#cfe0f2', true, z.bairros.filter(b => b.ll).length);
+      C.letterSwatch, true, z.bairros.filter(b => b.ll).length);
   }
   if (z && z.pois.length) {
     h += t('<h3>נקודות במפה</h3>') + D.poiOrder.filter(c => counts[c])
@@ -4990,7 +5018,7 @@ function applyHi(from) {
   // the map half
   if (LG.fre) LG.fre.eachLayer(l => {
     const on = hi && hi.kind === 'fre' && l.feature.__key === hi.id;
-    l.setStyle({ weight: on ? 3 : 0, color: '#b7791f', opacity: on ? 1 : 0,
+    l.setStyle({ weight: on ? 3 : 0, color: C.hi, opacity: on ? 1 : 0,
                  fillOpacity: S.muncol ? (on ? .92 : .78) : 0 });
     if (on) l.bringToFront();
   });

@@ -479,11 +479,51 @@ const css = (page, sel, prop) =>
   await page.click('[data-m="theme:dark"]');
   await page.waitForTimeout(500);
   ok('תצוגת לילה sets the theme', await page.evaluate(() => document.documentElement.dataset.theme) === 'dark');
+  /* At night depth is colour, not shadow (Practical UI p. 122): the three
+     surfaces step up in lightness and every shadow token is none.  Read off
+     the computed styles, not the stylesheet, so the media query and the
+     data-theme path are both what is measured. */
+  const night = await page.evaluate(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const lum = h => { const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
+      .map(c => c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4)); return .2126 * r + .7152 * g + .0722 * b; };
+    const v = k => cs.getPropertyValue(k).trim();
+    return { bg: lum(v('--bg')), card: lum(v('--card')), overlay: lum(v('--overlay')),
+             btn: getComputedStyle(document.querySelector('#menuBtn')).boxShadow,
+             raised: v('--shadow-raised'), overlayShadow: v('--shadow-overlay') };
+  });
+  ok('at night the three surfaces step up base < raised < overlay',
+     night.bg < night.card && night.card < night.overlay, JSON.stringify(night));
+  ok('and nothing casts a shadow — the floating button included',
+     night.btn === 'none' && night.raised === 'none' && night.overlayShadow === 'none', night.btn);
   ok('and the row marks itself', await flag('theme:dark') === 'true');
   ok('while תצוגת יום clears its mark', await flag('theme:light') === 'false');
   await page.click('[data-m="theme:light"]');
   await page.waitForTimeout(500);
   ok('תצוגת יום sets it back', await page.evaluate(() => document.documentElement.dataset.theme) === 'light');
+  ok('and by day the floating button is raised by a shadow',
+     await page.evaluate(() => getComputedStyle(document.querySelector('#menuBtn')).boxShadow) !== 'none');
+  /* The type scale: eight sizes and two weights, and every line height a
+     multiple of 4.  Measured on the rendered page, over everything in the
+     reading half, so a size typed into a rule shows up as a size on screen. */
+  const type = await page.evaluate(() => {
+    const sizes = new Set(), weights = new Set(), lines = [];
+    document.querySelectorAll('#doc *, .crumb *, #menu *').forEach(el => {
+      if (!el.textContent.trim() || el.children.length) return;
+      const cs = getComputedStyle(el);
+      sizes.add(parseFloat(cs.fontSize)); weights.add(cs.fontWeight);
+      const lh = parseFloat(cs.lineHeight);
+      if (Number.isFinite(lh) && lh % 4) lines.push(el.className + ':' + cs.lineHeight);
+    });
+    const body = getComputedStyle(document.body);
+    return { sizes: [...sizes].sort((a, b) => a - b), weights: [...weights].sort(), offGrid: lines.slice(0, 5),
+             body: [body.fontSize, body.lineHeight] };
+  });
+  ok('every size on the page is one of the eight steps of the scale',
+     type.sizes.every(s => [12, 14, 16, 18, 20, 24, 32, 40].includes(s)), JSON.stringify(type.sizes));
+  ok('and only two weights are used, 400 and 700', type.weights.every(w => w === '400' || w === '700'), JSON.stringify(type.weights));
+  ok('and every line height divides by 4', type.offGrid.length === 0, JSON.stringify(type.offGrid));
+  ok('the body is 16 over 24', type.body[0] === '16px' && type.body[1] === '24px', JSON.stringify(type.body));
   ok('the theme survives a redraw of the map',
      await page.evaluate(() => document.querySelectorAll('#map path').length) > 0);
 

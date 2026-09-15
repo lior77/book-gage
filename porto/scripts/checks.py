@@ -1579,6 +1579,96 @@ def main():
             fail("municipality %s: belt %r is not one of the regions in municipios.json → belts"
                  % (m.get("he"), m.get("belt")))
 
+
+    # ---- 7z. a size, a colour, a radius or a shadow is named once, in the tokens
+    # Measured 2026-09-15 before 2.0.0: app.css named 25 font sizes, 9 radii and
+    # 17 shadows in its rules, 6 colours outside :root, and app.js 64 hex
+    # colours in 40 places; the dark theme re-used the light theme's shadows,
+    # which on a near-black ground are invisible — so a card, a panel and a
+    # menu all sat at the same depth at night.  The tokens are the one place a
+    # value is decided, and this is what keeps the next size from being typed
+    # straight into a rule again.
+    css_src = io.open(os.path.join(ROOT, "app.css"), encoding="utf-8").read()
+    js_src = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    css_bare = re.sub(r"/\*.*?\*/", "", css_src, flags=re.S)
+    tok_blocks = []
+    for m in re.finditer(r':root(?:\[data-theme="dark"\]|:not\(\[data-theme="light"\]\))?\s*\{', css_bare):
+        tok_blocks.append((m.end(), css_bare.index("}", m.end())))
+    if len(tok_blocks) != 3:
+        fail("app.css: expected the light block and the two dark blocks of tokens, found %d" % len(tok_blocks))
+    css_rules = css_bare
+    for a, b in reversed(tok_blocks):
+        css_rules = css_rules[:a] + css_rules[b:]
+    def css_line(pos):
+        return css_rules.count("\n", 0, pos) + 1
+    colour_lit = r"#[0-9a-fA-F]{3,8}(?![\w-])(?!\s*[{.\[>~+#])|rgba?\(\s*\d"
+    for m in re.finditer(colour_lit, css_rules):
+        fail("app.css line ~%d names a colour in a rule (%s) — every colour is a token in :root"
+             % (css_line(m.start()), m.group(0)))
+    for prop, ok_re, what in (
+            ("font-size", r"^var\(--t-[0-9a-z]+\)$", "a --t-* token"),
+            ("line-height", r"^(var\(--lh-[0-9a-z]+\)|inherit)$", "a --lh-* token"),
+            ("font-weight", r"^(400|700)$", "400 or 700 — two weights, not three"),
+            ("border-radius", r"^(var\(--r-[a-z]+\)|50%|0)$", "a --r-* token or 50%"),
+            ("letter-spacing", r"^-?[\d.]+em$", "an em value")):
+        for m in re.finditer(r"(?<![\w-])%s:([^;}]+)" % prop, css_rules):
+            v = m.group(1).strip()
+            if not re.match(ok_re, v):
+                fail("app.css line ~%d: %s:%s — must be %s" % (css_line(m.start()), prop, v, what))
+    for m in re.finditer(r"(?<![\w-])font:([^;}]+)", css_rules):
+        if m.group(1).strip() != "inherit":
+            fail("app.css line ~%d: font:%s — the shorthand hides a size and a line height; use the tokens"
+                 % (css_line(m.start()), m.group(1).strip()))
+    ring = r"^(inset\s+)?-?[\d.]+(px)?\s+-?[\d.]+(px)?\s+0(px)?(\s+[\d.]+px)?\s+var\(--[\w-]+\)$"
+    for m in re.finditer(r"(?<![\w-])box-shadow:([^;}]+)", css_rules):
+        for part in re.split(r",(?![^(]*\))", m.group(1)):
+            part = part.strip()
+            if part in ("none",) or re.match(r"^var\(--shadow-(raised|overlay)\)$", part):
+                continue
+            if re.match(ring, part):
+                continue   # a hairline ring drawn with a token colour, no blur: an outline, not depth
+            fail("app.css line ~%d: box-shadow %r — depth is --shadow-raised or --shadow-overlay, nothing else"
+                 % (css_line(m.start()), part))
+    # the tokens themselves
+    def toks(block):
+        return dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", block))
+    light_t = toks(css_bare[tok_blocks[0][0]:tok_blocks[0][1]])
+    sizes = [k for k in light_t if k.startswith("--t-")]
+    if len(sizes) != 8:
+        fail("app.css: %d --t-* sizes; the scale is eight steps" % len(sizes))
+    for k in sizes:
+        sz, lh = int(light_t[k][:-2]), int(light_t.get("--lh-" + k[4:], "0px")[:-2])
+        if lh % 4 or lh < sz * 1.2:
+            fail("app.css: %s is %dpx with a line height of %dpx — every line height divides by 4 and is at least 1.2× the size" % (k, sz, lh))
+    for k, v in light_t.items():
+        if re.match(r"--s\d$", k) and int(v[:-2]) % 4:
+            fail("app.css: %s:%s is off the 4-point grid" % (k, v))
+    def lum(h):
+        r, g, b = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+        f = lambda c: c / 12.92 if c <= .03928 else ((c + .055) / 1.055) ** 2.4
+        return .2126 * f(r) + .7152 * f(g) + .0722 * f(b)
+    for a, b in tok_blocks[1:]:
+        dark_t = toks(css_bare[a:b])
+        for k in ("--shadow-raised", "--shadow-overlay"):
+            if dark_t.get(k) != "none":
+                fail("app.css dark theme: %s is %r — at night depth is colour, not shadow" % (k, dark_t.get(k)))
+        if not all(k in dark_t for k in ("--bg", "--card", "--overlay")):
+            fail("app.css dark theme: the three surfaces --bg, --card, --overlay must all be redefined")
+        elif not (lum(dark_t["--bg"]) < lum(dark_t["--card"]) < lum(dark_t["--overlay"])):
+            fail("app.css dark theme: the surfaces must step up base < raised < overlay: %s %s %s"
+                 % (dark_t["--bg"], dark_t["--card"], dark_t["--overlay"]))
+    if "--overlay" not in light_t:
+        fail("app.css: no --overlay surface in the light theme")
+    # app.js: the map's colours live in one block
+    pa, pb = js_src.find("/* PALETTE-START"), js_src.find("/* PALETTE-END */")
+    if pa < 0 or pb < pa:
+        fail("app.js: no PALETTE-START … PALETTE-END block")
+    else:
+        for m in re.finditer(r"#[0-9a-fA-F]{6}(?![\w-])|rgba?\(\s*\d", js_src):
+            if not (pa <= m.start() <= pb):
+                fail("app.js line %d names a colour (%s) outside the palette block"
+                     % (js_src.count("\n", 0, m.start()) + 1, m.group(0)))
+
     for w in warns:
         print("WARN  " + w)
     for f in fails:

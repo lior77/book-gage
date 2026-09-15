@@ -5,12 +5,22 @@
    layout button decides which halves are up, and nothing drags.
    Tuned for a 6.7" Android phone (Galaxy A56, 1080x2340) and scales up. */
 
+/* ---------- the tokens: every colour, size, radius and shadow the app uses ----------
+   Nothing below this block names a colour, a font size, a line height, a radius
+   or a shadow in the clear — checks.py section 7z fails the build if one does.
+   Measured before 2.0.0: 91 colours, 25 font sizes, 9 radii and 17 shadows were
+   written straight into rules; the dark theme re-used the light theme's shadows,
+   which on a near-black ground are simply not there (Practical UI p. 122). */
 :root{
   /* Neutrals carry a slight cool bias — the district is river and Atlantic, and
      a flat grey reads as unchosen. The accent is azulejo blue, the one colour
      the subject actually wears. */
   --bg:#eef1f5; --card:#ffffff; --ink:#141b26; --ink-2:#5b6779; --line:#dde3ec;
-  --accent:#15568f; --accent-ink:#ffffff;
+  /* Three surfaces, base → raised → overlay.  In the light theme white on grey
+     is what "raised" looks like and the overlay is white too, lifted by its
+     shadow; in the dark theme the shadows go and the three greys do the work. */
+  --overlay:#ffffff;
+  --accent:#15568f; --accent-ink:#ffffff; --accent-tint:rgba(21,86,143,.12);
   --warn:#8a5000; --warn-bg:#fdf3e3; --good:#1c7a4a; --bad:#b3261e;
   /* ׳אין נתון׳ is text a reader has to read, so it owes 4.5:1 (WCAG 2.2
      SC 1.4.3) — the old #8b95a4 measured 3.03:1 on the card and failed it */
@@ -25,22 +35,47 @@
   --tool-line:#aab8cb; --ring-off:#000000;
   /* the two on the map are darker than the menu they open */
   --btn-solid:#9fb0c8; --btn-solid-2:#8b9eb9; --btn-line:#6b7f9c;
-  /* the strip floats over the map, and each button floats over the strip */
-  --float:0 2px 6px rgba(16,24,40,.10),0 10px 28px rgba(16,24,40,.16);
-  --float-sm:0 1px 2px rgba(16,24,40,.10),0 3px 8px rgba(16,24,40,.14);
-  --float-in:0 1px 1px rgba(16,24,40,.14) inset,0 1px 2px rgba(16,24,40,.10);
   --hi:#fff3d6; --hi-line:#b7791f;
   --dot:#101010; --dot-ring:#ffffff;
-  /* one shadow, spent only on things that genuinely float */
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 6px 20px rgba(16,24,40,.10);
-  /* radii by role, not one stamped on everything */
-  --r-card:14px; --r-ctl:10px; --r-pill:999px;
-  /* a spacing scale, so gaps repeat instead of being invented per block */
-  /* 4, 6, 8, 12, 16 are the low end of Shopify Polaris's published scale;
-     the sixth step was 22, which no published system ships — Carbon, Polaris
-     and Material all step 16 → 24.  22 is a type size in Material, not a
-     spacing value. */
-  --s1:4px; --s2:6px; --s3:8px; --s4:12px; --s5:16px; --s6:24px;
+  /* white on a saturated fill — a red button, a chosen chip — in both themes */
+  --on-solid:#ffffff;
+  /* the hairlines drawn round a swatch or a pin so it has an edge on any fill,
+     and the pale halo that keeps a coloured dot off the map behind it */
+  --edge:rgba(0,0,0,.25); --edge-strong:rgba(0,0,0,.35);
+  --halo:rgba(255,255,255,.9); --halo-weak:rgba(255,255,255,.16);
+  --scrim:rgba(8,12,20,.94);
+  /* What sits on the map itself does not follow the theme: the tiles are the
+     same in day and night, so the number on a parish is always this ink in
+     this halo.  --map-accent is the blue of a Latin label on the map. */
+  --map-ink:#101010; --map-accent:#15568f;
+  --map-halo:rgba(255,255,255,.92); --map-glow:rgba(255,255,255,.95);
+  --night-halo:rgba(8,16,28,.55); --night-glow:rgba(8,16,28,.92);
+  --me:#1a73e8;
+  /* Two shadows, and only two (Practical UI p. 120): a small sharp one for a
+     control or a card that is raised, a large soft one for what floats over
+     the page — menu, sheet, panel.  Both are the ink, not black, so they
+     belong to the same picture (p. 121). */
+  --shadow-raised:0 1px 2px rgba(16,24,40,.12),0 2px 6px rgba(16,24,40,.10);
+  --shadow-overlay:0 4px 12px rgba(16,24,40,.12),0 16px 40px rgba(16,24,40,.18);
+  /* Type: eight sizes on a 1.125 (major second) scale from 16, and a line
+     height for each that divides by 4 (Practical UI pp. 242–243).  Two weights,
+     400 and 700, and nothing between them (p. 239).  Long prose — a parish
+     note, a municipality profile, the explanation pages — is --t-lg: body text
+     read at arm's length is at least 18px (p. 244).  Interface text that is
+     scanned rather than read is --t-md and below. */
+  --t-xs:12px; --t-sm:14px; --t-md:16px; --t-lg:18px;
+  --t-xl:20px; --t-2xl:24px; --t-3xl:32px; --t-4xl:40px;
+  --lh-xs:16px; --lh-sm:20px; --lh-md:24px; --lh-lg:28px;
+  --lh-xl:28px; --lh-2xl:32px; --lh-3xl:40px; --lh-4xl:48px;
+  /* radii by role, not one stamped on everything.  --r-xs is for a swatch of
+     14px or less: at --r-ctl it would be a disc, and a disc already means a
+     point on this map; the square swatch is the mark of an area fill. */
+  --r-card:14px; --r-ctl:10px; --r-pill:999px; --r-xs:4px;
+  /* A spacing scale on a 4-point grid, so gaps repeat instead of being
+     invented per block.  The old second step was 6, the one value that was not
+     on the grid; it is 8 now, and every other step kept its size and moved
+     down one name. */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:80px;
   /* A floating control on the map — the menu button, the home button, the trail.
      All three are this size, all three sit 10px down from the map's top, and the
      strip they share is what the map keeps clear.  It was written as a bare 38
@@ -53,37 +88,34 @@
   --safe-t:env(safe-area-inset-top,0px);
 }
 /* Dark palette, defined once and applied twice: by the device setting, and by
-   an explicit data-theme when a host stamps one on the root element. */
+   an explicit data-theme when a host stamps one on the root element.
+   No shadow at all here: "shadows are hard to see on a dark interface, so rely
+   on colour instead" (Practical UI p. 122) — the three surfaces step up in
+   lightness, base → raised → overlay, and that step is the elevation. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0e1420; --card:#18202e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
-    --accent:#6ea8dd; --accent-ink:#0e1420;
+    --bg:#0e1420; --card:#18202e; --overlay:#222d3e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
+    --accent:#6ea8dd; --accent-ink:#0e1420; --accent-tint:rgba(110,168,221,.16);
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#95a0b2; --ctl-line:#7d8aa2;
     --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
     --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#576c90;
-    --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
-    --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
-    --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
     --hi:#3a3312; --hi-line:#e0b040;
-    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
+    --shadow-raised:none; --shadow-overlay:none;
     --crumb-halo-dark:rgba(10,16,26,.92);
   }
 }
 :root[data-theme="dark"]{
-    --bg:#0e1420; --card:#18202e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
-    --accent:#6ea8dd; --accent-ink:#0e1420;
+    --bg:#0e1420; --card:#18202e; --overlay:#222d3e; --ink:#e6ebf3; --ink-2:#97a3b6; --line:#27303f;
+    --accent:#6ea8dd; --accent-ink:#0e1420; --accent-tint:rgba(110,168,221,.16);
     --warn:#ffd28a; --warn-bg:#3a2c12; --good:#5fd39a; --bad:#ff8a80;
     --miss:#95a0b2; --ctl-line:#7d8aa2;
     --tool-bg:#243044; --tool-solid:#243044; --tool-solid-2:#2e3c53;
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
     --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#576c90;
-    --float:0 2px 6px rgba(0,0,0,.45),0 12px 30px rgba(0,0,0,.5);
-    --float-sm:0 1px 2px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.45);
-    --float-in:0 1px 1px rgba(0,0,0,.55) inset,0 1px 2px rgba(0,0,0,.4);
     --hi:#3a3312; --hi-line:#e0b040;
-    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
+    --shadow-raised:none; --shadow-overlay:none;
     --crumb-halo-dark:rgba(10,16,26,.92);
 }
 
@@ -98,14 +130,15 @@ html{height:100%}
 body{
   margin:0; height:100dvh; display:flex; flex-direction:column; overflow:hidden;
   background:var(--bg); color:var(--ink);
-  font:400 16px/1.55 system-ui,-apple-system,"Noto Sans Hebrew","Heebo",Arial,sans-serif;
+  font-family:system-ui,-apple-system,"Noto Sans Hebrew","Heebo",Arial,sans-serif;
+  font-size:var(--t-md); line-height:var(--lh-md); font-weight:400;
   -webkit-text-size-adjust:100%; overscroll-behavior:none;
   font-variant-numeric:tabular-nums;
 }
-h1,h2,h3{margin:0; line-height:1.22; font-weight:700; text-wrap:balance}
-h1{font-size:1.24rem; letter-spacing:-.01em}
-h2{font-size:1.06rem; letter-spacing:-.005em}
-h3{font-size:.92rem}
+h1,h2,h3{margin:0; font-weight:700; text-wrap:balance}
+h1{font-size:var(--t-2xl); line-height:var(--lh-2xl); letter-spacing:-.01em}
+h2{font-size:var(--t-xl); line-height:var(--lh-xl); letter-spacing:-.005em}
+h3{font-size:var(--t-md); line-height:var(--lh-md)}
 p{margin:0}
 .doc p + p{margin-block-start:.55em}
 button,select,input{font:inherit; color:inherit}
@@ -117,7 +150,7 @@ button{background:none; border:0; padding:0; cursor:pointer; text-align:start}
 .chev{width:18px; height:18px; color:var(--ink-2)}
 .muted{color:var(--ink-2)}
 .num{direction:ltr; unicode-bidi:isolate}
-:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-xs)}
 .lat{direction:ltr; unicode-bidi:isolate; display:inline-block}
 
 /* ---------- boot ---------- */
@@ -166,7 +199,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    inset with it.  It is on the map now, so the last thing above the gesture bar
    is this column and the inset belongs here. */
 .doc{padding:10px 10px calc(10px + var(--safe-b));
-     display:flex; flex-direction:column; gap:var(--s5)}
+     display:flex; flex-direction:column; gap:var(--s4)}
 
 /* The seam between the halves is a line, not a handle.  Dragging it is gone:
    the split is half and half, and the layout button is the only thing that
@@ -236,17 +269,17 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
           both directions.  The box is as wide as its text and stops 10px
           short of the map's far edge. */
        inset-inline-start:calc(var(--mapx) + 10px + 2*var(--ctl-size)
-                               + var(--s2) + var(--s4));
+                               + var(--s2) + var(--s3));
        inline-size:max-content;
        max-inline-size:calc(100% - var(--mapx) - 2*var(--ctl-size)
-                            - var(--s2) - var(--s4) - 20px);
+                            - var(--s2) - var(--s3) - 20px);
        /* Centred on the buttons' band, not merely started at the same 10px:
           the trail is one line at level 1 and two at levels 2 and 3, and the
           two-line box has to grow around its middle or the second line hangs
           below the buttons it is supposed to sit beside. */
        display:flex; flex-direction:column; justify-content:center;
        min-block-size:var(--ctl-size); text-align:start;
-       --crumb-halo:var(--crumb-halo-dark, rgba(255,255,255,.92))}
+       --crumb-halo:var(--crumb-halo-dark, var(--map-halo))}
 .crumb button,.crumb span{display:block; max-width:100%; text-align:start;
        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
        text-shadow:0 0 3px var(--crumb-halo), 0 0 6px var(--crumb-halo),
@@ -255,7 +288,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    invalid — `inherit` is not a font-family token — so the whole declaration was
    dropped and the trail had been rendering at the inherited 16px/1.55 ever
    since, which is why its two lines sat 2.8px below the buttons' middle. */
-.crumb button{font-weight:400; font-size:12.5px; line-height:20px;
+.crumb button{font-weight:400; font-size:var(--t-xs); line-height:var(--lh-xs);
        color:var(--ink-2); padding:0;
        min-height:20px; background:none; border:0; cursor:pointer;
        text-decoration:underline; text-underline-offset:3px;
@@ -263,7 +296,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 .crumb button:active{color:var(--ink)}
 /* the level directly above this one — the one the reader is most likely to
    want back — carries the weight, and is still a link */
-.crumb .now{font-weight:700; font-size:14px; line-height:22px;
+.crumb .now{font-weight:700; font-size:var(--t-sm); line-height:var(--lh-sm);
        color:var(--ink); min-height:22px}
 /* one level only — the district — and the block still holds the band's height */
 .crumb.one .now{line-height:inherit}
@@ -284,7 +317,7 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    screen; the list stays against the start edge, where the rows are read from. */
 .menu-in{height:100%; overflow-y:auto; overscroll-behavior:contain;
       display:flex; flex-direction:column;
-      padding:calc(20px + var(--ctl-size) + var(--s4)) 10px calc(10px + var(--safe-b))}
+      padding:calc(20px + var(--ctl-size) + var(--s3)) 10px calc(10px + var(--safe-b))}
 .mrow,.mgrp,.mnote,.mrow-pair{max-width:520px; width:100%}
 /* The heading switches all eight; the chevron beside it opens the list.  Two
    buttons, not one with two targets: a row that does one thing when tapped in
@@ -300,8 +333,8 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 .mrow-more[aria-expanded="true"] svg{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){ .mrow-more svg{transition:none} }
 /* the eight sit under the heading they belong to */
-.mrow-sub{padding-inline-start:var(--s6)}
-.mrow-sub .mrow-l{font-size:.9rem}
+.mrow-sub{padding-inline-start:var(--s5)}
+.mrow-sub .mrow-l{font-size:var(--t-sm)}
 /* 20px in from the screen's top and start corner, and it stays there: the menu
    button moved to 10px and this one was asked to keep its place, so the two no
    longer sit on the same pixels.  Landscape parts them further — the map's
@@ -315,9 +348,9 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 /* One row per thing the menu can do: the icon on the start edge — the right —
    then the label, then whatever says the row's state.  A row is 44px so a thumb
    lands on it, and the rule under it is the only division between them. */
-.mrow{display:flex; align-items:center; gap:var(--s4); width:100%;
-      min-height:44px; padding:var(--s2) var(--s3); border-radius:var(--r-ctl);
-      color:var(--ink); font-size:.95rem}
+.mrow{display:flex; align-items:center; gap:var(--s3); width:100%;
+      min-height:44px; padding:var(--s2) var(--s2); border-radius:var(--r-ctl);
+      color:var(--ink); font-size:var(--t-md)}
 .mrow:active{background:var(--tool-solid-2)}
 .mrow svg{width:22px; height:22px; flex:0 0 auto; fill:none; stroke:currentColor;
       stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
@@ -328,10 +361,10 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
       visibility:hidden}
 .mrow[aria-pressed="true"] .mrow-k,.mrow[aria-current="true"] .mrow-k{visibility:visible}
 .mrow[aria-pressed="true"],.mrow[aria-current="true"]{font-weight:700}
-.mgrp{margin-block-start:var(--s5); padding:var(--s2) var(--s3);
-      font-size:.78rem; font-weight:700; letter-spacing:.02em;
+.mgrp{margin-block-start:var(--s4); padding:var(--s2) var(--s2);
+      font-size:var(--t-xs); font-weight:700; letter-spacing:.02em;
       color:var(--ink-2); border-block-end:1px solid var(--tool-line)}
-.mnote{padding:var(--s2) var(--s3); font-size:.76rem; color:var(--ink-2)}
+.mnote{padding:var(--s2) var(--s2); font-size:var(--t-sm); color:var(--ink-2)}
 /* fit and locate act on the map; with the map hidden they have nothing to act
    on, so they go rather than sit there dead. */
 body[data-view="text"] .map-only{display:none}
@@ -357,8 +390,8 @@ body[data-view="text"] .map-only{display:none}
 #bordersBtn[data-b~="m"] .r2,
 #bordersBtn[data-b~="f"] .r3{stroke:var(--ring-off)}
 
-.mt{box-shadow:var(--float-sm); transition:box-shadow .12s ease, transform .12s ease}
-.mt:active{box-shadow:var(--float-in); transform:translateY(1px)}
+.mt{box-shadow:var(--shadow-raised); transition:box-shadow .12s ease, transform .12s ease}
+.mt:active{box-shadow:none; transform:translateY(1px)}
 @media (prefers-reduced-motion:reduce){
   .mt{transition:none}
   .mt:active{transform:none}
@@ -367,7 +400,7 @@ body[data-view="text"] .map-only{display:none}
    currentColor, so it inverts with the button when the mode is on */
 .mt{display:grid; place-items:center; width:var(--ctl-size); height:var(--ctl-size);
     border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
-    border:1px solid var(--line); box-shadow:var(--shadow)}
+    border:1px solid var(--line); box-shadow:var(--shadow-raised)}
 .mt:active{background:var(--bg)}
 .mt[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink);
     border-color:var(--accent)}
@@ -375,17 +408,17 @@ body[data-view="text"] .map-only{display:none}
    thing they were about, and in map-only view there was nowhere to put them. */
 .msgs:empty{display:none}
 .msgs{padding:10px 10px 0}
-.msg{display:flex; gap:var(--s3); align-items:flex-start; padding:var(--s4);
-     border-radius:var(--r-card); background:var(--card);
+.msg{display:flex; gap:var(--s2); align-items:flex-start; padding:var(--s3);
+     border-radius:var(--r-card); background:var(--overlay); box-shadow:var(--shadow-overlay);
      border:1px solid var(--line); border-inline-start:3px solid var(--accent);
-     font-size:.87rem; line-height:1.5}
+     font-size:var(--t-sm); line-height:var(--lh-sm)}
 .msg.bad{border-inline-start-color:var(--warn); background:var(--warn-bg); color:var(--warn)}
 .msg-body{flex:1 1 auto; min-width:0}
 .msg-body button,.msg-body a{display:inline-block; margin-block-start:var(--s2);
      color:var(--accent); font-weight:700; text-decoration:underline}
 .msg.bad .msg-body button,.msg.bad .msg-body a{color:inherit}
 .msg-x{flex:0 0 auto; width:26px; height:26px; border-radius:var(--r-ctl);
-       display:grid; place-items:center; color:var(--ink-2); font-size:.8rem}
+       display:grid; place-items:center; color:var(--ink-2); font-size:var(--t-sm)}
 .msg-x:active{background:var(--bg)}
 /* the "you are here" dot: a device position, never a data point, so it is the
    one mark on the map that is neither numbered nor black */
@@ -394,42 +427,42 @@ body[data-view="text"] .map-only{display:none}
 .ghost{cursor:grab}
 .ghost:active{cursor:grabbing}
 .ghost-ring{position:absolute; inset:6px; border-radius:50%;
-    border:2.5px solid var(--accent); background:rgba(21,86,143,.12);
-    box-shadow:0 0 0 2px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.35)}
+    border:2.5px solid var(--accent); background:var(--accent-tint);
+    box-shadow:0 0 0 2px var(--halo),0 0 0 3px var(--edge-strong)}
 .ghost-dot{position:absolute; inset-block-start:21px; inset-inline-start:21px;
     width:4px; height:4px; border-radius:50%; background:var(--accent)}
 
-.me{width:16px; height:16px; border-radius:50%; background:#1a73e8;
-    border:3px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.4)}
-.panel{margin:var(--s4) var(--s4) 0; padding:var(--s4);
-       border-radius:var(--r-card); background:var(--card);
+.me{width:16px; height:16px; border-radius:50%; background:var(--me);
+    border:3px solid var(--on-solid); box-shadow:0 0 0 1px var(--edge-strong)}
+.panel{margin:var(--s3) var(--s3) 0; padding:var(--s3);
+       border-radius:var(--r-card); background:var(--overlay); box-shadow:var(--shadow-overlay);
        border:1px solid var(--line); border-block-start:3px solid var(--accent);
-       font-size:.88rem; display:flex; flex-direction:column; gap:var(--s3)}
-.panel-h{display:flex; align-items:center; gap:var(--s3)}
+       font-size:var(--t-sm); display:flex; flex-direction:column; gap:var(--s2)}
+.panel-h{display:flex; align-items:center; gap:var(--s2)}
 .panel-h h2{flex:1 1 auto}
 .panel input[type=search],.panel input[type=text],.panel textarea{
-       width:100%; padding:var(--s3) var(--s4); border-radius:var(--r-ctl);
+       width:100%; padding:var(--s2) var(--s3); border-radius:var(--r-ctl);
        border:1px solid var(--ctl-line); background:var(--bg); color:var(--ink);
        font:inherit; resize:vertical}
 .panel .rows{margin-block-start:var(--s2)}
 .btns{display:flex; flex-direction:column; gap:var(--s2); margin-block-start:var(--s2)}
 .btns .cta{margin:0}
-.panel h3{font-size:.74rem; font-weight:700; color:var(--ink-2);
-          letter-spacing:.04em; margin:var(--s4) 0 var(--s1)}
-.lay{display:flex; align-items:center; gap:var(--s3); width:100%;
+.panel h3{font-size:var(--t-xs); font-weight:700; color:var(--ink-2);
+          letter-spacing:.04em; margin:var(--s3) 0 var(--s1)}
+.lay{display:flex; align-items:center; gap:var(--s2); width:100%;
      padding:var(--s2) var(--s2); text-align:start; border-radius:var(--r-ctl)}
 .lay:active{background:var(--bg)}
 .lay-n{flex:1 1 auto; min-width:0}
 .lay-c{flex:0 0 auto; width:14px; height:14px; border-radius:50%;
        box-shadow:0 0 0 1.5px var(--card),0 0 0 2.5px var(--line)}
-.lay-c.sq{border-radius:4px}
-.lay-x{flex:0 0 auto; width:19px; height:19px; border-radius:6px; display:grid;
+.lay-c.sq{border-radius:var(--r-xs)}
+.lay-x{flex:0 0 auto; width:19px; height:19px; border-radius:var(--r-ctl); display:grid;
        place-items:center; border:1.6px solid var(--line); color:transparent;
-       font-size:.7rem; font-weight:700; line-height:1}
+       font-size:var(--t-xs); font-weight:700; line-height:var(--lh-xs)}
 .lay[aria-pressed="true"] .lay-x{background:var(--accent); border-color:var(--accent);
        color:var(--accent-ink)}
 .lay[aria-pressed="false"] .lay-n{color:var(--ink-2)}
-.lay-k{flex:0 0 auto; font-size:.72rem; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.lay-k{flex:0 0 auto; font-size:var(--t-xs); color:var(--ink-2); font-variant-numeric:tabular-nums}
 /* The record behind a switch.  It is a link and says so, and it starts where
    the row's name starts — the check box and the colour chip above it are
    19px and 14px with a gap on either side — so it reads as belonging to the
@@ -437,18 +470,18 @@ body[data-view="text"] .map-only{display:none}
    of SC 2.5.8 for a target this small. */
 .srcln{color:var(--accent); font-weight:700; text-decoration:underline;
        text-underline-offset:3px; text-decoration-thickness:1px;
-       font-size:.74rem; min-height:24px; text-align:start;
-       margin-inline-start:calc(var(--s2) + 19px + var(--s3) + 14px + var(--s3))}
+       font-size:var(--t-xs); min-height:24px; text-align:start;
+       margin-inline-start:calc(var(--s2) + 19px + var(--s2) + 14px + var(--s2))}
 .srcln:active{color:var(--ink)}
 
-.fld-l{display:block; font-size:.8rem; font-weight:700; color:var(--ink-2);
+.fld-l{display:block; font-size:var(--t-sm); font-weight:700; color:var(--ink-2);
        margin-block:8px 3px}
 .cta-2{background:var(--bg); color:var(--ink); border:1px solid var(--ctl-line)}
 .cta-danger{background:var(--bg); color:var(--bad); border:1px solid var(--bad)}
 
 .leaflet-container{font:inherit; background:var(--bg)}
-.tt{background:var(--card); color:var(--ink); border:1px solid var(--line);
-    box-shadow:var(--shadow); font-size:.8rem; direction:rtl}
+.tt{background:var(--overlay); color:var(--ink); border:1px solid var(--line);
+    box-shadow:var(--shadow-overlay); font-size:var(--t-sm); direction:rtl}
 .tt::before{border-top-color:var(--line)!important}
 
 /* ---------- the map label ----------
@@ -467,72 +500,72 @@ body[data-view="text"] .map-only{display:none}
    The element IS the target, so it is 24×24 — the floor WCAG 2.2 SC 2.5.8 sets
    at AA.  It has to be the element's own box: an overlay pseudo-element does
    not change what the browser hit-tests or what a measurement reads. */
-.lbl{--lbl-ink:#101010; --lbl-halo:rgba(255,255,255,.92);
-     --lbl-glow:rgba(255,255,255,.95);
+.lbl{--lbl-ink:var(--map-ink); --lbl-halo:var(--map-halo);
+     --lbl-glow:var(--map-glow);
      display:grid; place-items:center; width:24px; height:24px;
      background:none; border:0; box-shadow:none; direction:ltr; cursor:pointer}
 .lbl > i{display:grid; place-items:center; width:20px; height:20px;
-     font:700 12px/1 system-ui,sans-serif; font-style:normal;
+     font-weight:700; font-size:var(--t-xs); line-height:var(--lh-xs); font-family:system-ui,sans-serif; font-style:normal;
      color:var(--lbl-ink); background:none; border:0; box-shadow:none;
      text-shadow:0 0 3px var(--lbl-glow), 0 1px 2px var(--lbl-glow);
      -webkit-text-stroke:2.5px var(--lbl-halo); paint-order:stroke fill}
 .lbl.wide,.lbl.wide > i{width:28px}
 /* the locality letters at level 3 — the same label, in the link blue */
-.lbl-ltr{--lbl-ink:#15568f}
+.lbl-ltr{--lbl-ink:var(--map-accent)}
 
 /* ---------- text half ---------- */
 /* A section of the page, not a card on it: no surface of its own, no border, no
    corner.  What separates one section from the next is its heading and the gap
    above it.  Things that really are cards — a נ.צ. record, a message — keep
    their own rules further down; this one is only the document's sections. */
-.card{display:flex; flex-direction:column; gap:var(--s3)}
-.lead{font-size:.95rem; line-height:1.6}
-.sub{font-size:.82rem; color:var(--ink-2)}
-.hdr{display:flex; align-items:flex-start; gap:var(--s3)}
+.card{display:flex; flex-direction:column; gap:var(--s2)}
+.lead{font-size:var(--t-lg); line-height:var(--lh-lg)}
+.sub{font-size:var(--t-sm); color:var(--ink-2)}
+.hdr{display:flex; align-items:flex-start; gap:var(--s2)}
 .hdr .pin{margin-block-start:2px}
 .hdr > div{min-width:0}
 .hdr h1,.hdr h2{margin:0}
-.en{font-size:.85rem; color:var(--ink-2); font-weight:600}
+.en{font-size:var(--t-sm); color:var(--ink-2); font-weight:700}
 
 .pin{flex:0 0 auto; display:grid; place-items:center; min-width:27px; height:27px;
      padding:0 var(--s2); border-radius:var(--r-pill); background:var(--c,var(--line));
-     color:#101010; font:700 13px/1 system-ui,sans-serif; direction:ltr;
-     box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.3)}
-.pin-sq{border-radius:7px}
+     color:var(--map-ink); font-weight:700; font-size:var(--t-sm); line-height:var(--lh-sm); font-family:system-ui,sans-serif; direction:ltr;
+     box-shadow:inset 0 0 0 1.5px var(--edge-strong)}
+.pin-sq{border-radius:var(--r-ctl)}
 .dot{flex:0 0 auto; width:11px; height:11px; border-radius:50%; background:var(--c,var(--dot));
-     box-shadow:0 0 0 1.5px var(--dot-ring),0 0 0 2.5px rgba(0,0,0,.25); margin:7px 2px}
-.dot.mine{border-radius:3px; transform:rotate(45deg)}
+     box-shadow:0 0 0 1.5px var(--dot-ring),0 0 0 2.5px var(--edge); margin:7px 2px}
+.dot.mine{border-radius:var(--r-xs); transform:rotate(45deg)}
 
 /* A list on a white page, not a stack of cards: one hairline between entries,
    the chevron saying it opens.  Boxed rows on a boxed page were two frames
    around the same thing. */
 .rows{display:flex; flex-direction:column}
-.row{display:flex; align-items:flex-start; gap:var(--s3); width:100%;
-     padding:var(--s4) 0; border-block-end:1px solid var(--line)}
+.row{display:flex; align-items:flex-start; gap:var(--s2); width:100%;
+     padding:var(--s3) 0; border-block-end:1px solid var(--line)}
 .rows .row:last-child{border-block-end:0}
 .row:active{background:var(--bg)}
 .row.is-hi{background:var(--hi); box-shadow:inset 2px 0 0 var(--hi-line)}
 .row-body{flex:1 1 auto; min-width:0}
-.row-t{display:block; font-weight:700; font-size:.97rem; line-height:1.35}
-.row-t .lat{font-weight:600; font-size:.84rem; color:var(--ink-2)}
-.row-d{display:block; font-size:.87rem; color:var(--ink-2); line-height:1.55;
+.row-t{display:block; font-weight:700; font-size:var(--t-md); line-height:var(--lh-md)}
+.row-t .lat{font-weight:700; font-size:var(--t-sm); color:var(--ink-2)}
+.row-d{display:block; font-size:var(--t-sm); color:var(--ink-2); line-height:var(--lh-sm);
        margin-block-start:var(--s1)}
-.row-m{display:block; font-size:.76rem; color:var(--miss); margin-block-start:var(--s2)}
-.row-full .row-d{color:var(--ink); font-size:.9rem}
+.row-m{display:block; font-size:var(--t-xs); color:var(--miss); margin-block-start:var(--s2)}
+.row-full .row-d{color:var(--ink); font-size:var(--t-lg)}
 
 /* ---------- המקומות שלי ---------- */
 /* Two buttons on a line, at the start edge — חדש first, so it is the one under
    the thumb — and the heading beneath them rather than beside them. */
-.wp-top{display:flex; align-items:center; gap:var(--s3); margin-block-end:var(--s3)}
+.wp-top{display:flex; align-items:center; gap:var(--s2); margin-block-end:var(--s2)}
 .wp-top .chip{flex:0 0 auto}
-.wp-find{margin-block-start:var(--s3); display:flex; flex-direction:column; gap:var(--s3)}
-.wp-find input{width:100%; padding:var(--s3) var(--s4); border-radius:var(--r-ctl);
+.wp-find{margin-block-start:var(--s2); display:flex; flex-direction:column; gap:var(--s2)}
+.wp-find input{width:100%; padding:var(--s2) var(--s3); border-radius:var(--r-ctl);
       border:1px solid var(--line); background:var(--card)}
 #wpQres .rows{max-height:46vh; overflow-y:auto}
 
 /* Expanded is the default: the photo under the text it belongs to.  List puts
    the same text beside a thumbnail, so a screenful is a screenful of places. */
-.wp-line{display:flex; align-items:flex-start; gap:var(--s4)}
+.wp-line{display:flex; align-items:flex-start; gap:var(--s3)}
 .wp-line .wp-txt{flex:1 1 auto; min-width:0}
 .ph-thumb{flex:0 0 84px; width:84px; margin:0}
 .ph-thumb .ph-img{width:84px; height:84px; object-fit:cover; border-radius:var(--r-ctl)}
@@ -551,15 +584,15 @@ body[data-view="text"] .map-only{display:none}
 .way-row .chip{white-space:nowrap}
 .way-hd{margin-block-start:var(--s2)}
 .way-why{display:flex; flex-direction:column; gap:2px}
-.way-li{display:block; width:100%; font-size:.82rem; color:var(--miss);
-      padding:var(--s2) var(--s3); border-radius:var(--r-ctl); text-align:start}
+.way-li{display:block; width:100%; font-size:var(--t-sm); color:var(--miss);
+      padding:var(--s2) var(--s2); border-radius:var(--r-ctl); text-align:start}
 .way-li:active{background:var(--bg)}
 .way-li.is-on{color:var(--ink)}
 /* two lines to start with, and it grows with what is typed — app.js sets the
    height, so nothing here may fight it with a fixed one */
 /* an explicit line-height so "two lines" is a number and not the browser's
    idea of `normal`, which computes to nothing a check can read */
-#mineDesc{line-height:1.5; min-height:calc(2 * 1.5em + 14px); resize:none; overflow-y:auto}
+#mineDesc{line-height:var(--lh-md); min-height:calc(2 * var(--lh-md) + var(--s4)); resize:none; overflow-y:auto}
 
 /* Two buttons over the map while a place is being chosen on it. */
 /* 18px clear of the map's bottom, plus whatever the device keeps for itself.
@@ -568,26 +601,26 @@ body[data-view="text"] .map-only{display:none}
    cannot be completed at all. */
 .pick-bar{position:absolute; z-index:700;
       inset-block-end:calc(var(--mapy) + 18px + var(--safe-b));
-      inset-inline:0; display:flex; justify-content:center; gap:var(--s3);
+      inset-inline:0; display:flex; justify-content:center; gap:var(--s2);
       pointer-events:none}
-.pick-bar .chip{pointer-events:auto; padding:var(--s3) var(--s6); font-size:.9rem;
-      box-shadow:var(--float)}
+.pick-bar .chip{pointer-events:auto; padding:var(--s2) var(--s5); font-size:var(--t-sm);
+      box-shadow:var(--shadow-overlay)}
 
 /* The form is a screen of its own.  Its height is set in app.js from
    visualViewport, so the keyboard takes room from the fields and not from the
    two buttons at the head, which stay put while the body scrolls. */
 .sheet{position:fixed; inset-inline:0; inset-block-start:0; height:100dvh;
       z-index:705; display:flex; flex-direction:column;
-      background:var(--card); border-block-end:1px solid var(--line)}
+      background:var(--overlay); box-shadow:var(--shadow-overlay); border-block-end:1px solid var(--line)}
 /* The home and menu buttons stay above the sheet and keep working, so its head
    starts below them: 10px of inset plus the control's own size plus a gap. */
-.sheet-h{flex:0 0 auto; display:flex; align-items:flex-start; gap:var(--s3);
+.sheet-h{flex:0 0 auto; display:flex; align-items:flex-start; gap:var(--s2);
       flex-wrap:wrap;
-      padding:calc(10px + var(--ctl-size) + var(--s3)) 10px var(--s3);
+      padding:calc(10px + var(--ctl-size) + var(--s2)) 10px var(--s2);
       border-block-end:1px solid var(--line); background:var(--card)}
 .sheet-h h2{flex:1 1 auto; min-width:0}
 .sheet-b{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-      display:flex; flex-direction:column; gap:var(--s3);
+      display:flex; flex-direction:column; gap:var(--s2);
       padding:10px 10px calc(10px + var(--safe-b))}
 /* Every field keeps its own height: in a flex column they were shrunk to a
    sliver by whatever else wanted the room. */
@@ -600,59 +633,59 @@ body[data-view="text"] .map-only{display:none}
 .wp{gap:var(--s2)}
 .wp.is-hi{border-color:var(--hi-line); background:var(--hi);
      box-shadow:inset 0 0 0 1px var(--hi-line)}
-.wp-h{display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap}
-.wp-h h2{margin:0; flex:1 1 auto; min-width:0; font-size:1rem}
+.wp-h{display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap}
+.wp-h h2{margin:0; flex:1 1 auto; min-width:0; font-size:var(--t-md)}
 .wp-acts{display:flex; gap:var(--s2); flex:0 0 auto}
-.wp-acts .chip{padding:var(--s1) var(--s3)}
+.wp-acts .chip{padding:var(--s1) var(--s2)}
 .wp .fld-l{margin-block-start:var(--s2)}
-.wp-arm{background:var(--bad); color:#fff; border-color:var(--bad)}
+.wp-arm{background:var(--bad); color:var(--on-solid); border-color:var(--bad)}
 
-.belt{display:flex; align-items:flex-start; gap:var(--s3); padding:var(--s3) 0;
+.belt{display:flex; align-items:flex-start; gap:var(--s2); padding:var(--s2) 0;
       border-block-end:1px solid var(--line)}
 .belt:last-child{border-block-end:0}
-.belt-sw{flex:0 0 auto; width:16px; height:16px; border-radius:4px; margin-block-start:4px;
-         background:var(--c); box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.belt-sw{flex:0 0 auto; width:16px; height:16px; border-radius:var(--r-xs); margin-block-start:4px;
+         background:var(--c); box-shadow:0 0 0 1px var(--edge)}
 
 .stats{display:flex; flex-direction:column;
        border-block-start:1px solid var(--line)}
-.stat{display:flex; align-items:baseline; gap:var(--s3); width:100%;
-      padding:var(--s3) 0; border-block-end:1px solid var(--line); text-align:start}
+.stat{display:flex; align-items:baseline; gap:var(--s2); width:100%;
+      padding:var(--s2) 0; border-block-end:1px solid var(--line); text-align:start}
 .stat:active{background:var(--bg)}
-.stat-l{flex:1 1 auto; font-size:.85rem; color:var(--ink-2)}
-.stat-v{flex:0 0 auto; font-weight:700; font-size:1.02rem}
-.stat-u{font-weight:400; font-size:.8rem; color:var(--ink-2)}
-.stat-y{flex:0 0 auto; width:3.2em; text-align:end; font-size:.7rem; color:var(--miss)}
-.stat.no .stat-v{color:var(--miss); font-size:.9rem; font-weight:600}
+.stat-l{flex:1 1 auto; font-size:var(--t-sm); color:var(--ink-2)}
+.stat-v{flex:0 0 auto; font-weight:700; font-size:var(--t-xl)}
+.stat-u{font-weight:400; font-size:var(--t-sm); color:var(--ink-2)}
+.stat-y{flex:0 0 auto; width:3.2em; text-align:end; font-size:var(--t-xs); color:var(--miss)}
+.stat.no .stat-v{color:var(--miss); font-size:var(--t-sm); font-weight:700}
 
-.kv{margin:0; font-size:.9rem}
-.kv div{display:flex; gap:var(--s3); padding:var(--s2) 0; border-block-end:1px solid var(--line)}
+.kv{margin:0; font-size:var(--t-sm)}
+.kv div{display:flex; gap:var(--s2); padding:var(--s2) 0; border-block-end:1px solid var(--line)}
 .kv div:last-child{border-block-end:0}
-.kv dt{flex:0 0 76px; font-weight:700; color:var(--ink-2); font-size:.82rem}
+.kv dt{flex:0 0 76px; font-weight:700; color:var(--ink-2); font-size:var(--t-sm)}
 .kv dd{margin:0; flex:1 1 auto}
 
 .chips{display:flex; flex-wrap:wrap; gap:var(--s2)}
-.chip{padding:var(--s2) var(--s4); border-radius:var(--r-pill); font-size:.8rem;
-      font-weight:600; background:var(--card); border:1px solid var(--line);
+.chip{padding:var(--s2) var(--s3); border-radius:var(--r-pill); font-size:var(--t-sm);
+      font-weight:700; background:var(--card); border:1px solid var(--line);
       color:var(--ink-2)}
 .chip.is-on{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
 .chip{display:inline-flex; align-items:center; gap:5px}
 .chip-c{width:10px; height:10px; border-radius:50%; flex:0 0 auto;
-        box-shadow:0 0 0 1px rgba(255,255,255,.85),0 0 0 2px rgba(0,0,0,.25)}
-.grp{font-size:.78rem; font-weight:700; letter-spacing:.04em; color:var(--ink-2);
-     display:flex; align-items:center; gap:var(--s3); margin-block-start:var(--s2)}
+        box-shadow:0 0 0 1px var(--halo),0 0 0 2px var(--edge)}
+.grp{font-size:var(--t-xs); font-weight:700; letter-spacing:.04em; color:var(--ink-2);
+     display:flex; align-items:center; gap:var(--s2); margin-block-start:var(--s2)}
 .grp::after{content:""; flex:1 1 auto; height:1px; background:var(--line)}
 .warn{background:var(--warn-bg); color:var(--warn); border-radius:var(--r-ctl);
-      padding:var(--s3) var(--s4); font-size:.82rem}
-.note{font-size:.78rem; color:var(--ink-2)}
+      padding:var(--s2) var(--s3); font-size:var(--t-sm)}
+.note{font-size:var(--t-sm); color:var(--ink-2)}
 /* the list view: descriptions and notes fold away; value rows, years and source buttons never do */
 #doc.dense .row-d, #doc.dense .note{display:none}
-.flag{display:inline-block; font-size:.68rem; font-weight:700; padding:1px var(--s2);
+.flag{display:inline-block; font-size:var(--t-xs); font-weight:700; padding:1px var(--s2);
       border-radius:var(--r-pill); background:var(--warn-bg); color:var(--warn);
       vertical-align:middle; margin-inline-start:var(--s1)}
 .doc a{color:var(--accent)}
-.doc pre{background:var(--bg); border:1px solid var(--line); border-radius:9px;
-         padding:8px; overflow-x:auto; font-size:.78rem; direction:ltr; text-align:start}
-.doc code{font-size:.8rem; direction:ltr; unicode-bidi:isolate}
+.doc pre{background:var(--bg); border:1px solid var(--line); border-radius:var(--r-ctl);
+         padding:8px; overflow-x:auto; font-size:var(--t-sm); direction:ltr; text-align:start}
+.doc code{font-size:var(--t-sm); direction:ltr; unicode-bidi:isolate}
 
 /* ---------- the sources drawer ---------- */
 /* The one window that is still full screen: it is a reference document, read
@@ -664,18 +697,18 @@ body[data-view="text"] .map-only{display:none}
 .drawer{position:fixed; inset:0; z-index:800; display:flex; flex-direction:column;
         background:var(--bg)}
 .drawer-in{display:flex; flex-direction:column; min-height:0; height:100%}
-.drawer-head{flex:0 0 auto; display:flex; align-items:center; gap:var(--s3);
-             padding:calc(var(--safe-t) + var(--s4)) var(--s4) var(--s4);
+.drawer-head{flex:0 0 auto; display:flex; align-items:center; gap:var(--s2);
+             padding:calc(var(--safe-t) + var(--s3)) var(--s3) var(--s3);
              background:var(--card); border-block-end:1px solid var(--line)}
 .drawer-head h2{flex:1 1 auto; margin:0}
-.drawer-head input{flex:1 1 auto; min-width:0; padding:var(--s3) var(--s4);
+.drawer-head input{flex:1 1 auto; min-width:0; padding:var(--s2) var(--s3);
                    border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
                    background:var(--bg)}
 .drawer-body{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch;
-             padding:var(--s4) var(--s4) calc(var(--safe-b) + 28px);
-             display:flex; flex-direction:column; gap:var(--s4);
+             padding:var(--s3) var(--s3) calc(var(--safe-b) + 28px);
+             display:flex; flex-direction:column; gap:var(--s3);
              max-width:72ch; margin-inline:auto; width:100%}
-.cta{display:block; width:100%; margin-block-start:var(--s4); padding:var(--s4);
+.cta{display:block; width:100%; margin-block-start:var(--s3); padding:var(--s3);
      border-radius:var(--r-ctl); background:var(--accent); color:var(--accent-ink);
      font-weight:700; text-align:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
@@ -687,7 +720,7 @@ body[data-view="text"] .map-only{display:none}
        overflow:hidden; clip-path:inset(50%); white-space:nowrap}
 .ph-pick{cursor:pointer}
 .ph-in:focus-visible + .ph-pick{outline:2px solid var(--accent); outline-offset:2px}
-.ph-fig{margin:var(--s3) 0 0; border-radius:var(--r-ctl); overflow:hidden;
+.ph-fig{margin:var(--s2) 0 0; border-radius:var(--r-ctl); overflow:hidden;
         background:var(--bg); border:1px solid var(--line)}
 .ph-img{display:block; width:100%; max-height:46vh; object-fit:contain;
         background:var(--bg); cursor:zoom-in}
@@ -695,13 +728,13 @@ body[data-view="text"] .map-only{display:none}
 
 /* Full size, over everything, dismissed by a tap anywhere — the panel is too
    narrow to judge a photo by. */
-.lb{position:fixed; inset:0; z-index:3000; background:rgba(8,12,20,.94);
-    display:flex; align-items:center; justify-content:center; padding:var(--s4)}
+.lb{position:fixed; inset:0; z-index:3000; background:var(--scrim);
+    display:flex; align-items:center; justify-content:center; padding:var(--s3)}
 .lb[hidden]{display:none}
 .lb-img{max-width:100%; max-height:100%; object-fit:contain}
-.lb-x{position:absolute; inset-block-start:calc(var(--safe-t) + var(--s4));
-      inset-inline-end:var(--s4); width:40px; height:40px; border-radius:50%;
-      background:rgba(255,255,255,.16); color:#fff; font-size:1.1rem}
+.lb-x{position:absolute; inset-block-start:calc(var(--safe-t) + var(--s3));
+      inset-inline-end:var(--s3); width:40px; height:40px; border-radius:50%;
+      background:var(--halo-weak); color:var(--on-solid); font-size:var(--t-lg)}
 
 /* ---------- השוואת נתונים ---------- */
 /* Three controls, the field's own name as the heading, a key that says what
@@ -709,51 +742,51 @@ body[data-view="text"] .map-only{display:none}
    Every colour on this screen is computed in app.js from the measured palette;
    the rules here carry shape and spacing only. */
 .cmp-top{display:flex; align-items:center; justify-content:space-between;
-  gap:var(--s3); padding-block:var(--s4) var(--s2)}
+  gap:var(--s2); padding-block:var(--s3) var(--s2)}
 /* עיריות and רובעים at the start edge — the right, in this document */
 .cmp-scope{display:flex; justify-content:flex-start; gap:var(--s2)}
-.cmp-sc{font:inherit; font-size:.9rem; font-weight:700; padding:7px 18px;
+.cmp-sc{font:inherit; font-size:var(--t-sm); font-weight:700; padding:7px 18px;
   border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
   background:var(--bg); color:var(--ink-2); cursor:pointer}
-.cmp-sc[aria-pressed="true"]{background:var(--hi-line); border-color:var(--hi-line); color:#fff}
+.cmp-sc[aria-pressed="true"]{background:var(--hi-line); border-color:var(--hi-line); color:var(--on-solid)}
 /* and the field switch at the end edge — the left */
-.cmp-swap{margin-inline-start:auto; font:inherit; font-size:.85rem; font-weight:700;
+.cmp-swap{margin-inline-start:auto; font:inherit; font-size:var(--t-sm); font-weight:700;
   padding:7px 15px; border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
   background:var(--bg); color:var(--ink); cursor:pointer; white-space:nowrap}
-.cmp-h{font-size:1.28rem; font-weight:700; line-height:1.25; margin:0}
-.cmp-u{font-weight:400; font-size:.8rem; color:var(--ink-2)}
-.cmp-what{margin:var(--s1) 0 0; font-size:.8rem; color:var(--ink-2); line-height:1.5}
+.cmp-h{font-size:var(--t-2xl); font-weight:700; line-height:var(--lh-2xl); margin:0}
+.cmp-u{font-weight:400; font-size:var(--t-sm); color:var(--ink-2)}
+.cmp-what{margin:var(--s1) 0 0; font-size:var(--t-sm); color:var(--ink-2); line-height:var(--lh-sm)}
 
 /* the key: colour → the range it stands for */
-.cmp-key{display:flex; flex-direction:column; gap:1px; margin-block:var(--s4) var(--s3);
+.cmp-key{display:flex; flex-direction:column; gap:1px; margin-block:var(--s3) var(--s2);
   border:1px solid var(--line); border-radius:var(--r-ctl); overflow:hidden}
-.cmp-k{display:flex; align-items:center; gap:var(--s3); padding:7px 10px;
-  background:var(--card); font-size:.84rem}
-.cmp-k-sw{flex:0 0 auto; width:34px; height:20px; border-radius:3px;
-  border:1px solid rgba(0,0,0,.12)}
+.cmp-k{display:flex; align-items:center; gap:var(--s2); padding:7px 10px;
+  background:var(--card); font-size:var(--t-sm)}
+.cmp-k-sw{flex:0 0 auto; width:34px; height:20px; border-radius:var(--r-xs);
+  border:1px solid var(--line)}
 /* the same hatch the map draws for a unit with no value */
 .cmp-k-nd{background:repeating-linear-gradient(45deg,var(--miss) 0 1.2px,transparent 1.2px 4px)}
 .cmp-k-r{flex:1 1 auto; min-width:0}
-.cmp-k-n{flex:0 0 auto; font-size:.76rem; color:var(--miss);
+.cmp-k-n{flex:0 0 auto; font-size:var(--t-xs); color:var(--miss);
   font-variant-numeric:tabular-nums}
 
 /* one unit */
 .cmp-rows{display:flex; flex-direction:column}
-.cmp-row{display:flex; align-items:center; gap:var(--s3); width:100%;
+.cmp-row{display:flex; align-items:center; gap:var(--s2); width:100%;
   padding:8px 0; border-block-end:1px solid var(--line); cursor:pointer}
 .cmp-rows .cmp-row:last-child{border-block-end:0}
 .cmp-row:active{background:var(--bg)}
 .cmp-row.is-hi{background:var(--hi); box-shadow:inset 2px 0 0 var(--hi-line)}
 .cmp-sw{flex:0 0 auto; display:grid; place-items:center; min-width:32px; height:26px;
   padding-inline:6px; border-radius:var(--r-ctl); direction:ltr;
-  font:700 .78rem/1 system-ui,sans-serif}
+  font-weight:700; font-size:var(--t-xs); line-height:var(--lh-xs); font-family:system-ui,sans-serif}
 .cmp-sw-nd{color:var(--miss); border:1px dashed var(--line);
   background:repeating-linear-gradient(45deg,var(--miss) 0 1.2px,transparent 1.2px 4px)}
 .cmp-body{flex:1 1 auto; min-width:0}
-.cmp-n{display:block; font-size:.92rem; font-weight:700; line-height:1.3;
+.cmp-n{display:block; font-size:var(--t-sm); font-weight:700; line-height:var(--lh-sm);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.cmp-n .lat{font-weight:400; font-size:.76rem; color:var(--ink-2)}
-.cmp-v{flex:0 0 auto; font:inherit; font-size:.95rem; font-weight:700;
+.cmp-n .lat{font-weight:400; font-size:var(--t-xs); color:var(--ink-2)}
+.cmp-v{flex:0 0 auto; font:inherit; font-size:var(--t-md); font-weight:700;
   background:none; border:0; color:var(--ink); cursor:pointer;
   padding:4px 2px; text-align:end; min-width:70px;
   border-block-end:1px dotted var(--line)}
@@ -761,8 +794,8 @@ body[data-view="text"] .map-only{display:none}
 .cmp-row .chev{flex:0 0 auto; width:16px; height:16px; color:var(--miss)}
 
 /* the parishes between the two tens, named rather than silently dropped */
-.cmp-cut{display:flex; align-items:center; gap:var(--s3); padding-block:var(--s3);
-  color:var(--miss); font-size:.76rem}
+.cmp-cut{display:flex; align-items:center; gap:var(--s2); padding-block:var(--s2);
+  color:var(--miss); font-size:var(--t-xs)}
 .cmp-cut::before,.cmp-cut::after{content:""; flex:1 1 auto; height:0;
   border-block-start:1px dashed var(--line)}
 
@@ -771,21 +804,21 @@ body[data-view="text"] .map-only{display:none}
    own. paint-order puts the stroke behind the glyph rather than over it. */
 /* the same label with the two inks swapped: white glyph, dark halo, because
    what is under it here is a fill from the scale and not a street map */
-.lbl.cmp-lbl{--lbl-ink:#ffffff; --lbl-halo:rgba(8,16,28,.55);
-  --lbl-glow:rgba(8,16,28,.92)}
+.lbl.cmp-lbl{--lbl-ink:var(--on-solid); --lbl-halo:var(--night-halo);
+  --lbl-glow:var(--night-glow)}
 .lbl.cmp-lbl > i{width:auto; height:auto}
 
 /* the field picker */
-.cmp-note{line-height:1.55; margin-block-end:var(--s3)}
+.cmp-note{line-height:var(--lh-md); margin-block-end:var(--s2)}
 .cmp-fields{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
   gap:var(--s2)}
 .cmp-f{display:grid; gap:2px; text-align:start; padding:10px 12px;
   border:1px solid var(--ctl-line); border-radius:var(--r-ctl);
   background:var(--card); color:var(--ink); font:inherit; cursor:pointer}
 .cmp-f:active{background:var(--bg)}
-.cmp-f-t{font-weight:700; font-size:.9rem; line-height:1.3}
-.cmp-f-u{font-size:.74rem; color:var(--ink-2)}
-.cmp-f-c{font-size:.74rem; color:var(--miss); direction:ltr; text-align:start}
+.cmp-f-t{font-weight:700; font-size:var(--t-sm); line-height:var(--lh-sm)}
+.cmp-f-u{font-size:var(--t-xs); color:var(--ink-2)}
+.cmp-f-c{font-size:var(--t-xs); color:var(--miss); direction:ltr; text-align:start}
 .cmp-f.part .cmp-f-c{color:var(--hi-line); font-weight:700}
 
 /* ---------- מגבלות בנייה ---------- */
@@ -800,11 +833,11 @@ body[data-view="text"] .map-only{display:none}
    ground, composited in app.js — so the key is a sample of the thing it indexes
    and not a brighter cousin of it. Switched off it keeps the outline and loses
    the fill, which is the same "present but empty" the layer switches use. */
-.cons-key{display:flex; gap:var(--s2); margin-block-end:var(--s4)}
+.cons-key{display:flex; gap:var(--s2); margin-block-end:var(--s3)}
 .cons-k{flex:1 1 0; min-width:0; display:flex; align-items:center;
   justify-content:center; min-height:38px; padding:var(--s2) var(--s2);
   border:1px solid transparent; border-radius:var(--r-ctl);
-  font-size:.82rem; font-weight:700; line-height:1.2; text-align:center;
+  font-size:var(--t-sm); font-weight:700; line-height:var(--lh-sm); text-align:center;
   cursor:pointer}
 .cons-k[aria-pressed="false"]{background:transparent; color:var(--ink-2);
   border-style:dashed}
@@ -813,7 +846,7 @@ body[data-view="text"] .map-only{display:none}
 
 /* the download, which happens once and then never again */
 .cons-prog{height:8px; border-radius:var(--r-pill); background:var(--bg);
-  border:1px solid var(--line); overflow:hidden; margin-block:var(--s3) var(--s2)}
+  border:1px solid var(--line); overflow:hidden; margin-block:var(--s2) var(--s2)}
 .cons-prog i{display:block; height:100%; background:var(--accent);
   transition:width .18s linear}
 @media (prefers-reduced-motion:reduce){.cons-prog i{transition:none}}
@@ -821,53 +854,53 @@ body[data-view="text"] .map-only{display:none}
 /* the four numbers. The fourth is the union and not the sum of the first two,
    so it is ruled off from them rather than sitting in the same list. */
 .crows{display:flex; flex-direction:column;
-  border-block-start:1px solid var(--line); margin-block-start:var(--s3)}
-.crow{display:flex; align-items:center; gap:var(--s3); width:100%;
-  padding:var(--s3) 0; border-block-end:1px solid var(--line); text-align:start}
+  border-block-start:1px solid var(--line); margin-block-start:var(--s2)}
+.crow{display:flex; align-items:center; gap:var(--s2); width:100%;
+  padding:var(--s2) 0; border-block-end:1px solid var(--line); text-align:start}
 .crow:active{background:var(--bg)}
-.crow-c{flex:0 0 auto; width:13px; height:13px; border-radius:3px;
-  border:1px solid rgba(0,0,0,.18)}
+.crow-c{flex:0 0 auto; width:13px; height:13px; border-radius:var(--r-xs);
+  border:1px solid var(--edge)}
 .crow-b{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px}
-.crow-l{font-size:.86rem; font-weight:700; line-height:1.3}
-.crow-m{font-size:.74rem; color:var(--ink-2); line-height:1.4}
+.crow-l{font-size:var(--t-sm); font-weight:700; line-height:var(--lh-sm)}
+.crow-m{font-size:var(--t-xs); color:var(--ink-2); line-height:var(--lh-xs)}
 .crow-p{flex:0 0 auto; min-width:4.4em; text-align:end;
-  font-weight:700; font-size:1.02rem; font-variant-numeric:tabular-nums}
-.crow.no .crow-p{color:var(--miss); font-size:.9rem}
+  font-weight:700; font-size:var(--t-xl); font-variant-numeric:tabular-nums}
+.crow.no .crow-p{color:var(--miss); font-size:var(--t-sm)}
 .crow.no .crow-c{background:transparent!important; border-style:dashed}
 .crow-tot{border-block-end:0; border-block-start:2px solid var(--line);
   margin-block-start:2px}
-.crow-tot .crow-l{font-size:.92rem}
+.crow-tot .crow-l{font-size:var(--t-sm)}
 /* The categories under the two classes: the same row, one step quieter, so the
    eye reads two numbers first and the breakdown second.  They are still rows
    and still open the record — a list of eighteen categories nobody can tap is
    a picture of data, not data. */
 .crow-sub{padding:5px 0}
-.crow-sub .crow-l{font-size:.78rem; font-weight:400}
-.crow-sub .crow-m{font-size:.7rem}
-.crow-sub .crow-p{font-size:.86rem; font-weight:600}
+.crow-sub .crow-l{font-size:var(--t-xs); font-weight:400}
+.crow-sub .crow-m{font-size:var(--t-xs)}
+.crow-sub .crow-p{font-size:var(--t-sm); font-weight:700}
 .crow-sub .crow-c{width:9px; height:9px; opacity:.75}
 
 /* One unit on the list. The bar runs the full width of the card, because what
    it is for is the filled part against the whole — a 74px stub beside a line of
    text could only be read against the other stubs. */
 .cons-row{display:flex; flex-direction:column; gap:var(--s2); width:100%;
-  padding:var(--s3) 0; border-block-end:1px solid var(--line); text-align:start}
+  padding:var(--s2) 0; border-block-end:1px solid var(--line); text-align:start}
 .cons-row:last-child{border-block-end:0}
 .cons-row:active{background:var(--bg)}
-.cons-head{display:flex; align-items:center; gap:var(--s3); width:100%}
+.cons-head{display:flex; align-items:center; gap:var(--s2); width:100%}
 .cons-head .row-t{flex:1 1 auto; min-width:0; overflow:hidden;
   text-overflow:ellipsis; white-space:nowrap}
 .cons-head .chev{flex:0 0 auto; width:16px; height:16px; color:var(--miss)}
 /* The bar and the number it stands for, on one line: the bar takes the width
    that is left and the figure sits at the end of it. Nothing else — the row is
    a share, and a share needs one number. */
-.cons-line{display:flex; align-items:center; gap:var(--s3); width:100%}
-.cons-bar{display:flex; flex:1 1 auto; min-width:0; height:14px; border-radius:4px;
+.cons-line{display:flex; align-items:center; gap:var(--s2); width:100%}
+.cons-bar{display:flex; flex:1 1 auto; min-width:0; height:14px; border-radius:var(--r-xs);
   overflow:hidden; background:var(--bg); border:1px solid var(--line)}
 .cons-bar i{display:block; height:100%}
-.cons-pct{flex:0 0 auto; min-width:3.6em; text-align:end; font-size:.82rem;
+.cons-pct{flex:0 0 auto; min-width:3.6em; text-align:end; font-size:var(--t-sm);
   font-weight:700; font-variant-numeric:tabular-nums}
-.cons-val{display:block; width:100%; text-align:end; font-size:.8rem;
+.cons-val{display:block; width:100%; text-align:end; font-size:var(--t-sm);
   color:var(--ink-2); font-variant-numeric:tabular-nums}
 .cons-row.no .cons-val{color:var(--miss)}
 /* the total has no colour of its own: it is the union of the three above it */

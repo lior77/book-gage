@@ -71,7 +71,7 @@ def tokens(block):
 def read_palettes(css):
     light = css[css.index(":root{"):css.index("@media (prefers-color-scheme: dark)")]
     dark_start = css.index(':root[data-theme="dark"]{')
-    dark = css[dark_start:css.index("}", css.index("--shadow:", dark_start))]
+    dark = css[dark_start:css.index("}", dark_start)]
     a, b = tokens(light), tokens(dark)
     # the dark block overrides a subset; everything else is inherited
     merged = dict(a)
@@ -80,18 +80,17 @@ def read_palettes(css):
 
 
 def read_type(css):
-    body = re.search(r"body\{[^}]*font:(\d+)\s+(\d+)px/([\d.]+)\s+([^;]+);", css, re.S)
-    heads = []
-    for tag in ("h1", "h2", "h3"):
-        m = re.search(r"\n%s\{font-size:([\d.]+)rem" % tag, css)
-        if m:
-            heads.append((tag, float(m.group(1))))
-    lh = re.search(r"h1,h2,h3\{margin:0; line-height:([\d.]+)", css)
-    return {
-        "weight": body.group(1), "size": int(body.group(2)),
-        "line": float(body.group(3)), "stack": body.group(4).strip(),
-        "heads": heads, "head_line": float(lh.group(1)) if lh else None,
-    }
+    """The eight steps of the scale and their line heights, off the tokens; the
+    stack off the body rule; the weights off every rule that names one."""
+    body = re.search(r"body\{[^}]*font-family:([^;]+);", css, re.S)
+    if not body:
+        raise SystemExit("body font-family not found in app.css")
+    root = tokens(css[css.index(":root{"):css.index("@media (prefers-color-scheme: dark)")])
+    steps = [k[4:] for k in root if k.startswith("--t-")]
+    scale = [(n, int(root["--t-" + n][:-2]), int(root["--lh-" + n][:-2])) for n in steps]
+    bare = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    weights = sorted(set(re.findall(r"font-weight:(\d+)", bare)))
+    return {"stack": body.group(1).strip(), "scale": scale, "weights": weights}
 
 
 def read_lines(js):
@@ -209,11 +208,30 @@ ROLES = {
     "--ring-off": "החישוק הכבוי באייקון הגבולות",
     "--hi": "רקע הפריט המסומן", "--hi-line": "הקו של הפריט המסומן",
     "--dot": "נקודת POI", "--dot-ring": "טבעת סביבה",
-    "--float": "צל של דבר שמרחף", "--float-sm": "צל קטן", "--float-in": "צל פנימי",
-    "--shadow": "הצל היחיד, לדברים שבאמת מרחפים",
+    "--overlay": "משטח שמרחף מעל הדף — לוח, גיליון, הודעה, טולטיפ",
+    "--accent-tint": "הצבע המוביל ב-12% — טבעת המיקום",
+    "--on-solid": "לבן על מילוי רווי, בשני המצבים",
+    "--edge": "קו שוליים דק סביב דוגמית", "--edge-strong": "קו שוליים סביב סיכה או סמן",
+    "--halo": "הילה בהירה סביב נקודה צבעונית", "--halo-weak": "לחצן על גבי מסך כהה",
+    "--scrim": "המסך הכהה מאחורי תמונה מוגדלת",
+    "--map-ink": "דיו על המפה — אינו עוקב אחרי ערכת הנושא", "--map-accent": "כחול של תווית לטינית על המפה",
+    "--map-halo": "ההילה של המספר על המפה", "--map-glow": "הזוהר שמתחת להילה",
+    "--night-halo": "הילה כהה בהשוואה", "--night-glow": "הזוהר הכהה בהשוואה",
+    "--me": "המיקום של המכשיר",
+    "--shadow-raised": "צל קטן וחד — פקד או כרטיס מורם; ‏none בלילה",
+    "--shadow-overlay": "צל גדול ורך — מה שמרחף מעל הדף; ‏none בלילה",
+    "--t-xs": "12 — שנת ייחוס, תווית זעירה", "--t-sm": "14 — מטא, הערה, קוד",
+    "--t-md": "16 — טקסט ממשק", "--t-lg": "18 — פרוזה",
+    "--t-xl": "20 — ערך מספרי, כותרת שורה", "--t-2xl": "24 — כותרת כרטיס",
+    "--t-3xl": "32 — כותרת מסך", "--t-4xl": "40 — המספר הגדול היחיד",
+    "--lh-xs": "גובה שורה 16", "--lh-sm": "גובה שורה 20", "--lh-md": "גובה שורה 24",
+    "--lh-lg": "גובה שורה 28", "--lh-xl": "גובה שורה 28", "--lh-2xl": "גובה שורה 32",
+    "--lh-3xl": "גובה שורה 40", "--lh-4xl": "גובה שורה 48",
     "--r-card": "רדיוס כרטיס", "--r-ctl": "רדיוס פקד", "--r-pill": "רדיוס גלולה",
+    "--r-xs": "רדיוס דוגמית — 14px ומטה, שלא תהפוך לעיגול",
     "--s1": "ריווח 1", "--s2": "ריווח 2", "--s3": "ריווח 3",
     "--s4": "ריווח 4", "--s5": "ריווח 5", "--s6": "ריווח 6",
+    "--s7": "ריווח 7", "--s8": "ריווח 8",
     "--safe-b": "שוליים בטוחים למטה", "--safe-t": "שוליים בטוחים למעלה",
     "--f": "גובה חצי המפה",
 }
@@ -505,19 +523,19 @@ def page(light, dark, dark_keys, ty, icons, motion, lines, classes):
     space = "".join(
         '<div class="sp"><span class="sp-b" style="width:%s"></span>'
         '<code dir="ltr">%s</code><span class="n" dir="ltr">%s</span></div>'
-        % (light[k], k, light[k]) for k in ("--s1", "--s2", "--s3", "--s4", "--s5", "--s6"))
+        % (light[k], k, light[k]) for k in ("--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7", "--s8"))
     radii = "".join(
         '<div class="rad"><span class="rad-b" style="border-radius:%s"></span>'
         '<code dir="ltr">%s</code><span class="n" dir="ltr">%s</span>'
         '<span class="role">%s</span></div>'
-        % (light[k], k, light[k], esc(ROLES.get(k, ""))) for k in ("--r-card", "--r-ctl", "--r-pill"))
+        % (light[k], k, light[k], esc(ROLES.get(k, ""))) for k in ("--r-card", "--r-ctl", "--r-pill", "--r-xs"))
 
     heads = "".join(
-        '<div class="spec"><span style="font-size:%srem;font-weight:700;line-height:%s">'
+        '<div class="spec"><span style="font-size:%dpx;font-weight:%d;line-height:%dpx">'
         'רובע בונפים · Bonfim · 22,978</span>'
-        '<span class="n">%s · %srem · %spx · גובה שורה %s</span></div>'
-        % (sz, ty["head_line"], tag, sz, round(sz * ty["size"]), ty["head_line"])
-        for tag, sz in ty["heads"])
+        '<span class="n">--t-%s · %dpx / %dpx · %s</span></div>'
+        % (sz, 700 if sz >= 20 else 400, lh, n, sz, lh, esc(ROLES.get("--t-" + n, "")))
+        for n, sz, lh in ty["scale"])
 
     targets = "".join(
         '<div class="tg"><span class="tg-b" style="width:%dpx;height:%dpx"></span>'
@@ -738,8 +756,10 @@ footer{margin-block-start:52px; padding-block-start:18px;
 <div class="logics">%(logics)s</div>
 
 <h2>טיפוגרפיה</h2>
-<p>גוף הטקסט: <code dir="ltr">%(tfam)s</code> · %(tsize)spx · משקל %(tw)s · גובה שורה
-  %(tline)s. גובה השורה עומד בדרישת SC 1.4.12, שמחייבת שהטקסט ישרוד 1.5×.
+<p>המערום: <code dir="ltr">%(tfam)s</code>. שמונה גדלים על סולם 1.125 מ-16, וגובה
+  שורה לכל אחד שמתחלק ב-4; שני משקלים בלבד — %(weights)s. פרוזה ארוכה היא
+  ‏<code dir="ltr">--t-lg</code>, 18px, כי טקסט גוף נקרא ממרחק זרוע; טקסט ממשק
+  שנסרק ולא נקרא הוא ‏<code dir="ltr">--t-md</code> ומטה.
   ‏Material ממליץ 16/24 ל-Body Large; GOV.UK מפרסם 19/25, ואין מספר יחיד מוסכם.</p>
 %(heads)s
 <div class="spec"><span>רובע בונפים · Bonfim · 22,978 תושבים · 3.09 קמ״ר</span>
@@ -749,9 +769,8 @@ footer{margin-block-start:52px; padding-block-start:18px;
   ממשק עברי מיישרות לשמאל. ספרות בתוך מספר לעולם אינן מתהפכות.</div>
 
 <h2>ריווח</h2>
-<p>‏4, 6, 8, 12, 16 הם הקצה הנמוך של הסולם שמפרסמת Polaris; הצעד השישי הועבר
-  מ-22 ל-24, כי Carbon, ‏Polaris ו-Material כולן פוסעות 16 ← 24, ו-22 הוא מספר
-  של טיפוגרפיה ולא של ריווח.</p>
+<p>רשת של 4 נקודות, שמונה צעדים. הצעד השני היה 6 — הערך היחיד שלא ישב על
+  הרשת — והוא 8 עכשיו; כל צעד אחר שמר על גודלו וירד שם אחד.</p>
 %(space)s
 
 <h2>רדיוסים</h2>
@@ -845,8 +864,8 @@ footer{margin-block-start:52px; padding-block-start:18px;
         "gaphead": "".join("<th>%d→%d</th>" % (i + 1, i + 2) for i in range(4)),
         "blueground": blue_ground,
         "hw": HATCH["w"], "hg": HATCH["gap"], "ha": HATCH["angle"], "hl": HATCH["light"],
-        "tfam": esc(ty["stack"]), "tsize": ty["size"], "tw": ty["weight"],
-        "tline": ty["line"], "heads": heads, "space": space, "radii": radii,
+        "tfam": esc(ty["stack"]), "weights": " ו-".join(ty["weights"]),
+        "heads": heads, "space": space, "radii": radii,
         "targets": targets, "motion": mo, "icons": icon_list, "mirror": mirror,
     }
 
