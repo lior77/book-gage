@@ -1440,6 +1440,67 @@ def main():
           % (sum(1 for f in fre if "pop2021" in f), len(fre),
              sum(1 for f in fre if "he" in f), len(fre),
              sum(1 for f in fre if "area_km2" in f), len(fre)))
+    # ---- 7x. the prose agrees with the data it sits next to ----------------
+    # Found on 2026-09-15 while reading the info page: it told the reader the
+    # district has 243 parishes on CAOP 2020, that the 2025 boundaries were
+    # "not in the app yet", and explained a "split in 2025" flag no row can
+    # carry — while section 3 above enforces 275 and sources.json names CAOP
+    # 2025 in ten fields. Every check in this file validated data; none read
+    # the sentences beside it, so a page explaining the numbers contradicted
+    # the numbers for several releases. This reads app.js as text — every
+    # literal, Hebrew and English, comments included — and binds each count
+    # or edition it names to the value the data actually holds.
+    appjs_txt = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    zones_all = load("zones.json")["zones"]
+    n_new25 = sum(1 for f in fre if f.get("was_part_of"))
+    n_unions = len({f["was_part_of"]["dicofre"] for f in fre if f.get("was_part_of")})
+    n_untouched = len(fre) - n_new25
+    n_quarters = len(city["quarters"])
+    n_city_bairros = sum(len(z.get("bairros", []))
+                         for k, z in zones_all.items() if k.startswith("1|"))
+    # (?<!\d)…(?!\d) keeps "2011 parishes" from reading as 011 or 201.
+    # The bare "N parishes" may name the district (275) or the untouched
+    # remainder (218); anything else is a number that once was true.
+    bound = [  # (pattern, expected, what the number is)
+        (r"(?<!\d)(\d{3})(?!\d)\s*(?:רובעים|parishes)",
+         {len(fre), n_untouched, len(fre) - n_quarters},
+         "parishes (district, untouched remainder, or outside Porto city)"),
+        (r"(?:מ-|of the )(\d{3}) (?:היחידות|units)", len(fre), "units the app draws"),
+        (r"(\d+) (?:רובעים חדשים|new parishes)", n_new25, "parishes the 2025 reform created"),
+        (r"(\d+) (?:איחודים|unions)", n_unions, "unions the 2025 reform dissolved"),
+        (r"(\d+) (?:הרובעים האחרים|other parishes)", n_untouched, "parishes the reform left alone"),
+        (r"(\d+) (?:רבעי פורטו|Porto quarters)", n_quarters, "Porto quarters"),
+        (r"(\d+) (?:שכונות|neighbourhoods)", n_city_bairros, "Porto neighbourhoods"),
+    ]
+    for pat, want, what in bound:
+        wants = want if isinstance(want, set) else {want}
+        for m in re.finditer(pat, appjs_txt):
+            got = int(m.group(1))
+            if got not in wants:
+                fail("app.js prose says %d %s; the data holds %s (…%s…)"
+                     % (got, what, "/".join(str(w) for w in sorted(wants)),
+                        appjs_txt[max(0, m.start()-25):m.end()+10].replace("\n", " ")))
+    # The edition the app draws is the one sources.json names. Any other CAOP
+    # year in app.js is either history (2013 — the division the reform undid,
+    # and TIPAU's base) or a sentence nobody updated. Naming a new historical
+    # edition here is a deliberate act, which is the point.
+    CAOP_CURRENT = str(sources["fields"]["map.caop_2025"]["reference_year"])
+    CAOP_HISTORY_OK = {"2013"}
+    years = set(re.findall(r"CAOP\s*(20\d\d)", appjs_txt))
+    if CAOP_CURRENT not in years:
+        fail("app.js never names the CAOP edition it draws (%s)" % CAOP_CURRENT)
+    for y in sorted(years - {CAOP_CURRENT} - CAOP_HISTORY_OK):
+        fail("app.js names CAOP %s; the app draws CAOP %s and %s is not a "
+             "listed historical edition" % (y, CAOP_CURRENT, y))
+    # Two claims that were true once and cannot be true now: the boundaries
+    # are in (map.caop_2025 exists), and every row is a 2025 parish with a
+    # 2025 code, so no row can be a dissolved union wearing a "split" flag.
+    for phrase in ("עדיין אינם באפליקציה", "not in the app yet",
+                   "פורק ב-2025", "split in 2025"):
+        if phrase in appjs_txt:
+            fail("app.js still says '%s' — the 2025 division is what it draws"
+                 % phrase)
+
     for w in warns:
         print("WARN  " + w)
     for f in fails:

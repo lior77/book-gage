@@ -1,6 +1,6 @@
 /* מחוז פורטו — split-screen app.
    Data: data/processed/*.json, built by scripts/build.py from the source
-   document's own texts, CAOP 2020 boundaries, INE Censos 2021 and OSM.
+   document's own texts, CAOP 2025 boundaries, INE Censos 2021 and OSM.
    Nothing here is invented: a field with no value renders "אין נתון", and every
    number carries the source and the reference year it came with.
 
@@ -129,7 +129,7 @@ const S = {
   lnRegion: false,     // the two NUTS III regions — off until asked for
   lnDistrict: true,    // Porto district
   lnMun: true,         // the 18 municipalities
-  lnFre: true,         // the 243 parishes
+  lnFre: true,         // the 275 parishes
   adding: false,       // waiting for a tap on the map to place a new point
   wp: false,           // נ.צ. management: the cards in the text half
   wpSel: null,         // the id of the card and pin being looked at
@@ -1031,7 +1031,7 @@ function renderDistrict() {
       <h1>${S.lang === 'en' ? 'Distrito do Porto' : t('מחוז פורטו') + ' <span class="en lat">(Distrito do Porto)</span>'}</h1>
       <!-- The population and the area are the two rows of the table right
            below, and a lead that says them again is the same fact twice. -->
-      <p class="lead">${t('18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.')}</p>
+      <p class="lead">${t('18 עיריות ו-275 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.')}</p>
       <div class="stats">
         ${stat(t('תושבים'), D.totPop, '', 0, 'municipio.pop2021', 100)}
         ${stat(t('שטח'), D.totArea, t('קמ״ר'), 1, 'municipio.area_km2')}
@@ -1208,7 +1208,7 @@ function renderMun(num) {
       return at && at.mun_num === num;
     })}
     <p class="note" style="margin-block-start:10px">${t('המספר על כל רובע הוא הקוד הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן')}
-      <span class="flag">${t('פורק ב-2025')}</span> ${t('חדל להתקיים כיחידה ברפורמת 2025, והקוד שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.')}</p>
+      <span class="flag">${t('רובע מ-2025')}</span> ${t('נוצר ברפורמת 2025 מאיחוד שבוטל — בכרטיס שלו רשומים השם, הקוד והנתונים של היחידה הקודמת, תחת שמה.')}</p>
     ${regionsDoc()}`;
   $('#paneText').scrollTop = 0;
 }
@@ -3813,7 +3813,7 @@ function fixPlacing() {
 /* Every parish has this level, not only Porto's seven.  What fills it differs,
    and the app says which is which: Porto's quarters carry the 53 neighbourhoods
    the source document names, with a Hebrew name and a description each; the
-   other 236 parishes carry what OpenStreetMap actually holds — the localities
+   other 268 parishes carry what OpenStreetMap actually holds — the localities
    inside them and the landmarks and services in those. */
 const zoneOf = key => D.zones[key] || { origin: 'osm', bairros: [], pois: [] };
 
@@ -4530,7 +4530,7 @@ function renderCmp() {
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}</h1>
     <p class="cmp-what">${atDistrict
       ? (S.cmpScope === 'fre'
-         ? t('243 רובעי המחוז')
+         ? t('275 רובעי המחוז')
          : t('18 עיריות המחוז'))
       : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`
         + t(' — ברמה הזאת אין מה לבחור, ולכן אין כאן שני הכפתורים')}
@@ -5292,8 +5292,8 @@ function renderInfo() {
     <p>${t('המספר שעל כל רובע הוא באותו אופן')} <b>${t('שתי הספרות הרשמיות שלו')}</b> ${t('בתוך העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים מגיעים מיחידות שמסומנות ב-OpenStreetMap עם')} <span class="lat">ref:ine</span>
       ${t('ועם')} <span class="lat">source=DGT — CAOP</span>${t(', כלומר הם הקוד שהמדינה מפרסמת ולא מספור של האפליקציה.')}</p>
     <p>${t('הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.')}</p>
-    <p><b>${t('רפורמת 2025.')}</b> ${t('חלק מהאיחודים של 2013 בוטלו, ורובעים שאוחדו חזרו להיות יחידות נפרדות עם קודים חדשים. במחוז פורטו זה נוגע ל-25 מ-243 היחידות שהאפליקציה מציירת: הן פורקו ל-57 רובעים חדשים, והקוד של היחידה המאוחדת בוטל. הגבולות והנתונים כאן הם CAOP 2020 — כלומר המפה של 2013 — ולכן ל-25 האלה מוצג')} <span class="flag">${t('פורק ב-2025')}</span> ${t('במקום קוד, ובכרטיס של כל אחת מהן רשומים בשמם ובקודם הרובעים שהחליפו אותה. 218 הרובעים האחרים לא נגעו ברפורמה והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.')}</p>
-    <p class="note">${t('כדי שהאפליקציה תציג את 275 הרובעים של 2025 עצמם — ולא את חלוקת 2020 עם הערה — צריך את שכבת הגבולות CAOP במהדורה 2024 או 2025. אין לי אותה כאן, וכל נתוני האוכלוסייה שיש לי הם ממפקד 2021 שנספר לפי חלוקת 2013, כך שפיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים.')}</p>
+    <p><b>${t('רפורמת 2025.')}</b> ${t('האפליקציה מציירת את חלוקת 2025 — 275 רובעים לפי CAOP 2025. חלק מהאיחודים של 2013 בוטלו: במחוז פורטו 25 איחודים פורקו ל-57 רובעים חדשים, וקוד היחידה המאוחדת בוטל. רובע כזה מסומן')} <span class="flag">${t('רובע מ-2025')}</span>${t(', ובכרטיס שלו רשומים השם, הקוד והנתונים של היחידה שממנה נוצר — תחת שמה ושנת הייחוס שלה, לא כשלו. 218 הרובעים האחרים לא נגעו ברפורמה, והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.')}</p>
+    <p class="note">${t('אוכלוסיית 57 הרובעים החדשים נגזרת מטבלת ההמרה של INE בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה שממנה נוצרו.')}</p>
 
     <h2>${t('מי מודד ומי סופר')}</h2>
     <p>${t('שני גופים שונים עומדים מאחורי כל מספר כאן, ותפקידם שונה לגמרי.')}</p>
@@ -5328,9 +5328,9 @@ function renderInfo() {
     <h2>${t('מה יש כאן')}</h2>
     <p>${t('המסך מחולק לשניים: מפה בחצי אחד, וכל הידע שנוגע למה שרואים בה בחצי השני. הקו שביניהם נגרר, המפה נגררת ומתקרבת בתוך החלון שלה, והטקסט נגלל בלי הגבלה.')}</p>
     <ul>
-      <li>${t('18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·')}
+      <li>${t('18 עיריות · 275 רובעים · 7 רבעי פורטו · 53 שכונות ·')}
         <span class="num">${D.totPoi}</span> ${t('נקודות במפה')}</li>
-      <li>${t('אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים')}</li>
+      <li>${t('אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 275 הרובעים')}</li>
       <li>${t('מפקד 2021 לכל יחידה: גיל חציוני, פילוח גיל, אזרחות זרה, ואחת-עשרה שורות של דיור ובניינים — דירות ריקות, בעלות מול שכירות, חניה, מצב הבניינים ותקופת הבנייה')}</li>
       <li>${t('נבנה:')} <span class="lat">${html(D.generated)}</span></li>
     </ul>
@@ -5682,6 +5682,15 @@ Object.assign(EN, {
   'סכנת שריפה אינה כאן ולא תהיה עד שתימצא שנת הייחוס שלה: השדה שנראה כמו תאריך המפה הוא תאריך החוק שהורה עליה.': 'Fire hazard is not here and will not be until its reference year is found: the field that looks like the map’s date is the date of the law that ordered it.',
   'שנת ייחוס': 'reference year',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
+  'רובע מ-2025': 'a 2025 parish',
+  'האפליקציה מציירת את חלוקת 2025 — 275 רובעים לפי CAOP 2025. חלק מהאיחודים של 2013 בוטלו: במחוז פורטו 25 איחודים פורקו ל-57 רובעים חדשים, וקוד היחידה המאוחדת בוטל. רובע כזה מסומן':
+    'The app draws the 2025 division — 275 parishes per CAOP 2025. Some of the 2013 mergers were undone: in Porto district 25 unions were split into 57 new parishes, and the merged unit\'s code was withdrawn. Such a parish is marked',
+  ', ובכרטיס שלו רשומים השם, הקוד והנתונים של היחידה שממנה נוצר — תחת שמה ושנת הייחוס שלה, לא כשלו. 218 הרובעים האחרים לא נגעו ברפורמה, והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.':
+    ', and its card lists the name, code and figures of the unit it was created from — under that unit\'s name and reference year, not its own. The 218 other parishes were untouched by the reform, and the code shown for them is the full, valid official code.',
+  'אוכלוסיית 57 הרובעים החדשים נגזרת מטבלת ההמרה של INE בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה שממנה נוצרו.':
+    'The population of the 57 new parishes comes from INE\'s conversion table between the 2021 census sub-sections and the CAOP 2025 boundaries, and it sums exactly to the population of the unit each was created from.',
+  'נוצר ברפורמת 2025 מאיחוד שבוטל — בכרטיס שלו רשומים השם, הקוד והנתונים של היחידה הקודמת, תחת שמה.':
+    'was created by the 2025 reform from a dissolved union — its card lists the previous unit\'s name, code and figures, under that unit\'s name.',
   '. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.': '. The code and the boundary above are this parish’s, in the 2025 division.',
   '<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>': '<p class="note">Median age, foreign citizenship, higher education and unemployment are not shown for this parish: the 2021 census was counted on the 2013 boundaries, and some of its statistical sections are cut in two by the 2025 ones. A share computed from the part that falls inside would be a share of most of the parish, presented as the parish’s.</p>',
   '· מתוכם ברובע הזה': '· of them in this parish',
@@ -5692,7 +5701,7 @@ Object.assign(EN, {
   '% מהיחידה ·': '% of the unit ·',
   '. הקוד שלמעלה הוא הקוד שהחזיקה עד אז, וזה גם הקוד שלפיו INE ספר אותה ב-2021 — הגבול והנתונים כאן הם של היחידה הזו.': '. The code above is the one it held until then, and it is also the code INE counted it under in 2021 — the boundary and the data here are that unit’s.',
   '18 עיריות המחוז': 'the district\'s 18 municipalities',
-  '243 רובעי המחוז': 'the district\'s 243 parishes',
+  '275 רובעי המחוז': 'the district\'s 275 parishes',
   '<b>לחיצה כפולה</b> — על הנקודה או על הרישום — פותחת אותה במפות גוגל.': '<b>A double tap</b> — on the point or on the entry — opens it in Google Maps.',
   'בדיקה:': 'Validation:',
   'היישובים האלה אינם יחידה מנהלית ואין להם גבול. הם מגיעים מ-OpenStreetMap כנקודה אחת לכל יישוב, ולכן אין להם שם עברי ואין להם תיאור — לא נכתב כזה לאף אחד מהם.': 'These settlements are not an administrative unit and have no boundary. They come from OpenStreetMap as one point each, and so they carry neither a Hebrew name nor a description — none was ever written for any of them.',
@@ -5754,8 +5763,6 @@ Object.assign(EN, {
      not yet have the interface in their language finds their way back. */
   'עברית':
     'עברית',
-  ' <span class="flag">פורק ב-2025</span>':
-    ' <span class="flag">split in 2025</span>',
   ' INE אינו מפרסם ברמת הרובע בעירייה הזאת, ולכן אין כאן ולו ערך אחד.':
     ' INE does not publish parish-level figures in this municipality, so there is not one value here.',
   ' · <span class="flag">מהתמונה</span>':
@@ -5816,10 +5823,10 @@ Object.assign(EN, {
     'The 18 municipalities in the app are divided between two such units:',
   '18 העיריות — לפי המספור במפה':
     'The 18 municipalities — by the numbering on the map',
-  '18 עיריות · 243 רובעים · 7 רבעי פורטו · 53 שכונות ·':
-    '18 municipalities · 243 parishes · 7 Porto quarters · 53 neighbourhoods ·',
-  '18 עיריות ו-243 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.':
-    '18 municipalities and 243 parishes in north-west Portugal, from the Atlantic in the west to the Marão mountains in the east. It is the most densely populated district in the country.',
+  '18 עיריות · 275 רובעים · 7 רבעי פורטו · 53 שכונות ·':
+    '18 municipalities · 275 parishes · 7 Porto quarters · 53 neighbourhoods ·',
+  '18 עיריות ו-275 רובעים בצפון-מערב פורטוגל, מהאוקיינוס האטלנטי במערב ועד הרי מראו במזרח. זהו המחוז הצפוף במדינה.':
+    '18 municipalities and 275 parishes in north-west Portugal, from the Atlantic in the west to the Marão mountains in the east. It is the most densely populated district in the country.',
   '7 מהעיריות כאן: פנאפיאל, פאסוש דה פריירה, לוזאדה, פלגיירש, אמרנטה, מרקו דה קנבזש ובאיאו. (ליחידה שייכות עוד ארבע עיריות ממחוזות אחרים.)':
     '7 of the municipalities here: Penafiel, Paços de Ferreira, Lousada, Felgueiras, Amarante, Marco de Canaveses and Baião. (Four more municipalities from other districts belong to the unit.)',
   '; שתי הספרות שאחריו הן העירייה, ושתיים נוספות הן הרובע:':
@@ -5886,8 +5893,8 @@ Object.assign(EN, {
     '· smallest to largest',
   'אבטלה':
     'Unemployment',
-  'אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 243 הרובעים':
-    '2021 population, area and density for all 18 municipalities and all 243 parishes',
+  'אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 275 הרובעים':
+    '2021 population, area and density for all 18 municipalities and all 275 parishes',
   'אוניברסיטה והשכלה':
     'University and education',
   'אופי':
@@ -5942,8 +5949,6 @@ Object.assign(EN, {
     'No value — not ranked',
   'במכשיר הזה בלבד':
     'on this device only',
-  'במקום קוד, ובכרטיס של כל אחת מהן רשומים בשמם ובקודם הרובעים שהחליפו אותה. 218 הרובעים האחרים לא נגעו ברפורמה והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.':
-    'instead of a code, and each of their cards lists by name and code the parishes that replaced it. The other 218 parishes were untouched by the reform and the code shown for them is the full, valid official one.',
   'בני 0–14':
     'Aged 0–14',
   'בני 0–14 ':
@@ -6014,8 +6019,6 @@ Object.assign(EN, {
     'is a European standard for dividing territory for statistics and budget allocation. Portugal has three levels; the one actually used is',
   'החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה מקיף את העיריות של כל אזור.':
     "The district's official division, and the one INE publishes by. The orange line on the map encloses each region's municipalities.",
-  'החלוקה מגיעה מטבלת ההמרה של INE בין תת-המקטעים הסטטיסטיים של מפקד 2021 לגבולות 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה כאן. הגבולות עצמם עדיין אינם באפליקציה — לכך צריך את CAOP 2025.':
-    "The split comes from INE's conversion table between the 2021 census sub-sections and the 2025 boundaries, and it sums exactly to the population of the unit here. The boundaries themselves are not in the app yet — that needs CAOP 2025.",
   'החלפת התמונה':
     'Replace the photo',
   'החלפת נתון':
@@ -6096,8 +6099,6 @@ Object.assign(EN, {
     'this is not “violent crime”',
   'זקוקים לתיקון':
     'Need repair',
-  'חדל להתקיים כיחידה ברפורמת 2025, והקוד שלו הוא זה שהחזיק עד אז — בכרטיס שלו רשומים הרובעים שהחליפו אותו.':
-    'ceased to exist as a unit in the 2025 reform, and its code is the one it held until then — its card lists the parishes that replaced it.',
   'חדש':
     'New',
   'חוזרת לפעול ביציאה ממנו.</p>':
@@ -6112,8 +6113,6 @@ Object.assign(EN, {
     'Search',
   'חיפוש מקום':
     'Search for a place',
-  'חלק מהאיחודים של 2013 בוטלו, ורובעים שאוחדו חזרו להיות יחידות נפרדות עם קודים חדשים. במחוז פורטו זה נוגע ל-25 מ-243 היחידות שהאפליקציה מציירת: הן פורקו ל-57 רובעים חדשים, והקוד של היחידה המאוחדת בוטל. הגבולות והנתונים כאן הם CAOP 2020 — כלומר המפה של 2013 — ולכן ל-25 האלה מוצג':
-    "Some of the 2013 mergers were undone, and merged parishes became separate units again with new codes. In Porto district this touches 25 of the 243 units the app draws: they were split into 57 new parishes, and the merged unit's code was withdrawn. The boundaries and data here are CAOP 2020 — the 2013 map — so those 25 show",
   'חצי מפה, חצי טקסט':
     'Half map, half text',
   'חציון למשק בית פיסקאלי':
@@ -6134,8 +6133,6 @@ Object.assign(EN, {
     'Localities and neighbourhoods',
   'יש כרטיסייה בעריכה — לשמור או לבטל אותה קודם.':
     'A card is open for editing — save or cancel it first.',
-  'כדי שהאפליקציה תציג את 275 הרובעים של 2025 עצמם — ולא את חלוקת 2020 עם הערה — צריך את שכבת הגבולות CAOP במהדורה 2024 או 2025. אין לי אותה כאן, וכל נתוני האוכלוסייה שיש לי הם ממפקד 2021 שנספר לפי חלוקת 2013, כך שפיצול היחידות היום היה משאיר 57 רובעים בלי מספר תושבים.':
-    'For the app to show the 275 parishes of 2025 themselves — rather than the 2020 division with a note — the CAOP boundary layer in its 2024 or 2025 edition is needed. It is not here, and all the population data available was counted on the 2013 division in the 2021 census, so splitting the units today would leave 57 parishes with no population figure.',
   'כל מספר באפליקציה נלחץ ומציג את המקור ואת שנת הייחוס שלו. המספרים על המפה הם קודי DICOFRE הרשמיים.':
     'Every number in the app is tappable and shows its source and reference year. The numbers on the map are the official DICOFRE codes.',
   'כל נתוני האוכלוסייה באפליקציה הם ממפקד 2021.':
@@ -6308,8 +6305,6 @@ Object.assign(EN, {
     'Parks, gardens and beaches',
   'פורטולנד':
     'Portoland',
-  'פורק ב-2025':
-    'split in 2025',
   'פירוט נקודות הציון':
     'List the landmark categories',
   'פתיחת הרובע':

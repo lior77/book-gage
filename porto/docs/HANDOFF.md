@@ -222,7 +222,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 
 ## 5. מנגנוני האימות — ומה הנוהג סביבם
 
-### ‏`scripts/checks.py` — 29 בדיקות
+### ‏`scripts/checks.py` — 30 בדיקות
 
 מזוהות לפי אות: ‏`1`–`7`, ואז `7b`…`7w`. הרשימה המלאה עם ההסבר לכל אחת
 נמצאת ב-`ARCHITECTURE.md` §8. הן מכסות: שלמות מקורות, קודי DICOFRE,
