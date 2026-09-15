@@ -644,6 +644,8 @@ body[data-view="text"] .map-only{display:none}
 .warn{background:var(--warn-bg); color:var(--warn); border-radius:var(--r-ctl);
       padding:var(--s3) var(--s4); font-size:.82rem}
 .note{font-size:.78rem; color:var(--ink-2)}
+/* the list view: descriptions and notes fold away; value rows, years and source buttons never do */
+#doc.dense .row-d, #doc.dense .note{display:none}
 .flag{display:inline-block; font-size:.68rem; font-weight:700; padding:1px var(--s2);
       border-radius:var(--r-pill); background:var(--warn-bg); color:var(--warn);
       vertical-align:middle; margin-inline-start:var(--s1)}

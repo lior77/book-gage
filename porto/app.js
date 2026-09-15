@@ -128,6 +128,7 @@ const S = {
   // its own; the level decides which of them are black and which recede.
   lnRegion: false,     // the two NUTS III regions — off until asked for
   sortDesc: false,     // ranked lists run smallest first; the chip flips the reading order only
+  dense: false,        // one list/expanded state for every mode; false = expanded
   lnDistrict: true,    // Porto district
   lnMun: true,         // the 18 municipalities
   lnFre: true,         // the 275 parishes
@@ -1029,7 +1030,7 @@ function renderDistrict() {
     </button>`;
   }).join('');
 
-  $('#doc').innerHTML = `
+  $('#doc').innerHTML = `${viewBar()}
     <div class="card">
       <h1>${S.lang === 'en' ? 'Distrito do Porto' : t('מחוז פורטו') + ' <span class="en lat">(Distrito do Porto)</span>'}</h1>
       <!-- The population and the area are the two rows of the table right
@@ -1181,7 +1182,7 @@ function renderMun(num) {
     </button>`;
   }).join('');
 
-  $('#doc').innerHTML = `
+  $('#doc').innerHTML = `${viewBar()}
     <div class="card">
       <div class="hdr">
         <span class="pin" style="--c:${html(m.fill)}">${html(munNum(m))}</span>
@@ -2188,6 +2189,13 @@ function consSort(rows) {
    the reading order. */
 const sortBar = () => `<div class="chips"><button class="chip${S.sortDesc ? ' is-on' : ''}" data-sortdir
     aria-pressed="${S.sortDesc}">${S.sortDesc ? t('מהנמוך לגבוה') : t('מהגבוה לנמוך')}</button></div>`;
+/* One list/expanded chip, first thing in the text half in every mode.  It names
+   the view the next tap gives (the נ.צ. chip's convention).  Compact hides
+   descriptions and notes only: a value row keeps its value, unit, year and
+   "אין נתון", and every source button stays, so what is unknown and where a
+   number came from can never be folded away. */
+const viewBar = () => `<div class="chips"><button class="chip${S.dense ? ' is-on' : ''}" data-dense
+    aria-pressed="${S.dense}">${S.dense ? t('מורחב') : t('רשימה')}</button></div>`;
 const sortAria = () => `aria-sort="${S.sortDesc ? 'descending' : 'ascending'}"`;
 const consSrc = () => S.level === 'district' || S.level === 'mun'
   ? 'municipio.cons_pct' : 'freguesia.cons_pct';
@@ -2259,7 +2267,7 @@ function renderCons() {
       (m ? `<div class="grp">${t('העירייה')}</div>${consNumbers(m, 'municipio.cons_pct')}` : '');
   }
 
-  return `<div class="card" id="consCard">
+  return `${viewBar()}<div class="card" id="consCard">
     ${ready ? consKeyLine() : ''}
     <h1>${title}</h1>
     ${sub ? `<p class="sub">${sub}</p>` : ''}
@@ -2801,7 +2809,7 @@ function renderWaypoints() {
     <div class="card">
       <div class="wp-top">
         <button class="chip is-on" data-wpact="new">${t('חדש')}</button>
-        <button class="chip" data-wpact="mode">${S.wpList ? t('מורחב') : t('רשימה')}</button>
+        <button class="chip${S.dense ? ' is-on' : ''}" data-dense aria-pressed="${S.dense}">${S.dense ? t('מורחב') : t('רשימה')}</button>
       </div>
       <h1>${t('המקומות שלי')}</h1>
     </div>
@@ -2913,11 +2921,11 @@ function wpCard(p) {
         ${html(where)}${p.at ? ' · ' + html(p.at) : ''}</p>
     </div>`;
   const fig = p.photo
-    ? `<figure class="ph-fig${S.wpList ? ' ph-thumb' : ''}" data-wpimg="${html(p.id)}"
+    ? `<figure class="ph-fig${S.dense ? ' ph-thumb' : ''}" data-wpimg="${html(p.id)}"
         ><img class="ph-img" alt="${html(p.name)}"></figure>` : '';
-  return `<article class="card wp${on ? ' is-hi' : ''}${S.wpList ? ' wp-row' : ''}"
+  return `<article class="card wp${on ? ' is-hi' : ''}${S.dense ? ' wp-row' : ''}"
       data-wp="${html(p.id)}">${acts}
-      ${S.wpList ? `<div class="wp-line">${body}${fig}</div>` : body + fig}
+      ${S.dense ? `<div class="wp-line">${body}${fig}</div>` : body + fig}
     </article>`;
 }
 
@@ -3328,7 +3336,6 @@ function wpClick(e) {
     const act = b.dataset.wpact;
     if (act !== 'del') wpArmed = null;
     if (act === 'new') { openNewSheet(); return true; }
-    if (act === 'mode') { S.wpList = !S.wpList; save(); renderWaypoints(); return true; }
     if (act === 'edit') { startWpEdit(b.dataset.id); return true; }
     if (act === 'cancel') { closeNewSheet(); return true; }
     if (act === 'save') { commitMine(); return true; }
@@ -3912,7 +3919,7 @@ function renderZone(key) {
       <span class="chip-c" style="background:${html(CAT_COLOUR[c] || '#101010')}"></span>${html(poiLabel(c))}
       <span class="num">${z.pois.filter(p => p.cat === c).length}</span></button>`).join('');
 
-  $('#doc').innerHTML = `
+  $('#doc').innerHTML = `${viewBar()}
     <div class="card">
       <div class="hdr">
         <span class="pin" style="--c:${html(f.colour || '#ddd')}">${freNum(f)}</span>
@@ -4485,7 +4492,7 @@ function renderCmp() {
           <span class="cmp-f-c num">${n}/${rows.length}</span>
         </button>`;
       }).join('')}</div>`).join('');
-    return `<div class="cmp-top">
+    return `${viewBar()}<div class="cmp-top">
         <h1 class="cmp-h">${t('החלפת נתון')}</h1>
         <button class="cmp-swap" data-cmppick="0">${t('חזרה')}</button>
       </div>
@@ -4538,7 +4545,7 @@ function renderCmp() {
     }).join('')}</div>
     <p class="note">${t('ערך חסר אינו מקום אחרון. היחידות האלה אינן מדורגות, אינן צבועות ואינן נספרות — במפה הן מפוספסות.')}</p>` : '';
 
-  return `<div class="cmp-top">
+  return `${viewBar()}<div class="cmp-top">
       ${scope}
       <button class="cmp-swap" data-cmppick="1">${t('החלפת נתון')}</button>
     </div>
@@ -4932,6 +4939,7 @@ function toggleLayers(force) {
 
 // after a change that alters what the text half should say
 function redrawText() {
+  $('#doc').classList.toggle('dense', S.dense);
   // management replaces the level document: the map is still at its level and
   // still navigable, but the text half is the list of נ.צ. until it is closed
   if (S.cmp) { $('#doc').innerHTML = renderCmp(); return; }
@@ -5130,7 +5138,7 @@ function save() {
       cons: S.cons,
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
-      muncol: S.muncol, wpList: S.wpList, sortDesc: S.sortDesc,
+      muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
       lnRegion: S.lnRegion, lnDistrict: S.lnDistrict,
       lnMun: S.lnMun, lnFre: S.lnFre,
       tiles: S.tiles,
@@ -5162,7 +5170,10 @@ function restore() {
     if (o.consShow && typeof o.consShow === 'object')
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
-    if (typeof o.wpList === 'boolean') S.wpList = o.wpList;
+    // `dense` is the one list/expanded state for every mode; `wpList` was its
+    // name while only the נ.צ. screen had it, and files with it still read
+    if (typeof o.dense === 'boolean') S.dense = o.dense;
+    else if (typeof o.wpList === 'boolean') S.dense = o.wpList;
     if (typeof o.sortDesc === 'boolean') S.sortDesc = o.sortDesc;
     if (o.view === 'split' || o.view === 'map' || o.view === 'text') S.view = o.view;
     if (o.theme === 'light' || o.theme === 'dark' || o.theme === 'auto') S.theme = o.theme;
@@ -5505,6 +5516,10 @@ function wire() {
     if (S.wp && wpClick(e)) return;
     // the sort chip: reading order only, so the text is redrawn and the map is not
     if (e.target.closest('[data-sortdir]')) { S.sortDesc = !S.sortDesc; save(); redrawText(); return; }
+    if (e.target.closest('[data-dense]')) {
+      S.dense = !S.dense; save();
+      $('#doc').classList.toggle('dense', S.dense); redrawText(); return;
+    }
     const src = e.target.closest('[data-src]');
     if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
     if (S.cmp && cmpClick(e)) return;

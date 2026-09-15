@@ -350,7 +350,7 @@ PATTERNS = [
     ("places", "המקומות שלי",
      "הנקודות שהמשתמש מוסיף: הסימון במפה, היריעה שנפתחת, והטופס שבתוכה.",
      ["wp", "wp-", "mine", "me", "pin", "pin-sq", "sheet", "sheet-", "fld-l",
-      "ghost-dot", "ghost-ring"]),
+      "ghost-dot", "ghost-ring", "dense"]),
     ("photo", "תמונות",
      "תצלום שהמשתמש צירף, והתצוגה המלאה שלו.",
      ["ph-", "lb", "lb-"]),

@@ -549,7 +549,7 @@ const css = (page, sel, prop) =>
      await page.$('#doc [data-mine-act]') === null);
 
   const newBtn = await box(page, '[data-wpact="new"]');
-  const modeBtn = await box(page, '[data-wpact="mode"]');
+  const modeBtn = await box(page, '[data-dense]');
   const h1 = await box(page, '#doc h1');
   const pane = await box(page, '#paneText');
   ok('the button reads חדש',
@@ -570,20 +570,20 @@ const css = (page, sel, prop) =>
   });
   await page.waitForTimeout(500);
   ok('the mode button reads רשימה while the cards are expanded',
-     (await page.$eval('[data-wpact="mode"]', e => e.textContent)).trim() === 'רשימה');
+     (await page.$eval('[data-dense]', e => e.textContent)).trim() === 'רשימה');
   ok('expanded: the photo is under the text, not beside it',
      await page.$('.wp .wp-line') === null && await page.$('.wp .ph-fig') !== null);
-  await page.click('[data-wpact="mode"]');
+  await page.click('[data-dense]');
   await page.waitForTimeout(500);
   ok('one tap turns the label to מורחב',
-     (await page.$eval('[data-wpact="mode"]', e => e.textContent)).trim() === 'מורחב');
+     (await page.$eval('[data-dense]', e => e.textContent)).trim() === 'מורחב');
   ok('and the card becomes a line with a thumbnail beside the text',
      await page.$('.wp .wp-line') !== null && await page.$('.wp .ph-thumb') !== null);
   const txt = await box(page, '.wp .wp-txt');
   const thumb = await box(page, '.wp .ph-thumb');
   ok('the thumbnail is on the left of the text', thumb.right <= txt.x + 1,
      `thumb right ${thumb.right.toFixed(1)}, text x ${txt.x.toFixed(1)}`);
-  await page.click('[data-wpact="mode"]');
+  await page.click('[data-dense]');
   await page.waitForTimeout(500);
   ok('and back to expanded', await page.$('.wp .wp-line') === null);
 
@@ -2801,6 +2801,35 @@ const css = (page, sel, prop) =>
        `none ${a.filter(r => r.no).length}, aria ${await aria()}`);
     await page.click('[data-sortdir]'); await page.waitForTimeout(300);
     await page.evaluate(() => { if (S.cmp) toggleCmp(); });
+  }
+
+  /* ---- list / expanded, the same chip in every mode ---------------------
+     Compact folds descriptions and notes away and nothing else: every value
+     row keeps its year and its "אין נתון", every source button stays, and the
+     state is one — set at the district, still set inside a municipality. */
+  {
+    await page.evaluate(async () => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) await toggleCons(); });
+    await page.click('#homeBtn'); await page.waitForTimeout(400);
+    if (await page.evaluate(() => S.dense)) { await page.click('[data-dense]'); await page.waitForTimeout(300); }
+    const vis = sel => page.$$eval(sel, els => els.filter(e => e.getClientRects().length > 0).length);
+    const chipIn = async () => (await page.$('#doc [data-dense]')) !== null;
+    const where = [];
+    where.push(['district', await chipIn()]);
+    await page.evaluate(() => toggleCmp()); await page.waitForTimeout(300); where.push(['comparison', await chipIn()]);
+    await page.evaluate(() => toggleCmp()); await page.evaluate(async () => { await toggleCons(); }); await page.waitForTimeout(300); where.push(['constraints', await chipIn()]);
+    await page.evaluate(async () => { await toggleCons(); }); await page.waitForTimeout(300);
+    ok('list/expanded: the same chip in the district, comparison and constraints views', where.every(w => w[1]), JSON.stringify(where));
+    const before = { d: await vis('#doc .row-d'), y: await vis('#doc .stat-y'), no: await vis('#doc .stat.no'), src: await vis('#doc [data-src]') };
+    await page.click('#doc [data-dense]'); await page.waitForTimeout(400);
+    const after = { d: await vis('#doc .row-d'), y: await vis('#doc .stat-y'), no: await vis('#doc .stat.no'), src: await vis('#doc [data-src]') };
+    ok('list: descriptions fold away', before.d > 5 && after.d === 0, `${before.d} → ${after.d}`);
+    ok('list: every year, every "אין נתון" and every source button stay visible',
+       after.y === before.y && after.no === before.no && after.src === before.src && before.src > 0, JSON.stringify({ before, after }));
+    await page.click('#doc [data-mun="14"]'); await page.waitForTimeout(500);
+    ok('list: one state — still compact inside Lousada, chip offers מורחב',
+       await page.$eval('#doc', e => e.classList.contains('dense')) && (await page.$eval('#doc [data-dense]', e => e.textContent.trim())) === 'מורחב'
+         && await vis('#doc .row-d') === 0 && await vis('#doc .stat-y') > 0);
+    await page.click('#doc [data-dense]'); await page.waitForTimeout(300);
   }
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
