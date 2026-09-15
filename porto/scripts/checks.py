@@ -1711,6 +1711,63 @@ def main():
     if re.search(r"TIPAU 2014", io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()):
         fail("app.js names TIPAU 2014; the version in force is 2025")
 
+
+    # ---- 7ab. every host the app can reach is on the list it shows the reader
+    # The app said "works without a network" while the street background was
+    # fetched from OpenStreetMap and the constraint layers from two CDNs.  The
+    # honest statement is "offline, with these online features", and the
+    # ONLINE list in app.js is that statement, printed on the about page.
+    # This reads every URL out of app.js, sw.js, index.html and the layers
+    # manifest and requires its host on that list — so a fetch added anywhere
+    # has to be declared where the reader can see it.
+    online_src = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
+    m_on = re.search(r"const ONLINE = \(\) => \[(.*?)\n\];", online_src, re.S)
+    declared = set(re.findall(r"host: '([^']+)'", m_on.group(1))) if m_on else set()
+    if not declared:
+        fail("app.js: no ONLINE list (const ONLINE = () => [...])")
+    reached = {}
+    for name in ("app.js", "sw.js", "index.html"):
+        txt = io.open(os.path.join(ROOT, name), encoding="utf-8").read()
+        for u in re.findall(r"https?://([A-Za-z0-9.-]+\.[a-z]{2,})", txt):
+            reached.setdefault(u, set()).add(name)
+    lm = json.load(io.open(os.path.join(ROOT, "data", "layers_manifest.json"), encoding="utf-8"))
+    for k in ("base", "fallback"):
+        h = re.match(r"https?://([A-Za-z0-9.-]+)", lm.get(k, ""))
+        if h:
+            reached.setdefault(h.group(1), set()).add("layers_manifest.json")
+    reached.pop("www.w3.org", None)          # an XML namespace, not a request
+    for host, where in sorted(reached.items()):
+        if host not in declared:
+            fail("%s reaches %s and the ONLINE list on the about page does not name it" % ("/".join(sorted(where)), host))
+    for host in sorted(declared - set(reached)):
+        fail("the ONLINE list names %s and nothing in the app reaches it" % host)
+    if re.search(r"עובדת גם בלי רשת|works (?:fully )?offline", online_src):
+        fail("app.js still promises plain offline; say which features need a network")
+
+    # ---- 7ac. a note beside a value is one line; the reasons live in the record
+    # Measured 2026-09-15: 41 class="note" strings, median 119 characters, the
+    # longest 282, nineteen over 120 — half the notes were paragraphs, not a
+    # line.  The three tiers (UX-2.0.0 §5, principle 3): the value and its year
+    # always; one quiet line when a caveat changes how to read the number; and
+    # everything else one tap away in the source record.  A caveat that needs
+    # two lines belongs in sources.json, so this measures every note literal
+    # in app.js and fails on one that runs past 120 characters of text.
+    NOTE_MAX = 120
+    # the translation table at the foot of app.js repeats every literal as a
+    # key — measure the code above it, where the notes are written
+    code_part = online_src[:online_src.index("Object.assign(EN, {")]
+    for m in re.finditer(r'<p class="note[^"]*"[^>]*>(.*?)</p>', code_part, re.S):
+        raw = m.group(1)
+        if "${" in raw and not re.search(r"[֐-׿]", raw):
+            continue                          # composed at runtime from data, measured where the data is
+        txt = re.sub(r"\$\{[^}]*\}", "", raw)   # a data value is not the note's own text
+        txt = re.sub(r"<[^>]+>", "", txt)
+        txt = re.sub(r"'\s*\)\s*\+\s*t\(\s*'", "", txt)   # t('…') + t('…')
+        txt = re.sub(r"\s+", " ", txt).strip()
+        if len(txt) > NOTE_MAX:
+            fail("app.js line %d: a note of %d characters — over %d it is a paragraph, and belongs in the source record: %s…"
+                 % (code_part.count("\n", 0, m.start()) + 1, len(txt), NOTE_MAX, txt[:60]))
+
     for w in warns:
         print("WARN  " + w)
     for f in fails:

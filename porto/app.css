@@ -689,7 +689,7 @@ body[data-view="text"] .map-only{display:none}
 .grp::after{content:""; flex:1 1 auto; height:1px; background:var(--line)}
 .warn{background:var(--warn-bg); color:var(--warn); border-radius:var(--r-ctl);
       padding:var(--s2) var(--s3); font-size:var(--t-sm)}
-.note{font-size:var(--t-sm); color:var(--ink-2)}
+.note{font-size:var(--t-xs); line-height:var(--lh-xs); color:var(--ink-2)}
 /* the list view: descriptions and notes fold away; value rows, years and source buttons never do */
 #doc.dense .row-d, #doc.dense .note{display:none}
 .flag{display:inline-block; font-size:var(--t-xs); font-weight:700; padding:1px var(--s2);

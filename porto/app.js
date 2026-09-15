@@ -4004,7 +4004,7 @@ function renderZone(key) {
       <p class="sub">${html(nm(m))} · ${html(t(m.belt))}${f.dicofre
         ? t(' · קוד רשמי <span class="lat num">') + html(f.dicofre) + '</span>' : ''}</p>
       ${f.was_part_of ? `<p class="note">${wasNote(f)}${t('. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.')}</p>` : ''}
-      ${f.census_partial ? t('<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>') : ''}
+      ${f.census_partial ? t('<p class="note">ארבעה שדות מפקד אינם מוצגים: המקטעים הסטטיסטיים של 2021 אינם מכסים את הרובע הזה במלואו. הסיבה — ברשומת המקור של כל שדה.</p>') : ''}
       <div class="stats">
         ${stat(t('תושבים'), f.pop2021, '', 0, 'freguesia.pop2021', 100)}
         ${stat(t('שטח'), f.area_km2, t('קמ״ר'), 1, 'freguesia.area_km2')}
@@ -4924,7 +4924,7 @@ function renderLayers() {
             ? ' · ' + consMB(consBytes(miss)) + ' MB'
             : ''),
           LAYER_STYLE.ren.fillColor, true) +
-      t('<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>') +
+      t('<p class="note" style="margin-block-start:6px">REN ו-RAN לכל 18 העיריות, ב-40% מעל מפת הרקע. ההורדה פעם אחת ומכאן בלי רשת; כיבוי אינו מוחק.</p>') +
       srcLine('map.ren_ran');
   }
 
@@ -4933,9 +4933,7 @@ function renderLayers() {
   // the level and the mode, and the note says the rule rather than offering
   // a switch.
   h += t('<h3>קווי גבול</h3>') +
-    t('<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה, ואין להם מתג: ') +
-    t('מה ששייך למה שעל המסך שחור, והשאר אפור. קו האזורים הכתום מצויר ברמות 1–2, ') +
-    t('וגבול המחוז הוא הקצה החיצוני של העיריות.</p>');
+    t('<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, השאר אפור; קו האזורים הכתום ברמות 1–2.</p>');
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
@@ -5346,6 +5344,34 @@ function showSource(key, exact) {
     ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`);
 }
 
+/* ---------------------------------------------------- what needs a network --- */
+/* The app is not "offline"; it is offline with these online features, and this
+   is the whole set.  Every host app.js, sw.js and the layers manifest name has
+   to be on it — checks.py 7ab reads them out and fails on one that is not —
+   and the "about" page prints it, so what the app promises and what it does
+   are the same list.  Each feature says so where it appears too: the tiles
+   drop with a note, the download page names its size, the Google link opens a
+   browser. */
+const ONLINE = () => [
+  { host: 'tile.openstreetmap.org', he: t('מפת הרקע (רחובות)'),
+    what: t('אריחי OpenStreetMap. אריח שכבר נראה נשמר במכשיר; בלי רשת המפה מוצגת כגבולות בלבד, וכל הנתונים זמינים.') },
+  { host: 'cdn.jsdelivr.net', he: t('מגבלות בנייה — הורדה חד-פעמית'),
+    what: t('שכבות REN ו-RAN לכל 18 העיריות, מ-jsDelivr; הגודל כתוב על שורת התפריט לפני הלחיצה. מכאן הן עובדות בלי רשת.') },
+  { host: 'raw.githubusercontent.com', he: t('מגבלות בנייה — מקור גיבוי'),
+    what: t('אותם קבצים מ-GitHub, אם jsDelivr אינו זמין.') },
+  { host: 'www.google.com', he: t('פתיחה במפות גוגל'),
+    what: t('לחיצה כפולה על מקום פותחת בדפדפן קישור עם נ״צ בלבד — בלי מפתח, בלי חשבון ובלי לשמור דבר.') },
+];
+function onlineDoc() {
+  return `<h2>${t('מה דורש רשת')}</h2>
+    <p>${t('כל השאר — הגבולות, המפקד, המחירים, מגבלות הבנייה שהורדו, המקומות שלך — במכשיר, ועובד בלי חיבור.')}</p>
+    ${ONLINE().map(o => `<div class="card">
+      <h3>${html(o.he)}</h3>
+      <p>${html(o.what)}</p>
+      <p class="note"><code>${html(o.host)}</code></p>
+    </div>`).join('')}`;
+}
+
 function renderInfo(kind) {
   const s = D.sources;
   const fields = Object.entries(s.fields).map(([k, f]) => `<div class="card">
@@ -5394,8 +5420,8 @@ function renderInfo(kind) {
 ` }
     : kind === 'terms' ? { title: t('תנאים והגבלות'), body: `    <h2>${t('רישוי וייחוס')}</h2>
     ${s.license_notices.map(n => `<p>${prose(n)}</p>`).join('')}
-    <p class="note">${t('לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.')}</p>
-    <p class="note">${t('האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.')}</p>
+    <p>${t('לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.')}</p>
+    <p>${t('האפליקציה עובדת בלי רשת, חוץ מהתכונות שברשימה ״מה דורש רשת״ בדף ״על האפליקציה״ — וכל אחת מהן אומרת זאת במקומה.')}</p>
 
     <h2>${t('הגבלת אחריות')}</h2>
     <p>${t('האפליקציה מציגה העתקים של מה שרשויות פרסמו, בתאריך הייחוס הרשום ליד כל מספר. היא אינה ייעוץ, אינה הערכת שווי ואינה מסמך רשמי.')}</p>
@@ -5457,6 +5483,8 @@ function renderInfo(kind) {
     <h2>${t('מה עוד חסר')}</h2>
     <p>${prose(s.missing.note_he)}</p>
     ${missUser}
+
+    ${onlineDoc()}
 
     <h2>${t('נקודות הציון שלכם')}</h2>
     <p>${t('הן נשמרות')} <b>${t('במכשיר הזה בלבד')}</b>${t('. לא נשלחות לשום מקום ולא מגובות.')}</p>
@@ -5794,9 +5822,6 @@ Object.assign(EN, {
   'שנת ייחוס': 'reference year',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   'רובע מ-2025': 'a 2025 parish',
-  '<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה, ואין להם מתג: ': '<p class="note" style="margin-block-start:6px">The boundaries follow the level and have no switch: ',
-  'מה ששייך למה שעל המסך שחור, והשאר אפור. קו האזורים הכתום מצויר ברמות 1–2, ': 'what belongs to what is on screen is black, the rest grey. The regions\' orange line is drawn at levels 1–2, ',
-  'וגבול המחוז הוא הקצה החיצוני של העיריות.</p>': 'and the district boundary is the outer edge of the municipalities.</p>',
   'על האפליקציה': 'About the app',
   'מאחורי הקלעים': 'Behind the scenes',
   'תנאים והגבלות': 'Terms and limits',
@@ -5835,7 +5860,8 @@ Object.assign(EN, {
   'נוצר ברפורמת 2025 מאיחוד שבוטל — בכרטיס שלו רשומים השם, הקוד והנתונים של היחידה הקודמת, תחת שמה.':
     'was created by the 2025 reform from a dissolved union — its card lists the previous unit\'s name, code and figures, under that unit\'s name.',
   '. הקוד והגבול שלמעלה הם של הרובע הזה, בחלוקה של 2025.': '. The code and the boundary above are this parish’s, in the 2025 division.',
-  '<p class="note">גיל חציוני, אזרחות זרה, השכלה ואבטלה אינם מוצגים לרובע הזה: מפקד 2021 נספר לפי גבולות 2013, וחלק מהמקטעים הסטטיסטיים שלו נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע המוצג כשיעור שלו.</p>': '<p class="note">Median age, foreign citizenship, higher education and unemployment are not shown for this parish: the 2021 census was counted on the 2013 boundaries, and some of its statistical sections are cut in two by the 2025 ones. A share computed from the part that falls inside would be a share of most of the parish, presented as the parish’s.</p>',
+  '<p class="note">ארבעה שדות מפקד אינם מוצגים: המקטעים הסטטיסטיים של 2021 אינם מכסים את הרובע הזה במלואו. הסיבה — ברשומת המקור של כל שדה.</p>':
+    '<p class="note">Four census fields are not shown: the 2021 statistical sections do not cover this parish in full. The reason is in each field’s source record.</p>',
   '· מתוכם ברובע הזה': '· of them in this parish',
   'היחידה שקדמה לו': 'The unit it came out of',
   'המספרים כאן הם של היחידה הקודמת ולא של הרובע הזה, והם אינם נספרים בהשוואות, בדירוגים או בצבעי המפה. הם מוצגים כדי לומר איך נראה השטח לפני שהגבול זז.': 'These figures belong to the earlier unit and not to this parish, and they are never counted in a comparison, a ranking or the map’s colours. They are here to say what the ground looked like before the boundary moved.',
@@ -6138,8 +6164,8 @@ Object.assign(EN, {
     'Existing dwellings',
   'דירות ריקות':
     'Vacant dwellings',
-  'האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.':
-    'The app works without a network. With no connection the background tiles will not load, the map shows boundaries only, and all the data and text remain fully available.',
+  'האפליקציה עובדת בלי רשת, חוץ מהתכונות שברשימה ״מה דורש רשת״ בדף ״על האפליקציה״ — וכל אחת מהן אומרת זאת במקומה.':
+    'The app works without a network, except for the features listed under "What needs a network" on the "About the app" page — and each of them says so where it appears.',
   'הגיל החציוני מחושב מפסי גיל של חמש שנים — INE לא מפרסם חציון בקובץ הזה. מדד הזדקנות הוא בני 65 ומעלה לכל מאה בני 0–14. השינוי מ-2011 הוא כפי ש-INE מפרסמת אותו על גאוגרפיית מפקד 2021 — לא חושב כאן, כי חלוקת הרובעים של 2011 אינה זו של 2021.':
     'Median age is interpolated from five-year age bands — INE publishes no median in this file. The ageing index is people aged 65 and over per hundred aged 0–14. The change since 2011 is as INE publishes it, on the 2021 census geography: it is not computed here, because the 2011 parishes are not the 2021 parishes.',
   'הדפדפן הזה לא תומך באיתור מיקום.':
@@ -6208,6 +6234,28 @@ Object.assign(EN, {
     'Compare data',
   'השוואה':
     'Compare',
+  'מה דורש רשת':
+    'What needs a network',
+  'כל השאר — הגבולות, המפקד, המחירים, מגבלות הבנייה שהורדו, המקומות שלך — במכשיר, ועובד בלי חיבור.':
+    'Everything else — the boundaries, the census, the prices, the constraint layers once downloaded, your places — is on the device and works with no connection.',
+  'מפת הרקע (רחובות)':
+    'Street background',
+  'אריחי OpenStreetMap. אריח שכבר נראה נשמר במכשיר; בלי רשת המפה מוצגת כגבולות בלבד, וכל הנתונים זמינים.':
+    'OpenStreetMap tiles. A tile already seen is kept on the device; without a network the map shows boundaries only, and all the data stays available.',
+  'מגבלות בנייה — הורדה חד-פעמית':
+    'Building constraints — a one-time download',
+  'שכבות REN ו-RAN לכל 18 העיריות, מ-jsDelivr; הגודל כתוב על שורת התפריט לפני הלחיצה. מכאן הן עובדות בלי רשת.':
+    'The REN and RAN layers for all 18 municipalities, from jsDelivr; the size is on the menu row before it is pressed. From then on they work offline.',
+  'מגבלות בנייה — מקור גיבוי':
+    'Building constraints — fallback source',
+  'אותם קבצים מ-GitHub, אם jsDelivr אינו זמין.':
+    'The same files from GitHub, if jsDelivr is unavailable.',
+  'פתיחה במפות גוגל':
+    'Opening in Google Maps',
+  'לחיצה כפולה על מקום פותחת בדפדפן קישור עם נ״צ בלבד — בלי מפתח, בלי חשבון ובלי לשמור דבר.':
+    'Double-tapping a place opens a link with the coordinate only in the browser — no key, no account, nothing stored.',
+  '<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, השאר אפור; קו האזורים הכתום ברמות 1–2.</p>':
+    '<p class="note" style="margin-block-start:6px">The boundaries follow the level and have no switch: what belongs to the screen is black, the rest grey; the orange regions line at levels 1–2.</p>',
   'אזור לפי INE':
     'Area type (INE)',
   'עירוני בעיקרו':
@@ -6664,8 +6712,8 @@ Object.assign(EN, {
     'Nothing new was added.',
 
   /* ---- the district-wide constraint view ---- */
-  '<p class="note" style="margin-block-start:6px">הרשת האקולוגית הלאומית ועתודת הקרקע החקלאית, לכל 18 העיריות, בשקיפות של 40% מעל מפת הרקע ומתחת לגבולות העיריות. ההפעלה הראשונה מורידה אותן פעם אחת ומכאן הן עובדות בלי רשת; כיבוי אינו מוחק אותן. ויטרז׳ העיריות אינו מוצג בתצוגה הזאת — שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה.</p>':
-    '<p class="note" style="margin-block-start:6px">The national ecological network and the national agricultural land reserve, for all 18 municipalities, at 40% opacity over the street background and under the municipal boundaries. The first activation downloads them once and from then on they work with no network; switching off does not delete them. The municipality colours are not shown in this view — two flat colour fields on top of each other are not two readings but one muddy one.</p>',
+  '<p class="note" style="margin-block-start:6px">REN ו-RAN לכל 18 העיריות, ב-40% מעל מפת הרקע. ההורדה פעם אחת ומכאן בלי רשת; כיבוי אינו מוחק.</p>':
+    '<p class="note" style="margin-block-start:6px">REN and RAN for all 18 municipalities, at 40% over the street background. Downloaded once and offline from then on; switching off deletes nothing.</p>',
   'מגבלות בנייה במחוז':
     'Building constraints across the district',
   'שתי שכבות שקובעות אם והיכן מותר לבנות. הן אינן בתוך האפליקציה — הן שוקלות 21.7 מגה-בייט למחוז כולו — ולכן הן יורדות בלחיצה, פעם אחת. שום דבר לא יורד מעצמו.':

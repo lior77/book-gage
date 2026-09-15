@@ -2776,6 +2776,34 @@ const css = (page, sel, prop) =>
     await page.evaluate(() => goDistrict()); await page.waitForTimeout(400);
   }
 
+  /* What needs a network is one list, printed where the reader can see it;
+     and a note beside a value is one quiet line, with the reasons a tap away. */
+  {
+    await page.evaluate(() => openInfo('about')); await page.waitForTimeout(400);
+    const about = await page.evaluate(() => ({
+      text: document.querySelector('#infoDrawer').innerText,
+      hosts: ONLINE().map(o => o.host) }));
+    ok('the about page has a "what needs a network" section', /מה דורש רשת/.test(about.text));
+    ok('and it names every host the app can reach', about.hosts.length >= 3 && about.hosts.every(h => about.text.includes(h)), JSON.stringify(about.hosts));
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; openInfo('terms'); }); await page.waitForTimeout(400);
+    const terms = await page.evaluate(() => document.querySelector('#infoDrawer').innerText);
+    ok('the terms page no longer promises plain offline — it points at that list', /מה דורש רשת/.test(terms) && !/עובדת גם בלי רשת/.test(terms));
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
+    const cp = await page.evaluate(() => {
+      const f = D.fre.find(x => x.dicofre === '131732');          // Crestuma: census_partial
+      goZone(D.freKey(f));
+      const notes = [...document.querySelectorAll('#doc .card .note')].map(n => n.innerText.trim());
+      const note = notes.find(n => /ארבעה שדות מפקד/.test(n)) || '';
+      return { partial: f.census_partial === true, len: note.length, size: getComputedStyle(document.querySelector('#doc .note')).fontSize };
+    });
+    ok('a parish the census sections do not cover carries one short note, not a paragraph', cp.partial && cp.len > 0 && cp.len <= 120, JSON.stringify(cp));
+    ok('and the note is set at the smallest step of the scale — tier 2 is quiet', cp.size === '12px', cp.size);
+    await page.click('#doc .stat[data-src="freguesia.median_age"]'); await page.waitForTimeout(500);
+    const rec = await page.evaluate(() => (document.querySelector('#panel') && !document.querySelector('#panel').hidden ? document.querySelector('#panel').innerText : '') + document.getElementById('doc').innerText);
+    ok('the full reason is one tap away, in the field\'s source record', /המקטעים הסטטיסטיים/.test(rec) && /2013/.test(rec));
+    await page.evaluate(() => { closePanel(); goDistrict(); }); await page.waitForTimeout(400);
+  }
+
   /* THE MATRIX.  Three levels by three modes, every cell exists, and the two
      axes never move each other: switching mode keeps the level and the unit,
      navigating keeps the mode.  Read off S and the tab row after each step. */
