@@ -289,7 +289,7 @@ const css = (page, sel, prop) =>
   const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'cons', 'more', 'save', 'load', 'info', 'dev', 'terms'];
+    'tiles', 'glass', 'cons', 'regions', 'more', 'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -452,28 +452,88 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(800);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
 
-  /* The boundaries are a function of the level and the mode: no switch, no
-     saved state, no cycle.  The regions' orange line is simply there at the
-     district, 3.2 wide, and the paragraph that explains them is there too. */
-  const region = await page.evaluate(() => {
-    const p = [...document.querySelectorAll('#map path')]
-      .find(el => (el.getAttribute('stroke') || '').toLowerCase() === '#e2761b');
-    return p ? Number(p.getAttribute('stroke-width')) : null;
-  });
-  ok('the regions\' orange line is drawn at the district without any switch, 3.2 wide', region === 3.2, String(region));
-  ok('and there is no row for it, nor a boundaries row — the level decides',
-     (await page.$('[data-m="regions"]')) === null && (await page.$('[data-m="borders"]')) === null);
-  ok('the regions block is on the district page', await page.$('#regionsDoc') !== null);
-  ok('and it is the last thing on the page',
-     await page.evaluate(() => document.querySelector('#doc').lastElementChild.id) === 'regionsDoc');
-  const rtxt = await page.$eval('#regionsDoc', el => el.textContent);
-  for (const need of ['האזור המטרופוליטני של פורטו', 'טאמגה אה סוזה', 'NUTS III'])
-    ok(`the regions block names ${need}`, rtxt.includes(need));
-  ok('it follows the map to level 2 as well',
-     await page.evaluate(async () => { goMun(13); return true; }) &&
-     (await page.waitForTimeout(800), await page.$('#regionsDoc') !== null));
-  await page.evaluate(() => goDistrict());
+  /* THE REGIONS ARE A LAYER, NOT A LINE ON EVERY MAP.  2.0.0 drew the two
+     NUTS III outlines at levels 1–2 with nothing to switch them off; that was
+     a regression and this is what holds the fix.  Off by default, everywhere;
+     אזורים in the menu opens a screen of their own. */
+  const orange = () => page.evaluate(() => [...document.querySelectorAll('#map path')]
+    .filter(el => (el.getAttribute('stroke') || '').toLowerCase() === '#e2761b').length);
+  await page.evaluate(() => { if (S.regions) toggleRegions(); goDistrict(); });
   await page.waitForTimeout(700);
+  ok('with the layer off there is no orange line at the district', await orange() === 0, String(await orange()));
+  await page.evaluate(() => goMun(13)); await page.waitForTimeout(700);
+  ok('nor at a municipality', await orange() === 0, String(await orange()));
+  await page.evaluate(() => goDistrict()); await page.waitForTimeout(600);
+  ok('and the district page no longer carries the regions paragraph', await page.$('#regionsDoc') === null);
+
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
+  ok('the menu carries an אזורים row, under שכבות', await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
+    return rows.indexOf('regions') > rows.indexOf('tiles') && rows.indexOf('regions') > 0;
+  }));
+  await page.evaluate(() => { S.tiles = false; map.removeLayer(tileLayer); });
+  await page.click('[data-m="regions"]');
+  await page.waitForTimeout(900);
+  ok('tapping it opens the regions screen and closes the menu',
+     await page.evaluate(() => S.regions === true && S.menu === false));
+  ok('and brings the street background back, because the regions are drawn on it',
+     await page.evaluate(() => S.tiles === true && map.hasLayer(tileLayer)));
+  const rg = await page.evaluate(() => ({
+    lines: LG.rgLine ? LG.rgLine.getLayers().map(g => g.getLayers().length) : null,
+    width: (document.querySelector('#map path[stroke="#e2761b"]') || { getAttribute: () => null }).getAttribute('stroke-width'),
+    nums: LG.rgNums ? LG.rgNums.getLayers().map(m => m.getElement() && m.getElement().innerText.trim()) : null,
+    level: S.level, mun: S.mun,
+  }));
+  ok('both regions are actually drawn — not an empty layer that draws nothing',
+     rg.lines && rg.lines.length === 2 && rg.lines.every(n => n > 0), JSON.stringify(rg.lines));
+  ok('the outline is the orange line at its documented width', rg.width === '3.2', String(rg.width));
+  ok('and each region carries its key number at its centre',
+     JSON.stringify(rg.nums) === JSON.stringify(['1', '2']), JSON.stringify(rg.nums));
+  ok('opening the layer did not move the level', rg.level === 'district' && rg.mun === null, JSON.stringify(rg));
+  const rtxt = await page.$eval('#doc', el => el.innerText);
+  for (const need of ['אזורים', 'האזור המטרופוליטני של פורטו', 'טאמגה אה סוזה', 'NUTS III'])
+    ok(`the reading half names ${need}`, rtxt.includes(need));
+  ok('and it offers one row per region, each tappable',
+     await page.$$eval('#doc [data-region]', e => e.length) === 2);
+  ok('nothing is filled until a region is chosen', await page.evaluate(() => !LG.rgFill));
+
+  /* tapping a row fills that region, and only that one */
+  await page.click('#doc [data-region="1"]');
+  await page.waitForTimeout(700);
+  const sel1 = await page.evaluate(() => ({ sel: S.regionSel,
+    fill: LG.rgFill ? LG.rgFill.getLayers().length : 0,
+    op: LG.rgFill ? LG.rgFill.getLayers()[0].options.fillOpacity : null,
+    colour: LG.rgFill ? LG.rgFill.getLayers()[0].options.fillColor : null,
+    marked: document.querySelectorAll('#doc .region-row[aria-pressed="true"]').length }));
+  ok('tapping a region in the list fills it orange at 40%',
+     sel1.sel === 1 && sel1.op === 0.4 && sel1.colour === '#e2761b', JSON.stringify(sel1));
+  ok('and it fills that region\'s municipalities and no others',
+     sel1.fill === await page.evaluate(() => D.belts[1].nums.length), JSON.stringify(sel1.fill));
+  ok('and exactly one row is marked', sel1.marked === 1, String(sel1.marked));
+
+  /* tapping the other one on the map does the same, and marks its card */
+  await page.evaluate(() => { let done = 0; LG.rgLine.getLayers()[0].eachLayer(l => { if (!done++) l.fire('click'); }); });
+  await page.waitForTimeout(700);
+  const sel2 = await page.evaluate(() => ({ sel: S.regionSel,
+    fill: LG.rgFill ? LG.rgFill.getLayers().length : 0,
+    which: (document.querySelector('#doc .region-row[aria-pressed="true"]') || { dataset: {} }).dataset.region }));
+  ok('tapping a region on the map fills it and marks its card in the reading half',
+     sel2.sel === 0 && sel2.which === '0'
+       && sel2.fill === await page.evaluate(() => D.belts[0].nums.length), JSON.stringify(sel2));
+  ok('tapping the same one again clears the choice',
+     await page.evaluate(async () => { pickRegion(0, 'doc'); return S.regionSel === null && !LG.rgFill; }));
+
+  /* and off again leaves nothing behind */
+  await page.evaluate(() => { toggleRegions(); }); await page.waitForTimeout(800);
+  ok('switching the layer off takes the orange with it', await orange() === 0, String(await orange()));
+  ok('and gives the street background back exactly as it was',
+     await page.evaluate(() => S.tiles === false && !map.hasLayer(tileLayer)));
+  ok('and the level document is back', await page.evaluate(() =>
+    S.regions === false && /מחוז פורטו/.test(document.getElementById('doc').innerText)));
+  await page.evaluate(() => { S.tiles = true; tileLayer.addTo(map); goDistrict(); });
+  await page.waitForTimeout(700);
+  // the layer closed the menu behind it; the block below opens on a menu row
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
 
   /* 6. day and night are a choice, not only the phone's setting */
   await page.click('[data-m="theme:dark"]');
@@ -1665,9 +1725,10 @@ const css = (page, sel, prop) =>
   const mrows = await page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
   ok('the menu carries one row for the constraints', mrows.indexOf('cons') >= 0,
      JSON.stringify(mrows.slice(mrows.indexOf('tiles'), mrows.indexOf('tiles') + 5)));
-  ok('and it sits under שכבות, above the boundaries row',
+  ok('and it sits under שכבות, between the stained glass and the regions',
      mrows.indexOf('cons') === mrows.indexOf('glass') + 1
-       && mrows.indexOf('cons') === mrows.indexOf('more') - 1);
+       && mrows.indexOf('regions') === mrows.indexOf('cons') + 1
+       && mrows.indexOf('more') === mrows.indexOf('regions') + 1, JSON.stringify(mrows.slice(mrows.indexOf('tiles'))));
   const consLabel = await page.evaluate(() =>
     document.querySelector('#menuIn [data-m="cons"]').innerText);
   ok('the row says what is still to download before it is pressed',
@@ -2975,7 +3036,7 @@ const css = (page, sel, prop) =>
       const zi = n => Number(getComputedStyle(document.querySelector(`.leaflet-${n}-pane`)).zIndex);
       return { region: zi('ln-region'), mun: zi('ln-mun'), fre: zi('ln-fre') };
     });
-    ok('boundary stack: regions above municipalities above parishes — and no district pane',
+    ok('boundary stack: the regions pane above municipalities above parishes — and no district pane',
        z.region > z.mun && z.mun > z.fre && !document_has_district, JSON.stringify(z));
   }
 
@@ -3092,20 +3153,21 @@ const css = (page, sel, prop) =>
     const tally = () => page.evaluate(() => {
       const t = g => { if (!LG[g]) return { n: 0, black: 0 }; let n = 0, black = 0;
         LG[g].eachLayer(l => { n++; if (l.options.color === '#000000') black++; }); return { n, black }; };
-      return { region: t('lnRegion'), mun: t('lnMun'), fre: t('lnFre') };
+      return { mun: t('lnMun'), fre: t('lnFre'), rg: !!LG.rgLine };
     });
-    await page.evaluate(() => goDistrict()); await page.waitForTimeout(600);
+    await page.evaluate(() => { if (S.regions) toggleRegions(); goDistrict(); }); await page.waitForTimeout(600);
     const l1 = await tally();
-    ok('level 1: regions and 18 black municipalities, no parish, no district line',
-       l1.region.n > 0 && l1.mun.n === 18 && l1.mun.black === 18 && l1.fre.n === 0 && !(await page.evaluate(() => !!LG.lnDistrict)), JSON.stringify(l1));
+    ok('level 1: 18 black municipalities, no parish, no district line and no region line',
+       l1.mun.n === 18 && l1.mun.black === 18 && l1.fre.n === 0 && !l1.rg
+         && !(await page.evaluate(() => !!LG.lnDistrict)), JSON.stringify(l1));
     await page.evaluate(() => goMun(14)); await page.waitForTimeout(600);
     const l2 = await tally();
-    ok('level 2: regions still there, one black municipality of 18, its 16 parishes drawn, one of them… none black',
-       l2.region.n > 0 && l2.mun.n === 18 && l2.mun.black === 1 && l2.fre.n === 16, JSON.stringify(l2));
+    ok('level 2: one black municipality of 18, its 16 parishes drawn, still no region line',
+       l2.mun.n === 18 && l2.mun.black === 1 && l2.fre.n === 16 && !l2.rg, JSON.stringify(l2));
     await page.evaluate(() => goZone(D.freKey(D.freByMun.get(14)[0]))); await page.waitForTimeout(700);
     const l3 = await tally();
-    ok('level 3: no regions, 18 grey municipalities, the 16 sibling parishes with exactly one black',
-       l3.region.n === 0 && l3.mun.n === 18 && l3.mun.black === 0 && l3.fre.n === 16 && l3.fre.black === 1, JSON.stringify(l3));
+    ok('level 3: 18 grey municipalities, the 16 sibling parishes with exactly one black',
+       l3.mun.n === 18 && l3.mun.black === 0 && l3.fre.n === 16 && l3.fre.black === 1 && !l3.rg, JSON.stringify(l3));
     ok('and nothing about boundaries is saved', await page.evaluate(() => {
       try { const o = JSON.parse(localStorage.getItem('porto') || '{}'); return !('lnMun' in o) && !('lnRegion' in o); } catch (e) { return true; } }));
     await page.evaluate(() => goDistrict()); await page.waitForTimeout(500);

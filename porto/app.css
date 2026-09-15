@@ -47,7 +47,7 @@
   /* What sits on the map itself does not follow the theme: the tiles are the
      same in day and night, so the number on a parish is always this ink in
      this halo.  --map-accent is the blue of a Latin label on the map. */
-  --map-ink:#101010; --map-accent:#15568f;
+  --map-ink:#101010; --map-accent:#15568f; --map-region:#e2761b;
   --map-halo:rgba(255,255,255,.92); --map-glow:rgba(255,255,255,.95);
   --night-halo:rgba(8,16,28,.55); --night-glow:rgba(8,16,28,.92);
   --me:#1a73e8;
@@ -918,6 +918,16 @@ body[data-view="text"] .map-only{display:none}
 .cons-row.no .cons-val{color:var(--miss)}
 /* the total has no colour of its own: it is the union of the three above it */
 .crow-tot .crow-c{border:0}
+
+/* ---------- שכבת האזורים ---------- */
+/* A row in the regions key is a button, and the one being looked at carries
+   the same highlight a chosen card does anywhere else in the app. */
+.region-row{width:100%; text-align:start; background:none; border:0; font:inherit;
+  color:inherit; cursor:pointer; border-radius:var(--r-ctl)}
+.region-row:active{background:var(--bg)}
+.region-row[aria-pressed="true"]{background:var(--hi); box-shadow:inset 2px 0 0 var(--hi-line)}
+/* the number on a region is the map's own label, in the regions' orange */
+.lbl-region{--lbl-ink:var(--map-region)}
 
 /* ---------- מוד נכסים ---------- */
 /* A listing card: the quote's own price line, the provider's picture beside it,

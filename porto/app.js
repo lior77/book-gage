@@ -137,6 +137,12 @@ const S = {
   cmpScope: 'mun',     // level 1 only: 'mun' | 'fre'
   cmpField: null,      // the field being compared; CMP_DEFAULT until chosen
   cmpPick: false,      // the field picker is open in place of the key and list
+  /* The two NUTS III regions.  A layer you switch on from the menu, not a line
+     that is always there: until 2.0.0 it was a switch, 2.0.0 made it permanent
+     at levels 1–2, and that was wrong — the regions answer a question of their
+     own and they answer it on a screen of their own. */
+  regions: false,
+  regionSel: null,     // the index of the region being looked at, or null
 };
 const MINE_KEY = 'porto-mine-v1';
 const D = {};
@@ -340,7 +346,7 @@ const lineColour = (kind, props) => {
 /* Drawn after the filled shapes of whichever level is on screen, so a boundary
    is never buried under a fill.  The fills carry no stroke of their own any
    more — every line on the map comes from here. */
-const LINE_KEYS = ['lnRegion', 'lnMun', 'lnFre', 'lnRegionC', 'lnMunC', 'lnFreC'];
+const LINE_KEYS = ['lnMun', 'lnFre', 'lnMunC', 'lnFreC'];
 
 function drawLines() {
   LINE_KEYS.forEach(k => {
@@ -422,17 +428,10 @@ function drawLines() {
       });
     }
   }
-  const regions = { type: 'FeatureCollection',
-    features: D.bB.features.filter(ft => ft.properties.kind === 'nuts3') };
-  /* Same reason as the neighbouring municipalities: while comparing one
-     municipality the plate holds that municipality and nothing else, and the
-     district edge crossing the empty corner is a line to nowhere.  On the
-     ordinary map it is context over a street background; here there is no
-     background for it to be context on. */
-  // The regions are context at levels 1 and 2 and nothing at level 3, where the
-  // screen is one parish and a line that leaves the district is noise.
-  const wide = !(S.cmp && S.level !== 'district');
-  if (wide && S.level !== 'zone') add('lnRegion', regions, 'region');
+  /* No region line here.  2.0.0 drew the two NUTS III regions on every map at
+     levels 1–2, with no way to switch them off — a permanent orange line over
+     work that had nothing to do with it.  They are a layer now: אזורים in the
+     menu opens a screen of their own, and drawRegions() is what draws them. */
 }
 
 function isDark() {
@@ -1102,24 +1101,146 @@ function drawDistrict() {
   fit(LG.mun.getBounds());
 }
 
-/* The two NUTS III regions, explained where the line that draws them is on.
-   It used to sit in the district card whether the layer was on or not, which
-   made it a paragraph about something that was not on the map.  Now it is the
-   last thing in the reading half at every level, and only while אזורים is on. */
-function regionsDoc() {
-  if (S.level === 'zone' || !D.belts) return '';
-  const rows = D.belts.map(b => `<div class="belt">
-      <span class="belt-sw" style="--c:${html(b.colour)}"></span>
+/* ===================================================== the regions layer ===
+   The two NUTS III regions.  Until 2.0.0 they were a switch; 2.0.0 made them a
+   permanent orange line at levels 1–2 and that was a regression — a line the
+   reader could not turn off, over work that had nothing to do with it.  They
+   are a layer again, and a better one: אזורים in the menu opens a screen where
+   the regions are the subject.  The street background under them, their two
+   outlines on it with a key number in each, and the reading half explaining
+   what a NUTS III region is and what each of these two is.  Tapping one — in
+   the list or on the map — fills it orange at 40%, which is the one thing that
+   says "this one" without a second colour entering the picture. */
+const REGION_FILL = 0.4;
+
+/* The first rule of this project is that every number on screen opens the
+   record behind it.  "3/18" on the flood row is such a number, and so is the
+   megabyte figure on the constraints row — but both sit inside the row's own
+   <button>, and a button may not contain a button.  So the link is its own
+   line beneath the row.  Until it existed the coverage caveat — which is the
+   whole honesty of the flood layer — lived in a file no reader ever opens.
+   The regions screen shows the same link, which is why this is no longer a
+   local of the layers panel. */
+const srcLine = key =>
+  `<p class="note" style="margin-block-start:2px">
+     <button class="srcln" type="button" data-src="${html(key)}">${
+       t('מקור, שנת ייחוס ומה לא ממופה')}</button>
+   </p>`;
+
+/* Where the number sits: the middle of the region's own municipalities.  Read
+   off the shapes rather than stored, because the only thing that could make it
+   drift is the boundary file, and then it should drift. */
+function regionCentre(belt) {
+  const fs = D.bM.features.filter(ft => belt.nums.indexOf(ft.properties.num) >= 0);
+  if (!fs.length) return null;
+  return L.geoJSON({ type: 'FeatureCollection', features: fs }).getBounds().getCenter();
+}
+/* Matched on the Hebrew name, which both records carry.  The first cut matched
+   on `code`: the boundary file has it and municipios.json → belts does not, so
+   every filter returned nothing and the two outlines were an empty layer that
+   drew nothing and said nothing.  A silent empty layer is the failure this
+   project dislikes most, so the browser suite counts the paths. */
+const regionFeatures = belt => ({ type: 'FeatureCollection',
+  features: D.bB.features.filter(ft => ft.properties.kind === 'nuts3' && ft.properties.he === belt.he) });
+
+let regionsBefore = null;      // the switches the screen borrowed
+
+function toggleRegions() {
+  if (S.adding) stopPlacing();
+  S.regions = !S.regions;
+  if (S.regions) {
+    // the list of places also owns the reading half; one screen at a time
+    if (S.wp) toggleWp();
+    if (S.view === 'map') { S.view = 'split'; applyView(); }
+    S.regionSel = null;
+    /* The street background is part of what this screen shows — the regions
+       are where people live, and an outline over an empty plate does not say
+       that.  It goes back as it was on the way out. */
+    regionsBefore = { tiles: S.tiles };
+    if (!S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+  } else {
+    const b = regionsBefore;
+    regionsBefore = null;
+    if (b && !b.tiles && S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+    S.regionSel = null;
+  }
+  closePanel();
+  applySwitches();
+  redrawLevel(); drawMine(); redrawText();
+  if (S.regions) $('#paneText').scrollTop = 0;
+  save();
+}
+const regionsOff = () => { if (S.regions) toggleRegions(); };
+
+function drawRegions() {
+  clearMap();
+  const belts = D.belts || [];
+  /* The chosen region is filled first, under the outlines, so no fill ever
+     sits on top of a line and softens it. */
+  if (S.regionSel !== null && belts[S.regionSel]) {
+    const nums = belts[S.regionSel].nums;
+    LG.rgFill = L.geoJSON({ type: 'FeatureCollection',
+        features: D.bM.features.filter(ft => nums.indexOf(ft.properties.num) >= 0) },
+      { interactive: false,
+        style: { weight: 0, fillColor: REGION_COLOUR, fillOpacity: REGION_FILL } }).addTo(map);
+  }
+  LG.rgLine = L.layerGroup(belts.map((b, i) => L.geoJSON(regionFeatures(b), {
+    pane: PANE_OF.region,
+    style: { color: lineColour('region'), weight: LINE_W.region, opacity: .95,
+             fill: true, fillOpacity: 0, lineJoin: 'round', lineCap: 'round' },
+    onEachFeature: (ft, l) => {
+      l.on('click', () => pickRegion(i, 'map'));
+      l.bindTooltip(`<b>${html(nm(b))}</b><br>${html(b.nums.length)} ${html(t('עיריות'))}`,
+        { sticky: true, className: 'tt' });
+    },
+  }))).addTo(map);
+  LG.rgNums = L.layerGroup(belts.map((b, i) => {
+    const c = regionCentre(b);
+    if (!c) return null;
+    const mk = L.marker(c, { icon: numIcon(String(i + 1), 'lbl-region'), keyboard: false,
+      title: (i + 1) + ' · ' + nm(b), riseOnHover: true });
+    mk.on('click', () => pickRegion(i, 'map'));
+    return mk;
+  }).filter(Boolean)).addTo(map);
+  fit(L.geoJSON(D.bM).getBounds());
+}
+
+/* One place decides what "this region is the one" means, whichever half the
+   tap came from: the fill on the map, the marked row in the list, and — from
+   the map — the card scrolled to, because the tap happened somewhere else. */
+function pickRegion(i, from) {
+  S.regionSel = S.regionSel === i ? null : i;
+  drawRegions();
+  redrawText();
+  if (from === 'map' && S.regionSel !== null) {
+    const el = $(`#doc [data-region="${S.regionSel}"]`);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+function renderRegions() {
+  const belts = D.belts || [];
+  const rows = belts.map((b, i) => {
+    const on = S.regionSel === i;
+    return `<button class="belt region-row${on ? ' is-hi' : ''}" data-region="${i}"
+        aria-pressed="${on}">
+      <span class="pin" style="--c:${html(b.colour)}">${i + 1}</span>
       <span class="row-body">
         <span class="row-t">${nmPair(b, b.en)}</span>
-        <span class="row-d">${prose(b.sub_he)}</span>
-        <span class="row-m num">${html(b.nums.slice().sort((x, y) => x - y).join(' · '))}</span>
-      </span></div>`).join('');
-  return `<div class="card" id="regionsDoc">
-      <h2>${t('שני האזורים')} <span class="en lat">(NUTS III)</span></h2>
-      <p class="sub">${t('החלוקה הרשמית של המחוז, וזו שלפיה INE מפרסם. הקו הכתום במפה מקיף את העיריות של כל אזור.')}</p>
+        <span class="row-d">${prose(b.sub_he === undefined ? '' : (S.lang === 'en' ? b.sub_en : b.sub_he))}</span>
+        <span class="row-m">${t('העיריות:')} <span class="num">${html(b.nums.slice().sort((x, y) => x - y).join(' · '))}</span></span>
+      </span></button>`;
+  }).join('');
+  return `${viewBar()}<div class="card">
+      <h1>${t('אזורים')} <span class="en lat">(NUTS III)</span></h1>
+      <p class="lead">${t('מחוז פורטו מחולק לשני אזורים סטטיסטיים, וזו החלוקה שלפיה INE מפרסם חלק מהנתונים. אזור אינו רשות מנהלית ואינו גובה מס: הוא יחידת מדידה של האיחוד האירופי, ברמה NUTS III, שלפיה משווים אזורים בין מדינות.')}</p>
+      <p class="note">${t('הקו הכתום במפה מקיף את העיריות של כל אזור. המספר במרכזו הוא מספר האזור באפליקציה — לחיצה עליו, או על שורה ברשימה, צובעת את האזור.')}</p>
+    </div>
+    <div class="card">
+      <h2>${t('מפתח האזורים')}</h2>
       ${rows}
       <p class="note">${t('שני האזורים גדולים ממה שמצויר כאן: לאזור המטרופוליטני 17 עיריות ולטאמגה אה סוזה 11, והשאר יושבות במחוזות אוויירו וויזאו. האפליקציה מראה את החלק שבתוך מחוז 13 בלבד.')}</p>
+      ${srcLine('map.caop_2025')}
     </div>`;
 }
 
@@ -1155,8 +1276,7 @@ function renderDistrict() {
 
     <div class="grp">${t('18 העיריות — לפי המספור במפה')}</div>
     <div class="rows">${list}</div>
-    ${mineList(null)}
-    ${regionsDoc()}`;
+    ${mineList(null)}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -1326,8 +1446,7 @@ function renderMun(num) {
       return at && at.mun_num === num;
     })}
     <p class="note" style="margin-block-start:10px">${t('המספר על כל רובע הוא מספר רץ של האפליקציה, בסדר הקוד הרשמי; הקוד הרשמי המלא כתוב לצד השם. רובע שמסומן')}
-      <span class="flag">${t('רובע מ-2025')}</span> ${t('נוצר ברפורמת 2025 מאיחוד שבוטל — בכרטיס שלו רשומים השם, הקוד והנתונים של היחידה הקודמת, תחת שמה.')}</p>
-    ${regionsDoc()}`;
+      <span class="flag">${t('רובע מ-2025')}</span> ${t('נוצר ברפורמת 2025 מאיחוד שבוטל — בכרטיס שלו רשומים השם, הקוד והנתונים של היחידה הקודמת, תחת שמה.')}</p>`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -2808,6 +2927,7 @@ function dropWpUrls() { wpUrls.forEach(u => URL.revokeObjectURL(u)); wpUrls = []
 
 function toggleWp() {
   if (S.adding) stopPlacing();
+  if (!S.wp && S.regions) toggleRegions();   // both own the reading half
   S.wp = !S.wp;
   renderMenu();
   if (!S.wp) {
@@ -3160,6 +3280,8 @@ function goHome() {
   mineEditing = null; minePending = null; dropPhotoUrl();
   wpArmed = null;
   if (S.wp) toggleWp();
+  // the regions screen is not a level and not a mode; home leaves it
+  if (S.regions) toggleRegions();
   /* Home is a level, not a mode: it goes to the district and leaves the mode
      as it is, because the mode switcher is the one way between modes and the
      trail and this button are the one way between levels.  Two axes, and a
@@ -4054,8 +4176,7 @@ function renderZone(key) {
     ${mineList(p => {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && D.freKey(at) === key;
-    })}
-    ${regionsDoc()}`;
+    })}`;
   $('#paneText').scrollTop = 0;
 }
 
@@ -4119,6 +4240,9 @@ function toggleFills() {
 /* Redraw whichever level is on screen, because the fill belongs to the level
    and each level draws its own. */
 function redrawLevel() {
+  // the regions are their own screen: the two of them on the street background,
+  // and none of the level's own shapes
+  if (S.regions) { drawRegions(); return; }
   if (S.cmp) { drawCmp(); return; }
   if (S.lst) { drawListings(); return; }
   if (S.level === 'district') drawDistrict();
@@ -4717,6 +4841,9 @@ const menuRows = () => [
      it draws them over.  The row carries what is still to download, so the
      price is on it before it is pressed. */
   { k: 'cons', he: t('מגבלות בנייה') + consHe(), icon: 'cons', kind: 'tog' },
+  /* The two NUTS III regions.  A layer, and a switch again: 2.0.0 drew them on
+     every map at levels 1–2 with nothing to turn them off. */
+  { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
   { k: 'more', he: t('עוד שכבות'), icon: 'more', kind: 'act' },
   { grp: t('נתונים') },
   // The points the user marked, and only those — everything else in the app
@@ -4743,6 +4870,7 @@ function menuState(k) {
   if (k === 'tiles') return S.tiles;
   if (k === 'glass') return S.muncol;
   if (k === 'cons') return S.cons;
+  if (k === 'regions') return S.regions;
   if (k === 'locate') return !!meWatch;
   if (k === 'mine') return S.wp;
   if (k === 'cmp') return S.cmp;
@@ -4846,6 +4974,7 @@ function menuPick(k) {
     case 'search':  openMenu(false); openSearch(); break;
     case 'mine':    openMenu(false); toggleWp(); break;
     case 'cmp':     openMenu(false); setMode(S.cmp ? 'overview' : 'cmp'); break;
+    case 'regions': openMenu(false); toggleRegions(); break;
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
@@ -4899,18 +5028,6 @@ function renderLayers() {
        ${n === undefined ? '' : `<span class="lay-k">${n}</span>`}
      </button>`;
 
-  /* The first rule of this project is that every number on screen opens the
-     record behind it.  "3/18" on the flood row is such a number, and so is the
-     megabyte figure on the constraints row — but both sit inside the row's own
-     <button>, and a button may not contain a button.  So the link is its own
-     line beneath the row.  Until it existed the coverage caveat — which is the
-     whole honesty of the flood layer — lived in a file no reader ever opens. */
-  const srcLine = key =>
-    `<p class="note" style="margin-block-start:2px">
-       <button class="srcln" type="button" data-src="${html(key)}">${
-         t('מקור, שנת ייחוס ומה לא ממופה')}</button>
-     </p>`;
-
   let h = t('<h3>שכבות</h3>') +
     row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), C.tilesSwatch, true) +
     row(S.muncol, 'muncol', t('צבעי 18 העיריות'), C.munSwatch, true) +
@@ -4945,7 +5062,7 @@ function renderLayers() {
   // the level and the mode, and the note says the rule rather than offering
   // a switch.
   h += t('<h3>קווי גבול</h3>') +
-    t('<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, השאר אפור; קו האזורים הכתום ברמות 1–2.</p>');
+    t('<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, והשאר אפור. האזורים הם שכבה נפרדת בתפריט.</p>');
   // the letters only exist at level 3, and they are neighbourhoods in Porto and
   // localities everywhere else — the row says which, and counts them like the
   // other rows do
@@ -5000,6 +5117,7 @@ function renderModeBar() {
 function setMode(k) {
   if (k === modeOf()) return;
   if (S.adding) stopPlacing();
+  if (S.regions) regionsOff();
   if (S.wp) toggleWp();
   if (S.cmp) toggleCmp();
   if (S.cons) consOff();
@@ -5013,6 +5131,7 @@ function setMode(k) {
 function redrawText() {
   $('#doc').classList.toggle('dense', S.dense);
   renderModeBar();
+  if (S.regions) { $('#doc').innerHTML = renderRegions(); return; }
   // the places list sits over the level document: the map is still at its
   // level and still navigable, and the mode is still the mode, until it closes
   if (S.wp) { renderWaypoints(); return; }
@@ -5213,7 +5332,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
       letters: S.letters, mine: S.mine, water: S.water, floods: S.floods,
-      cons: S.cons, lst: S.lst,
+      cons: S.cons, lst: S.lst, regions: S.regions,
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
@@ -5241,6 +5360,7 @@ function restore() {
     if (typeof o.floods === 'boolean') S.floods = o.floods;
     if (typeof o.cons === 'boolean') S.cons = o.cons;
     if (typeof o.lst === 'boolean') S.lst = o.lst;
+    if (typeof o.regions === 'boolean') S.regions = o.regions;
     if (o.consShow && typeof o.consShow === 'object')
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
@@ -5640,6 +5760,10 @@ function wire() {
   $('#doc').addEventListener('click', e => {
     // the נ.צ. cards come first: while they are on screen they are the screen
     if (S.wp && wpClick(e)) return;
+    if (S.regions) {
+      const r = e.target.closest('[data-region]');
+      if (r) { pickRegion(Number(r.dataset.region), 'doc'); return; }
+    }
     if (S.lst && lstClick(e)) return;
     // the sort chip: reading order only, so the text is redrawn and the map is not
     if (e.target.closest('[data-sortdir]')) { S.sortDesc = !S.sortDesc; save(); redrawText(); return; }
@@ -6861,6 +6985,18 @@ Object.assign(EN, {
     'Compare data',
   'השוואה':
     'Compare',
+  'אזורים':
+    'Regions',
+  'העיריות:':
+    'Municipalities:',
+  'מפתח האזורים':
+    'The regions key',
+  'מחוז פורטו מחולק לשני אזורים סטטיסטיים, וזו החלוקה שלפיה INE מפרסם חלק מהנתונים. אזור אינו רשות מנהלית ואינו גובה מס: הוא יחידת מדידה של האיחוד האירופי, ברמה NUTS III, שלפיה משווים אזורים בין מדינות.':
+    'The Porto district is divided into two statistical regions, and this is the division INE publishes some of its data by. A region is not an administrative authority and levies no tax: it is a European Union unit of measurement, at the NUTS III level, by which regions are compared between countries.',
+  'הקו הכתום במפה מקיף את העיריות של כל אזור. המספר במרכזו הוא מספר האזור באפליקציה — לחיצה עליו, או על שורה ברשימה, צובעת את האזור.':
+    'The orange line on the map encloses each region\'s municipalities. The number at its centre is the region\'s number in the app — tapping it, or a row in the list, colours the region.',
+  'עיריות':
+    'municipalities',
   '18 העיריות — מודעות בכל אחת':
     'The 18 municipalities — listings in each',
   'אין מודעות תואמות כאן. המספרים על המפה אומרים איפה יש.':
@@ -7099,8 +7235,8 @@ Object.assign(EN, {
     'Opening in Google Maps',
   'לחיצה כפולה על מקום פותחת בדפדפן קישור עם נ״צ בלבד — בלי מפתח, בלי חשבון ובלי לשמור דבר.':
     'Double-tapping a place opens a link with the coordinate only in the browser — no key, no account, nothing stored.',
-  '<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, השאר אפור; קו האזורים הכתום ברמות 1–2.</p>':
-    '<p class="note" style="margin-block-start:6px">The boundaries follow the level and have no switch: what belongs to the screen is black, the rest grey; the orange regions line at levels 1–2.</p>',
+  '<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, והשאר אפור. האזורים הם שכבה נפרדת בתפריט.</p>':
+    '<p class="note" style="margin-block-start:6px">The boundaries follow the level and have no switch: what belongs to the screen is black, the rest grey. The regions are a layer of their own in the menu.</p>',
   'אזור לפי INE':
     'Area type (INE)',
   'עירוני בעיקרו':
