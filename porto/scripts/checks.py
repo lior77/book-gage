@@ -141,6 +141,16 @@ def main():
     for num, want in EXPECTED_FREG.items():
         if per.get(num, 0) != want:
             fail("municipality %d: %d freguesias, expected %d" % (num, per.get(num, 0), want))
+    # The running number the map shows: exactly 1..N per municipality, in the
+    # official (DICOFRE) order, so the map, the list and the legend agree.
+    for num, want in EXPECTED_FREG.items():
+        kids = sorted((f for f in fre if f["mun_num"] == num), key=lambda f: f["code"])
+        nums = [f.get("num") for f in kids]
+        if nums != list(range(1, want + 1)):
+            fail("municipality %d: running numbers are %s, not 1..%d in code order"
+                 % (num, nums[:6], want))
+    if sorted(m["num"] for m in mun) != list(range(1, 19)):
+        fail("municipality running numbers are not 1..18")
 
     # ---- 2. no filler values ----------------------------------------------
     for f in fre:
@@ -1462,7 +1472,7 @@ def main():
     # The bare "N parishes" may name the district (275) or the untouched
     # remainder (218); anything else is a number that once was true.
     bound = [  # (pattern, expected, what the number is)
-        (r"(?<!\d)(\d{3})(?!\d)\s*(?:רובעים|parishes)",
+        (r"(?<!\d)(\d{3})(?!\d)\s*(?:רובעים|parishes|shapes)",
          {len(fre), n_untouched, len(fre) - n_quarters},
          "parishes (district, untouched remainder, or outside Porto city)"),
         (r"(?:מ-|of the )(\d{3}) (?:היחידות|units)", len(fre), "units the app draws"),

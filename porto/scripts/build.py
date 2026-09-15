@@ -1471,6 +1471,18 @@ def main():
                              "items": indicators})
     dump("municipios.json", {"generated": date.today().isoformat(),
                              "belts": belts, "items": municipios})
+    # The number on the map is the app's own: 1..N inside each municipality,
+    # in the official order (by DICOFRE), so the map and the list read the
+    # same thing and no municipality shows 02 next to 44. The official code
+    # stays in `code`/`dicofre` and is printed in the text beside every unit.
+    # Municipalities already carry `num` (1–18; 1–11 are the metropolitan
+    # area, 12–18 Tâmega e Sousa — the running number says the region).
+    by_mun = {}
+    for f in freguesias:
+        by_mun.setdefault(f["mun_num"], []).append(f)
+    for kids in by_mun.values():
+        for i, f in enumerate(sorted(kids, key=lambda f: f["code"]), 1):
+            f["num"] = i
     dump("freguesias.json", {"generated": date.today().isoformat(),
                              "items": freguesias})
     dump("porto_city.json", {"generated": date.today().isoformat(),

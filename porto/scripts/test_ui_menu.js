@@ -2744,6 +2744,29 @@ const css = (page, sel, prop) =>
     ok('boundary stack: regions above district above municipalities above parishes',
        z.region > z.district && z.district > z.mun && z.mun > z.fre, JSON.stringify(z));
   }
+
+  /* ---- running numbers: the map, the pins and the legend say the same thing
+     The label on a unit is the app's own 1..N; the official DICOFRE code is
+     printed in the text beside it. Read back the labels the map actually
+     draws, at the district and inside one municipality (Lousada = 14, which
+     has 16 parishes), and compare with the pins in the list. */
+  {
+    const labels = () => page.$$eval('.leaflet-marker-icon.lbl i', els => els.map(e => e.textContent.trim()).sort((a, b) => a - b));
+    const pins = () => page.$$eval('#doc [data-mun] .pin, #doc [data-fre] .pin', els => els.map(e => e.textContent.trim()).sort((a, b) => a - b));
+    await page.click('#homeBtn'); await page.waitForTimeout(400);
+    const want18 = Array.from({ length: 18 }, (_, i) => String(i + 1));
+    ok('district: the 18 map labels are the running numbers 1..18', JSON.stringify(await labels()) === JSON.stringify(want18), (await labels()).join(','));
+    ok('district: the list pins are the same 1..18', JSON.stringify(await pins()) === JSON.stringify(want18), (await pins()).join(','));
+    const codeBeside = await page.$$eval('#doc [data-mun]', els => els.length && els.every(e => /\b13\d\d\b/.test(e.textContent)));
+    ok('district: every row also prints the four-digit official code', codeBeside);
+    await page.click('#doc [data-mun="14"]'); await page.waitForTimeout(500);
+    const want16 = Array.from({ length: 16 }, (_, i) => String(i + 1));
+    ok('Lousada: the 16 parish labels are 1..16', JSON.stringify(await labels()) === JSON.stringify(want16), (await labels()).join(','));
+    ok('Lousada: the list pins are 1..16 and each row prints a six-digit code',
+       JSON.stringify(await pins()) === JSON.stringify(want16)
+         && await page.$$eval('#doc [data-fre]', els => els.every(e => /\b1305\d\d\b/.test(e.textContent))),
+       (await pins()).join(','));
+  }
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);

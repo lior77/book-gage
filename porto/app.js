@@ -771,9 +771,8 @@ function cmpIcon(text) {
 }
 
 function numIcon(text, cls) {
-  // Official codes are two digits, and a unit the 2025 reform split shows its
-  // first successor with a plus — three characters, which need a wider pill or
-  // they spill out of the circle Leaflet sizes from iconSize.
+  // Running numbers are one or two digits; letters and anything longer get
+  // a wider pill or they spill out of the circle Leaflet sizes from iconSize.
   const wide = String(text).length > 2, w = wide ? 28 : 24;
   return L.divIcon({
     className: 'lbl' + (wide ? ' wide' : '') + (cls ? ' ' + cls : ''),
@@ -968,7 +967,7 @@ function drawDistrict() {
         if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), nm(m)); return; }
         goMun(ft.properties.num);
       });
-      l.bindTooltip(`<b>${html(munCode(m) + ' · ' + nm(m))}</b><br><span class="lat">${html(m.pt)}</span>`,
+      l.bindTooltip(`<b>${html(munNum(m) + ' · ' + nm(m))}</b><br><span class="lat">${html(m.pt + ' · ' + munCode(m))}</span>`,
         { sticky: true, className: 'tt' });
     },
   }).addTo(map);
@@ -979,8 +978,8 @@ function drawDistrict() {
   drawLines();
 
   LG.labels = L.layerGroup(D.mun.map(m => {
-    const mk = L.marker(latlng(m.center), { icon: numIcon(munCode(m)), keyboard: false,
-      title: munCode(m) + ' · ' + nm(m), riseOnHover: true });
+    const mk = L.marker(latlng(m.center), { icon: numIcon(munNum(m)), keyboard: false,
+      title: munNum(m) + ' · ' + nm(m), riseOnHover: true });
     mk.on('click', () => {
       if (S.adding || S.wp) return;
       if (isSecondTap('mun:' + m.num)) { openInGoogle(latlng(m.center), m.he); return; }
@@ -1003,7 +1002,7 @@ function regionsDoc() {
       <span class="row-body">
         <span class="row-t">${nmPair(b, b.en)}</span>
         <span class="row-d">${prose(b.sub_he)}</span>
-        <span class="row-m num">${html(b.nums.map(n => munCode(D.munByNum.get(n))).sort().join(' · '))}</span>
+        <span class="row-m num">${html(b.nums.slice().sort((x, y) => x - y).join(' · '))}</span>
       </span></div>`).join('');
   return `<div class="card" id="regionsDoc">
       <h2>${t('שני האזורים')} <span class="en lat">(NUTS III)</span></h2>
@@ -1014,12 +1013,12 @@ function regionsDoc() {
 }
 
 function renderDistrict() {
-  const list = D.mun.slice().sort((a, b) => munCode(a).localeCompare(munCode(b))).map(m => {
+  const list = D.mun.slice().sort((a, b) => a.num - b.num).map(m => {
     const chr = (m.profile.find(p => p.label === 'אופי') || {}).text || '';
     return `<button class="row" data-mun="${m.num}">
-      <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
+      <span class="pin" style="--c:${html(m.fill)}">${html(munNum(m))}</span>
       <span class="row-body">
-        <span class="row-t">${nmPair(m, m.en)}</span>
+        <span class="row-t">${nmPair(m, m.en)}${m.dicofre ? ` <span class="lat num">${html(m.dicofre)}</span>` : ''}</span>
         <span class="row-d">${prose(chr)}</span>
         <span class="row-m">${html(t(m.belt))} · <span class="num">${shown(m.pop2021, 0, 100)}</span> ${t('תושבים ·')}
           <span class="num">${nf(m.area_km2, 1)}</span> ${t('קמ״ר ·')}
@@ -1067,8 +1066,12 @@ function freOfFeature(num, props) {
 // of its DICOFRE code (131202 -> 02), as INE counted it in 2021. The 25 units
 // the 2025 reform dissolved keep the code they held until then — it is the
 // code their figures were published under, and the card says what replaced them.
-const freNum = f => (f.code || '–');
-// Sorting key, so a municipality's parish list runs in the official order.
+// The number on the map: the app's own 1..N inside the municipality (built in
+// build.py in official-code order). The official code is freCode / dicofre.
+const freNum = f => (f.num === undefined ? '–' : String(f.num));
+const munNum = m => String(m.num);
+// Sorting key, so a municipality's parish list runs in the official order —
+// which is also the running-number order, so the list and the map agree.
 const freOrder = f => (f.code || '99');
 /* A parish the 2025 reform created out of a dissolved union.  The app draws
    the 2025 division now, so the thing worth saying is no longer "this will be
@@ -1180,7 +1183,7 @@ function renderMun(num) {
   $('#doc').innerHTML = `
     <div class="card">
       <div class="hdr">
-        <span class="pin" style="--c:${html(m.fill)}">${html(munCode(m))}</span>
+        <span class="pin" style="--c:${html(m.fill)}">${html(munNum(m))}</span>
         <div><h1>${nmPair(m, m.en)}</h1>
           <p class="sub">${html(t(m.belt))} · <span class="num">${nf(m.n_freguesias)}</span> ${t('רובעים')}${m.dicofre
             ? t(' · קוד רשמי <span class="lat num">') + html(m.dicofre) + '</span>' : ''}</p></div>
@@ -1210,7 +1213,7 @@ function renderMun(num) {
       const at = freguesiaAt(p.ll[0], p.ll[1]);
       return at && at.mun_num === num;
     })}
-    <p class="note" style="margin-block-start:10px">${t('המספר על כל רובע הוא הקוד הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן')}
+    <p class="note" style="margin-block-start:10px">${t('המספר על כל רובע הוא מספר רץ של האפליקציה, בסדר הקוד הרשמי; הקוד הרשמי המלא כתוב לצד השם. רובע שמסומן')}
       <span class="flag">${t('רובע מ-2025')}</span> ${t('נוצר ברפורמת 2025 מאיחוד שבוטל — בכרטיס שלו רשומים השם, הקוד והנתונים של היחידה הקודמת, תחת שמה.')}</p>
     ${regionsDoc()}`;
   $('#paneText').scrollTop = 0;
@@ -4320,7 +4323,7 @@ function cmpRank(field) {
 /* All of them.  An earlier cut drew the ten smallest and the ten largest at
    level 1, because 243 shades of one hue is not a map anyone can read — but
    that was the continuous ramp's problem, and five classes do not have it.
-   243 shapes in five colours is exactly the picture the screen is for. */
+   275 shapes in five colours is exactly the picture the screen is for. */
 function cmpShown(rk) { return { list: rk.have, cut: 0 }; }
 
 /* ------------------------------------------------------------ the map --- */
@@ -4403,12 +4406,12 @@ function drawCmp() {
   /* The labels are the app's own: the official DICOFRE code, as on every other
      map here.  The colour says which fifth the unit is in and the list says the
      number — the label has no third job to do. */
-  /* At level 1 with the parishes chosen there are 243 shapes: a number on each
+  /* At level 1 with the parishes chosen there are 275 shapes: a number on each
      is not a map.  The labels there name the eighteen municipalities that hold
      them, which is what tells you where you are looking. */
   const rows = S.level === 'mun' ? (D.freByMun.get(S.mun) || []) : D.mun;
   LG.labels = L.layerGroup(rows.map(o => {
-    const code = o.mun_num === undefined ? munCode(o) : freNum(o);
+    const code = o.mun_num === undefined ? munNum(o) : freNum(o);
     const mk = L.marker(latlng(o.center), { icon: cmpIcon(code), keyboard: false,
       title: cmpCode(code) + ' · ' + cmpName(o), riseOnHover: true });
     mk.on('click', () => {
@@ -4435,7 +4438,7 @@ const cmpFmt = (v, f) => v === null || v === undefined ? miss() : nf(v, f.dec);
 function cmpRowHtml(r, field, lvl, rk) {
   const ink = inkOn(r.c);
   const mun = r.o.mun_num === undefined;
-  const code = mun ? munCode(r.o) : freNum(r.o);
+  const code = mun ? munNum(r.o) : freNum(r.o);
   return `<div class="cmp-row" data-cmpu="${html(cmpId(r.o))}"${
       mun ? ` data-mun="${r.o.num}"` : ''}>
     <span class="cmp-sw" style="background:${r.c};color:${ink}">${html(cmpCode(code))}</span>
@@ -4517,7 +4520,7 @@ function renderCmp() {
       const mun = r.o.mun_num === undefined;
       return `<div class="cmp-row no" data-cmpu="${html(cmpId(r.o))}"${
           mun ? ` data-mun="${r.o.num}"` : ''}>
-        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munCode(r.o) : freNum(r.o)))}</span>
+        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munNum(r.o) : freNum(r.o)))}</span>
         <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}
           <span class="lat">${html(bare(r.o.pt))}</span></span></span>
         <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${miss()}</button>
@@ -5184,7 +5187,7 @@ function runSearch(term) {
   const out = [];
   D.mun.forEach(m => {
     if (hit(m.he) || hit(m.pt) || hit(m.en) || hit(m.dicofre)) out.push({
-      t: munCode(m) + ' · ' + m.he, s: m.pt, k: t('עירייה'), go: `data-jump="mun:${m.num}"` });
+      t: munNum(m) + ' · ' + m.he, s: m.pt + ' · ' + munCode(m), k: t('עירייה'), go: `data-jump="mun:${m.num}"` });
   });
   D.fre.forEach(f => {
     // the official code is searchable too: it is what appears on a form
@@ -5291,10 +5294,9 @@ function renderInfo() {
     <h2>${t('איך קוראים את המספרים')}</h2>
     <p>${t('לכל יחידה מנהלית בפורטוגל יש קוד רשמי אחד,')} <b>DICOFRE</b>${t(', והוא בנוי בשכבות. מחוז פורטו הוא')} <span class="num">13</span>${t('; שתי הספרות שאחריו הן העירייה, ושתיים נוספות הן הרובע:')}</p>
     <pre>${t('13 12 02 ▔▔ ▔▔ ▔▔ │  │  └── רובע  (Bonfim) │  └───── עירייה (פורטו) └──────── מחוז  (פורטו)')}</pre>
-    <p>${t('המספר שמופיע על כל עירייה במפה הוא')} <b>${t('שתי הספרות הרשמיות שלה')}</b> ${t('— פורטו היא')} <span class="num">12</span>${t(', אמרנטה')} <span class="num">01</span>${t(', טרופה')} <span class="num">18</span>${t('. זה הקוד שמופיע בטפסים, במסמכי מקרקעין ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.')}</p>
-    <p>${t('המספר שעל כל רובע הוא באותו אופן')} <b>${t('שתי הספרות הרשמיות שלו')}</b> ${t('בתוך העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים מגיעים מיחידות שמסומנות ב-OpenStreetMap עם')} <span class="lat">ref:ine</span>
-      ${t('ועם')} <span class="lat">source=DGT — CAOP</span>${t(', כלומר הם הקוד שהמדינה מפרסמת ולא מספור של האפליקציה.')}</p>
-    <p>${t('הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.')}</p>
+    <p>${t('המספר שמופיע על כל עירייה ועל כל רובע במפה הוא')} <b>${t('מספר רץ של האפליקציה')}</b>${t(': העיריות 1 עד 18 — ‏1 עד 11 באזור המטרופוליטני, ‏12 עד 18 בטאמגה אה סוזה — והרובעים 1 עד N בתוך כל עירייה, בסדר הקוד הרשמי. הוא נועד לקשור בין המפה לרשימה, ואין לו קיום מחוץ לאפליקציה.')}</p>
+    <p>${t('הקוד הרשמי כתוב בטקסט לצד כל יחידה: לעירייה ארבע ספרות, לרובע שש. זה הקוד שמופיע בטפסים, במסמכי מקרקעין ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל. הקודים מגיעים מ-CAOP 2025 של DGT — הקוד והגבול הם אותה רשומה.')}</p>
+    <p>${t('הקוד הרשמי אינו רץ 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה קוד חדש בסוף הרשימה של אותה עירייה — ולכן בקודים הרשמיים 02 יכול לשבת ליד 44. המספר הרץ שעל המפה מוחק את הפער הזה.')}</p>
     <p><b>${t('רפורמת 2025.')}</b> ${t('האפליקציה מציירת את חלוקת 2025 — 275 רובעים לפי CAOP 2025. חלק מהאיחודים של 2013 בוטלו: במחוז פורטו 25 איחודים פורקו ל-57 רובעים חדשים, וקוד היחידה המאוחדת בוטל. רובע כזה מסומן')} <span class="flag">${t('רובע מ-2025')}</span>${t(', ובכרטיס שלו רשומים השם, הקוד והנתונים של היחידה שממנה נוצר — תחת שמה ושנת הייחוס שלה, לא כשלו. 218 הרובעים האחרים לא נגעו ברפורמה, והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.')}</p>
     <p class="note">${t('אוכלוסיית 57 הרובעים החדשים נגזרת מטבלת ההמרה של INE בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025, וסכומה שווה בדיוק לאוכלוסיית היחידה שממנה נוצרו.')}</p>
 
@@ -5686,6 +5688,16 @@ Object.assign(EN, {
   'שנת ייחוס': 'reference year',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   'רובע מ-2025': 'a 2025 parish',
+  'המספר על כל רובע הוא מספר רץ של האפליקציה, בסדר הקוד הרשמי; הקוד הרשמי המלא כתוב לצד השם. רובע שמסומן':
+    'The number on each parish is the app\'s own running number, in official-code order; the full official code is printed beside the name. A parish marked',
+  'המספר שמופיע על כל עירייה ועל כל רובע במפה הוא': 'The number on every municipality and parish on the map is',
+  'מספר רץ של האפליקציה': 'the app\'s own running number',
+  ': העיריות 1 עד 18 — ‏1 עד 11 באזור המטרופוליטני, ‏12 עד 18 בטאמגה אה סוזה — והרובעים 1 עד N בתוך כל עירייה, בסדר הקוד הרשמי. הוא נועד לקשור בין המפה לרשימה, ואין לו קיום מחוץ לאפליקציה.':
+    ': municipalities 1 to 18 — 1 to 11 in the metropolitan area, 12 to 18 in Tâmega e Sousa — and parishes 1 to N inside each municipality, in official-code order. It ties the map to the list and has no existence outside the app.',
+  'הקוד הרשמי כתוב בטקסט לצד כל יחידה: לעירייה ארבע ספרות, לרובע שש. זה הקוד שמופיע בטפסים, במסמכי מקרקעין ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל. הקודים מגיעים מ-CAOP 2025 של DGT — הקוד והגבול הם אותה רשומה.':
+    'The official code is printed in the text beside every unit: four digits for a municipality, six for a parish. It is the code on forms, property documents and official tables, and can be used with any authority in Portugal. The codes come from DGT\'s CAOP 2025 — the code and the boundary are the same record.',
+  'הקוד הרשמי אינו רץ 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה קוד חדש בסוף הרשימה של אותה עירייה — ולכן בקודים הרשמיים 02 יכול לשבת ליד 44. המספר הרץ שעל המפה מוחק את הפער הזה.':
+    'The official code does not run 01, 02, 03 without gaps, and that is correct: the list was fixed in Portuguese alphabetical order, and when a parish ceases to exist its code is neither reused nor reassigned. A unit created by a merger or a split got a new code at the end of its municipality\'s list — so in the official codes 02 can sit next to 44. The running number on the map removes that gap.',
   'האפליקציה מציירת את חלוקת 2025 — 275 רובעים לפי CAOP 2025. חלק מהאיחודים של 2013 בוטלו: במחוז פורטו 25 איחודים פורקו ל-57 רובעים חדשים, וקוד היחידה המאוחדת בוטל. רובע כזה מסומן':
     'The app draws the 2025 division — 275 parishes per CAOP 2025. Some of the 2013 mergers were undone: in Porto district 25 unions were split into 57 new parishes, and the merged unit\'s code was withdrawn. Such a parish is marked',
   ', ובכרטיס שלו רשומים השם, הקוד והנתונים של היחידה שממנה נוצר — תחת שמה ושנת הייחוס שלה, לא כשלו. 218 הרובעים האחרים לא נגעו ברפורמה, והקוד שמוצג להם הוא הקוד הרשמי המלא והתקף.':
@@ -5798,22 +5810,14 @@ Object.assign(EN, {
     '" aria-label="List the landmark categories">',
   ') — לא INE. היא קובעת איפה בדיוק עובר כל גבול. ממנה מגיעות כל הצורות על המפה, וכל שטח בקמ״ר שמוצג כאן חושב מהפוליגונים עצמם ולא נלקח מטבלה.':
     ') — not INE. It settles exactly where every boundary runs. Every shape on the map comes from it, and every area in km² shown here was computed from the polygons themselves rather than taken from a table.',
-  ', אמרנטה':
-    ', Amarante',
   ', ובה 25 יחידות. מה שמייחד אותה בפורטוגל: כל יחידה היא גם':
     ', with 25 units. What is distinctive about it in Portugal: every unit is also',
   ', והוא בנוי בשכבות. מחוז פורטו הוא':
     ', and it is built in layers. Porto district is',
   ', ולכן המיקום חסום. הקישור המקוון (https) יעבוד.':
     ', so location is blocked. The online link (https) will work.',
-  ', טרופה':
-    ', Trofa',
-  ', כלומר הם הקוד שהמדינה מפרסמת ולא מספור של האפליקציה.':
-    ", so they are the code the state publishes and not a numbering of the app's own.",
   ', עם מחירי נדל״ן נמוכים משמעותית ואוכלוסייה מתכווצת. כאן חיים כ-348 אלף תושבים.':
     ', with markedly lower property prices and a shrinking population. About 348,000 residents live here.',
-  '. זה הקוד שמופיע בטפסים, במסמכי מקרקעין ובטבלאות רשמיות, ואפשר להשתמש בו מול כל גורם בפורטוגל.':
-    '. This is the code that appears on forms, in property documents and in official tables, and it can be used with any body in Portugal.',
   '. לא נשלחות לשום מקום ולא מגובות.':
     '. They are sent nowhere and backed up nowhere.',
   '. קוד DICOFRE הוא מה שמחבר ביניהם — אותו מזהה בשני המקורות, ולכן אפשר לצרף מספר לגבול בלי לנחש.':
@@ -5968,8 +5972,6 @@ Object.assign(EN, {
     'The 2025 reform split it into ',
   'בשכירות':
     'Rented',
-  'בתוך העירייה, ובכרטיס של כל רובע מופיע גם הקוד המלא בן שש הספרות. הקודים מגיעים מיחידות שמסומנות ב-OpenStreetMap עם':
-    'within the municipality, and each parish card also shows the full six-digit code. The codes come from units tagged in OpenStreetMap with',
   'בתי חולים':
     'Hospitals',
   'בתמונה אין מיקום שמיש. ייתכן שתיוג המיקום במצלמה כבוי — ':
@@ -6048,12 +6050,6 @@ Object.assign(EN, {
     'The screen is split in two: a map in one half, and everything known about what is on it in the other. The map pans and zooms inside its own window, and the text scrolls without limit.',
   'המספר על הכרטיסייה הוא כמה יחידות יש להן ערך בשדה הזה. ביתר יוצג ׳אין נתון׳, והן לא ידורגו.':
     'The number on the card is how many units have a value for that field. The rest show “no data” and are not ranked.',
-  'המספר על כל רובע הוא הקוד הרשמי שלו בתוך העירייה, והרשימה מסודרת לפיו. רובע שמסומן':
-    'The number on each parish is its official code within the municipality, and the list is ordered by it. A parish marked',
-  'המספר שמופיע על כל עירייה במפה הוא':
-    'The number on each municipality on the map is',
-  'המספר שעל כל רובע הוא באותו אופן':
-    'The number on each parish is likewise',
   'המספרים':
     'numbers',
   'המקומות שלי':
@@ -6068,8 +6064,6 @@ Object.assign(EN, {
     'The point stayed where you placed it.',
   'הנקודה נשמרה, אבל התמונה לא: ':
     'The point was saved, but the photo was not: ',
-  'הספרות אינן רצות 01, 02, 03 בלי דילוגים, וזה תקין: הרשימה נקבעה לפי סדר האלף-בית הפורטוגלי, וכשרובע חדל להתקיים הקוד שלו לא מוחזר לשימוש ולא מחולק מחדש. יחידה שנוצרה מאיחוד או מפיצול קיבלה מספר חדש שנוסף בסוף הרשימה של אותה עירייה — ולכן עירייה יכולה להציג 02 ליד 44.':
-    "The digits do not run 01, 02, 03 without gaps, and that is correct: the list was set in Portuguese alphabetical order, and when a parish ceases to exist its code is not returned to use and not reassigned. A unit created by a merger or a split was given a new number added at the end of that municipality's list — which is why a municipality can show 02 next to 44.",
   'הסרת התמונה':
     'Remove the photo',
   'העיריות':
@@ -6090,8 +6084,6 @@ Object.assign(EN, {
     'The photo will be removed when the point is saved.',
   'ויטרז׳ מפות':
     'Stained-glass fills',
-  'ועם':
-    'and',
   'ותעריפי האזורים — ושוק עבודה אחד. כאן חיים כ-1.44 מיליון מתושבי המחוז.':
     "pass and the zone fares — and one labour market. About 1.44 million of the district's residents live here.",
   'זה לא טקסט תקין של נקודות.':
@@ -6392,10 +6384,6 @@ Object.assign(EN, {
     'Language',
   'שתי אותיות ומעלה. האפליקציה אינה מחפשת כתובות רחוב — אין בה מאגר כתובות ואין לה רשת.':
     'Two letters or more. The app does not search street addresses — it holds no address database and has no network.',
-  'שתי הספרות הרשמיות שלה':
-    'its two official digits',
-  'שתי הספרות הרשמיות שלו':
-    'its two official digits',
   'תוצאות, מוצגות 60.':
     'results; 60 shown.',
   'תושבים':
@@ -6444,8 +6432,6 @@ Object.assign(EN, {
     "— anyone who files no return is not counted. From 2018 the figure is attributed to the municipality of the taxpayer's fiscal address and excludes non-residents.",
   '— מפקד האוכלוסין שנערך כל עשר שנים.':
     '— the census, held every ten years.',
-  '— פורטו היא':
-    '— Porto is',
   '— ‏criminalidade violenta e grave מתפרסמת לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.':
     '— criminalidade violenta e grave is published by district and police command only, and has no municipal figure.',
   '€ לשנה':
