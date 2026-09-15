@@ -115,10 +115,10 @@ cd "$PORTO"
     │   └── layers/         (22M)         ← שכבות להורדה לפי דרישה
     ├── scripts/                          ← כל העיבוד והבדיקות
     │   ├── build.py                      ← raw → processed
-    │   ├── checks.py                     ← ★ 35 בדיקות. exit 1 עוצר
+    │   ├── checks.py                     ← ★ 36 בדיקות. exit 1 עוצר
     │   ├── crosscheck_baseline.py
     │   ├── bundle_standalone.py
-    │   ├── test_ui_menu.js               ← 508 בדיקות Playwright
+    │   ├── test_ui_menu.js               ← 530 בדיקות Playwright
     │   ├── test_exif.js
     │   ├── check_network.py              ← מה באמת נגיש דרך ה-proxy
     │   ├── build_constraints.py          ← REN/RAN לפי CAOP 2025
@@ -190,7 +190,7 @@ node scripts/test_exif.js
 
 # בדיקות הדפדפן צריכות origin אמיתי — לא file://
 python3 -m http.server 8234 &
-URL=http://127.0.0.1:8234/index.html node scripts/test_ui_menu.js   # 508 בדיקות
+URL=http://127.0.0.1:8234/index.html node scripts/test_ui_menu.js   # 530 בדיקות
 
 python3 scripts/bundle_standalone.py  # → porto-standalone.html
 ```
@@ -212,7 +212,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 >
 > ‏`requirements.txt` הוא ההצהרה, והסקריפט מוסיף את מה ש-pip אינו יכול לתת:
 > ‏`playwright` כמודול **node**, שהוא דבר אחר מחבילת הפייתון באותו שם. הוא גם
-> **בודק ש-Chromium במקומו ונופל אם לא** — אחרת חוסר הדפדפן מתגלה 508 בדיקות
+> **בודק ש-Chromium במקומו ונופל אם לא** — אחרת חוסר הדפדפן מתגלה 530 בדיקות
 > מאוחר יותר כ-timeout. **הוא לעולם לא מריץ `playwright install`.**
 
 ‏Chromium ל-Playwright: `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
@@ -222,9 +222,9 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 
 ## 5. מנגנוני האימות — ומה הנוהג סביבם
 
-### ‏`scripts/checks.py` — 35 בדיקות
+### ‏`scripts/checks.py` — 36 בדיקות
 
-מזוהות לפי אות: ‏`1`–`7`, ואז `7b`…`7z`, `7aa`…`7ac`. הרשימה המלאה עם ההסבר לכל אחת
+מזוהות לפי אות: ‏`1`–`7`, ואז `7b`…`7z`, `7aa`…`7ad`. הרשימה המלאה עם ההסבר לכל אחת
 נמצאת ב-`ARCHITECTURE.md` §8. הן מכסות: שלמות מקורות, קודי DICOFRE,
 התאמת אוכלוסייה, תרגום (כל מחרוזת עברית שמגיעה למסך חייבת אנגלית),
 ‏REN/RAN, תקינות ה-XML של המניפסט, וההסכם בין העמוד למעטפת.
@@ -233,7 +233,7 @@ python3 scripts/bundle_standalone.py  # → porto-standalone.html
 
 | קובץ | מה | כמה |
 |---|---|---|
-| `scripts/test_ui_menu.js` | פריסה, תפריט, גבולות, נ.צ., תמונות, שפה, מגבלות בנייה | 508 |
+| `scripts/test_ui_menu.js` | פריסה, תפריט, גבולות, נ.צ., תמונות, שפה, מגבלות בנייה | 530 |
 | `scripts/test_exif.js` | קורא ה-EXIF, כולל מקרה ה-GPS הריק | — |
 
 ### ★ הנוהג: בדיקה חדשה חייבת להוכיח שהיא יכולה ליפול
@@ -531,6 +531,7 @@ Póvoa de Varzim  — timeout. מסומן **לנסות שוב**, לא ״לא ז�
 
 | # | מה | מצב |
 |---|---|---|
+| 0 | **‏2.0.0 — כל 19 סעיפי תוכנית המימוש ב-`UI-2.0.0.md` §9 מומשו** (2026-09-15, 13 קומיטים בענף) | נשאר: **להעלות את `VERSION` ל-2.0.0** כדי לבנות APK. שני דברים שלא ניתן היה לבדוק בלי מפתח: קריאה חיה ל-`api.idealista.com` מהאפליקציה (ואם הדפדפן חוסם ב-CORS — `scripts/fetch_listings.py` וייבוא הקובץ הם הדרך, והם נבדקו על `scripts/fixtures/listings_lousada.json`), והמכסה בפועל. ‏7 בדיקות חדשות ב-`checks.py` (7x…7ad), הוכחו נופלות על עותקים; חבילת הדפדפן 442 → 530 |
 | 1 | **מפתח חתימה** (`porto/android/SIGNING.md`) | ממתין למשתמש. כל שחרור מוחק נתונים בלעדיו |
 | 2 | **‏PDM — למזג את שני החצאים** | ‏§8. ‏`porto_pdm_claude/` ו-`GPT/PDM_RAW` מכסים עיריות שונות ואפס חפיפה |
 | 3 | **‏CRUS כשכבה במפה** | הנתונים נכנסו ב-1.46.0; הפוליגונים לא ולא בטוח שכדאי — 369MB למחוז, 39 אחרי דחיסה |
@@ -599,7 +600,7 @@ Póvoa de Varzim  — timeout. מסומן **לנסות שוב**, לא ״לא ז�
 
 ### המכולה קופאת בין תורים
 
-תהליכי רקע מתקדמים בעיקר **בזמן שפקודה רצה**. חבילה של 508 בדיקות יכולה
+תהליכי רקע מתקדמים בעיקר **בזמן שפקודה רצה**. חבילה של 530 בדיקות יכולה
 להיראות תקועה. פתרון: לולאת המתנה **בחזית** (עד 600 שניות), עם `time.sleep`
 של פייתון — ‏`sleep` בחזית חסום בהארנס.
 

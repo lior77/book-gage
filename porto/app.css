@@ -918,3 +918,35 @@ body[data-view="text"] .map-only{display:none}
 .cons-row.no .cons-val{color:var(--miss)}
 /* the total has no colour of its own: it is the union of the three above it */
 .crow-tot .crow-c{border:0}
+
+/* ---------- מוד נכסים ---------- */
+/* A listing card: the quote's own price line, the provider's picture beside it,
+   and no chip on any number — there is no source record behind a listing.  The
+   form is one column, label above field, radios as chips (Practical UI ch. 8). */
+.lst-line{display:flex; align-items:flex-start; gap:var(--s3)}
+.lst-txt{flex:1 1 auto; min-width:0}
+.lst-thumb{flex:0 0 96px; width:96px; margin:0}
+.lst-thumb img{display:block; width:96px; height:72px; object-fit:cover; border-radius:var(--r-ctl); background:var(--bg)}
+.lst-price{font-size:var(--t-xl); line-height:var(--lh-xl); font-weight:700}
+.lst-meta{font-size:var(--t-sm); font-weight:400; color:var(--ink-2)}
+.lst-asread{display:block; font-size:var(--t-xs); line-height:var(--lh-xs); font-weight:400; color:var(--ink-2)}
+.lst h2{font-size:var(--t-md); line-height:var(--lh-md); margin:var(--s1) 0 0}
+.lst-read{opacity:.8}
+.lst-detail{display:flex; flex-direction:column; gap:var(--s3); margin-block-start:var(--s2)}
+.lst-quote{background:var(--bg); border-inline-start:3px solid var(--ctl-line); border-radius:var(--r-ctl);
+  padding:var(--s2) var(--s3); font-size:var(--t-sm); line-height:var(--lh-sm); color:var(--ink)}
+.lst-quote p{margin:0; white-space:pre-line}
+.lst-photos{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:var(--s2)}
+.lst-photos img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--r-ctl); background:var(--bg)}
+.lst-savedph{position:relative}
+.ph-cap{position:absolute; inset-block-start:0; inset-inline:0; z-index:1; padding:var(--s1) var(--s2);
+  font-size:var(--t-xs); line-height:var(--lh-xs); font-weight:700; color:var(--on-solid); background:var(--scrim)}
+.lf-form{gap:var(--s3)}
+.lf-fld{display:flex; flex-direction:column; gap:var(--s1)}
+.lf-row{display:flex; gap:var(--s2)}
+.lf-row .lf-in{flex:1 1 0; min-width:0}
+.lf-in,.lf-sel{width:100%; padding:var(--s2) var(--s3); border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
+  background:var(--card); color:var(--ink); font:inherit; font-size:var(--t-md); line-height:var(--lh-md)}
+.lf-short{max-width:160px}
+.lf-cred{display:flex; flex-direction:column; gap:var(--s1); padding:var(--s3); border-radius:var(--r-ctl); background:var(--bg)}
+.lf-cred h3{margin:0}

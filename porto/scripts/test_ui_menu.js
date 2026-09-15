@@ -2809,7 +2809,7 @@ const css = (page, sel, prop) =>
      navigating keeps the mode.  Read off S and the tab row after each step. */
   {
     const cell = () => page.evaluate(() => ({ level: S.level, mun: S.mun, zone: S.zone,
-      mode: S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview',
+      mode: S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview',
       tab: (document.querySelector('#modeBar [aria-selected="true"]') || { dataset: {} }).dataset.mode,
       tabs: document.querySelectorAll('#modeBar [role="tab"]').length,
       text: document.getElementById('doc').innerText.length }));
@@ -2826,8 +2826,8 @@ const css = (page, sel, prop) =>
       await page.waitForFunction(() => !S.cons || consPhase === 'ready', null, { timeout: 120000 });
       await page.waitForTimeout(600);
     };
-    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); });
-    ok('the tab row offers the three modes', (await cell()).tabs === 3, JSON.stringify(await cell()));
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); });
+    ok('the tab row offers the four modes', (await cell()).tabs === 4, JSON.stringify(await cell()));
     ok('and it sits at the head of the text half',
        await page.evaluate(() => {
          const b = document.querySelector('#modeBar').getBoundingClientRect();
@@ -2837,7 +2837,7 @@ const css = (page, sel, prop) =>
     for (const level of ['district', 'mun', 'zone']) {
       await mode('overview'); await go(level);
       const before = await cell();
-      for (const k of ['cons', 'cmp', 'overview']) {
+      for (const k of ['cons', 'cmp', 'lst', 'overview']) {
         await mode(k);
         const c = await cell();
         ok(`${level} × ${k}: the cell exists, the tab says so, and the text half says something`,
@@ -2848,7 +2848,7 @@ const css = (page, sel, prop) =>
       }
     }
     /* the other axis: navigate inside a mode and the mode stays, home included */
-    for (const k of ['cons', 'cmp']) {
+    for (const k of ['cons', 'cmp', 'lst']) {
       await go('district'); await mode(k);
       await go('mun'); const a = await cell();
       await go('zone'); const b = await cell();
@@ -2876,6 +2876,68 @@ const css = (page, sel, prop) =>
        over.mode === 'cmp' && over.level === 'zone' && back.mode === 'cmp' && back.level === 'zone'
          && back.text > 40, JSON.stringify([over, back]));
     await mode('overview'); await go('district');
+  }
+
+  /* THE LISTINGS MODE.  A results file (six real Lousada listings, read
+     through the provider's connector) is imported; the map colours by count,
+     the rows count, the cards quote; nothing on it opens a source record and
+     nothing in the overview shows a listing; save makes a place of the
+     user's own with the quote inside and the copy marked as a copy. */
+  {
+    const fixture = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'listings_lousada.json'), 'utf8'));
+    await page.route('**img4.idealista.pt/**', r => r.abort());
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); goDistrict(); });
+    await page.click('#modeBar [data-mode="lst"]'); await page.waitForTimeout(600);
+    ok('the listings tab opens a search form and moves nothing', await page.evaluate(() =>
+      S.lst === true && S.level === 'district' && !!document.querySelector('#lstForm') && !!document.querySelector('#lstSearch')));
+    ok('the form is one column with a label above every field', await page.evaluate(() => {
+      const f = document.querySelector('#lstForm'); const cs = getComputedStyle(f);
+      return cs.flexDirection === 'column' && f.querySelectorAll('.fld-l').length >= 6; }));
+    await page.click('#lstSearch'); await page.waitForTimeout(500);
+    ok('search without a key explains what is missing and opens the key fields, without a blocking screen',
+       await page.evaluate(() => !!document.querySelector('#lstApikey') && document.querySelector('#msgs').innerText.includes('מפתח')
+         && !document.querySelector('#menu').hidden === false));
+    await page.evaluate(f => importListings(f), fixture); await page.waitForTimeout(800);
+    const l1 = await page.evaluate(() => ({ n: D.lst.items.length, level: S.level, form: !!document.querySelector('#lstForm'),
+      lousada: (document.querySelector('#doc [data-lstmun="14"] .num') || {}).innerText,
+      chips: document.querySelectorAll('#doc [data-src]').length,
+      painted: LG.mun ? LG.mun.getLayers().filter(l => l.options.fillOpacity > .5).length : 0 }));
+    ok('the file is read: six listings, the level unchanged, the form folded', l1.n === 6 && l1.level === 'district' && !l1.form, JSON.stringify(l1));
+    ok('level 1 counts them by municipality — all six in Lousada', l1.lousada === '6', JSON.stringify(l1));
+    ok('and paints exactly one municipality on the map', l1.painted === 1, String(l1.painted));
+    ok('no number on the listings screen opens a source record', l1.chips === 0, String(l1.chips));
+    await page.click('#doc [data-lstmun="14"]'); await page.waitForTimeout(700);
+    const l2 = await page.evaluate(() => ({ level: S.level, mun: S.mun, mode: S.lst,
+      sum: [...document.querySelectorAll('#doc [data-lstfre] .num')].reduce((a, e) => a + (+e.innerText || 0), 0),
+      cards: document.querySelectorAll('#doc .lst').length, chips: document.querySelectorAll('#doc [data-src]').length }));
+    ok('level 2 keeps the mode, counts by parish to six, and lists the six', l2.level === 'mun' && l2.mode && l2.sum === 6 && l2.cards === 6 && l2.chips === 0, JSON.stringify(l2));
+    const code = fixture.items[0].code;
+    await page.click(`#doc [data-lst="${code}"] .lst-txt`); await page.waitForTimeout(800);
+    const l3 = await page.evaluate(c => ({ level: S.level, zone: S.zone, open: S.lstOpen, state: lstState(c),
+      quote: !!document.querySelector('#doc .lst-quote'), pins: LG.lst ? LG.lst.getLayers().length : 0,
+      src: !!document.querySelector('#doc a[href*="idealista.pt"]'), chips: document.querySelectorAll('#doc [data-src]').length }), code);
+    ok('tapping a listing opens its parish at level 3, marks it read, and shows the quote and the pin', l3.level === 'zone' && l3.open === code && l3.state === 'read' && l3.quote && l3.pins >= 1 && l3.src && l3.chips === 0, JSON.stringify(l3));
+    ok('and the parish it opened is the one under the coordinate, not the one in the text',
+       l3.zone === await page.evaluate(c => { const it = D.lst.items.find(x => x.code === c); const f = freguesiaAt(it.ll[0], it.ll[1]); return D.freKey(f); }, code), l3.zone);
+    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); });
+    await page.click(`#doc [data-lstact="save"][data-code="${code}"]`); await page.waitForTimeout(1200);
+    const sv = await page.evaluate(c => { const p = D.mine.find(x => x.id === 'l' + c); return p ? { state: lstState(c), price: p.src.price, read: p.src.read_at, desc: p.desc.length > 20, url: p.src.url } : null; }, code);
+    ok('save makes a place of the user\'s own with the quote, the price as read then, and when it was read', sv && sv.state === 'saved' && sv.price === 69000 && /2026/.test(sv.read) && sv.desc && /idealista/.test(sv.url), JSON.stringify(sv));
+    await page.evaluate(() => { if (!S.wp) toggleWp(); }); await page.waitForTimeout(600);
+    const card = await page.evaluate(c => { const el = document.querySelector(`#doc [data-wp="l${c}"]`); return el ? el.innerText : ''; }, code);
+    ok('on its my-places card the copy says it is a copy: the price "as read then", the quote as the listing\'s words', /כפי שנקרא אז/.test(card) && /לשון המודעה/.test(card) && /69/.test(card), card.slice(0, 120));
+    const ex = await page.evaluate(async c => { const p = await exportPayload(); const r = p.points.find(x => x.id === 'l' + c); return !!(r && r.src && r.src.code === c); }, code);
+    ok('and the export carries the quote and its provenance', ex);
+    await page.evaluate(() => { toggleWp(); }); await page.waitForTimeout(400);
+    await page.click(`#doc [data-lstact="del"][data-code="${fixture.items[1].code}"]`).catch(() => {});
+    await page.evaluate(c => { lstSetState(c, 'deleted'); redrawText(); }, fixture.items[1].code); await page.waitForTimeout(400);
+    ok('delete removes a listing from the results', await page.evaluate(() => lstLive().length) === 5);
+    await page.click('#modeBar [data-mode="overview"]'); await page.waitForTimeout(700);
+    const ov = await page.evaluate(() => ({ level: S.level, zone: S.zone, lst: document.querySelectorAll('#doc .lst, #doc .lst-quote').length,
+      euros: /€ ?69|69[,.]000/.test(document.getElementById('doc').innerText), chips: document.querySelectorAll('#doc [data-src]').length }));
+    ok('the overview of the same parish shows the statistics and not one listing — two screens, no mixing', ov.level === 'zone' && ov.lst === 0 && !ov.euros && ov.chips > 0, JSON.stringify(ov));
+    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); D.lst = null; lstSave(); goDistrict(); });
+    await page.unroute('**img4.idealista.pt/**');
   }
 
   /* Last block in the file, and it has to be: from here on every tile is

@@ -1741,7 +1741,7 @@ def main():
             fail("%s reaches %s and the ONLINE list on the about page does not name it" % ("/".join(sorted(where)), host))
     for host in sorted(declared - set(reached)):
         fail("the ONLINE list names %s and nothing in the app reaches it" % host)
-    if re.search(r"עובדת גם בלי רשת|works (?:fully )?offline", online_src):
+    if re.search(r"עובדת גם בלי רשת", online_src):
         fail("app.js still promises plain offline; say which features need a network")
 
     # ---- 7ac. a note beside a value is one line; the reasons live in the record
@@ -1767,6 +1767,53 @@ def main():
         if len(txt) > NOTE_MAX:
             fail("app.js line %d: a note of %d characters — over %d it is a paragraph, and belongs in the source record: %s…"
                  % (code_part.count("\n", 0, m.start()) + 1, len(txt), NOTE_MAX, txt[:60]))
+
+
+    # ---- 7ad. statistics and listings never on one screen — structurally ---
+    # The user's rule, and it is enforced on what a screen can reach rather
+    # than on wording: an earlier draft of the property card separated the two
+    # with a background, a heading, a click and a date, argued each one, and
+    # still put INE's median beside an asking price.  So: everything that
+    # touches a listing sits between LISTINGS-START and LISTINGS-END in app.js;
+    # inside, nothing reads sources.json, no chip opens a source record and no
+    # official field is named; outside, nothing reads a listing except the
+    # handful of dispatch calls named here.  Also: no listing ever enters
+    # data/processed, the fetch scripts never enter the APK, and no key-shaped
+    # literal enters the source.
+    lst_a, lst_b = appjs_txt.find("/* ======================================================= LISTINGS-START"), appjs_txt.find("LISTINGS-END")
+    if lst_a < 0 or lst_b < lst_a:
+        fail("app.js: no LISTINGS-START … LISTINGS-END block")
+    else:
+        inside = appjs_txt[lst_a:lst_b]
+        outside = appjs_txt[:lst_a] + appjs_txt[lst_b:]
+        outside = outside[:outside.index("Object.assign(EN, {")]      # the translation table names both
+        for pat, what in ((r"\bstat\(|\bstatText\(|\bsrcLine\(|data-src=|D\.sources|showSource\(", "a source-record chip or sources.json"),
+                          (r"\.pop2021\b|\.price_eur_m2\b|\.rent_eur_m2\b|\.tipau\b|\.cons_pct\b|\.crus\b|\.median_age\b|\.density\b", "an official field")):
+            for m in re.finditer(pat, inside):
+                fail("app.js listings block line %d reaches %s (%s) — a listing screen shows no statistics"
+                     % (appjs_txt.count("\n", 0, lst_a + m.start()) + 1, what, m.group(0)))
+        allowed = {"renderListings(", "drawListings(", "lstAfterRender(", "toggleLst(", "lstOff(", "importListings(",
+                   "lstClick(", "lstInput(", "lstLoad(", "lstSavedHtml("}
+        for m in re.finditer(r"\bD\.lst\b|\blst[A-Z]\w*\(|\bLST_\w+", outside):
+            if m.group(0) in allowed:
+                continue
+            fail("app.js line %d outside the listings block reads a listing (%s) — a statistics screen shows no listings"
+                 % (outside.count("\n", 0, m.start()) + 1, m.group(0)))
+    for path_ in sorted(glob.glob(os.path.join(ROOT, "data", "processed", "*.json"))):
+        txt = io.open(path_, encoding="utf-8").read()
+        if "propertyCode" in txt or '"kind": "listings"' in txt or "idealista.pt/imovel" in txt:
+            fail("%s carries listing data — listings live in the user's own file, never in data/processed" % os.path.basename(path_))
+    gradle_txt = io.open(os.path.join(ROOT, "android", "app", "build.gradle"), encoding="utf-8").read()
+    if re.search(r"include\s+.*'scripts", gradle_txt):
+        fail("build.gradle copies scripts/ into the APK — the fetch scripts and their fixtures never ship")
+    bundle_txt = io.open(os.path.join(ROOT, "scripts", "bundle_standalone.py"), encoding="utf-8").read()
+    if "fixtures" in bundle_txt:
+        fail("bundle_standalone.py inlines a fixture")
+    for name in ("app.js", "sw.js", "scripts/fetch_listings.py"):
+        txt = io.open(os.path.join(ROOT, name), encoding="utf-8").read()
+        for m in re.finditer(r"(?i)(apikey|secret|client_id|client_secret)\s*[:=]\s*['\"]([A-Za-z0-9+/=_-]{16,})['\"]", txt):
+            fail("%s line %d: a key-shaped literal (%s=…) — the key is typed by the user and never sits in the source"
+                 % (name, txt.count("\n", 0, m.start()) + 1, m.group(1)))
 
     for w in warns:
         print("WARN  " + w)

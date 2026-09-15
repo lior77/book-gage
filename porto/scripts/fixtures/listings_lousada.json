@@ -1,0 +1,217 @@
+{
+ "kind": "listings",
+ "provider": "idealista",
+ "source": "fixture",
+ "note": "Six real listings read through idealista's official connector on 2026-09-15, in the shape scripts/fetch_listings.py writes and the app imports. Descriptions shortened, agent contact details removed. Used by scripts/test_ui_menu.js; never copied into data/processed/.",
+ "read_at": "2026-09-15T21:30:00Z",
+ "query": {
+  "op": "sale",
+  "type": "house",
+  "where": "mun",
+  "mun": 14,
+  "minSize": "100",
+  "renew": true,
+  "garden": true,
+  "cap": 50
+ },
+ "items": [
+  {
+   "code": "34202627",
+   "url": "https://www.idealista.pt/pt/imovel/34202627/",
+   "price": 69000,
+   "currency": "€",
+   "size": 134,
+   "rooms": 3,
+   "bathrooms": 1,
+   "floor": null,
+   "type": "chalet/independantHouse",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.2870239,
+    -8.3027009
+   ],
+   "title": "Moradia independente na Travessa da Venda, 42, Cristelos - Boim - Ordem",
+   "subtitle": "Lousada, Porto",
+   "description": "Moradia para Restauro com 134m² de Área de Construção em Barrosas (Santo Estevão). Esta moradia para restauro, com 134m² de área de construção, está inserida num terreno com 359m², localizada em Barrosas (Santo Estevão), numa zona tranquila. Com espaço exterior generoso, é possível criar um jardim e área de lazer.",
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/e9/84/5b/328349425.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/e9/84/5b/328349425.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 515,
+   "features": {
+    "hasAirConditioning": false
+   },
+   "contact": null
+  },
+  {
+   "code": "34542040",
+   "url": "https://www.idealista.pt/pt/imovel/34542040/",
+   "price": 120000,
+   "currency": "€",
+   "size": 240,
+   "rooms": 0,
+   "bathrooms": 0,
+   "floor": null,
+   "type": "countryHouse/quinta",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.3301367,
+    -8.2696797
+   ],
+   "title": "Quinta na Rua de Belomonte, 46, Barrosas Santo Estêvão",
+   "subtitle": "Lousada, Porto",
+   "description": "Quinta com 12.770 m², com Riacho dentro da Propriedade - Para Construção, em Barrosas - Santo Estêvão, Lousada. Prédio de rés do chão com uma divisão destinada a armazém e logradouro. Área retificada com levantamento topográfico 12.770 m². Armazém agrícola; +/- 1.000 m² para construção; 1 poço de água; riacho dentro da propriedade; 1 presa de reserva de água.",
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/29/3f/08/299696519.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/29/3f/08/299696519.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 500,
+   "features": {
+    "hasAirConditioning": false
+   },
+   "contact": null
+  },
+  {
+   "code": "35306543",
+   "url": "https://www.idealista.pt/pt/imovel/35306543/",
+   "price": 147500,
+   "currency": "€",
+   "size": 104,
+   "rooms": 2,
+   "bathrooms": 1,
+   "floor": null,
+   "type": "chalet/independantHouse",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.3030157,
+    -8.2355092
+   ],
+   "title": "Moradia independente na Rua de Regadas, 42, Cernadelo e Lousada",
+   "subtitle": "Lousada, Porto",
+   "description": "Moradia para restauro com terreno de 1.080 m² – Cernadelo, Lousada. Moradia para restauro, localizada em Cernadelo, Lousada, inserida num generoso lote de terreno com 1.080 m². Zona tranquila e predominantemente residencial. Possibilidade de desenvolver duas unidades habitacionais independentes.",
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/a5/d4/a0/327864461.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/a5/d4/a0/327864461.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 1418,
+   "features": {
+    "hasAirConditioning": false,
+    "hasTerrace": true,
+    "hasSwimmingPool": false,
+    "hasParking": true,
+    "hasBoxRoom": true
+   },
+   "contact": null
+  },
+  {
+   "code": "34643925",
+   "url": "https://www.idealista.pt/pt/imovel/34643925/",
+   "price": 349500,
+   "currency": "€",
+   "size": 322,
+   "rooms": 5,
+   "bathrooms": 1,
+   "floor": null,
+   "type": "chalet/independantHouse",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.302264,
+    -8.2152207
+   ],
+   "title": "Moradia independente na Avenida do Rio s/n, Torno",
+   "subtitle": "Lousada, Porto",
+   "description": "Moradia T5 em pedra - Casa do Paço em Cernadelo, Lousada. Área bruta de construção de 322 m² e um terreno de 7060 m². Cinco quartos e uma casa de banho. Jardim com árvores de fruto. Dois artigos distintos, um rústico de 3800 m² e outro urbano com 322 m².",
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/1c/89/0a/302031681.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/1c/89/0a/302031681.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 1085,
+   "features": {
+    "hasAirConditioning": false,
+    "hasTerrace": true,
+    "hasSwimmingPool": false,
+    "hasParking": true,
+    "hasBoxRoom": true
+   },
+   "contact": null
+  },
+  {
+   "code": "34187123",
+   "url": "https://www.idealista.pt/pt/imovel/34187123/",
+   "price": 385000,
+   "currency": "€",
+   "size": 273,
+   "rooms": 3,
+   "bathrooms": 3,
+   "floor": null,
+   "type": "chalet/independantHouse",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.276503,
+    -8.3326311
+   ],
+   "title": "Moradia independente na Rua do Senhor do Monte, Figueiras e Covas",
+   "subtitle": "Lousada, Porto",
+   "description": "Condomínio privado composto por 12 moradias de tipologia T3, com 2 ou 3 frentes. Os preços começam a partir de 385.000€. Conclusão prevista para o 2º trimestre de 2026. Piscina, parque infantil, sala de condomínio. Categoria energética: A.",
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/8a/4c/2e/284010953.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/8a/4c/2e/284010953.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 1410,
+   "features": {
+    "hasAirConditioning": false,
+    "hasSwimmingPool": true,
+    "hasParking": true
+   },
+   "contact": null
+  },
+  {
+   "code": "35108689",
+   "url": "https://www.idealista.pt/pt/imovel/35108689/",
+   "price": 236236,
+   "currency": "€",
+   "size": 264,
+   "rooms": 3,
+   "bathrooms": 2,
+   "floor": null,
+   "type": "chalet/independantHouse",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.3001957,
+    -8.3228001
+   ],
+   "title": "Moradia independente na Rua de Secos s/n, Sousela",
+   "subtitle": "Lousada, Porto",
+   "description": "Moradia térrea para restauro em Sousela, Lousada, num terreno com 3.260 m². Anexos e cozinha tradicional. A 40 minutos do Porto.",
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/a2/7d/b9/328470123.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/a2/7d/b9/328470123.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 895,
+   "features": {
+    "hasAirConditioning": false,
+    "hasParking": true,
+    "hasBoxRoom": true
+   },
+   "contact": null
+  }
+ ]
+}

@@ -1597,6 +1597,38 @@ body[data-view="text"] .map-only{display:none}
 /* the total has no colour of its own: it is the union of the three above it */
 .crow-tot .crow-c{border:0}
 
+/* ---------- מוד נכסים ---------- */
+/* A listing card: the quote's own price line, the provider's picture beside it,
+   and no chip on any number — there is no source record behind a listing.  The
+   form is one column, label above field, radios as chips (Practical UI ch. 8). */
+.lst-line{display:flex; align-items:flex-start; gap:var(--s3)}
+.lst-txt{flex:1 1 auto; min-width:0}
+.lst-thumb{flex:0 0 96px; width:96px; margin:0}
+.lst-thumb img{display:block; width:96px; height:72px; object-fit:cover; border-radius:var(--r-ctl); background:var(--bg)}
+.lst-price{font-size:var(--t-xl); line-height:var(--lh-xl); font-weight:700}
+.lst-meta{font-size:var(--t-sm); font-weight:400; color:var(--ink-2)}
+.lst-asread{display:block; font-size:var(--t-xs); line-height:var(--lh-xs); font-weight:400; color:var(--ink-2)}
+.lst h2{font-size:var(--t-md); line-height:var(--lh-md); margin:var(--s1) 0 0}
+.lst-read{opacity:.8}
+.lst-detail{display:flex; flex-direction:column; gap:var(--s3); margin-block-start:var(--s2)}
+.lst-quote{background:var(--bg); border-inline-start:3px solid var(--ctl-line); border-radius:var(--r-ctl);
+  padding:var(--s2) var(--s3); font-size:var(--t-sm); line-height:var(--lh-sm); color:var(--ink)}
+.lst-quote p{margin:0; white-space:pre-line}
+.lst-photos{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:var(--s2)}
+.lst-photos img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--r-ctl); background:var(--bg)}
+.lst-savedph{position:relative}
+.ph-cap{position:absolute; inset-block-start:0; inset-inline:0; z-index:1; padding:var(--s1) var(--s2);
+  font-size:var(--t-xs); line-height:var(--lh-xs); font-weight:700; color:var(--on-solid); background:var(--scrim)}
+.lf-form{gap:var(--s3)}
+.lf-fld{display:flex; flex-direction:column; gap:var(--s1)}
+.lf-row{display:flex; gap:var(--s2)}
+.lf-row .lf-in{flex:1 1 0; min-width:0}
+.lf-in,.lf-sel{width:100%; padding:var(--s2) var(--s3); border-radius:var(--r-ctl); border:1px solid var(--ctl-line);
+  background:var(--card); color:var(--ink); font:inherit; font-size:var(--t-md); line-height:var(--lh-md)}
+.lf-short{max-width:160px}
+.lf-cred{display:flex; flex-direction:column; gap:var(--s1); padding:var(--s3); border-radius:var(--r-ctl); background:var(--bg)}
+.lf-cred h3{margin:0}
+
 </style>
 </head>
 <body>
@@ -1873,6 +1905,7 @@ const C = {
   mapInk: '#101010',       // --map-ink: a point with no category, the letter on a pin
   hi: '#b7791f',           // --hi-line: the ring on the chosen point, the chosen parish
   me: '#1a73e8',           // --me: the device's own position
+  listing: '#2f6fb3', listingRead: '#8a8f98',   // a listing pin, and one already read
   water: '#2f7fc1', waterFill: '#4a9ad4',
   fillDefault: '#dddddd',  // a parish with no colour of its own
   letterSwatch: '#cfe0f2', // the key's swatch for neighbourhood letters
@@ -4695,11 +4728,11 @@ function wpCard(p) {
   const body = `<div class="wp-txt">
       <div class="wp-h"><span class="dot mine" style="--c:${MINE_COLOUR}"></span>
         <h2>${html(p.name)}</h2></div>
-      ${p.desc ? `<p class="lead">${html(p.desc)}</p>` : ''}
+      ${p.src ? lstSavedHtml(p) : p.desc ? `<p class="lead">${html(p.desc)}</p>` : ''}
       <p class="note"><bdi class="num">${p.ll[0].toFixed(5)}, ${p.ll[1].toFixed(5)}</bdi><br>
         ${html(where)}${p.at ? ' · ' + html(p.at) : ''}</p>
     </div>`;
-  const fig = p.photo
+  const fig = p.photo && !(p.src && !S.dense)
     ? `<figure class="ph-fig${S.dense ? ' ph-thumb' : ''}" data-wpimg="${html(p.id)}"
         ><img class="ph-img" alt="${html(p.name)}"></figure>` : '';
   return `<article class="card wp${on ? ' is-hi' : ''}${S.dense ? ' wp-row' : ''}"
@@ -5197,6 +5230,8 @@ function deleteMine(id) {
   const gone = id || (mineEditing && mineEditing.id);
   if (!gone) return;
   delPhoto(gone);
+  const rec = D.mine.find(x => x.id === gone);
+  ((rec && rec.photos) || []).forEach((m, i) => { if (i) delPhoto(gone + ':' + i); });
   D.mine = D.mine.filter(x => x.id !== gone);
   saveMine();
   if (mineEditing && mineEditing.id === gone) {
@@ -5247,11 +5282,15 @@ async function gatherPhotos() {
   const out = [];
   for (const p of D.mine) {
     if (!p.photo) continue;
-    let blob = null;
-    try { blob = await getPhoto(p.id); } catch (e) { blob = null; }
-    if (!blob) continue;                      // the record says there is one and there is not
-    out.push({ id: p.id, type: blob.type || 'image/jpeg',
-               b64: bytesToB64(new Uint8Array(await blob.arrayBuffer())) });
+    // the first picture under the point's id, the rest under id:1, id:2 …
+    const ids = [p.id].concat((p.photos || []).slice(1).map((m, i) => p.id + ':' + (i + 1)));
+    for (const id of ids) {
+      let blob = null;
+      try { blob = await getPhoto(id); } catch (e) { blob = null; }
+      if (!blob) continue;                      // the record says there is one and there is not
+      out.push({ id, type: blob.type || 'image/jpeg',
+                 b64: bytesToB64(new Uint8Array(await blob.arrayBuffer())) });
+    }
   }
   return out;
 }
@@ -5432,6 +5471,7 @@ function commitImport(fromFile) {
   catch (e) { $('#impNote').textContent = t('זה לא טקסט תקין של נקודות.'); return; }
   // Version 0 of this format was the bare array of points, and files of it are
   // in people's messages to themselves; it still reads.
+  if (data && data.kind === 'listings') { importListings(data); return; }
   const rows = Array.isArray(data) ? data : data && Array.isArray(data.points) ? data.points : null;
   if (!rows) { $('#impNote').textContent = t('ציפיתי לרשימה של נקודות.'); return; }
   const bag = Array.isArray(data) ? {} : data;
@@ -5451,6 +5491,9 @@ async function importAll(rows, bag) {
     have.add(id); kept.add(id);
     const rec = { id: id, name: r.name, desc: typeof r.desc === 'string' ? r.desc : '',
                   ll: [r.ll[0], r.ll[1]], at: typeof r.at === 'string' ? r.at : '' };
+    // a saved listing travels with what it quoted and its pictures' records
+    if (r.src && typeof r.src === 'object') rec.src = r.src;
+    if (Array.isArray(r.photos)) rec.photos = r.photos;
     // the photo's own record travels with the point; the bytes are restored
     // below, and a point whose bytes did not arrive loses the record too
     if (r.photo && typeof r.photo === 'object') rec.photo = r.photo;
@@ -5462,7 +5505,7 @@ async function importAll(rows, bag) {
      point that was already here is not written over it. */
   let photos = 0;
   for (const ph of (Array.isArray(bag.photos) ? bag.photos : [])) {
-    if (!ph || !kept.has(ph.id) || typeof ph.b64 !== 'string') continue;
+    if (!ph || !kept.has(String(ph.id).split(':')[0]) || typeof ph.b64 !== 'string') continue;
     try {
       await putPhoto(ph.id, new Blob([b64ToBytes(ph.b64)],
         { type: typeof ph.type === 'string' ? ph.type : 'image/jpeg' }));
@@ -5811,6 +5854,7 @@ function toggleFills() {
    and each level draws its own. */
 function redrawLevel() {
   if (S.cmp) { drawCmp(); return; }
+  if (S.lst) { drawListings(); return; }
   if (S.level === 'district') drawDistrict();
   else if (S.level === 'mun') drawMun(S.mun);
   else drawZone(S.zone);
@@ -6673,8 +6717,9 @@ const MODES = () => [
   { k: 'overview', he: t('סקירה') },
   { k: 'cons', he: t('מגבלות') },
   { k: 'cmp', he: t('השוואה') },
+  { k: 'lst', he: t('נכסים') },
 ];
-const modeOf = () => (S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
+const modeOf = () => (S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
 function renderModeBar() {
   const bar = $('#modeBar');
   if (!bar) return;
@@ -6692,8 +6737,10 @@ function setMode(k) {
   if (S.wp) toggleWp();
   if (S.cmp) toggleCmp();
   if (S.cons) consOff();
+  if (S.lst) lstOff();
   if (k === 'cmp') toggleCmp();
   else if (k === 'cons') toggleCons();
+  else if (k === 'lst') toggleLst();
   renderModeBar();
 }
 
@@ -6703,6 +6750,7 @@ function redrawText() {
   // the places list sits over the level document: the map is still at its
   // level and still navigable, and the mode is still the mode, until it closes
   if (S.wp) { renderWaypoints(); return; }
+  if (S.lst) { $('#doc').innerHTML = renderListings(); lstAfterRender(); return; }
   if (S.cmp) {
     $('#doc').innerHTML = renderCmp();
     if (S.level === 'zone') cmpFocus('f' + S.zone);
@@ -6847,7 +6895,7 @@ function goZone(key) {
   S.cats = new Set(D.poiOrder);
   // the comparison paints its own map at every level — the parish among its
   // siblings, on the ramp — so it is drawn by the mode, not by the level
-  if (S.cmp) redrawLevel(); else drawZone(key);
+  if (S.cmp || S.lst) redrawLevel(); else drawZone(key);
   redrawText(); afterNav();
 }
 function goUp() {
@@ -6899,7 +6947,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
       letters: S.letters, mine: S.mine, water: S.water, floods: S.floods,
-      cons: S.cons,
+      cons: S.cons, lst: S.lst,
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
@@ -6926,6 +6974,7 @@ function restore() {
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
     if (typeof o.floods === 'boolean') S.floods = o.floods;
     if (typeof o.cons === 'boolean') S.cons = o.cons;
+    if (typeof o.lst === 'boolean') S.lst = o.lst;
     if (o.consShow && typeof o.consShow === 'object')
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
@@ -7061,6 +7110,8 @@ const ONLINE = () => [
     what: t('שכבות REN ו-RAN לכל 18 העיריות, מ-jsDelivr; הגודל כתוב על שורת התפריט לפני הלחיצה. מכאן הן עובדות בלי רשת.') },
   { host: 'raw.githubusercontent.com', he: t('מגבלות בנייה — מקור גיבוי'),
     what: t('אותם קבצים מ-GitHub, אם jsDelivr אינו זמין.') },
+  { host: 'api.idealista.com', he: t('חיפוש נכסים'),
+    what: t('״חפש״ במוד נכסים פונה ל-API של idealista עם המפתח שהזנת, ותמונות המודעות נטענות מהשרתים של idealista. מה שנשמר עובד אחר כך בלי רשת.') },
   { host: 'www.google.com', he: t('פתיחה במפות גוגל'),
     what: t('לחיצה כפולה על מקום פותחת בדפדפן קישור עם נ״צ בלבד — בלי מפתח, בלי חשבון ובלי לשמור דבר.') },
 ];
@@ -7258,6 +7309,7 @@ function wire() {
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
     drawMine(); renderLayers(); applyHi(); applySwitches();
   });
+  $('#doc').addEventListener('input', e => { if (S.lst) lstInput(e); });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
@@ -7322,6 +7374,7 @@ function wire() {
   $('#doc').addEventListener('click', e => {
     // the נ.צ. cards come first: while they are on screen they are the screen
     if (S.wp && wpClick(e)) return;
+    if (S.lst && lstClick(e)) return;
     // the sort chip: reading order only, so the text is redrawn and the map is not
     if (e.target.closest('[data-sortdir]')) { S.sortDesc = !S.sortDesc; save(); redrawText(); return; }
     if (e.target.closest('[data-dense]')) {
@@ -7429,6 +7482,7 @@ function wire() {
   S.cats = new Set(D.poiOrder);
 
   loadMine();
+  lstLoad();
   applyView();
   applyLang();
   themeAttr();
@@ -7489,6 +7543,611 @@ function wire() {
    A key that is missing here falls back to its Hebrew, on purpose — see t().
    scripts/checks.py compares this table against every t() call in the file, so
    a new Hebrew string cannot quietly reach an English reader untranslated. */
+/* ======================================================= LISTINGS-START ====
+   Property mode.  Everything that touches a listing lives between these two
+   marks, and checks.py 7ad keeps the two kinds of data apart structurally:
+   inside the block nothing reads sources.json, no chip opens a source record
+   and no official field is named; outside it nothing reads a listing.  The
+   rule the user set — statistics and listings never on one screen — is not a
+   matter of wording here but of what a screen is allowed to reach.
+
+   A listing is a quote from a provider, read at a moment.  It is not data
+   with a source record, no number on it is clickable, and everything about
+   it says who said it and when.  What is saved is saved as a place of the
+   user's own, with the quote and the pictures inside it, and works offline
+   from then on; the search itself is the one thing here that needs a
+   network, and it says so. */
+const LST_KEY = 'porto-listings';          // the last search: query, results, states
+const LST_CRED = 'porto-listings-key';     // the provider key the user typed, and nothing else
+const LST_QUOTA = 'porto-listings-quota';  // requests spent this month
+const LST_API = 'https://api.idealista.com';
+const LST_PHOTOS_MAX = 8;
+const LST_STALE_DAYS = 30;
+const LST_PAGE = 50;                       // the provider's page size
+const LST_TYPES = [['home', 'דירה'], ['house', 'בית'], ['any', 'הכול']];
+const LST_WHERE = [['district', 'מחוז'], ['mun', 'עירייה'], ['zone', 'רובע'], ['place', 'רחוב / יישוב'], ['radius', 'רדיוס']];
+const LST_STATUS_HE = { unread: 'לא נקרא', read: 'נקרא', saved: 'שמור' };
+
+const lstDefaultQ = () => ({ op: 'sale', type: 'house', where: 'district', mun: null, zone: null,
+  place: null, ll: null, km: 2, minPrice: '', maxPrice: '', minSize: '', rooms: '',
+  renew: false, garden: false, terrace: false, cap: 50 });
+
+/* ---- state on disk: the last search, the key, the month's spend ---- */
+function lstLoad() {
+  try { D.lst = JSON.parse(localStorage.getItem(LST_KEY) || 'null'); } catch (e) { D.lst = null; }
+  if (D.lst && !Array.isArray(D.lst.items)) D.lst = null;
+  if (D.lst) { lstAttach(D.lst.items); if (D.lst.query) S.lstQ = Object.assign(lstDefaultQ(), D.lst.query); }
+  if (!S.lstQ) S.lstQ = lstDefaultQ();
+}
+function lstSave() {
+  try { if (D.lst) localStorage.setItem(LST_KEY, JSON.stringify(D.lst)); else localStorage.removeItem(LST_KEY); }
+  catch (e) { mapNote(t('לא הצלחתי לשמור את תוצאות החיפוש — ייתכן שהאחסון המקומי מלא.'), true); }
+}
+function lstCred() {
+  try { const c = JSON.parse(localStorage.getItem(LST_CRED) || 'null'); return c && c.apikey && c.secret ? c : null; }
+  catch (e) { return null; }
+}
+function lstSetCred(apikey, secret) {
+  try {
+    if (apikey && secret) localStorage.setItem(LST_CRED, JSON.stringify({ apikey, secret }));
+    else localStorage.removeItem(LST_CRED);
+  } catch (e) { /* private mode */ }
+}
+function lstQuota() {
+  const month = new Date().toISOString().slice(0, 7);
+  let q = null;
+  try { q = JSON.parse(localStorage.getItem(LST_QUOTA) || 'null'); } catch (e) { q = null; }
+  if (!q || q.month !== month) q = { month, used: 0, limit: (q && q.limit) || 100 };
+  return q;
+}
+function lstQuotaSet(q) { try { localStorage.setItem(LST_QUOTA, JSON.stringify(q)); } catch (e) { /* private mode */ } }
+function lstSpend(n) { const q = lstQuota(); q.used += n; lstQuotaSet(q); return q; }
+
+/* ---- the mode ---- */
+function toggleLst() {
+  if (S.adding) stopPlacing();
+  S.lst = !S.lst;
+  if (S.lst) {
+    if (S.view === 'map') { S.view = 'split'; applyView(); }
+    if (!S.lstQ) S.lstQ = lstDefaultQ();
+    S.lstForm = !D.lst;
+  }
+  closePanel();
+  applySwitches();
+  redrawLevel(); drawMine(); redrawText();
+  if (S.lst) $('#paneText').scrollTop = 0;
+  save();
+}
+const lstOff = () => { if (S.lst) toggleLst(); };
+
+/* ---- where a listing is: from its coordinate, never from its text ---- */
+function lstAttach(items) {
+  items.forEach(it => {
+    if (!Array.isArray(it.ll) || it.ll.length !== 2) { it.zone = null; it.mun = null; return; }
+    const at = freguesiaAt(it.ll[0], it.ll[1]);
+    it.zone = at ? D.freKey(at) : null;
+    it.mun = at ? at.mun_num : null;
+  });
+}
+const lstState = code => (D.lst && D.lst.state && D.lst.state[code]) || (D.mine.some(p => p.id === 'l' + code) ? 'saved' : 'unread');
+function lstSetState(code, st) {
+  if (!D.lst) return;
+  D.lst.state = D.lst.state || {};
+  D.lst.state[code] = st;
+  lstSave();
+}
+const lstLive = () => (D.lst ? D.lst.items.filter(it => lstState(it.code) !== 'deleted') : []);
+function lstCounts(items) {
+  const mun = new Map(), fre = new Map();
+  items.forEach(it => {
+    if (it.mun) mun.set(it.mun, (mun.get(it.mun) || 0) + 1);
+    if (it.zone) fre.set(it.zone, (fre.get(it.zone) || 0) + 1);
+  });
+  return { mun, fre };
+}
+const lstHere = items => items.filter(it => S.level === 'district' ? true
+  : S.level === 'mun' ? it.mun === S.mun : it.zone === S.zone);
+function lstSorted(items) {
+  const s = items.slice().sort((a, b) => (a.price || 0) - (b.price || 0));
+  return S.sortDesc ? s.reverse() : s;
+}
+
+/* ---- the map: units coloured by how many listings they hold, pins at level 3 ---- */
+function lstBand(n, max) {
+  if (!n) return C.fillDefault;
+  const i = Math.min(CMP_BANDS - 1, Math.floor((n - 1) / Math.max(1, max) * CMP_BANDS));
+  return CMP_BLUES[i];
+}
+function lstPinIcon(st) {
+  const col = st === 'saved' ? MINE_COLOUR : st === 'read' ? C.listingRead : C.listing;
+  return L.divIcon({ className: 'me-pin', iconSize: [22, 29], iconAnchor: [11, 29],
+    html: `<svg viewBox="0 0 24 32" width="22" height="29" aria-hidden="true"
+        style="display:block;filter:drop-shadow(0 1px 2px ${C.pinShadow})">
+        <path d="M12 31.2C12 31.2 1.6 18.6 1.6 11.4a10.4 10.4 0 1 1 20.8 0C22.4 18.6 12 31.2 12 31.2z"
+              fill="${col}" stroke="${C.white}" stroke-width="1.8"/>
+        <text x="12" y="15" text-anchor="middle" font-size="10" font-weight="700" fill="${C.white}">€</text>
+      </svg>` });
+}
+function drawListings() {
+  clearMap();
+  const items = lstLive();
+  const counts = lstCounts(items);
+  if (S.level === 'zone') {
+    const feats = D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === S.zone);
+    LG.mun = L.geoJSON({ type: 'FeatureCollection', features: feats }, { interactive: false,
+      style: { weight: 0, fillColor: C.fillDefault, fillOpacity: .2 } }).addTo(map);
+    LG.lst = L.layerGroup(items.filter(it => it.zone === S.zone).map(it => {
+      const mk = L.marker(it.ll, { icon: lstPinIcon(lstState(it.code)), zIndexOffset: 1400,
+        title: lstPriceText(it) });
+      mk.bindTooltip(`<b>${html(lstPriceText(it))}</b><br>${html(it.title || '')}`, { direction: 'top', className: 'tt' });
+      mk.on('click', () => lstOpen(it.code));
+      return mk;
+    })).addTo(map);
+    drawLines();
+    fit(LG.mun.getBounds());
+    return;
+  }
+  const inMun = S.level === 'mun';
+  const base = inMun ? freFeatures(S.mun) : D.bM;
+  const unitOf = ft => inMun ? freOfFeature(S.mun, ft.properties) : D.munByNum.get(ft.properties.num);
+  const countOf = o => (!o ? 0 : (inMun ? counts.fre.get(D.freKey(o)) : counts.mun.get(o.num)) || 0);
+  let max = 0;
+  base.features.forEach(ft => { max = Math.max(max, countOf(unitOf(ft))); });
+  LG.mun = L.geoJSON(base, {
+    style: ft => { const n = countOf(unitOf(ft));
+      return { weight: 0, fillColor: lstBand(n, max), fillOpacity: n ? .82 : .18 }; },
+    onEachFeature: (ft, l) => {
+      const o = unitOf(ft);
+      if (!o) return;
+      l.on('click', () => { if (inMun) goZone(D.freKey(o)); else goMun(o.num); });
+      l.bindTooltip(`<b>${html(nm(o))}</b><br>${countOf(o)} ${html(t('מודעות'))}`, { sticky: true, className: 'tt' });
+    },
+  }).addTo(map);
+  const rows = inMun ? (D.freByMun.get(S.mun) || []) : D.mun;
+  LG.labels = L.layerGroup(rows.filter(o => countOf(o) > 0 && o.center).map(o => {
+    const mk = L.marker(latlng(o.center), { icon: cmpIcon(String(countOf(o))), keyboard: false, riseOnHover: true });
+    mk.on('click', () => { if (inMun) goZone(D.freKey(o)); else goMun(o.num); });
+    return mk;
+  })).addTo(map);
+  drawLines();
+  cmpPattern();
+  fit(LG.mun.getBounds());
+}
+
+/* ---- the text half ---- */
+const lstPriceText = it => (it.price != null ? nf(it.price, 0) + ' ' + (it.currency || '€') : t('מחיר לא צוין'));
+const lstDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
+const lstDaysSince = iso => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+function lstMeta(it) {
+  const bits = [];
+  if (it.rooms != null && it.rooms > 0) bits.push('T' + it.rooms);
+  if (it.size) bits.push(nf(it.size, 0) + ' ' + t('מ״ר'));
+  if (it.floor != null && it.floor !== '') bits.push(t('קומה') + ' ' + html(it.floor));
+  if (it.status === 'renew') bits.push(t('לשיפוץ'));
+  if (it.status === 'newdevelopment' || it.newDevelopment) bits.push(t('בנייה חדשה'));
+  return bits.join(' · ');
+}
+function lstWhere(it) {
+  if (!it.zone) return t('מחוץ למחוז פורטו');
+  const f = D.freByKey.get(it.zone);
+  return f ? nm(f) + ', ' + nm(D.munByNum.get(f.mun_num)) : '';
+}
+function lstQuerySummary(q) {
+  const parts = [t(q.op === 'rent' ? 'שכירות' : 'מכירה'), t((LST_TYPES.find(x => x[0] === q.type) || LST_TYPES[2])[1])];
+  if (q.where === 'district') parts.push(t('מחוז פורטו'));
+  else if (q.where === 'mun') { const m = D.munByNum.get(q.mun); if (m) parts.push(nm(m)); }
+  else if (q.where === 'zone') { const f = D.freByKey.get(q.zone); if (f) parts.push(nm(f)); }
+  else if (q.where === 'place' && q.place) parts.push(q.place.name + ' · ' + q.km + ' ' + t('ק״מ'));
+  else if (q.where === 'radius' && q.ll) parts.push(t('רדיוס') + ' ' + q.km + ' ' + t('ק״מ'));
+  if (q.minPrice || q.maxPrice) parts.push((q.minPrice ? nf(+q.minPrice, 0) : '') + '–' + (q.maxPrice ? nf(+q.maxPrice, 0) : '') + ' €');
+  if (q.minSize) parts.push('≥' + q.minSize + ' ' + t('מ״ר'));
+  if (q.rooms) parts.push('T' + q.rooms + '+');
+  if (q.renew) parts.push(t('לשיפוץ'));
+  if (q.garden) parts.push(t('גינה'));
+  if (q.terrace) parts.push(t('מרפסת'));
+  return parts.join(' · ');
+}
+const lstChip = (key, val, he, on) => `<button class="chip${on ? ' is-on' : ''}" data-lstset="${key}:${val}" role="radio" aria-checked="${on}">${html(t(he))}</button>`;
+const lstCheck = (key, he, on) => `<button class="chip${on ? ' is-on' : ''}" data-lstset="${key}:${on ? '0' : '1'}" role="checkbox" aria-checked="${on}">${on ? '☑ ' : '☐ '}${html(t(he))}</button>`;
+
+function lstFormHtml() {
+  const q = S.lstQ;
+  const cred = lstCred();
+  const quota = lstQuota();
+  const need = 1 + Math.ceil((q.cap || LST_PAGE) / LST_PAGE);
+  const left = Math.max(0, quota.limit - quota.used);
+  const munSel = `<select class="lf-sel" data-lstin="mun" aria-label="${t('עירייה')}">${D.mun.map(m =>
+    `<option value="${m.num}"${m.num === q.mun ? ' selected' : ''}>${html(munNum(m))} · ${html(nm(m))}</option>`).join('')}</select>`;
+  const zoneRows = D.freByMun.get(q.mun || S.mun || D.mun[0].num) || [];
+  const zoneSel = `<select class="lf-sel" data-lstin="zone" aria-label="${t('רובע')}">${zoneRows.map(f =>
+    `<option value="${html(D.freKey(f))}"${D.freKey(f) === q.zone ? ' selected' : ''}>${html(freNum(f))} · ${html(nm(f))}</option>`).join('')}</select>`;
+  const whereBody = q.where === 'mun' ? munSel
+    : q.where === 'zone' ? munSel + zoneSel
+    : q.where === 'place' ? `<div class="lf-fld"><span class="fld-l">${t('שם היישוב, הרובע או האתר — מהנתונים של האפליקציה')}</span>
+        <input class="lf-in" data-lstin="placeq" type="search" value="${html(q.placeq || '')}" placeholder="${t('שתי אותיות ומעלה')}">
+        <div id="lstPlaceHits"></div>
+        ${q.place ? `<p class="note">${t('נבחר:')} ${html(q.place.name)} <bdi class="num">${q.place.ll[0].toFixed(4)}, ${q.place.ll[1].toFixed(4)}</bdi></p>` : ''}
+        <span class="fld-l">${t('רדיוס בק״מ')}</span><input class="lf-in lf-short" data-lstin="km" type="number" min="0.2" step="0.5" value="${html(q.km)}"></div>`
+    : q.where === 'radius' ? `<div class="lf-fld"><button class="chip" id="lstCenter">${t('הנקודה: מרכז המפה כפי שהוא עכשיו')}</button>
+        ${q.ll ? `<p class="note">${t('הנקודה:')} <bdi class="num">${q.ll[0].toFixed(4)}, ${q.ll[1].toFixed(4)}</bdi></p>` : `<p class="note">${t('הזיזו את המפה כך שהנקודה הרצויה במרכזה, ואז לחצו.')}</p>`}
+        <span class="fld-l">${t('רדיוס בק״מ')}</span><input class="lf-in lf-short" data-lstin="km" type="number" min="0.2" step="0.5" value="${html(q.km)}"></div>`
+    : `<p class="note">${t('כל 18 העיריות. תוצאות מחוץ לגבולות המחוז מסוננות לפי גבולות CAOP.')}</p>`;
+  return `<div class="card lf-form" id="lstForm">
+    <h2>${t('חיפוש נכסים')}</h2>
+    <div class="lf-fld"><span class="fld-l">${t('עסקה')}</span>
+      <div class="chips" role="radiogroup">${lstChip('op', 'sale', 'מכירה', q.op === 'sale')}${lstChip('op', 'rent', 'שכירות', q.op === 'rent')}</div></div>
+    <div class="lf-fld"><span class="fld-l">${t('סוג נכס')}</span>
+      <div class="chips" role="radiogroup">${LST_TYPES.map(([k, he]) => lstChip('type', k, he, q.type === k)).join('')}</div></div>
+    <div class="lf-fld"><span class="fld-l">${t('היכן')}</span>
+      <div class="chips" role="radiogroup">${LST_WHERE.map(([k, he]) => lstChip('where', k, he, q.where === k)).join('')}</div>
+      ${whereBody}</div>
+    <div class="lf-fld"><span class="fld-l">${t('מחיר, €')}</span>
+      <div class="lf-row"><input class="lf-in" data-lstin="minPrice" type="number" inputmode="numeric" placeholder="${t('מ-')}" value="${html(q.minPrice)}">
+        <input class="lf-in" data-lstin="maxPrice" type="number" inputmode="numeric" placeholder="${t('עד')}" value="${html(q.maxPrice)}"></div></div>
+    <div class="lf-fld"><span class="fld-l">${t('שטח מזערי, מ״ר')}</span>
+      <input class="lf-in lf-short" data-lstin="minSize" type="number" inputmode="numeric" value="${html(q.minSize)}"></div>
+    <div class="lf-fld"><span class="fld-l">${t('חדרים, לפחות')}</span>
+      <div class="chips" role="radiogroup">${lstChip('rooms', '', 'לא משנה', !q.rooms)}${[1, 2, 3, 4, 5].map(n => lstChip('rooms', String(n), 'T' + n, String(q.rooms) === String(n))).join('')}</div></div>
+    <div class="lf-fld"><span class="fld-l">${t('מצב וחוץ')}</span>
+      <div class="chips">${lstCheck('renew', 'דורש שיפוץ', q.renew)}${lstCheck('garden', 'גינה', q.garden)}${lstCheck('terrace', 'מרפסת', q.terrace)}</div></div>
+    <div class="lf-fld"><span class="fld-l">${t('עד כמה תוצאות')}</span>
+      <div class="chips" role="radiogroup">${[50, 100, 150].map(n => lstChip('cap', String(n), String(n), (q.cap || 50) === n)).join('')}</div></div>
+    <button class="cta" id="lstSearch">${t('חפש')}</button>
+    <p class="note">${cred
+      ? `${t('החיפוש הזה יעלה')} ${need} ${t('בקשות · נותרו')} ${left} ${t('מתוך')} ${quota.limit} ${t('החודש · דורש רשת')}`
+      : t('אין מפתח ספק. ״חפש״ יסביר מה חסר; הכול חוץ מהחיפוש עובד גם בלי מפתח.')}</p>
+    <div class="chips"><button class="chip" data-lstform="cred">${cred ? t('הגדרות ספק') : t('הזנת מפתח ספק')}</button>
+      <button class="chip" data-lstform="file">${t('ייבוא קובץ תוצאות')}</button>
+      ${D.lst ? `<button class="chip" data-lstform="close">${t('חזרה לתוצאות')}</button>` : ''}</div>
+    ${S.lstCredOpen ? lstCredHtml(cred, quota) : ''}
+  </div>`;
+}
+function lstCredHtml(cred, quota) {
+  return `<div class="lf-cred">
+    <h3>${t('מפתח ה-API של idealista')}</h3>
+    <p class="note">${t('נשמר במכשיר הזה בלבד, ולעולם לא בקובץ ההתקנה. מתקבל ב-developers.idealista.com.')}</p>
+    <span class="fld-l">apikey</span><input class="lf-in" id="lstApikey" type="text" autocomplete="off" spellcheck="false" dir="ltr" value="${html(cred ? cred.apikey : '')}">
+    <span class="fld-l">secret</span><input class="lf-in" id="lstSecret" type="password" autocomplete="off" dir="ltr" value="${html(cred ? cred.secret : '')}">
+    <span class="fld-l">${t('מכסה חודשית (בקשות)')}</span><input class="lf-in lf-short" id="lstLimit" type="number" min="1" value="${quota.limit}">
+    <div class="chips"><button class="chip is-on" id="lstCredSave">${t('שמירה')}</button>
+      <button class="chip" id="lstCredClear">${t('מחיקת המפתח')}</button></div>
+  </div>`;
+}
+
+function lstCard(it, open) {
+  const st = lstState(it.code);
+  const thumb = it.thumbnail ? `<figure class="lst-thumb"><img src="${html(it.thumbnail)}" alt="" loading="lazy"></figure>` : '';
+  const photos = [it.thumbnail].concat(it.photos || []).filter((u, i, a) => u && a.indexOf(u) === i).slice(0, LST_PHOTOS_MAX);
+  const feats = Object.entries(it.features || {}).filter(([, v]) => v === true).map(([k]) => k.replace(/^has/, ''));
+  const detail = !open ? '' : `<div class="lst-detail">
+      ${it.description ? `<div class="lst-quote"><div class="grp">${t('לשון המודעה')}</div><p>${html(it.description)}</p></div>` : ''}
+      ${photos.length > 1 ? `<div class="lst-photos">${photos.slice(1).map(u => `<img src="${html(u)}" alt="" loading="lazy">`).join('')}</div>` : ''}
+      ${feats.length ? `<p class="note lat">${html(feats.join(' · '))}</p>` : ''}
+      ${it.priceByArea ? `<p class="note">${t('€/מ״ר לפי המודעה:')} <span class="num">${nf(it.priceByArea, 0)}</span> — ${t('על השטח שהמודעה מונה, לא על שטח מגורים')}</p>` : ''}
+      <div class="chips">
+        ${it.url ? `<a class="chip" href="${html(it.url)}" target="_blank" rel="noopener">${t('פתח במקור')}</a>` : ''}
+        <button class="chip" data-lstact="read" data-code="${html(it.code)}">${st === 'read' ? t('סמן כלא נקרא') : t('סמן כנקרא')}</button>
+        <button class="chip${st === 'saved' ? ' is-on' : ''}" data-lstact="save" data-code="${html(it.code)}">${st === 'saved' ? t('שמור ב״המקומות שלי״') : t('שמור כמקום שלי')}</button>
+        <button class="chip" data-lstact="del" data-code="${html(it.code)}">${t('מחק מהתוצאות')}</button>
+      </div></div>`;
+  return `<article class="card lst lst-${st}${open ? ' is-hi' : ''}" data-lst="${html(it.code)}">
+    <div class="lst-line">
+      ${thumb}
+      <div class="lst-txt">
+        <div class="lst-price"><span class="num">${html(lstPriceText(it))}</span>${lstMeta(it) ? ' <span class="lst-meta">· ' + lstMeta(it) + '</span>' : ''}</div>
+        <h2>${html(it.title || '')}</h2>
+        <p class="note">${html(lstWhere(it))} · <span class="flag">${html(t(LST_STATUS_HE[st] || st))}</span></p>
+      </div>
+    </div>
+    ${detail}
+  </article>`;
+}
+
+function renderListings() {
+  const q = S.lstQ || lstDefaultQ();
+  const items = lstLive();
+  const head = `${viewBar()}`;
+  if (!D.lst || S.lstForm) return head + lstFormHtml();
+  const summary = `<div class="card">
+    <h1>${t('נכסים')}</h1>
+    <p class="sub">${html(lstQuerySummary(D.lst.query || q))}</p>
+    <p class="note">${t('מקור:')} ${html(D.lst.provider || '')} · ${t(D.lst.source === 'file' ? 'מקובץ' : 'מה-API')} · ${t('נקרא ב-')}${html(lstDate(D.lst.readAt))} · ${items.length} ${t('מודעות')}</p>
+    <div class="chips"><button class="chip" data-lstform="open">${t('שינוי החיפוש')}</button>
+      <button class="chip" data-lstform="query">${t('השאילתה לסקריפט')}</button></div>
+    ${S.lstQueryOpen ? `<textarea class="lf-in" rows="5" dir="ltr" readonly>${html(JSON.stringify(lstQueryForScript(D.lst.query || q)))}</textarea>
+      <p class="note">${t('להדביק כ-query.json ולהריץ: python3 scripts/fetch_listings.py --query query.json')}</p>` : ''}
+  </div>`;
+  const counts = lstCounts(items);
+  let rows = '';
+  if (S.level === 'district') {
+    rows = `<div class="grp">${t('18 העיריות — מודעות בכל אחת')}</div><div class="rows">${D.mun.map(m => {
+      const n = counts.mun.get(m.num) || 0;
+      return `<button class="row" data-lstmun="${m.num}"><span class="pin" style="--c:${html(m.fill)}">${html(munNum(m))}</span>
+        <span class="row-body"><span class="row-t">${nmPair(m, m.en)}</span>
+        <span class="row-m"><span class="num">${n}</span> ${t('מודעות')}</span></span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>`; }).join('')}</div>`;
+  } else if (S.level === 'mun') {
+    const fr = D.freByMun.get(S.mun) || [];
+    rows = `<div class="grp">${t('הרובעים — מודעות בכל אחד')}</div><div class="rows">${fr.map(f => {
+      const n = counts.fre.get(D.freKey(f)) || 0;
+      return `<button class="row" data-lstfre="${html(D.freKey(f))}"><span class="pin" style="--c:${html(f.colour || C.fillDefault)}">${html(freNum(f))}</span>
+        <span class="row-body"><span class="row-t">${nmPair(f, bare(f.pt))}</span>
+        <span class="row-m"><span class="num">${n}</span> ${t('מודעות')}</span></span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>`; }).join('')}</div>`;
+  }
+  const here = lstSorted(lstHere(items));
+  const list = S.level === 'district' ? '' : `<div class="grp">${here.length} ${t('מודעות')}${S.level === 'zone' ? ' · ' + html(nm(D.freByKey.get(S.zone))) : ' · ' + html(nm(D.munByNum.get(S.mun)))}</div>
+    ${here.length ? sortBar() : ''}
+    ${here.length ? here.map(it => lstCard(it, S.lstOpen === it.code)).join('') : `<p class="note">${t('אין מודעות תואמות כאן. המספרים על המפה אומרים איפה יש.')}</p>`}`;
+  return head + summary + rows + list;
+}
+function lstAfterRender() {
+  if (S.lstOpen) { const el = $(`#doc [data-lst="${CSS.escape(S.lstOpen)}"]`); if (el) el.scrollIntoView({ block: 'nearest' }); }
+}
+function lstOpen(code) {
+  const it = D.lst && D.lst.items.find(x => x.code === code);
+  if (!it) return;
+  S.lstOpen = S.lstOpen === code ? null : code;
+  if (S.lstOpen && lstState(code) === 'unread') lstSetState(code, 'read');
+  if (S.lstOpen && it.zone && it.zone !== S.zone) { goZone(it.zone); return; }
+  redrawLevel(); redrawText();
+}
+
+/* ---- the query, in the provider's terms ---- */
+function lstGeo(q) {
+  const ring = feats => { const b = L.geoJSON({ type: 'FeatureCollection', features: feats }).getBounds();
+    const c = b.getCenter(); return { center: [c.lat, c.lng], distance: Math.ceil(c.distanceTo(b.getNorthEast())) }; };
+  if (q.where === 'mun' && q.mun) {
+    const g = ring(D.bM.features.filter(ft => ft.properties.num === q.mun));
+    return Object.assign(g, { filter: it => it.mun === q.mun });
+  }
+  if (q.where === 'zone' && q.zone) {
+    const g = ring(D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === q.zone));
+    return Object.assign(g, { filter: it => it.zone === q.zone });
+  }
+  if ((q.where === 'place' && q.place) || (q.where === 'radius' && q.ll)) {
+    const ll = q.where === 'place' ? q.place.ll : q.ll;
+    const m = Math.round((+q.km || 2) * 1000);
+    return { center: ll, distance: m, filter: it => L.latLng(ll).distanceTo(L.latLng(it.ll)) <= m };
+  }
+  const g = ring(D.bM.features);
+  return Object.assign(g, { filter: it => !!it.mun });
+}
+function lstApiParams(q, geo, page) {
+  const p = { country: 'pt', locale: 'pt', operation: q.op === 'rent' ? 'rent' : 'sale', propertyType: 'homes',
+    center: geo.center[0].toFixed(6) + ',' + geo.center[1].toFixed(6), distance: String(geo.distance),
+    maxItems: String(LST_PAGE), numPage: String(page), order: 'price', sort: 'asc' };
+  if (q.type === 'home') p.flat = 'true';
+  if (q.type === 'house') { p.chalet = 'true'; p.countryHouse = 'true'; }
+  if (q.minPrice) p.minPrice = String(+q.minPrice);
+  if (q.maxPrice) p.maxPrice = String(+q.maxPrice);
+  if (q.minSize) p.minSize = String(+q.minSize);
+  if (q.rooms) p.bedrooms = [1, 2, 3, 4].filter(n => n >= +q.rooms).join(',') + (+q.rooms <= 4 ? ',4' : '');
+  if (q.renew) p.status = 'renew';
+  if (q.garden) p.garden = 'true';
+  if (q.terrace) p.terrace = 'true';
+  return p;
+}
+const lstQueryForScript = q => ({ kind: 'listings-query', provider: 'idealista', query: q, geo: lstGeo(q) && { center: lstGeo(q).center, distance: lstGeo(q).distance } });
+function lstFromApi(el) {
+  const st = el.suggestedTexts || {};
+  return { code: String(el.propertyCode), url: el.url || '', price: el.price, currency: '€',
+    size: el.size, rooms: el.rooms, bathrooms: el.bathrooms, floor: el.floor == null ? null : el.floor,
+    type: el.detailedType ? (el.detailedType.typology || '') + (el.detailedType.subTypology ? '/' + el.detailedType.subTypology : '') : (el.propertyType || ''),
+    operation: el.operation || '', status: el.status || '', newDevelopment: !!el.newDevelopment,
+    ll: [el.latitude, el.longitude], title: st.title || el.address || '', subtitle: st.subtitle || '',
+    description: el.description || '', thumbnail: el.thumbnail || '',
+    photos: (el.images || []).map(i => i && i.url).filter(Boolean), numPhotos: el.numPhotos,
+    priceByArea: el.priceByArea, features: el.features || {}, contact: el.contactInfo || null };
+}
+function lstTake(items, q, provider, source) {
+  lstAttach(items);
+  const keep = {};
+  if (D.lst && D.lst.state) Object.entries(D.lst.state).forEach(([c, s]) => { if (s === 'saved') keep[c] = s; });
+  D.lst = { readAt: new Date().toISOString(), provider, source, query: Object.assign({}, q), items, state: keep };
+  S.lstForm = false; S.lstOpen = null;
+  lstSave();
+  if (!S.lst) toggleLst(); else { redrawLevel(); redrawText(); }
+}
+function lstMsg(text, bad) { mapNote(html(text), !!bad); }
+
+async function lstSearch() {
+  const q = S.lstQ;
+  if (q.where === 'mun' && !q.mun) { lstMsg(t('בחרו עירייה.'), true); return; }
+  if (q.where === 'zone' && !q.zone) { lstMsg(t('בחרו רובע.'), true); return; }
+  if (q.where === 'place' && !q.place) { lstMsg(t('בחרו יישוב, רובע או אתר מהרשימה.'), true); return; }
+  if (q.where === 'radius' && !q.ll) { lstMsg(t('קבעו את הנקודה: מרכז המפה.'), true); return; }
+  const cred = lstCred();
+  if (!cred) {
+    S.lstCredOpen = true; redrawText();
+    lstMsg(t('החיפוש פונה ל-API של idealista ודורש מפתח (apikey וסוד) שמזינים כאן פעם אחת. בלי מפתח אפשר לייבא קובץ תוצאות.'), true);
+    return;
+  }
+  const pages = Math.ceil((q.cap || LST_PAGE) / LST_PAGE);
+  const quota = lstQuota();
+  if (quota.used + 1 + pages > quota.limit) {
+    lstMsg(`${t('החיפוש יעלה')} ${1 + pages} ${t('בקשות ונותרו')} ${Math.max(0, quota.limit - quota.used)} ${t('החודש. אפשר להקטין את מספר התוצאות או להגדיל את המכסה בהגדרות.')}`, true);
+    return;
+  }
+  const geo = lstGeo(q);
+  const btn = $('#lstSearch');
+  if (btn) btn.textContent = t('מחפש…');
+  try {
+    const tok = await fetch(LST_API + '/oauth/token', { method: 'POST',
+      headers: { Authorization: 'Basic ' + btoa(cred.apikey + ':' + cred.secret), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=client_credentials&scope=read' });
+    lstSpend(1);
+    if (!tok.ok) throw new Error(t('המפתח לא התקבל — השרת השיב ') + tok.status);
+    const token = (await tok.json()).access_token;
+    let all = [], total = 0;
+    for (let page = 1; page <= pages; page++) {
+      const r = await fetch(LST_API + '/3.5/pt/search', { method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(lstApiParams(q, geo, page)).toString() });
+      lstSpend(1);
+      if (!r.ok) throw new Error(t('החיפוש נכשל — השרת השיב ') + r.status);
+      const j = await r.json();
+      total = j.total || 0;
+      all = all.concat((j.elementList || []).map(lstFromApi));
+      if (!j.elementList || j.elementList.length < LST_PAGE || page >= (j.totalPages || 1)) break;
+    }
+    lstAttach(all);
+    const kept = all.filter(geo.filter);
+    lstTake(kept, q, 'idealista', 'api');
+    lstMsg(`${kept.length} ${t('מודעות')}${total > all.length ? ` (${t('מתוך')} ${total} ${t('אצל הספק — עד הגבול שנבחר')})` : ''}`);
+  } catch (e) {
+    const net = e instanceof TypeError;
+    lstMsg((net ? t('לא הצלחתי להגיע ל-api.idealista.com מהמכשיר — אין רשת, או שהדפדפן חוסם את הקריאה (CORS). החלופה: להריץ את scripts/fetch_listings.py במחשב ולייבא את הקובץ. ') : '') + String(e.message || e), true);
+    redrawText();
+  }
+}
+
+/* ---- a results file, from scripts/fetch_listings.py or from another device ---- */
+function importListings(data) {
+  const items = (data.items || []).filter(it => it && Array.isArray(it.ll) && it.ll.length === 2
+    && it.ll.every(n => typeof n === 'number' && isFinite(n))).map(it => Object.assign({}, it, { code: String(it.code) }));
+  if (!items.length) { const n = $('#impNote'); if (n) n.textContent = t('קובץ תוצאות בלי מודעות עם קואורדינטות.'); return; }
+  closePanel();
+  const q = Object.assign(lstDefaultQ(), data.query || {});
+  S.lstQ = q;
+  lstTake(items, q, data.provider || 'file', 'file');
+  if (data.read_at) { D.lst.readAt = data.read_at; lstSave(); redrawText(); }
+  lstMsg(`${items.length} ${t('מודעות נקראו מקובץ')}${data.read_at ? ' · ' + t('נקרא ב-') + lstDate(data.read_at) : ''}`);
+}
+
+/* ---- saving: the listing becomes a place of the user's own ---- */
+async function saveListing(code) {
+  const it = D.lst && D.lst.items.find(x => x.code === code);
+  if (!it) return;
+  const id = 'l' + it.code;
+  if (D.mine.some(p => p.id === id)) { lstSetState(code, 'saved'); redrawText(); return; }
+  const rec = { id, name: it.title || (lstPriceText(it)), desc: it.description || '', ll: [it.ll[0], it.ll[1]],
+    at: new Date().toISOString(),
+    src: { provider: D.lst.provider || '', code: it.code, url: it.url || '', price: it.price, currency: it.currency || '€',
+      size: it.size, rooms: it.rooms, bathrooms: it.bathrooms, floor: it.floor, type: it.type, operation: it.operation,
+      status: it.status, priceByArea: it.priceByArea, features: it.features || {}, read_at: D.lst.readAt,
+      contact: it.contact || null } };
+  D.mine.push(rec);
+  saveMine();
+  lstSetState(code, 'saved');
+  redrawText(); drawMine();
+  const urls = [it.thumbnail].concat(it.photos || []).filter((u, i, a) => u && a.indexOf(u) === i).slice(0, LST_PHOTOS_MAX);
+  const metas = [];
+  let failed = 0;
+  for (let i = 0; i < urls.length; i++) {
+    try {
+      const r = await fetch(urls[i]);
+      if (!r.ok) throw new Error('http ' + r.status);
+      const small = await shrinkPhoto(await r.blob());
+      await putPhoto(i === 0 ? id : id + ':' + i, small.blob);
+      metas.push({ w: small.w, h: small.h, bytes: small.blob.size, from: 'listing' });
+    } catch (e) { failed++; }
+  }
+  if (metas.length) { rec.photo = metas[0]; rec.photos = metas; saveMine(); }
+  if (failed) lstMsg(`${t('נשמר. ')}${metas.length} ${t('תמונות נשמרו, ')}${failed} ${t('לא הגיעו — ללא רשת התמונות נשארות אצל הספק.')}`, true);
+  else if (metas.length) lstMsg(`${t('נשמר עם')} ${metas.length} ${t('תמונות.')}`);
+  if (S.wp) renderWaypoints();
+}
+
+/* The saved listing on its my-places card: three layers of "this is a copy",
+   the quote marked as the provider's words, the parish from the coordinate. */
+function lstSavedHtml(p) {
+  const s = p.src;
+  const when = lstDate(s.read_at || p.at);
+  const days = lstDaysSince(s.read_at || p.at);
+  const stale = days >= LST_STALE_DAYS;
+  const meta = lstMeta({ rooms: s.rooms, size: s.size, floor: s.floor, status: s.status });
+  const figs = (p.photos && p.photos.length ? p.photos : (p.photo ? [p.photo] : [])).map((m, i) =>
+    `<figure class="ph-fig lst-savedph" data-wpimg="${html(i ? p.id + ':' + i : p.id)}"><figcaption class="ph-cap">${t('עותק שמור')} · ${html(when)}</figcaption><img class="ph-img" alt=""></figure>`).join('');
+  return `<div class="lst-price"><span class="num">${html(lstPriceText({ price: s.price, currency: s.currency }))}</span>${meta ? ' <span class="lst-meta">· ' + meta + '</span>' : ''}
+      <span class="lst-asread">${t('כפי שנקרא אז')} · ${html(when)}</span></div>
+    ${stale ? `<div class="warn">${t('נקרא לפני')} ${days} ${t('ימים. מודעה יכולה להימכר מאז.')} ${s.url ? `<a href="${html(s.url)}" target="_blank" rel="noopener">${t('בדוק במקור')}</a>` : ''}</div>` : ''}
+    ${p.desc ? `<div class="lst-quote"><div class="grp">${t('לשון המודעה')} · ${html(s.provider || '')}</div><p>${html(p.desc)}</p></div>` : ''}
+    ${figs}
+    <p class="note">${s.url ? `<a href="${html(s.url)}" target="_blank" rel="noopener">${t('פתח במקור')}</a> · ` : ''}${t('קוד')} <span class="lat">${html(s.code || '')}</span></p>`;
+}
+
+/* ---- taps and typing in the text half ---- */
+function lstClick(e) {
+  const set = e.target.closest('[data-lstset]');
+  if (set) {
+    const [k, v] = set.dataset.lstset.split(':');
+    const q = S.lstQ;
+    if (k === 'renew' || k === 'garden' || k === 'terrace') q[k] = v === '1';
+    else if (k === 'cap') q.cap = +v;
+    else q[k] = v;
+    if (k === 'where') {
+      if (v === 'mun' && !q.mun) q.mun = S.mun || D.mun[0].num;
+      if (v === 'zone') { q.mun = S.mun || q.mun || D.mun[0].num; q.zone = S.zone || q.zone || D.freKey((D.freByMun.get(q.mun) || [])[0]); }
+    }
+    redrawText(); return true;
+  }
+  const form = e.target.closest('[data-lstform]');
+  if (form) {
+    const k = form.dataset.lstform;
+    if (k === 'open') { S.lstForm = true; S.lstCredOpen = false; }
+    else if (k === 'close') S.lstForm = false;
+    else if (k === 'cred') S.lstCredOpen = !S.lstCredOpen;
+    else if (k === 'query') S.lstQueryOpen = !S.lstQueryOpen;
+    else if (k === 'file') { openImport(); const n = $('#impNote'); if (n) n.textContent = t('בחרו קובץ תוצאות (listings) שכתב scripts/fetch_listings.py, או קובץ מקומות.'); return true; }
+    redrawText(); return true;
+  }
+  if (e.target.closest('#lstSearch')) { lstHarvest(); lstSearch(); return true; }
+  if (e.target.closest('#lstCredSave')) {
+    const a = ($('#lstApikey') || {}).value || '', s = ($('#lstSecret') || {}).value || '';
+    lstSetCred(a.trim(), s.trim());
+    const lim = +(($('#lstLimit') || {}).value || 0);
+    if (lim > 0) { const qt = lstQuota(); qt.limit = lim; lstQuotaSet(qt); }
+    S.lstCredOpen = false; redrawText();
+    lstMsg(a.trim() && s.trim() ? t('המפתח נשמר במכשיר הזה.') : t('לא נשמר מפתח — שני השדות נדרשים.'), !(a.trim() && s.trim()));
+    return true;
+  }
+  if (e.target.closest('#lstCredClear')) { lstSetCred('', ''); S.lstCredOpen = false; redrawText(); return true; }
+  if (e.target.closest('#lstCenter')) { const c = map.getCenter(); S.lstQ.ll = [c.lat, c.lng]; redrawText(); return true; }
+  const hit = e.target.closest('[data-lstplace]');
+  if (hit) {
+    const r = (lstPlaceHits || [])[Number(hit.dataset.lstplace)];
+    if (r && r.ll) { S.lstQ.place = { name: r.t, ll: r.ll }; S.lstQ.placeq = r.t; redrawText(); }
+    return true;
+  }
+  const act = e.target.closest('[data-lstact]');
+  if (act) {
+    const code = act.dataset.code, a = act.dataset.lstact;
+    if (a === 'read') lstSetState(code, lstState(code) === 'read' ? 'unread' : 'read');
+    else if (a === 'del') { lstSetState(code, 'deleted'); if (S.lstOpen === code) S.lstOpen = null; }
+    else if (a === 'save') { saveListing(code); return true; }
+    redrawLevel(); redrawText(); return true;
+  }
+  const mn = e.target.closest('[data-lstmun]');
+  if (mn) { goMun(Number(mn.dataset.lstmun)); return true; }
+  const fr = e.target.closest('[data-lstfre]');
+  if (fr) { goZone(fr.dataset.lstfre); return true; }
+  const card = e.target.closest('[data-lst]');
+  if (card && !e.target.closest('a, button, input, select, textarea')) { lstOpen(card.dataset.lst); return true; }
+  return false;
+}
+let lstPlaceHits = null;
+function lstInput(e) {
+  const k = e.target.dataset && e.target.dataset.lstin;
+  if (!k) return false;
+  const v = e.target.value;
+  if (k === 'mun') { S.lstQ.mun = Number(v); S.lstQ.zone = null; if (S.lstQ.where === 'zone') redrawText(); }
+  else if (k === 'zone') S.lstQ.zone = v;
+  else if (k === 'km') S.lstQ.km = v;
+  else if (k === 'placeq') {
+    S.lstQ.placeq = v; S.lstQ.place = null;
+    lstPlaceHits = (placeHits(v) || []).filter(r => r.ll).slice(0, 10);
+    const box = $('#lstPlaceHits');
+    if (box) box.innerHTML = lstPlaceHits.map((r, i) =>
+      `<button class="row" data-lstplace="${i}"><span class="row-body"><span class="row-t">${html(r.t)}</span><span class="row-d">${html(r.s || '')} · ${html(r.k || '')}</span></span></button>`).join('');
+  } else S.lstQ[k] = v;
+  return true;
+}
+function lstHarvest() {
+  $$('#doc [data-lstin]').forEach(el => { const k = el.dataset.lstin; if (k !== 'placeq' && k !== 'mun' && k !== 'zone') S.lstQ[k] = el.value; });
+}
+/* ======================================================== LISTINGS-END ==== */
+
 Object.assign(EN, {
   'השכלה גבוהה — מכלל התושבים': 'Higher education — of all residents',
   '<h3>מגבלות בנייה</h3>': '<h3>Building constraints</h3>',
@@ -7936,6 +8595,224 @@ Object.assign(EN, {
     'Compare data',
   'השוואה':
     'Compare',
+  '18 העיריות — מודעות בכל אחת':
+    'The 18 municipalities — listings in each',
+  'אין מודעות תואמות כאן. המספרים על המפה אומרים איפה יש.':
+    'No matching listings here. The numbers on the map say where there are.',
+  'אין מפתח ספק. ״חפש״ יסביר מה חסר; הכול חוץ מהחיפוש עובד גם בלי מפתח.':
+    'No provider key. "Search" will explain what is missing; everything but the search works without one.',
+  'אצל הספק — עד הגבול שנבחר':
+    'at the provider — up to the limit chosen',
+  'בדוק במקור':
+    'Check at the source',
+  'בחרו יישוב, רובע או אתר מהרשימה.':
+    'Pick a locality, parish or site from the list.',
+  'בחרו עירייה.':
+    'Pick a municipality.',
+  'בחרו קובץ תוצאות (listings) שכתב scripts/fetch_listings.py, או קובץ מקומות.':
+    'Pick a results file (listings) written by scripts/fetch_listings.py, or a places file.',
+  'בחרו רובע.':
+    'Pick a parish.',
+  'בנייה חדשה':
+    'new build',
+  'בקשות · נותרו':
+    'requests · left',
+  'בקשות ונותרו':
+    'requests and',
+  'גינה':
+    'garden',
+  'הגדרות ספק':
+    'Provider settings',
+  'הזיזו את המפה כך שהנקודה הרצויה במרכזה, ואז לחצו.':
+    'Move the map so the point you want is at its centre, then tap.',
+  'הזנת מפתח ספק':
+    'Enter a provider key',
+  'החודש · דורש רשת':
+    'this month · needs a network',
+  'החודש. אפשר להקטין את מספר התוצאות או להגדיל את המכסה בהגדרות.':
+    'are left this month. Reduce the number of results or raise the quota in the settings.',
+  'החיפוש הזה יעלה':
+    'This search will cost',
+  'החיפוש יעלה':
+    'The search would cost',
+  'החיפוש נכשל — השרת השיב ':
+    'The search failed — the server answered ',
+  'החיפוש פונה ל-API של idealista ודורש מפתח (apikey וסוד) שמזינים כאן פעם אחת. בלי מפתח אפשר לייבא קובץ תוצאות.':
+    'The search calls idealista\'s API and needs a key (apikey and secret) entered here once. Without a key you can import a results file.',
+  'היכן':
+    'Where',
+  'המפתח לא התקבל — השרת השיב ':
+    'The key was not accepted — the server answered ',
+  'המפתח נשמר במכשיר הזה.':
+    'The key is saved on this device.',
+  'הנקודה:':
+    'The point:',
+  'הנקודה: מרכז המפה כפי שהוא עכשיו':
+    'The point: the centre of the map as it is now',
+  'הרובעים — מודעות בכל אחד':
+    'The parishes — listings in each',
+  'השאילתה לסקריפט':
+    'The query for the script',
+  'חדרים, לפחות':
+    'Rooms, at least',
+  'חזרה לתוצאות':
+    'Back to the results',
+  'חיפוש נכסים':
+    'Property search',
+  'חפש':
+    'Search',
+  'ייבוא קובץ תוצאות':
+    'Import a results file',
+  'ימים. מודעה יכולה להימכר מאז.':
+    'days ago. A listing can have sold since.',
+  'כל 18 העיריות. תוצאות מחוץ לגבולות המחוז מסוננות לפי גבולות CAOP.':
+    'All 18 municipalities. Results outside the district are filtered out by the CAOP boundaries.',
+  'כפי שנקרא אז':
+    'as read then',
+  'לא הגיעו — ללא רשת התמונות נשארות אצל הספק.':
+    'did not arrive — without a network the pictures stay with the provider.',
+  'לא הצלחתי להגיע ל-api.idealista.com מהמכשיר — אין רשת, או שהדפדפן חוסם את הקריאה (CORS). החלופה: להריץ את scripts/fetch_listings.py במחשב ולייבא את הקובץ. ':
+    'Could not reach api.idealista.com from this device — no network, or the browser blocks the call (CORS). The alternative: run scripts/fetch_listings.py on a computer and import the file. ',
+  'לא הצלחתי לשמור את תוצאות החיפוש — ייתכן שהאחסון המקומי מלא.':
+    'Could not save the search results — local storage may be full.',
+  'לא נשמר מפתח — שני השדות נדרשים.':
+    'No key saved — both fields are required.',
+  'להדביק כ-query.json ולהריץ: python3 scripts/fetch_listings.py --query query.json':
+    'Paste as query.json and run: python3 scripts/fetch_listings.py --query query.json',
+  'לשון המודעה':
+    'The listing\'s own words',
+  'לשיפוץ':
+    'to renovate',
+  'מ-':
+    'from',
+  'מודעות':
+    'listings',
+  'מודעות נקראו מקובץ':
+    'listings read from a file',
+  'מחיקת המפתח':
+    'Delete the key',
+  'מחיר לא צוין':
+    'price not given',
+  'מחיר, €':
+    'Price, €',
+  'מחפש…':
+    'Searching…',
+  'מחק מהתוצאות':
+    'Remove from the results',
+  'מכסה חודשית (בקשות)':
+    'Monthly quota (requests)',
+  'מפתח ה-API של idealista':
+    'idealista\'s API key',
+  'מצב וחוץ':
+    'Condition and outdoors',
+  'מרפסת':
+    'terrace',
+  'מ״ר':
+    'm²',
+  'נבחר:':
+    'Chosen:',
+  'נכסים':
+    'Listings',
+  'נקרא ב-':
+    'read on ',
+  'נקרא לפני':
+    'Read',
+  'נשמר במכשיר הזה בלבד, ולעולם לא בקובץ ההתקנה. מתקבל ב-developers.idealista.com.':
+    'Saved on this device only, never in the install file. Obtained at developers.idealista.com.',
+  'נשמר עם':
+    'Saved with',
+  'נשמר. ':
+    'Saved. ',
+  'סוג נכס':
+    'Property type',
+  'סמן כלא נקרא':
+    'Mark as unread',
+  'סמן כנקרא':
+    'Mark as read',
+  'עד':
+    'to',
+  'עד כמה תוצאות':
+    'Up to how many results',
+  'עותק שמור':
+    'Saved copy',
+  'על השטח שהמודעה מונה, לא על שטח מגורים':
+    'over the area the listing counts, not living area',
+  'עסקה':
+    'Transaction',
+  'פתח במקור':
+    'Open at the source',
+  'קבעו את הנקודה: מרכז המפה.':
+    'Set the point: the centre of the map.',
+  'קובץ תוצאות בלי מודעות עם קואורדינטות.':
+    'A results file with no listings that carry coordinates.',
+  'קומה':
+    'floor',
+  'רדיוס':
+    'Radius',
+  'רדיוס בק״מ':
+    'Radius in km',
+  'שטח מזערי, מ״ר':
+    'Minimum size, m²',
+  'שינוי החיפוש':
+    'Change the search',
+  'שם היישוב, הרובע או האתר — מהנתונים של האפליקציה':
+    'The locality, parish or site — from the app\'s own data',
+  'שמור ב״המקומות שלי״':
+    'Saved in "My places"',
+  'שמור כמקום שלי':
+    'Save as my place',
+  'שמירה':
+    'Save',
+  'שתי אותיות ומעלה':
+    'Two letters or more',
+  'תמונות נשמרו, ':
+    'pictures saved, ',
+  'תמונות.':
+    'pictures.',
+  '״חפש״ במוד נכסים פונה ל-API של idealista עם המפתח שהזנת, ותמונות המודעות נטענות מהשרתים של idealista. מה שנשמר עובד אחר כך בלי רשת.':
+    '"Search" in the listings mode calls idealista\'s API with the key you entered, and the listings\' pictures load from idealista\'s servers. What is saved works offline afterwards.',
+  '€/מ״ר לפי המודעה:':
+    '€/m² by the listing:',
+  'מכירה':
+    'For sale',
+  'שכירות':
+    'For rent',
+  'דירה':
+    'Flat',
+  'בית':
+    'House',
+  'הכול':
+    'Any',
+  'מחוז':
+    'District',
+  'עירייה':
+    'Municipality',
+  'רובע':
+    'Parish',
+  'רחוב / יישוב':
+    'Street / locality',
+  'לא משנה':
+    'Any',
+  'דורש שיפוץ':
+    'needs renovation',
+  'לא נקרא':
+    'unread',
+  'נקרא':
+    'read',
+  'שמור':
+    'saved',
+  'מקור:':
+    'Source:',
+  'מקובץ':
+    'from a file',
+  'מה-API':
+    'from the API',
+  'מתוך':
+    'of',
+  'קוד':
+    'code',
+  'ק״מ':
+    'km',
   'מה דורש רשת':
     'What needs a network',
   'כל השאר — הגבולות, המפקד, המחירים, מגבלות הבנייה שהורדו, המקומות שלך — במכשיר, ועובד בלי חיבור.':
