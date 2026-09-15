@@ -1501,6 +1501,71 @@ def main():
             fail("app.js still says '%s' — the 2025 division is what it draws"
                  % phrase)
 
+    # ---- 7y. the launcher icon survives Android's mask ---------------------
+    # Measured 2026-09-15: icons/icon-512.png spread the district over 87% of
+    # its width, and android/…/mipmap-xxhdpi/ic_launcher.png was that very
+    # file (same md5). Android masks a launcher icon to 72dp of a 108dp
+    # canvas and guarantees only a 66dp circle, so the coast and the eastern
+    # tip — the two ends of the one shape the icon is — were cut off on every
+    # phone. The padded file already existed (icon-maskable-512.png, 54%) and
+    # served the PWA; Android shipped the wrong one. And make_icons.py still
+    # coloured by the three belts the app dropped in 1.8, so a re-run would
+    # have painted all 18 municipalities the grey fallback.
+    from PIL import Image
+    SAFE = 66.0 / 108.0
+    RES = os.path.join(ROOT, "android", "app", "src", "main", "res")
+    def art_reach(path):
+        """How far, as a fraction of the width, the art reaches from the centre.
+        The ground is read at the top-centre edge (a round icon's corner is
+        transparent); a transparent pixel is ground on any layer."""
+        im = Image.open(path).convert("RGBA"); w, h = im.size; px = im.load()
+        # w/8 in from the top edge: past a round icon's anti-aliased rim, and
+        # still outside the disc on a transparent layer. Any translucent pixel
+        # is a mask edge, never art — the art in these files is fully opaque.
+        bg = px[w // 2, w // 8]
+        def ground(a): return a[3] < 255 or all(abs(x - y) <= 28 for x, y in zip(a[:3], bg[:3]))
+        cx, cy, worst = w / 2.0, h / 2.0, 0.0
+        for y in range(0, h, 2):
+            for x in range(0, w, 2):
+                if not ground(px[x, y]):
+                    r = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5 / w
+                    if r > worst: worst = r
+        return 2 * worst   # diameter, comparable to SAFE
+    launchers = []
+    for d in os.listdir(RES) if os.path.isdir(RES) else []:
+        if d.startswith("mipmap-") and d != "mipmap-anydpi-v26":
+            for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+                f = os.path.join(RES, d, name)
+                if os.path.exists(f):
+                    launchers.append(f)
+    if not launchers:
+        fail("no launcher PNGs under android/…/res/mipmap-*")
+    for f in launchers:
+        reach = art_reach(f)
+        if reach > SAFE + 0.01:
+            fail("%s: the map reaches a %.0f%% disc; Android guarantees only %.0f%% (66dp of 108)"
+                 % (os.path.relpath(f, ROOT), 100 * reach, 100 * SAFE))
+    for d in ("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"):
+        if not os.path.exists(os.path.join(RES, d, "ic_launcher.png")):
+            fail("android: no ic_launcher.png for %s — the launcher will scale another density" % d)
+    xml = os.path.join(RES, "mipmap-anydpi-v26", "ic_launcher.xml")
+    if not os.path.exists(xml):
+        fail("android: no adaptive icon (mipmap-anydpi-v26/ic_launcher.xml)")
+    else:
+        x = io.open(xml, encoding="utf-8").read()
+        for layer in ("<background", "<foreground", "<monochrome"):
+            if layer not in x:
+                fail("android adaptive icon lacks a %s> layer" % layer)
+    # the generator colours from the data, so it cannot drift from it again
+    gen = io.open(os.path.join(ROOT, "scripts", "make_icons.py"), encoding="utf-8").read()
+    if "החגורה" in gen:
+        fail("make_icons.py still names the three belts the app dropped in 1.8")
+    belts_he = {b["he"] for b in load("municipios.json")["belts"]}
+    for m in mun:
+        if m.get("belt") not in belts_he:
+            fail("municipality %s: belt %r is not one of the regions in municipios.json → belts"
+                 % (m.get("he"), m.get("belt")))
+
     for w in warns:
         print("WARN  " + w)
     for f in fails:
