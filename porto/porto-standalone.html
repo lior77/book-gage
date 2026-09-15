@@ -1876,8 +1876,11 @@ function ownFeature(kind, props) {
 }
 const LINE_ON = { region: 'lnRegion', district: 'lnDistrict',
                   mun: 'lnMun', fre: 'lnFre' };
-// bottom to top — the array order IS the stacking order
-const LINE_PANE = ['ln-region', 'ln-district', 'ln-mun', 'ln-fre'];
+// bottom to top — the array order IS the stacking order.  Parishes lowest,
+// the orange NUTS III regions highest: they are the one line that marks a
+// body reaching beyond the district, and for a year they were painted under
+// every other line.  test_ui_menu.js reads the stack back off the panes.
+const LINE_PANE = ['ln-fre', 'ln-mun', 'ln-district', 'ln-region'];
 const PANE_OF = { region: 'ln-region', district: 'ln-district',
                   mun: 'ln-mun', fre: 'ln-fre' };
 const LINE_HE = { region: 'גבולות האזורים', district: 'גבול מחוז פורטו',

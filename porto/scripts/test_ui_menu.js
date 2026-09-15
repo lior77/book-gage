@@ -2729,6 +2729,21 @@ const css = (page, sel, prop) =>
   ok('nothing on any screen threw an uncaught error along the way',
      pageErrors.length === 0, pageErrors.join(' | '));
 
+
+  /* ---- the boundary stack: the orange regions sit on top ------------------
+     The four line panes are created once and given zIndex = 460 + i in
+     LINE_PANE order, so the array IS the stacking order.  For a year the
+     array put the regions first — i.e. lowest — and the one line that marks
+     a body reaching beyond the district was painted under every other line.
+     Read back from the panes the browser actually made, not from the array. */
+  {
+    const z = await page.evaluate(() => {
+      const zi = n => Number(getComputedStyle(document.querySelector(`.leaflet-${n}-pane`)).zIndex);
+      return { region: zi('ln-region'), district: zi('ln-district'), mun: zi('ln-mun'), fre: zi('ln-fre') };
+    });
+    ok('boundary stack: regions above district above municipalities above parishes',
+       z.region > z.district && z.district > z.mun && z.mun > z.fre, JSON.stringify(z));
+  }
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);
