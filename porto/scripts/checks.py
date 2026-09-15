@@ -1053,7 +1053,7 @@ def main():
             fail("app.js calls REN/RAN an outright ban (%r). They are "
                  "restrictions with an exception regime." % bad)
 
-    # ---- 7v. CRUS: the land-use regime, and where it does not add up -------
+    # ---- 7ae. CRUS: the land-use regime, and where it does not add up -----
     # This is the only block in the app whose reference year is the date a
     # municipality published its own plan, and whose hectares are the source's
     # own rather than anything measured here. Two things can therefore go wrong
@@ -1814,6 +1814,24 @@ def main():
         for m in re.finditer(r"(?i)(apikey|secret|client_id|client_secret)\s*[:=]\s*['\"]([A-Za-z0-9+/=_-]{16,})['\"]", txt):
             fail("%s line %d: a key-shaped literal (%s=…) — the key is typed by the user and never sits in the source"
                  % (name, txt.count("\n", 0, m.start()) + 1, m.group(1)))
+
+
+    # ---- 7af. every check in this file answers to one label, and only one ---
+    # Found 2026-09-15 while counting the sections for the 2.0.0 documents:
+    # 7v was the Android manifest check and ALSO the CRUS check, and both were
+    # cited as "§7v" in ARCHITECTURE.md and HANDOFF.md — so "see 7v" pointed at
+    # two different rules. The letter is how every document refers to a rule;
+    # a duplicate makes the reference useless and a rename silently orphans it.
+    # The CRUS one became 7ae. This keeps the next one from happening.
+    me = io.open(os.path.abspath(__file__), encoding="utf-8").read()
+    labels = re.findall(r"^    # ---- ([0-9a-z]+)\. ", me, re.M)
+    dup = sorted({l for l in labels if labels.count(l) > 1})
+    if dup:
+        fail("checks.py uses the same section label twice: %s — the letter is how "
+             "ARCHITECTURE.md and HANDOFF.md cite a rule, and two rules cannot share one"
+             % ", ".join(dup))
+    else:
+        print("check sections %d, every label its own" % len(labels))
 
     for w in warns:
         print("WARN  " + w)
