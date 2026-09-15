@@ -25,6 +25,7 @@ so) and "approx" (derived or proxied, never a measurement).  Anything below
 "verified" carries a note saying what is uncertain, and the line that produces
 it carries a comment saying the same.  Search this file for CONFIDENCE.
 """
+import csv
 import json
 import itertools
 import math
@@ -319,6 +320,37 @@ def load_extra():
     if not os.path.exists(path):
         return {}
     return json.load(open(path, encoding="utf-8"))
+
+
+def read_tipau():
+    """INE's urban-area typology, one class per parish: APU, AMU or APR.
+
+    The file is the category export of version V05635 (TIPAU 2025) from INE's
+    meta-information system, written by scripts/fetch_tipau.py.  Three levels:
+    the typology, the named urban area inside a municipality, and the parish
+    with its six-digit code.  Only the parish rows are read, and only their
+    code and the typology above them.
+
+    TIPAU 2025 stands on CAOP 2020, so the 57 parishes the 2025 reform created
+    have no row and get no value — the class of the union they came out of is
+    the union's, not theirs (rule 2).  The 25 dissolved unions do have rows and
+    simply find no parish to attach to.
+    """
+    path = os.path.join(RAW, "ine", "tipau2025_v05635.csv")
+    if not os.path.exists(path):
+        return {}
+    out, cur = {}, None
+    with open(path, encoding="utf-8", newline="") as fh:
+        rows = list(csv.reader(fh))
+    start = next(i for i, r in enumerate(rows) if r and r[0] == "Nível") + 1
+    for r in rows[start:]:
+        if len(r) < 2:
+            continue
+        if r[0] == "1":
+            cur = r[1]
+        elif r[0] == "3" and cur in ("APU", "AMU", "APR"):
+            out[r[1]] = cur
+    return out
 
 
 def load_raw(name):
@@ -1046,6 +1078,7 @@ def main():
     ine_mun, ine_fre = read_censos()
     ine_2025, mun25 = read_censos_2025()
     cons_mun, cons_fre = read_constraints()
+    tipau = read_tipau()
     crus_mun = read_crus()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
     translit_2025 = read_translit_2025()
@@ -1214,6 +1247,11 @@ def main():
             cons = cons_fre.get(rec["dicofre"])
             if cons:
                 rec["cons"] = cons
+            # CONFIDENCE: reported.  One class per parish, straight off INE's
+            # own table by the parish's own code; a parish born in 2025 has no
+            # code in that table and gets nothing.
+            if rec["dicofre"] in tipau and not before:
+                rec["tipau"] = tipau[rec["dicofre"]]
             if "pop2021" not in rec and caop_name in extra_pop:
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
@@ -1522,6 +1560,9 @@ def main():
           % (n_pop, len(freguesias), n_he, len(freguesias)))
     print("freguesias with a description: %d/%d   of them written for the app: %d"
           % (n_note, len(freguesias), n_app))
+    n_tipau = sum(1 for f in freguesias if "tipau" in f)
+    print("freguesias with a TIPAU 2025 class: %d/%d   (the %d born in 2025 have no row)"
+          % (n_tipau, len(freguesias), sum(1 for f in freguesias if f.get("was_part_of"))))
 
 
 if __name__ == "__main__":

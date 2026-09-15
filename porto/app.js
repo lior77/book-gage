@@ -606,6 +606,41 @@ function stat(label, val, unit, dec, srcKey, step, fmt) {
   </button>`;
 }
 
+/* A value that is a word, not a number: the same chip, the same source record
+   and the same year, without the rounding a figure gets. */
+function statText(label, text, srcKey) {
+  const f = D.sources.fields[srcKey] || {};
+  const has = text !== null && text !== undefined && text !== '';
+  return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}">
+    <span class="stat-l">${html(label)}</span>
+    <span class="stat-v">${has ? html(text) : miss()}</span>
+    <span class="stat-y">${f.reference_year ? html(f.reference_year) : t('מקור')}</span>
+  </button>`;
+}
+
+/* INE's urban-area typology, TIPAU 2025: one of three classes per parish.  A
+   statistical reading of the ground, not a planning one — CRUS is that. */
+const TIPAU_HE = { APU: 'עירוני בעיקרו', AMU: 'עירוני בינוני', APR: 'כפרי בעיקרו' };
+const tipauText = code => (code && TIPAU_HE[code] ? t(TIPAU_HE[code]) + ' (' + code + ')' : null);
+/* The municipality's parishes counted by class — a tally of the field, under
+   the field's own source record.  The parishes born in 2025 have no row in
+   INE's table and are counted as what they are: without a value. */
+function tipauCard(rows) {
+  if (!D.sources.fields['freguesia.tipau']) return '';
+  const n = k => rows.filter(f => f.tipau === k).length;
+  const none = rows.filter(f => !f.tipau).length;
+  return `<div class="card">
+    <h2>${t('הרובעים לפי TIPAU 2025')}</h2>
+    <div class="stats">
+      ${stat(t('עירוני בעיקרו (APU)'), n('APU'), t('רובעים'), 0, 'freguesia.tipau')}
+      ${stat(t('עירוני בינוני (AMU)'), n('AMU'), t('רובעים'), 0, 'freguesia.tipau')}
+      ${stat(t('כפרי בעיקרו (APR)'), n('APR'), t('רובעים'), 0, 'freguesia.tipau')}
+      ${none ? stat(t('בלי סיווג — נוצרו ב-2025'), none, t('רובעים'), 0, 'freguesia.tipau') : ''}
+    </div>
+    <p class="note">${t('טיפולוגיה סטטיסטית של INE על גבולות 2020, לא ייעוד תכנוני. רובע שנוצר ברפורמת 2025 אינו בטבלה.')}</p>
+  </div>`;
+}
+
 /* ------------------------------------------------------------- load data --- */
 // scripts/bundle_standalone.py inlines every data file into window.PORTO_DATA,
 // so the same code runs from a server, from one file on file://, and from a
@@ -1279,6 +1314,7 @@ function renderMun(num) {
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
     ${crusCard(m)}
+    ${tipauCard(rows)}
     ${layerCard(m.num)}
 
     <div class="grp">${rows.length} ${isPorto ? t('רבעי העיר') : t('הרובעים')} ${t('— לפי המספור במפה')}</div>
@@ -3973,6 +4009,7 @@ function renderZone(key) {
         ${stat(t('תושבים'), f.pop2021, '', 0, 'freguesia.pop2021', 100)}
         ${stat(t('שטח'), f.area_km2, t('קמ״ר'), 1, 'freguesia.area_km2')}
         ${stat(t('צפיפות'), f.density, t('לקמ״ר'), 0, 'freguesia.density', 100)}
+        ${statText(t('אזור לפי INE'), tipauText(f.tipau), 'freguesia.tipau')}
       </div>
       ${z.desc ? `<p class="lead">${prose(z.desc)}</p>` : ''}
       ${f.note ? `<p class="${z.desc ? 'sub' : 'lead'}">${prose(f.note)}</p>` : ''}
@@ -6171,6 +6208,28 @@ Object.assign(EN, {
     'Compare data',
   'השוואה':
     'Compare',
+  'אזור לפי INE':
+    'Area type (INE)',
+  'עירוני בעיקרו':
+    'Predominantly urban',
+  'עירוני בינוני':
+    'Moderately urban',
+  'כפרי בעיקרו':
+    'Predominantly rural',
+  'הרובעים לפי TIPAU 2025':
+    'Parishes by TIPAU 2025',
+  'עירוני בעיקרו (APU)':
+    'Predominantly urban (APU)',
+  'עירוני בינוני (AMU)':
+    'Moderately urban (AMU)',
+  'כפרי בעיקרו (APR)':
+    'Predominantly rural (APR)',
+  'בלי סיווג — נוצרו ב-2025':
+    'Unclassified — created in 2025',
+  'רובעים':
+    'parishes',
+  'טיפולוגיה סטטיסטית של INE על גבולות 2020, לא ייעוד תכנוני. רובע שנוצר ברפורמת 2025 אינו בטבלה.':
+    "INE's statistical typology on the 2020 boundaries, not a planning designation. A parish created by the 2025 reform is not in the table.",
   'סקירה':
     'Overview',
   'מגבלות':

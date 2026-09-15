@@ -673,6 +673,23 @@
       "label_he": "מספר הרובע על המפה (מספר רץ של האפליקציה)",
       "value_type": "text",
       "source": "מספור של האפליקציה, 1..N בתוך כל עירייה, בסדר הקוד הרשמי (DICOFRE); נבנה ב-scripts/build.py. אינו קוד רשמי; הקוד הרשמי המלא כתוב בטקסט לצד השם"
+    },
+    "freguesia.tipau": {
+      "label_he": "טיפולוגיית אזורים עירוניים — TIPAU 2025",
+      "value_type": "category",
+      "categories": {
+        "APU": "Área predominantemente urbana",
+        "AMU": "Área mediamente urbana",
+        "APR": "Área predominantemente rural"
+      },
+      "reference_year": 2025,
+      "source": "INE — Tipologia de áreas urbanas, 2025 (TIPAU 2025), גרסה V05635 במערכת המטא-מידע של INE (smi.ine.pt). ייצוא הקטגוריות המלא, רמה 3 (רובע), לפי קוד DICOFRE. בתוקף מ-14-04-2025 לפי ההחלטה ה-76 של Secção Permanente de Coordenação Estatística, Diário da República, 2.ª série, n.º 96, 20-05-2025. scripts/fetch_tipau.py",
+      "url": "https://smi.ine.pt/Versao/Detalhes/5635",
+      "retrieved": "2026-09-15",
+      "coverage": "218/275",
+      "confidence": "reported",
+      "caveat_he": "טיפולוגיה סטטיסטית של INE, לא ייעוד תכנוני: ׳כפרי בעיקרו׳ אינו אומר שאסור לבנות, ו׳עירוני בעיקרו׳ אינו אומר שמותר — את זה אומר CRUS. הגרסה עומדת על CAOP 2020, ולכן ל-57 הרובעים שנוצרו ברפורמת 2025 אין שורה והם מוצגים כ׳אין נתון׳ — לא הסיווג של האיחוד שממנו יצאו.",
+      "validation_he": "243 שורות למחוז פורטו בקובץ, כמספר רובעי CAOP 2020. 218 מהן נמצאו ברובעי 2025 של האפליקציה לפי הקוד, ובכל 218 השם בקובץ INE זהה לשם ב-CAOP 2025. 25 הקודים הנותרים הם האיחודים שבוטלו ב-2025 ואינם באפליקציה. מקור שני עצמאי לסיווג אין, ולכן reported ולא verified."
     }
   },
   "missing": {

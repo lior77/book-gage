@@ -1669,6 +1669,48 @@ def main():
                 fail("app.js line %d names a colour (%s) outside the palette block"
                      % (js_src.count("\n", 0, m.start()) + 1, m.group(0)))
 
+
+    # ---- 7aa. TIPAU: one class per parish, and none for a parish INE never saw
+    # Added 2026-09-15 with the field.  The planning documents assumed TIPAU
+    # 2014 was the version in force; INE's meta-information system lists TIPAU
+    # 2025 (V05635), in force since 14-04-2025 and standing on CAOP 2020.  So
+    # 218 parishes carry a class and the 57 the 2025 reform created carry
+    # none — and the trap this guards is the obvious shortcut: giving a new
+    # parish the class of the union it came out of (rule 2, no unmarked
+    # inference).  It also pins the raw file's shape, so a re-fetch that comes
+    # back short or on another geography cannot pass as the same table.
+    tipau_raw = os.path.join(ROOT, "data", "raw", "ine", "tipau2025_v05635.csv")
+    if not os.path.exists(tipau_raw):
+        fail("data/raw/ine/tipau2025_v05635.csv is missing — run scripts/fetch_tipau.py")
+    else:
+        rows = io.open(tipau_raw, encoding="utf-8").read().splitlines()
+        if "V05635" not in "\n".join(rows[:8]):
+            fail("tipau2025_v05635.csv is not the V05635 export (TIPAU 2025)")
+        n_d13 = sum(1 for r in rows if r.startswith("3,13"))
+        if n_d13 != 243:
+            fail("tipau2025_v05635.csv holds %d Porto-district parishes; CAOP 2020 had 243" % n_d13)
+    with_class = [f for f in fre if "tipau" in f]
+    for f in with_class:
+        if f["tipau"] not in ("APU", "AMU", "APR"):
+            fail("parish %s: tipau %r is not APU/AMU/APR" % (f.get("pt"), f["tipau"]))
+        if f.get("was_part_of"):
+            fail("parish %s was created in 2025 and yet carries a TIPAU class — INE never classified it; "
+                 "that is the dissolved union's class, not this parish's" % f.get("pt"))
+    if len(with_class) != n_untouched:
+        fail("TIPAU: %d parishes carry a class; every one of the %d parishes the 2025 reform left alone should, and no other"
+             % (len(with_class), n_untouched))
+    tip = sources["fields"].get("freguesia.tipau")
+    if not tip:
+        fail("sources.json has no record for freguesia.tipau")
+    else:
+        want = "%d/%d" % (len(with_class), len(fre))
+        if tip.get("coverage") != want:
+            fail("freguesia.tipau coverage is %r; the data says %s" % (tip.get("coverage"), want))
+        if tip.get("reference_year") != 2025 or "2025" not in tip.get("source", ""):
+            fail("freguesia.tipau must name TIPAU 2025 — 2014 is the superseded version")
+    if re.search(r"TIPAU 2014", io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()):
+        fail("app.js names TIPAU 2014; the version in force is 2025")
+
     for w in warns:
         print("WARN  " + w)
     for f in fails:

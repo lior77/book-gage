@@ -2735,6 +2735,47 @@ const css = (page, sel, prop) =>
     const doc = document.getElementById('doc'); if (doc) doc.scrollTop = 0; });
   await page.waitForTimeout(700);
 
+  /* TIPAU 2025 — INE's urban-area class on every parish the 2025 reform left
+     alone, and "no data" on every parish it created: the class of the union a
+     new parish came out of is the union's, and inheriting it would be the
+     unmarked inference rule 2 forbids. */
+  {
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); });
+    const tip = await page.evaluate(() => {
+      const bonfim = D.fre.find(f => f.dicofre === '131202');
+      goZone(D.freKey(bonfim));
+      const row = [...document.querySelectorAll('#doc .stat')].find(e => e.dataset.src === 'freguesia.tipau');
+      return row ? { text: row.innerText.replace(/\s+/g, ' ').trim(), no: row.classList.contains('no'), src: row.dataset.src } : null;
+    });
+    ok('Bonfim\'s card carries its TIPAU class as a chip with the field\'s source record',
+       tip && !tip.no && /APU/.test(tip.text) && /2025/.test(tip.text), JSON.stringify(tip));
+    await page.waitForTimeout(300);
+    await page.click('#doc .stat[data-src="freguesia.tipau"]');
+    await page.waitForTimeout(500);
+    const rec = await page.evaluate(() => document.getElementById('doc').innerText + (document.querySelector('#panel') && !document.querySelector('#panel').hidden ? document.querySelector('#panel').innerText : ''));
+    ok('and tapping it opens a record that names INE and TIPAU 2025', /TIPAU 2025/.test(rec) && /INE/.test(rec));
+    await page.evaluate(() => closePanel());
+    const born = await page.evaluate(() => {
+      const f = D.fre.find(x => x.dicofre === '131732');      // Crestuma, created 2025
+      goZone(D.freKey(f));
+      const row = [...document.querySelectorAll('#doc .stat')].find(e => e.dataset.src === 'freguesia.tipau');
+      return { was: !!f.was_part_of, tipau: f.tipau, no: row && row.classList.contains('no'), text: row && row.innerText };
+    });
+    ok('a parish created in 2025 shows אין נתון for it — not the class of the union it left',
+       born.was && born.tipau === undefined && born.no === true && /אין נתון/.test(born.text), JSON.stringify(born));
+    const tally = await page.evaluate(() => {
+      goMun(2);                                                 // Vila Nova de Gaia, 24 parishes
+      const rows = [...document.querySelectorAll('#doc .stat[data-src="freguesia.tipau"]')];
+      const n = rows.map(r => parseInt((r.querySelector('.stat-v') || {}).innerText, 10) || 0);
+      return { rows: rows.length, sum: n.reduce((a, b) => a + b, 0), parishes: D.freByMun.get(2).length,
+               none: (rows.find(r => /2025/.test(r.innerText)) || {}).innerText };
+    });
+    ok('the municipality card tallies its parishes by class, and the tally is its parish count',
+       tally.rows >= 3 && tally.sum === tally.parishes, JSON.stringify(tally));
+    ok('and says how many are unclassified because they were created in 2025', /\d/.test(tally.none || ''), JSON.stringify(tally.none));
+    await page.evaluate(() => goDistrict()); await page.waitForTimeout(400);
+  }
+
   /* THE MATRIX.  Three levels by three modes, every cell exists, and the two
      axes never move each other: switching mode keeps the level and the unit,
      navigating keeps the mode.  Read off S and the tab row after each step. */
