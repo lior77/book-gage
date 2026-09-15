@@ -1496,7 +1496,8 @@ def main():
     # edition here is a deliberate act, which is the point.
     CAOP_CURRENT = str(sources["fields"]["map.caop_2025"]["reference_year"])
     CAOP_HISTORY_OK = {"2013"}
-    years = set(re.findall(r"CAOP\s*(20\d\d)", appjs_txt))
+    # the licence notices are prose too, and one of them said CAOP 2020 until 2026-09-15
+    years = set(re.findall(r"CAOP\s*(20\d\d)", appjs_txt + " " + " ".join(sources["license_notices"])))
     if CAOP_CURRENT not in years:
         fail("app.js never names the CAOP edition it draws (%s)" % CAOP_CURRENT)
     for y in sorted(years - {CAOP_CURRENT} - CAOP_HISTORY_OK):

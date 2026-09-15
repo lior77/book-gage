@@ -289,7 +289,7 @@ const css = (page, sel, prop) =>
   const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'cons', 'borders', 'more', 'regions', 'save', 'load', 'info'];
+    'tiles', 'glass', 'cons', 'borders', 'more', 'regions', 'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -359,7 +359,8 @@ const css = (page, sel, prop) =>
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
     'theme:light': 'תצוגת יום', 'theme:dark': 'תצוגת לילה',
     'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
-    'regions': 'אזורים', 'save': 'שמירת נתונים', 'load': 'ייבוא נתונים', 'info': 'מידע' };
+    'regions': 'אזורים', 'save': 'שמירת נתונים', 'load': 'ייבוא נתונים',
+    'info': 'על האפליקציה', 'dev': 'מאחורי הקלעים', 'terms': 'תנאים והגבלות' };
   const labels = await page.$$eval('#menuIn [data-m]',
     els => Object.fromEntries(els.filter(e => e.querySelector('.mrow-l'))
       .map(e => [e.dataset.m, e.querySelector('.mrow-l').textContent])));
@@ -514,7 +515,9 @@ const css = (page, sel, prop) =>
     ['search', async () => !(await page.$eval('#panel', e => e.hidden)), '#panelClose'],
     ['load',   async () => (await page.$eval('#panelTitle', e => e.textContent)).includes('ייבוא'), '#panelClose'],
     ['more',   async () => (await page.$eval('#panelTitle', e => e.textContent)).includes('שכבות'), '#panelClose'],
-    ['info',   async () => !(await page.$eval('#infoDrawer', e => e.hidden)), '#infoClose'],
+    ['info',   async () => !(await page.$eval('#infoDrawer', e => e.hidden)) && (await page.$eval('#infoTitle', e => e.textContent)) === 'על האפליקציה', '#infoClose'],
+    ['dev',    async () => !(await page.$eval('#infoDrawer', e => e.hidden)) && (await page.$eval('#infoTitle', e => e.textContent)) === 'מאחורי הקלעים', '#infoClose'],
+    ['terms',  async () => !(await page.$eval('#infoDrawer', e => e.hidden)) && (await page.$eval('#infoTitle', e => e.textContent)) === 'תנאים והגבלות', '#infoClose'],
   ]) {
     if (!(await shown())) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
     await page.click(`[data-m="${k}"]`);
@@ -2830,6 +2833,24 @@ const css = (page, sel, prop) =>
        await page.$eval('#doc', e => e.classList.contains('dense')) && (await page.$eval('#doc [data-dense]', e => e.textContent.trim())) === 'מורחב'
          && await vis('#doc .row-d') === 0 && await vis('#doc .stat-y') > 0);
     await page.click('#doc [data-dense]'); await page.waitForTimeout(300);
+  }
+
+  /* ---- the three pages behind the one drawer -----------------------------
+     The user's page carries no field key; the developer's page does; the
+     terms page carries every licence notice and the limits of the app. */
+  {
+    const open = async k => { await page.evaluate(k => openInfo(k), k); await page.waitForTimeout(200);
+      return page.$eval('#infoBody', e => e.textContent); };
+    const about = await open('about'), dev = await open('dev'), terms = await open('terms');
+    ok('about: explains the codes, names the two bodies behind the numbers, and lists what is missing',
+       about.includes('DICOFRE') && about.includes('INE') && about.includes('CAOP') && about.includes('מה עוד חסר'));
+    ok('about: no field keys', !/\bmunicipio\.[a-z_]+\b/.test(about) && !/\bfreguesia\.[a-z_]+\b/.test(about));
+    ok('behind the scenes: the field keys, the build date and the validation chain',
+       /\bmunicipio\.crus\b/.test(dev) && dev.includes('checks.py') && dev.includes(await page.evaluate(() => D.generated)));
+    ok('terms: every licence notice, ODbL and CC BY 4.0 among them, and the limits of liability',
+       terms.includes('OpenStreetMap contributors') && terms.includes('ODbL') && terms.includes('CC BY 4.0')
+         && terms.includes('אינה ייעוץ') && terms.includes('אינו נושא באחריות'), terms.slice(0, 80));
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
   }
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();

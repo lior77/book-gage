@@ -154,7 +154,6 @@
     "בתיבה החוסמת של המחוז: REN ‏71 מצולעים, RAN ‏44, סכנת שריפה **173,047**. מצולע בודד של REN שוקל כ-5MB ושל RAN כ-6MB — הם מפורטים מאוד. זה לא נכנס ל-APK של 730KB, ולכן השאלה אינה איך למשוך אלא **איך להגיש**: הורדה לפי דרישה מתוך release אל IndexedDB היא ההצעה שעל השולחן וטרם הוכרעה.": "Inside the district's bounding box: REN 71 polygons, RAN 44, fire hazard **173,047**. A single REN polygon weighs about 5MB and a RAN one about 6MB — they are extremely detailed. That does not fit in a 730KB APK, and so the question is not how to fetch but **how to deliver**: an on-demand download from a release into IndexedDB is the proposal on the table, and it has not been decided.",
     "גבולות הרובעים במהדורה 2025": "Parish boundaries in the 2025 edition",
     "גבולות הרובעים — CAOP 2025": "Parish boundaries — CAOP 2025",
-    "גבולות מנהליים: CAOP 2020, Direção-Geral do Território (DGT) — נתונים פתוחים.": "Administrative boundaries: CAOP 2020, Direção-Geral do Território (DGT) — open data.",
     "גבולות שכונה (מתחת לרובע)": "Neighbourhood boundaries (below parish level)",
     "גדולה ומפוצלת מאוד, פקקים כבדים בגשרים בשעות שיא.": "Large and very fragmented, heavy congestion on the bridges at peak hours.",
     "גדת נהר מערבית, מחסנים ישנים ובתים צבעוניים. שקט יחסית, בתהליך שיפוץ מואץ.": "A western riverbank of old warehouses and colourful houses. Relatively quiet, and renovating fast.",
@@ -766,6 +765,7 @@
     "מספר העירייה על המפה (מספר רץ של האפליקציה)": "The municipality's number on the map (the app's running number)",
     "מספר הרובע על המפה (מספר רץ של האפליקציה)": "The parish's number on the map (the app's running number)",
     "מספור של האפליקציה, 1–18, בסדר של מסמך המקור: 1–11 האזור המטרופוליטני של פורטו, 12–18 טאמגה אה סוזה. אינו קוד רשמי; הקוד הרשמי (DICOFRE) כתוב בטקסט לצד השם": "The app's own numbering, 1–18, in the source document's order: 1–11 the Porto metropolitan area, 12–18 Tâmega e Sousa. Not an official code; the official code (DICOFRE) is printed in the text beside the name",
-    "מספור של האפליקציה, 1..N בתוך כל עירייה, בסדר הקוד הרשמי (DICOFRE); נבנה ב-scripts/build.py. אינו קוד רשמי; הקוד הרשמי המלא כתוב בטקסט לצד השם": "The app's own numbering, 1..N inside each municipality, in official-code (DICOFRE) order; built in scripts/build.py. Not an official code; the full official code is printed in the text beside the name"
+    "מספור של האפליקציה, 1..N בתוך כל עירייה, בסדר הקוד הרשמי (DICOFRE); נבנה ב-scripts/build.py. אינו קוד רשמי; הקוד הרשמי המלא כתוב בטקסט לצד השם": "The app's own numbering, 1..N inside each municipality, in official-code (DICOFRE) order; built in scripts/build.py. Not an official code; the full official code is printed in the text beside the name",
+    "גבולות מנהליים: CAOP 2025, Direção-Geral do Território (DGT) — נתונים פתוחים.": "Administrative boundaries: CAOP 2025, Direção-Geral do Território (DGT) — open data."
   }
 }

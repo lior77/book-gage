@@ -4691,7 +4691,9 @@ const menuRows = () => [
   { k: 'save', he: t('שמירת נתונים'), icon: 'save', kind: 'act' },
   { k: 'load', he: t('ייבוא נתונים'), icon: 'load', kind: 'act' },
   { grp: '' },
-  { k: 'info', he: t('מידע'), icon: 'info', kind: 'act' },
+  { k: 'info', he: t('על האפליקציה'), icon: 'info', kind: 'act' },
+  { k: 'dev', he: t('מאחורי הקלעים'), icon: 'info', kind: 'act' },
+  { k: 'terms', he: t('תנאים והגבלות'), icon: 'info', kind: 'act' },
 ];
 
 // what a row's mark should read, or null when the row carries no state
@@ -4768,7 +4770,7 @@ function applyTheme() {
 }
 
 /* Sources, accuracy and what is missing — the one full-screen window. */
-function openInfo() { renderInfo(); $('#infoDrawer').hidden = false; }
+function openInfo(kind) { renderInfo(kind || 'about'); $('#infoDrawer').hidden = false; }
 
 function menuPick(k) {
   if (k === 'cats-open') { S.catsOpen = !S.catsOpen; renderMenu(); return; }
@@ -4820,7 +4822,9 @@ function menuPick(k) {
     case 'regions': toggleRegions(); renderMenu(); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
-    case 'info':    openMenu(false); openInfo(); break;
+    case 'info':    openMenu(false); openInfo('about'); break;
+    case 'dev':     openMenu(false); openInfo('dev'); break;
+    case 'terms':   openMenu(false); openInfo('terms'); break;
   }
 }
 
@@ -5287,7 +5291,7 @@ function showSource(key, exact) {
     ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`);
 }
 
-function renderInfo() {
+function renderInfo(kind) {
   const s = D.sources;
   const fields = Object.entries(s.fields).map(([k, f]) => `<div class="card">
       <h3>${html(t(f.label_he || k))}</h3>
@@ -5312,8 +5316,38 @@ function renderInfo() {
         `<p class="note"><a href="${html(u)}" target="_blank" rel="noopener">${html(u)}</a></p>`).join('')}
     </div>`).join('');
 
-  $('#infoBody').innerHTML = `
-    <h2>${t('איך קוראים את המספרים')}</h2>
+  const missUser = s.missing.items.map(m => `<div class="card">
+      <h3>${html(t(m.label_he))}</h3>
+      <p>${prose(m.why_he)}</p>
+      ${m.important_he ? `<div class="warn">${prose(m.important_he)}</div>` : ''}
+    </div>`).join('');
+
+  /* One drawer, three pages.  The user's page explains the codes, the bodies
+     behind the numbers and what is missing; the developer's page carries the
+     field keys, the validation notes and the build; the terms page carries
+     every licence and the limits of what this app is. */
+  const page = kind === 'dev' ? { title: t('מאחורי הקלעים'), body: `    <h2>${t('גרסה')}</h2>
+    <p>${t('פורטולנד')} <span class="lat num">${html(D.version)}</span> ${t('· הנתונים נבנו ב-')}<span class="lat">${html(D.generated)}</span></p>
+
+    <p>${t('הנתונים נבנים ב-scripts/build.py מתוך data/raw, ועוברים את scripts/checks.py — עשרות חטיבות בדיקה שכל אחת נוספה אחרי שמשהו נשבר באמת — ואת crosscheck_baseline.py, ואז נארזים לקובץ העצמאי ולאפליקציית האנדרואיד. הדף הזה נועד למי שמפתח את האפליקציה; מה שהמשתמש צריך נמצא ב״על האפליקציה״.')}</p>
+    <h2>${t('מקור לכל שדה')}</h2>
+    ${fields}
+
+    <h2>${t('מה עוד חסר')}</h2>
+    <p>${prose(s.missing.note_he)}</p>
+    ${miss}
+` }
+    : kind === 'terms' ? { title: t('תנאים והגבלות'), body: `    <h2>${t('רישוי וייחוס')}</h2>
+    ${s.license_notices.map(n => `<p>${prose(n)}</p>`).join('')}
+    <p class="note">${t('לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.')}</p>
+    <p class="note">${t('האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.')}</p>
+
+    <h2>${t('הגבלת אחריות')}</h2>
+    <p>${t('האפליקציה מציגה העתקים של מה שרשויות פרסמו, בתאריך הייחוס הרשום ליד כל מספר. היא אינה ייעוץ, אינה הערכת שווי ואינה מסמך רשמי.')}</p>
+    <p>${t('מגבלות בנייה, אזורי הצפה וייעוד קרקע מוצגים כפי שפורסמו, ואינם תחליף לבדיקה מול העירייה. REN ו-RAN הן הגבלות ורישוי, לא איסור מוחלט. המיפוי של OpenStreetMap התנדבותי ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.')}</p>
+    <p>${t('המפתח אינו נושא באחריות לכל שימוש במידע שבאפליקציה ולכל החלטה שתתקבל על סמכו. שדה חסר מוצג כ״אין נתון״ ולעולם לא כאפס או כהערכה; אם משהו כאן סותר מקור רשמי, המקור הרשמי קובע.')}</p>
+    <p>${t('הנקודות והתמונות שלכם נשמרות במכשיר בלבד ואינן נשלחות לשום מקום.')}</p>` }
+    : { title: t('על האפליקציה'), body: `    <h2>${t('איך קוראים את המספרים')}</h2>
     <p>${t('לכל יחידה מנהלית בפורטוגל יש קוד רשמי אחד,')} <b>DICOFRE</b>${t(', והוא בנוי בשכבות. מחוז פורטו הוא')} <span class="num">13</span>${t('; שתי הספרות שאחריו הן העירייה, ושתיים נוספות הן הרובע:')}</p>
     <pre>${t('13 12 02 ▔▔ ▔▔ ▔▔ │  │  └── רובע  (Bonfim) │  └───── עירייה (פורטו) └──────── מחוז  (פורטו)')}</pre>
     <p>${t('המספר שמופיע על כל עירייה ועל כל רובע במפה הוא')} <b>${t('מספר רץ של האפליקציה')}</b>${t(': העיריות 1 עד 18 — ‏1 עד 11 באזור המטרופוליטני, ‏12 עד 18 בטאמגה אה סוזה — והרובעים 1 עד N בתוך כל עירייה, בסדר הקוד הרשמי. הוא נועד לקשור בין המפה לרשימה, ואין לו קיום מחוץ לאפליקציה.')}</p>
@@ -5359,34 +5393,24 @@ function renderInfo() {
         <span class="num">${D.totPoi}</span> ${t('נקודות במפה')}</li>
       <li>${t('אוכלוסיית 2021, שטח וצפיפות לכל 18 העיריות ולכל 275 הרובעים')}</li>
       <li>${t('מפקד 2021 לכל יחידה: גיל חציוני, פילוח גיל, אזרחות זרה, ואחת-עשרה שורות של דיור ובניינים — דירות ריקות, בעלות מול שכירות, חניה, מצב הבניינים ותקופת הבנייה')}</li>
-      <li>${t('נבנה:')} <span class="lat">${html(D.generated)}</span></li>
     </ul>
-    <p class="note">${t('מספרי העיריות והרובעים הם קודי DICOFRE הרשמיים. האותיות של השכונות והיישובים הן של האפליקציה: הן נועדו לקשור בין המפה לרשימה, ואין להן קיום מחוץ לאפליקציה.')}</p>
+    <p class="note">${t('המספרים שעל העיריות והרובעים והאותיות של השכונות והיישובים הם של האפליקציה: הם נועדו לקשור בין המפה לרשימה, ואין להם קיום מחוץ לאפליקציה. הקוד הרשמי (DICOFRE) כתוב בטקסט לצד כל יחידה.')}</p>
     ${STANDALONE
       ? `<p class="note">${t('זהו קובץ בודד ועצמאי — כל הנתונים בתוכו והוא עובד בלי רשת ובלי שרת. המסמך המקורי ‎(PDF)‎ נמצא במאגר, ב-')}<span class="lat">porto/data/raw/</span>.</p>`
       : `<p><a href="data/raw/porto_district_map_a3.pdf" target="_blank" rel="noopener">${t('פתיחת המסמך המקורי (PDF, 19 עמודים)')}</a></p>`}
 
     <h2>${t('מה עוד חסר')}</h2>
     <p>${prose(s.missing.note_he)}</p>
-    ${miss}
-
-    <h2>${t('מקור לכל שדה')}</h2>
-    ${fields}
-
-    <h2>${t('גרסה')}</h2>
-    <p>${t('פורטולנד')} <span class="lat num">${html(D.version)}</span> ${t('· הנתונים נבנו ב-')}<span class="lat">${html(D.generated)}</span></p>
-
-    <h2>${t('רישוי וייחוס')}</h2>
-    ${s.license_notices.map(n => `<p>${prose(n)}</p>`).join('')}
-    <p class="note">${t('לחיצה כפולה על כל דבר שיש לו קואורדינטה פותחת אותו במפות גוגל — קישור עם נ״צ בלבד, בלי מפתח ובלי לשמור דבר, ולכן בלי להפר את תנאי השימוש של גוגל שאוסרים לאחסן או להציג את הנתונים שלהם מחוץ למפה שלהם.')}</p>
-    <p class="note">${t('האפליקציה עובדת גם בלי רשת. בלי חיבור אריחי הרקע לא ייטענו, המפה תוצג כגבולות בלבד, וכל הנתונים והטקסטים זמינים במלואם.')}</p>
+    ${missUser}
 
     <h2>${t('נקודות הציון שלכם')}</h2>
     <p>${t('הן נשמרות')} <b>${t('במכשיר הזה בלבד')}</b>${t('. לא נשלחות לשום מקום ולא מגובות.')}</p>
     <p>${t('לחיצה על כרטיסייה מדגישה את הנקודה שלה במפה, ולחיצה על נקודה במפה פותחת את הכרטיסייה שלה. לחיצה כפולה על נקודה פותחת אותה במפות גוגל.')}</p>
     <p>${t('בבחירת תמונה אפשר לסמן כמה תמונות בבת אחת. הראשונה נכנסת לכרטיסייה הפתוחה, וכל אחת מהשאר הופכת לנקודה משלה. תמונה שיש בה קואורדינטות נוחתת עליהן; תמונה שאין בה נוחתת בפינה השמאלית העליונה של המפה — מקום שאפשר לראות ולגרור ממנו, ולא טענה על היכן היא צולמה.')}</p>
     <p>${t('בסימון נ.צ. על המפה: גוררים את הסימון למקום, ולחיצה כפולה עליו קובעת אותו.')}</p>
-    <p class="note">${t('שמירת נתונים כותבת קובץ אחד שנושא את שלושת הדברים שאינם מגיעים עם האפליקציה: המקומות, התמונות שעליהם, ושכבות מגבלות הבנייה שהורדו. ייבוא הקובץ במכשיר אחר מחזיר את שלושתם. ההעתקה ללוח נושאת את המקומות בלבד — מחרוזת שכוללת תמונות או שכבות נחתכת בדרך — ולכן היא מוצעת לצידו ולא במקומו.')}</p>`;
+    <p class="note">${t('שמירת נתונים כותבת קובץ אחד שנושא את שלושת הדברים שאינם מגיעים עם האפליקציה: המקומות, התמונות שעליהם, ושכבות מגבלות הבנייה שהורדו. ייבוא הקובץ במכשיר אחר מחזיר את שלושתם. ההעתקה ללוח נושאת את המקומות בלבד — מחרוזת שכוללת תמונות או שכבות נחתכת בדרך — ולכן היא מוצעת לצידו ולא במקומו.')}</p>` };
+  $('#infoTitle').textContent = page.title;
+  $('#infoBody').innerHTML = page.body;
 }
 
 /* ------------------------------------------------------------------ wire --- */
@@ -5716,6 +5740,22 @@ Object.assign(EN, {
   'שנת ייחוס': 'reference year',
   ' <span class="flag">רובע מ-2025</span>': ' <span class="flag">a 2025 parish</span>',
   'רובע מ-2025': 'a 2025 parish',
+  'על האפליקציה': 'About the app',
+  'מאחורי הקלעים': 'Behind the scenes',
+  'תנאים והגבלות': 'Terms and limits',
+  'הגבלת אחריות': 'Limits of liability',
+  'המספרים שעל העיריות והרובעים והאותיות של השכונות והיישובים הם של האפליקציה: הם נועדו לקשור בין המפה לרשימה, ואין להם קיום מחוץ לאפליקציה. הקוד הרשמי (DICOFRE) כתוב בטקסט לצד כל יחידה.':
+    'The numbers on municipalities and parishes and the letters on neighbourhoods and localities are the app\'s own: they tie the map to the list and have no existence outside the app. The official code (DICOFRE) is printed in the text beside every unit.',
+  'הנתונים נבנים ב-scripts/build.py מתוך data/raw, ועוברים את scripts/checks.py — עשרות חטיבות בדיקה שכל אחת נוספה אחרי שמשהו נשבר באמת — ואת crosscheck_baseline.py, ואז נארזים לקובץ העצמאי ולאפליקציית האנדרואיד. הדף הזה נועד למי שמפתח את האפליקציה; מה שהמשתמש צריך נמצא ב״על האפליקציה״.':
+    'The data is built by scripts/build.py from data/raw, passes scripts/checks.py — dozens of check sections, each added after something actually broke — and crosscheck_baseline.py, then is bundled into the standalone file and the Android app. This page is for whoever develops the app; what a user needs is under "About the app".',
+  'האפליקציה מציגה העתקים של מה שרשויות פרסמו, בתאריך הייחוס הרשום ליד כל מספר. היא אינה ייעוץ, אינה הערכת שווי ואינה מסמך רשמי.':
+    'The app shows copies of what authorities published, as of the reference date printed beside every number. It is not advice, not a valuation and not an official document.',
+  'מגבלות בנייה, אזורי הצפה וייעוד קרקע מוצגים כפי שפורסמו, ואינם תחליף לבדיקה מול העירייה. REN ו-RAN הן הגבלות ורישוי, לא איסור מוחלט. המיפוי של OpenStreetMap התנדבותי ואינו אחיד: היעדר נקודה אינו ראיה שאין שם דבר.':
+    'Building constraints, flood zones and land-use regimes are shown as published and are no substitute for checking with the municipality. REN and RAN are restrictions and licensing, not an absolute ban. OpenStreetMap mapping is volunteer work and uneven: a missing point is not evidence that there is nothing there.',
+  'המפתח אינו נושא באחריות לכל שימוש במידע שבאפליקציה ולכל החלטה שתתקבל על סמכו. שדה חסר מוצג כ״אין נתון״ ולעולם לא כאפס או כהערכה; אם משהו כאן סותר מקור רשמי, המקור הרשמי קובע.':
+    'The developer accepts no liability for any use of the information in this app or any decision taken on it. A missing field reads "no data", never a zero or an estimate; where anything here contradicts an official source, the official source prevails.',
+  'הנקודות והתמונות שלכם נשמרות במכשיר בלבד ואינן נשלחות לשום מקום.':
+    'Your points and photos are kept on this device only and are sent nowhere.',
   'מהנמוך לגבוה': 'lowest first',
   'מהגבוה לנמוך': 'highest first',
   '· מהגדול לקטן': '· largest first',
