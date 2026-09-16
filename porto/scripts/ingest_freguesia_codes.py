@@ -11,7 +11,9 @@ Reads:
     data/raw/freguesia_codes.geojson        Overpass query 09 — every
         admin_level=8 relation in the district bbox carrying ref:ine, as a
         centre point. This is the authority on what exists *now*.
-    data/raw/caop2020_porto_freguesias.geojson   the 243 parishes the app draws
+    data/raw/caop2020_porto_freguesias.geojson   the 243 parishes of the 2013
+                                                division — NOT what the app draws,
+                                                which is CAOP 2025's 275
     data/source_files/ine/BGRI2021_to_CAOP2025_reassignment.csv
         which 2021 parish each 2025 parish took its census sub-sections from,
         and how many people came with them. This is what lets a dissolved unit

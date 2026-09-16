@@ -10,6 +10,30 @@ source, the data model, and the verification machinery. Read it before changing
 anything under `porto/`, and update it in the same commit that changes what it
 describes.
 
+**That rule applies to every document, not only that one.** It said
+"ARCHITECTURE.md" alone until 2026-09-16, and the cost was visible: `README.md`
+— the first page anyone opens — spent several releases saying the district had
+243 parishes on CAOP 2020 and that the 2025 boundaries were "not in the app
+yet", all three false, while nobody was wrong to trust it. A change lands with
+the documents it makes untrue:
+
+| document | says what | update it when |
+|---|---|---|
+| `porto/docs/ARCHITECTURE.md` | structure, sources, data model, checks | any of those change |
+| `porto/README.md` | what the app is and does, and its licences | a feature, a count or a source changes |
+| `porto/docs/HANDOFF.md` | current state, open work, environment traps | a release, an open item, a trap |
+| `porto/docs/NETWORK-ALLOWLIST.md` | which hosts the project needs | a source is added or dropped |
+| `porto/docs/DATA-ACQUIRED.md` | what was actually obtained | data arrives or is proven unobtainable |
+
+The dated documents — `UX-2.0.0.md`, `UI-2.0.0.md`, `REVISION-2.0.0.md`,
+`WORKPLAN.md`, `DATA-REQUEST.md`, `DELIVERY.md` — are **records of a moment**
+and are not updated. They are amended only to record what later proved wrong,
+never rewritten to look right.
+
+`checks.py` §7x enforces the part a machine can see: every `.md` is declared
+live or record, and a live one may not carry a superseded count or edition. It
+cannot tell you that a feature is undocumented. That part is yours.
+
 **`porto/docs/HANDOFF.md`** is where to start in a fresh session: current
 version and state, what is open, how the loop is actually run, and the
 environment traps that have already cost real time. It tracks state; the

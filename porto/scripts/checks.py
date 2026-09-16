@@ -1534,6 +1534,207 @@ def main():
             fail("app.js still says '%s' — the 2025 division is what it draws"
                  % phrase)
 
+    # THE SAME RULE, over the documents.  Until 2.0.4 this section read app.js
+    # and nothing else, and README.md — the first page a new reader opens —
+    # had been saying "243 parishes", "CAOP 2020" and "the 2025 boundaries are
+    # not in the app yet" for several releases while every one of those was
+    # false.  The rule was never "app.js must not lie"; it was "the prose must
+    # agree with the data", and prose is mostly in the documents.
+    #
+    # A document may still narrate history, and must be able to: "from 243 to
+    # 275" is the project explaining itself, not a stale claim.  Two things
+    # make that safe rather than a hole:
+    #
+    #   1. Every .md is declared LIVE or RECORD below.  A RECORD is a dated
+    #      snapshot — a revision document, a work plan written for a version
+    #      that shipped — and is read as history entire.  An undeclared file
+    #      FAILS, so adding a document forces the decision rather than
+    #      defaulting to unchecked.
+    #   2. Inside a LIVE document a number may still appear in a TRANSITION —
+    #      "243 → 275", "מ-243 ל-275", "from 243 to 275".  That shape names
+    #      the old value and the new one together, so it cannot mislead, and
+    #      it is the only exemption.
+    DOC_KIND = {
+        # LIVE — says what is true now.  Every count and edition is bound.
+        "README.md": "live",
+        "docs/ARCHITECTURE.md": "live",
+        "docs/HANDOFF.md": "live",
+        "docs/NETWORK-ALLOWLIST.md": "live",
+        # RECORD — a dated snapshot, read as history.  Each says so in its own
+        # opening lines, and that is why it is exempt, not convenience.
+        "docs/UX-2.0.0.md": "record",          # "the UX document for 2.0.0"
+        "docs/UI-2.0.0.md": "record",          # ditto, with §9 the built record
+        "docs/REVISION-2.0.0.md": "record",    # the revision's own findings
+        "docs/WORKPLAN.md": "record",          # "נכתב ל-1.30.0"
+        "docs/DATA-REQUEST.md": "record",      # the brief sent out, as sent
+        "docs/DATA-ACQUIRED.md": "record",     # "מה נמשך בפועל — 2026-09-07"
+        "docs/DELIVERY.md": "record",          # "ההחלטות שהתקבלו ב-13.9.2026"
+    }
+    md_paths = sorted(
+        os.path.relpath(x, ROOT).replace(os.sep, "/")
+        for x in glob.glob(os.path.join(ROOT, "*.md"))
+        + glob.glob(os.path.join(ROOT, "docs", "*.md")))
+    for rel in md_paths:
+        if rel not in DOC_KIND:
+            fail("%s is not declared live or record in checks.py §7x DOC_KIND. "
+                 "A document nobody classified is a document nobody checks — "
+                 "say which it is" % rel)
+    for rel in sorted(DOC_KIND):
+        if rel not in md_paths:
+            fail("checks.py §7x DOC_KIND names %s, which does not exist" % rel)
+
+    # "243 → 275", "מ-243 ל-275", "from 243 to 275" — the old number beside the
+    # new one.  Matched on the pair, so a lone stale number is never exempt.
+    def in_transition(txt, start, end):
+        w = txt[max(0, start - 40):end + 40]
+        return bool(re.search(r"(?<!\d)\d{2,4}\s*(?:→|->|–|—)\s*\d{2,4}(?!\d)", w)
+                    or re.search(r"מ-\s*\d{2,4}\s*ל-\s*\d{2,4}", w)
+                    or re.search(r"from\s+\d{2,4}\s+to\s+\d{2,4}", w, re.I))
+
+    # A LIVE document is checked for SUPERSEDED values, not for every number
+    # it names.  The first cut of this bound each "N parishes" to the set of
+    # current counts, the way the app.js half does, and it was wrong for prose:
+    # it flagged "3,092 parishes nationally" (TIPAU's own figure), "131
+    # parishes — all four values empty" (a legitimate subset), and the lines
+    # where ARCHITECTURE.md QUOTES the old string while describing this very
+    # check.  A document has to be able to say "it used to say 243".  So what
+    # is bound is the short list of values that were true once and cannot be
+    # true now.
+    STALE = [
+        # Only the UNIT-COUNT forms: "243 parishes", "243 הרובעים". Deliberately
+        # NOT fractions ("70/243", "119 מתוך 243") and NOT a bare "**243**" in
+        # a table cell. Both cuts that tried to cover those flagged true
+        # sentences — INE really did publish a price for 70 of the 243 parishes
+        # of the 2013 division, and saying so is not a stale claim. A check
+        # that cries wolf on correct prose gets switched off, and then it
+        # protects nothing.
+        (r"(?<![\d,/])243(?![\d/])\s*(?:ה)?(?:רובעים|פרגזיות|parishes)",
+         "243 parishes", len(fre)),
+        # "the other 236" always meant the parishes outside Porto city, which
+        # is 275 - 7 quarters, and never the reform's untouched remainder.
+        (r"(?<![\d,])236(?![\d])\s*(?:הרובעים|הפרגזיות|parishes)",
+         "236 parishes outside Porto city", len(fre) - n_quarters),
+        (r"(?<![\d,])1,720(?![\d])", "1,720 localities", None),
+        (r"(?<![\d,])1,530(?![\d])\s*(?:אתרים|sites)", "1,530 sites", None),
+        (r"CAOP\s*2020", "CAOP 2020 as the edition drawn", None),
+    ]
+
+    # The superseded value is sometimes the TRUE one, and no pattern can see
+    # the difference: TIPAU 2025 really does stand on CAOP 2020 and really does
+    # carry 243 parishes in this district, and the raw file named in the source
+    # table really is the 2020 one.  Each exemption names the line it excuses
+    # and why.
+    #
+    # It is keyed on a distinctive FRAGMENT of that line, so it cannot drift
+    # onto some other sentence — but editing the line around the fragment does
+    # NOT cancel it, and the first version of this comment claimed it did.
+    # What stands guard instead is the dead-exemption check below: an entry
+    # that matches nothing has outlived its sentence and fails, so an exemption
+    # cannot quietly become a licence for a line nobody has read in a year.
+    STALE_OK = [
+        ("docs/ARCHITECTURE.md", "raw/caop2020_porto_freguesias.geojson",
+         "the source table describing the 2020 raw file, which is what it is"),
+        ("docs/ARCHITECTURE.md", "היא עומדת על **CAOP 2020**",
+         "TIPAU 2025 is published on the CAOP 2020 division — true, and the "
+         "reason 57 parishes have no class"),
+        ("docs/ARCHITECTURE.md", "ו-243 במחוז פורטו, כמ",
+         "the count inside TIPAU's own export, on its 2020 base"),
+        ("docs/ARCHITECTURE.md", "CAOP 2020. ‏`build.py → read_tipau()`",
+         "same TIPAU base, in the sentence that says how it is read"),
+        ("docs/ARCHITECTURE.md", "7x · הפרוזה תואמת לנתונים",
+         "the checks table describing this very rule"),
+        ("docs/ARCHITECTURE.md", "עמוד ״מידע״ אחד לשני קהלים",
+         "§11, the record of a trap that was fixed"),
+        ("docs/ARCHITECTURE.md", "מחירי INE ברמת הרובע בשבע עיריות",
+         "§11, a closed finding about codes that resolve against CAOP 2020"),
+        ("docs/ARCHITECTURE.md", "`missing.items` היא חלק מהמוצר",
+         "the checks table describing 7q"),
+    ]
+
+    def excused(rel, line):
+        return any(f == rel and frag in line for f, frag, _why in STALE_OK)
+
+    # An exemption that excuses nothing is an exemption nobody re-read.
+    for f, frag, why in STALE_OK:
+        path_ = os.path.join(ROOT, f)
+        if not os.path.exists(path_) or frag not in io.open(path_, encoding="utf-8").read():
+            fail("checks.py §7x STALE_OK excuses %r in %s (%s), and that text is "
+                 "no longer there — drop the exemption or fix the line" % (frag, f, why))
+
+    def quoted(line, start, end):
+        """Is the match inside quotation marks on its own line?
+
+        A document quoting the old wording — "the info page said ״243
+        parishes״" — is the project describing its own history, and that is
+        the sentence this check exists to make possible, not to forbid."""
+        for op, cl in (("\u05f4", "\u05f4"), ('"', '"'), ("\u201c", "\u201d"),
+                       ("\u00ab", "\u00bb"), ("`", "`")):
+            i = 0
+            while True:
+                o = line.find(op, i)
+                if o < 0:
+                    break
+                c = line.find(cl, o + 1)
+                if c < 0:
+                    break
+                if o < start and end <= c + 1:
+                    return True
+                i = c + 1
+        return False
+
+    # A live document still carries sections that are pure record: the table of
+    # traps already fixed, the findings already closed. They exist to say what
+    # WAS true, and binding them to what is true now would forbid the project
+    # from remembering anything. The heading marks them.
+    RECORD_HEADING = re.compile(
+        r"(מלכודות|נסגר|מה נדחה|שגיאות שנעשו|היסטוריה|traps|closed|rejected)", re.I)
+
+    def live_spans(txt):
+        """The byte ranges of a document that are NOT inside a record section."""
+        heads = [(m.start(), m.group(0)) for m in re.finditer(r"(?m)^#{1,4} .*$", txt)]
+        spans, i = [], 0
+        for n, (pos, head) in enumerate(heads):
+            end = heads[n + 1][0] if n + 1 < len(heads) else len(txt)
+            if RECORD_HEADING.search(head):
+                spans.append((i, pos))
+                i = end
+        spans.append((i, len(txt)))
+        return spans
+
+    for rel in md_paths:
+        if DOC_KIND.get(rel) != "live":
+            continue
+        txt = io.open(os.path.join(ROOT, rel), encoding="utf-8").read()
+        lines = txt.split("\n")
+        spans = live_spans(txt)
+        def is_live(pos):
+            return any(a <= pos < b for a, b in spans)
+        for pat, what, now in STALE:
+            for m in re.finditer(pat, txt):
+                ln = txt.count("\n", 0, m.start())
+                line = lines[ln]
+                col = m.start() - (sum(len(x) + 1 for x in lines[:ln]))
+                if not is_live(m.start()) or in_transition(txt, m.start(), m.end()):
+                    continue
+                if quoted(line, col, col + (m.end() - m.start())) or excused(rel, line):
+                    continue
+                fail("%s line %d still says %s%s — %s"
+                     % (rel, ln + 1, what,
+                        "" if now is None else " (it is %d now)" % now,
+                        line.strip()[:90]))
+        for phrase in ("עדיין אינם באפליקציה", "עדיין לא באפליקציה",
+                       "not in the app yet"):
+            for m in re.finditer(re.escape(phrase), txt):
+                if not is_live(m.start()):
+                    continue
+                ln = txt.count("\n", 0, m.start())
+                line = lines[ln]
+                col = m.start() - (sum(len(x) + 1 for x in lines[:ln]))
+                if quoted(line, col, col + (m.end() - m.start())):
+                    continue
+                fail("%s line %d still says '%s' — the 2025 division is what "
+                     "the app draws" % (rel, ln + 1, phrase))
+
     # ---- 7y. the launcher icon survives Android's mask ---------------------
     # Measured 2026-09-15: icons/icon-512.png spread the district over 87% of
     # its width, and android/…/mipmap-xxhdpi/ic_launcher.png was that very
