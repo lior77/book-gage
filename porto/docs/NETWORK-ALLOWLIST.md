@@ -88,6 +88,9 @@ dgadr.gov.pt
 *.dgadr.gov.pt
 apambiente.pt
 *.apambiente.pt
+copernicus-dem-30m.s3.amazonaws.com
+ipma.pt
+*.ipma.pt
 icnf.pt
 *.icnf.pt
 pordata.pt
@@ -150,6 +153,9 @@ cm-felgueiras.pt
 | `overpass-api.de` | OpenStreetMap — הרצת שאילתות Overpass מכאן במקום ידנית ב-overpass-turbo | מאומת |
 | `*.pordata.pt` | סדרות זמן ברמת עירייה — הכנסה, תעסוקה, כוח קנייה | מאומת |
 | `epsg.io` | הגדרות מערכות קואורדינטות, לאימות המרות | מאומת |
+| `copernicus-dem-30m.s3.amazonaws.com` | **‏Copernicus DEM GLO-30 — אריחי הגובה.** שניים בלבד (‏N41/W009, ‏N41/W008) מכסים את המחוז, ‏81MB. ‏AWS Open Data: בלי מפתח, בלי הרשמה, בלי חתימה | **נמשך בפועל** (2026-09-16) |
+| `www.ipma.pt` | **נורמלים אקלימיים 1991–2020,** כדף נתונים לכל תחנה תחת `/bin/file.data/climate-normal/`. גם דף הנורמלים עצמו, שמטמיע את אותם ערכים כ-JSON וממנו נעשית ההצלבה | **נמשך בפועל** (2026-09-16) |
+| `api.ipma.pt` | ה-API הפתוח של IPMA. **אין בו נורמלים** — `forecast/` ו-`observation/` בלבד. רשום כאן כדי שלא ייבדק שוב | מאומת, ולא רלוונטי |
 | `cm-*.pt` | הגאופורטלים של 18 העיריות, ל-PDM שאינו ב-PCGT | **לא אומתו** — לפי המוסכמה הנפוצה. שורה שגויה לא מזיקה, היא פשוט לא תתאים לכלום; `check_network.py` יראה אילו נפתחו |
 
 **הממצא המשמעותי הוא `ogcapi.dgterritorio.gov.pt`, לא PCGT.** PCGT הוא פורטל
