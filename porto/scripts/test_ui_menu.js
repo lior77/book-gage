@@ -286,12 +286,14 @@ const css = (page, sel, prop) =>
   const rowsNow = () => page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
   const CATS = ['cat:station', 'cat:hospital', 'cat:university', 'cat:museum',
                 'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
+  /* המיקום שלי and the language are not rows any more — they are the two
+     buttons beside the menu's close control, checked in their own block. */
   const WANT = ['search',
     'mode:overview', 'mode:cons', 'mode:cmp', 'mode:lst', 'mode:mine',
-    'locate', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
-    'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'regions', 'climate', 'more', 'save', 'load', 'info', 'dev', 'terms'];
+    'theme:auto', 'theme:light', 'theme:dark',
+    'tiles', 'glass', 'regions', 'climate', 'cats', 'cats-open',
+    'more', 'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -356,12 +358,12 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(400);
   ok('another tap brings them all back', await catsOn() === 8, String(await catsOn()));
 
-  const HE = { search: 'חיפוש', locate: 'המיקום שלי',
+  const HE = { search: 'חיפוש',
     'mode:overview': 'סקירה', 'mode:cmp': 'השוואה', 'mode:lst': 'נכסים',
     'mode:mine': 'המקומות שלי',
     cats: 'נקודות ציון', regions: 'אזורים', climate: 'אקלים',
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
-    'theme:light': 'תצוגת יום', 'theme:dark': 'תצוגת לילה',
+    'theme:light': 'מראה יום', 'theme:dark': 'מראה לילה',
     'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
     'save': 'שמירת נתונים', 'load': 'ייבוא נתונים',
     'info': 'על האפליקציה', 'dev': 'מאחורי הקלעים', 'terms': 'תנאים והגבלות' };
@@ -378,13 +380,44 @@ const css = (page, sel, prop) =>
        if (!svg || !svg.children.length) return false;
        return svg.getBoundingClientRect().right > lab.getBoundingClientRect().right;
      })));
-  /* The mode is the first thing the menu offers, under the search: which of
-     the five readings of the same ground is on screen.  Everything below it
-     is how that reading is drawn. */
-  ok('the five groups are titled, and the mode comes first',
+  /* תצוגה is the first thing the menu offers, under the search: which of the
+     five readings of the same ground is on screen.  Everything below it is how
+     that reading is drawn — מראה — and then what is drawn on the map.
+     The word was "מוד" until 2.0.5, a transliteration that said nothing in
+     Hebrew; the theme group took "מראה" so the two do not collide. */
+  ok('the four groups are titled, and the reading comes first',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean)))
-       .join('|') === 'מוד|תצוגה|שפה|שכבות|נתונים',
+       .join('|') === 'תצוגה|מראה|שכבות|נתונים',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean))).join('|'));
+  ok('נקודות ציון sits with the layers it is one of',
+     await page.evaluate(() => {
+       const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
+       return rows.indexOf('cats') > rows.indexOf('tiles')
+         && rows.indexOf('cats') < rows.indexOf('more');
+     }));
+
+  /* The menu's own header: close, then המיקום שלי, then the language — along
+     the inline axis, so in Hebrew they read right to left from the corner. */
+  const topBox = await page.evaluate(() => {
+    const r = s => { const b = document.querySelector(s).getBoundingClientRect();
+      return { x: b.x, w: b.width, h: b.height }; };
+    return { close: r('#menuClose'), locate: r('#menuLocate'), lang: r('#menuLang') };
+  });
+  ok('the three header controls sit in one row, close in the corner',
+     topBox.close.x > topBox.locate.x && topBox.locate.x > topBox.lang.x,
+     JSON.stringify(topBox));
+  ok('and all three are the same 44px target as every other control',
+     [topBox.close, topBox.locate, topBox.lang].every(b => Math.round(b.w) === 44
+       && Math.round(b.h) === 44), JSON.stringify(topBox));
+  /* Two languages, so the button is an action and names where it goes — but a
+     screen reader is told both, never a state where it needs a verb. */
+  ok('the language button offers the other language, and says both to a reader',
+     await page.evaluate(() => {
+       const b = document.querySelector('#menuLang');
+       return b.textContent.trim() === 'EN'
+         && /עברית/.test(b.getAttribute('aria-label'))
+         && /English/.test(b.getAttribute('aria-label'));
+     }), await page.$eval('#menuLang', e => e.textContent + ' / ' + e.getAttribute('aria-label')));
 
   /* 5. the switches: a tap flips the row and the state behind it */
   const flag = k => page.$eval(`[data-m="${k}"]`,
@@ -1624,7 +1657,7 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { if (S.cmp) toggleCmp(); goMun(1); });
   await page.waitForTimeout(600);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
-  await page.click('[data-m="lang:en"]');
+  await page.click('#menuLang');          // the header button, not a row
   await page.waitForTimeout(900);
   ok('choosing English flips the page to left-to-right',
      await page.evaluate(() => document.documentElement.dir) === 'ltr'
@@ -1764,7 +1797,20 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
   await page.waitForTimeout(300);
   await page.evaluate(() => openMenu(true)); await page.waitForTimeout(450);
-  ok('and none in the menu itself', (await hebrewIn('#menu')) === null,
+  /* One exemption, and it is the point of the control rather than a hole in
+     the rule: the language button names the language it SWITCHES TO, so on the
+     English screen it reads "עב" and must.  Everything else in the menu is
+     bound by the sweep above. */
+  ok('the language button is the only Hebrew on the English menu, and it is the target language',
+     await page.evaluate(() => document.querySelector('#menuLang').textContent.trim() === 'עב'));
+  ok('and none in the menu itself',
+     (await page.evaluate(() => {
+       const b = document.querySelector('#menuLang'); const was = b.textContent;
+       b.textContent = '';                       // measure the menu without it
+       const m = document.querySelector('#menu').innerText.match(/[\u0590-\u05ff]+/);
+       b.textContent = was;
+       return m ? m[0] : null;
+     })) === null,
      await hebrewIn('#menu'));
   await page.evaluate(() => openMenu(false)); await page.waitForTimeout(300);
   await page.evaluate(() => { if (!S.cmp) toggleCmp(); }); await page.waitForTimeout(900);
@@ -1773,7 +1819,7 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { if (S.cmp) toggleCmp(); }); await page.waitForTimeout(500);
 
   await page.click('#menuBtn'); await page.waitForTimeout(300);
-  await page.click('[data-m="lang:he"]'); await page.waitForTimeout(800);
+  await page.click('#menuLang'); await page.waitForTimeout(800);
   ok('and choosing Hebrew puts it all back',
      await page.evaluate(() => document.documentElement.dir) === 'rtl'
        && (await page.evaluate(() => document.getElementById('doc').innerText)).includes('תושבים'));

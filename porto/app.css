@@ -350,10 +350,17 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    longer sit on the same pixels.  Landscape parts them further — the map's
    right edge is halfway across — and the close button stays in the screen's own
    corner, because that is the corner of the thing being closed. */
-.mt.menu-x{position:absolute; z-index:1;
-      inset-block-start:20px; inset-inline-start:20px;
-      background:var(--tool-solid); border-color:var(--ctl-line)}
-.mt.menu-x:active{background:var(--tool-solid-2)}
+/* The three header controls run along the inline axis from the screen's own
+   start corner, so in Hebrew they read right-to-left: close, המיקום שלי, the
+   language.  A flex row rather than three absolute positions, so none of them
+   has to know how wide the one before it is. */
+.menu-top{position:absolute; z-index:1; display:flex; gap:var(--s2);
+      inset-block-start:20px; inset-inline-start:20px}
+.mt.menu-x,.mt.menu-top-b{background:var(--tool-solid); border-color:var(--ctl-line)}
+.mt.menu-x:active,.mt.menu-top-b:active{background:var(--tool-solid-2)}
+/* Two letters, not an icon: "EN" and "עב" are read faster than any glyph a
+   language can be drawn as, and they are the only two states there are. */
+.menu-lang{font-size:var(--t-sm); line-height:var(--lh-sm); font-weight:700}
 
 /* One row per thing the menu can do: the icon on the start edge — the right —
    then the label, then whatever says the row's state.  A row is 44px so a thumb

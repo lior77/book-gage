@@ -53,9 +53,22 @@
        so the same corner opens it and shuts it.  The list itself is built in
        app.js from MENU, because every row has to show its own state. -->
   <nav class="menu" id="menu" hidden aria-label="תפריט">
-    <button class="mt menu-x" id="menuClose" aria-label="סגירת התפריט">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
+    <!-- The menu's own header: close, then the two things you want on the way
+         OUT rather than as a row to scroll to — where am I, and which language.
+         They run along the inline axis, so in Hebrew they read right to left:
+         close, then המיקום שלי to its left, then the language to its left. -->
+    <div class="menu-top">
+      <button class="mt menu-x" id="menuClose" aria-label="סגירת התפריט">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <button class="mt menu-top-b" id="menuLocate" aria-label="המיקום שלי">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+      </button>
+      <!-- The label is the language you are NOT in, because that is what the
+           button does; the accessible name says both, so a screen reader is
+           never told a state where it needs an action. -->
+      <button class="mt menu-top-b menu-lang" id="menuLang"></button>
+    </div>
     <div class="menu-in" id="menuIn"></div>
   </nav>
 

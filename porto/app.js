@@ -4991,24 +4991,16 @@ function cmpClick(e) {
 
 const menuRows = () => [
   { k: 'search', he: t('חיפוש'), icon: 'search', kind: 'act' },
-  /* The modes, first thing under חיפוש: the one question the whole screen
-     answers, and the only control that changes it. */
-  { grp: t('מוד') },
-  ...MODES().map(m => ({ k: 'mode:' + m.k, he: m.he, icon: m.icon, kind: 'radio' })),
-  { grp: '' },
-  { k: 'locate', he: t('המיקום שלי'), icon: 'locate', kind: 'act', mapOnly: true },
-  /* The eight categories under one heading that switches them together, with a
-     chevron beside it that opens the list so each can be set on its own.  Eight
-     rows at the top of the menu were eight-ninths of what you scrolled past to
-     reach anything else. */
-  { k: 'cats', he: t('נקודות ציון'), icon: 'dots', kind: 'tog', more: 'cats-open' },
-  ...(S.catsOpen
-    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: poiLabel(c), icon: c, kind: 'tog', sub: true }))
-    : []),
-  // Below the eight, not between the heading and them: the expanded categories
-  // have to follow their own heading with nothing in between or they stop
-  // reading as belonging to it.
+  /* The five readings of the same ground, first thing under חיפוש: the one
+     question the whole screen answers, and the only control that changes it.
+     Called תצוגה because that is what it is — the same data, shown another
+     way — and "מוד" was a transliteration that said nothing in Hebrew. */
   { grp: t('תצוגה') },
+  ...MODES().map(m => ({ k: 'mode:' + m.k, he: m.he, icon: m.icon, kind: 'radio' })),
+  /* המיקום שלי and the language are NOT here: they are the two buttons beside
+     the menu's close control.  Both are one tap that you want on the way out,
+     not a row to scroll to. */
+  { grp: t('מראה') },
   { k: 'view:split', he: t('גרפיקה וטקסט'), icon: 'split', kind: 'radio' },
   { k: 'view:map', he: t('גרפיקה בלבד'), icon: 'maponly', kind: 'radio' },
   { k: 'view:text', he: t('טקסט בלבד'), icon: 'textonly', kind: 'radio' },
@@ -5021,16 +5013,9 @@ const menuRows = () => [
      rather than offering only the one you are not in: the label on a control
      must not change with its state, or a screen reader cannot tell whether the
      word it reads is what the control IS or what it WILL DO. */
-  { k: 'theme:auto', he: t('תצוגה לפי המכשיר'), icon: 'auto', kind: 'radio' },
-  { k: 'theme:light', he: t('תצוגת יום'), icon: 'day', kind: 'radio' },
-  { k: 'theme:dark', he: t('תצוגת לילה'), icon: 'night', kind: 'radio' },
-  /* Its own heading, and both languages always named.  A control's label must
-     not change with its state — the same rule that keeps all three themes on
-     the list — so this is not a single row that says "English" while you are
-     reading Hebrew. */
-  { grp: t('שפה') },
-  { k: 'lang:he', he: t('עברית'), icon: 'lang', kind: 'radio' },
-  { k: 'lang:en', he: 'English', icon: 'lang', kind: 'radio' },
+  { k: 'theme:auto', he: t('מראה לפי המכשיר'), icon: 'auto', kind: 'radio' },
+  { k: 'theme:light', he: t('מראה יום'), icon: 'day', kind: 'radio' },
+  { k: 'theme:dark', he: t('מראה לילה'), icon: 'night', kind: 'radio' },
   { grp: t('שכבות') },
   { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
   { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
@@ -5038,6 +5023,18 @@ const menuRows = () => [
      every map at levels 1–2 with nothing to turn them off. */
   { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
   { k: 'climate', he: t('אקלים'), icon: 'climate', kind: 'tog' },
+  /* The eight categories under one heading that switches them together, with a
+     chevron beside it that opens the list so each can be set on its own.  They
+     are a layer — points drawn on the map — and they sit with the layers now.
+     Eight rows at the top of the menu were eight-ninths of what you scrolled
+     past to reach anything else. */
+  { k: 'cats', he: t('נקודות ציון'), icon: 'dots', kind: 'tog', more: 'cats-open' },
+  ...(S.catsOpen
+    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: poiLabel(c), icon: c, kind: 'tog', sub: true }))
+    : []),
+  // Below the eight, not between the heading and them: the expanded categories
+  // have to follow their own heading with nothing in between or they stop
+  // reading as belonging to it.
   { k: 'more', he: t('עוד שכבות'), icon: 'more', kind: 'act' },
   { grp: t('נתונים') },
   // The points the user marked, and only those — everything else in the app
@@ -5070,7 +5067,28 @@ function menuState(k) {
   return null;
 }
 
+/* The language button names the language it SWITCHES TO, and its accessible
+   name says both.  The rule this app keeps — a control's label does not change
+   with its state — is about a control whose label would otherwise be read as a
+   STATE: "תצוגת לילה" on a switch cannot tell you whether that is what you have
+   or what you would get.  Here there are exactly two languages and the button
+   is an action, so naming the destination is what makes it unambiguous; the
+   three themes stay a list of three for the same reason. */
+function renderMenuTop() {
+  const b = $('#menuLang');
+  if (b) {
+    const to = S.lang === 'he' ? 'en' : 'he';
+    b.textContent = to === 'en' ? 'EN' : 'עב';
+    b.setAttribute('lang', to === 'en' ? 'en' : 'he');
+    b.setAttribute('aria-label', t('שפה: עברית / English'));
+  }
+  // המיקום שלי needs a map to point at, exactly as the row did
+  const l = $('#menuLocate');
+  if (l) l.classList.toggle('map-only', true);
+}
+
 function renderMenu() {
+  renderMenuTop();
   const box = $('#menuIn');
   if (!box) return;
   box.innerHTML = menuRows().map(r => {
@@ -5862,6 +5880,11 @@ function wire() {
   });
   $('#menuBtn').addEventListener('click', menuTap);
   $('#menuClose').addEventListener('click', () => openMenu(false));
+  $('#menuLocate').addEventListener('click', () => { openMenu(false); toggleLocate(); });
+  /* Two languages, so the button is a switch rather than a chooser. It leaves
+     the menu open: the whole menu is written in the language, and the change
+     is visible on the menu itself — the same reason the theme rows do. */
+  $('#menuLang').addEventListener('click', () => menuPick('lang:' + (S.lang === 'he' ? 'en' : 'he')));
   $('#menuIn').addEventListener('click', e => {
     const r = e.target.closest('[data-m]');
     if (r) menuPick(r.dataset.m);
@@ -7781,6 +7804,16 @@ Object.assign(EN, {
     'November',
   'דצמבר':
     'December',
+  'מראה':
+    'Appearance',
+  'מראה לפי המכשיר':
+    'Follow the device',
+  'מראה יום':
+    'Day',
+  'מראה לילה':
+    'Night',
+  'שפה: עברית / English':
+    'Language: Hebrew / English',
   'גובה ושיפוע':
     'Elevation and slope',
   'גובה ממוצע':
