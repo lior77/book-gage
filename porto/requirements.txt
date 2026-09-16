@@ -36,7 +36,20 @@ numpy>=1.24         # 2.4.6 — checks.py imports it directly.  It also arrives
 # --- only for re-fetching sources or regenerating icons, not for a build ---
 # Left out of the line above so that a session which just wants a green suite
 # does not install a browser driver and an image library it will never call.
-#     pip install playwright pillow
+#     pip install playwright pillow rasterio pdfminer.six
 # playwright        # fetch_pordata.py — the Python package, which is NOT the
 #                   # node module the browser suite needs.  See setup_env.sh.
 # pillow            # make_icons.py — imports as `PIL`
+# rasterio          # fetch_dem.py — the Copernicus elevation tiles.  It bundles
+#                   # its own GDAL in the wheel, which is why it is here at all:
+#                   # the note above about this environment having no GDAL is
+#                   # about the SYSTEM library, and still true.  81 MB of tiles
+#                   # download beside it; neither is needed for a build, because
+#                   # fetch_dem.py writes data/raw/elevation_dem.json and build.py
+#                   # reads that.
+# pdfminer.six      # fetch_ipma_normals.py — the climate normals are published
+#                   # as a PDF per station and there is no other machine-readable
+#                   # form of them.  ⚠️ the system `cryptography` in this image is
+#                   # broken (no _cffi_backend) and pdfminer imports it, so
+#                   # `pip install --upgrade cffi cryptography` first or the
+#                   # import dies with a Rust panic, not a Python error.

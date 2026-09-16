@@ -24,6 +24,7 @@ DATA_FILES = [
     "data/processed/freguesias.json",
     "data/processed/porto_city.json",
     "data/processed/zones.json",
+    "data/processed/climate.json",
     "data/sources.json",
     "data/prose_en.json",
     "data/layers_manifest.json",

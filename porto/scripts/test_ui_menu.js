@@ -291,7 +291,7 @@ const css = (page, sel, prop) =>
     'locate', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'regions', 'more', 'save', 'load', 'info', 'dev', 'terms'];
+    'tiles', 'glass', 'regions', 'climate', 'more', 'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -359,7 +359,7 @@ const css = (page, sel, prop) =>
   const HE = { search: 'חיפוש', locate: 'המיקום שלי',
     'mode:overview': 'סקירה', 'mode:cmp': 'השוואה', 'mode:lst': 'נכסים',
     'mode:mine': 'המקומות שלי',
-    cats: 'נקודות ציון', regions: 'אזורים',
+    cats: 'נקודות ציון', regions: 'אזורים', climate: 'אקלים',
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
     'theme:light': 'תצוגת יום', 'theme:dark': 'תצוגת לילה',
     'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
@@ -561,6 +561,143 @@ const css = (page, sel, prop) =>
     S.regions === false && /מחוז פורטו/.test(document.getElementById('doc').innerText)));
   await page.evaluate(() => { S.tiles = true; tileLayer.addTo(map); goDistrict(); });
   await page.waitForTimeout(700);
+
+  /* ---- TERRAIN: measured here, so it says so ---------------------------
+     Elevation and slope are the first fields in this app that no body
+     published — they were computed by cutting a 30 m raster to a boundary.
+     What the checks cannot see is whether the screen tells the reader that:
+     "mean slope 15.9°" reads like a survey of the plot unless something on
+     the card says it is a hillside on a 30 m grid. */
+  await page.evaluate(() => goMun(D.mun.find(m => m.pt === 'Baião').num));
+  await page.waitForTimeout(800);
+  const terr = await page.evaluate(() => {
+    const c = [...document.querySelectorAll('#doc .card')]
+      .find(x => /גובה ושיפוע/.test(x.innerText));
+    if (!c) return null;
+    return { text: c.innerText, srcs: [...c.querySelectorAll('[data-src]')].map(e => e.dataset.src) };
+  });
+  ok('the municipality page carries a terrain card', terr !== null);
+  ok('and every figure on it opens its own source record',
+     terr && terr.srcs.length === 3
+       && terr.srcs.filter(k => k === 'municipio.ele').length === 2
+       && terr.srcs.indexOf('municipio.slope') >= 0, JSON.stringify(terr && terr.srcs));
+  ok('Baião reads its real ground: mean 557 m, up to 1,410 m on the Marão',
+     terr && /557/.test(terr.text) && /1,410/.test(terr.text),
+     terr && terr.text.replace(/\n/g, ' ').slice(0, 120));
+  /* The card must not let a surface model pass as ground.  This is the
+     accuracy contract's rule 4 — never restate a source into something
+     stronger — applied to a measurement rather than to wording. */
+  ok('and it says on the card that this is a surface model, not the ground',
+     terr && /מודל פני שטח/.test(terr.text) && /30 מטר/.test(terr.text));
+  ok('the source record names Copernicus, marks the value approx, and says how it was computed',
+     await page.evaluate(() => {
+       const f = D.sources.fields['municipio.slope'];
+       return /Copernicus/.test(f.source) && f.confidence === 'approx' && !!f.method_he;
+     }));
+  /* A parish sits inside its municipality, so its ground cannot be higher. */
+  ok('a parish never reports ground its municipality does not have',
+     await page.evaluate(() => {
+       const bad = [];
+       for (const f of D.fre) {
+         const m = D.munByNum.get(f.mun_num);
+         if (!f.ele || !m || !m.ele) continue;
+         if (f.ele.min < m.ele.min - 0.05 || f.ele.max > m.ele.max + 0.05) bad.push(f.pt);
+       }
+       return bad.length === 0;
+     }));
+  ok('all 18 municipalities and all 275 parishes carry it — a partial cover is a mis-key',
+     await page.evaluate(() => D.mun.filter(m => m.ele).length === 18
+       && D.fre.filter(f => f.ele).length === 275));
+  /* A value shown to one decimal is not "rounded" from two.  Until 2.0.3 the
+     guard compared the strings, so every such figure offered an exact value
+     identical to itself, over a sentence saying that was what the source
+     published — which on a derived field is not true of anything published. */
+  ok('a one-decimal figure offers no "exact value", and a rounded one still does',
+     await page.evaluate(() => {
+       const s = document.querySelector('#doc [data-src$=".slope"]');
+       const p = document.querySelector('#doc [data-src$=".pop2021"]');
+       return s && !s.dataset.exact && p && !!p.dataset.exact;
+     }));
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(600);
+
+  /* ---- CLIMATE: two stations, and the screen says they are two stations --
+     IPMA publishes normals per station.  Two of its 55 stand in this
+     district, for 18 municipalities and 275 parishes.  The whole point of
+     this screen is that it refuses to colour a unit, so that is what is
+     measured here — not only that the numbers arrived. */
+  if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
+  await page.click('[data-m="climate"]');
+  await page.waitForTimeout(900);
+  ok('אקלים opens a screen of its own and closes the menu',
+     await page.evaluate(() => S.climate === true && S.menu === false));
+  const clim = await page.evaluate(() => ({
+    pins: LG.clNums ? LG.clNums.getLayers().length : 0,
+    nums: LG.clNums ? LG.clNums.getLayers().map(m => m.getElement().innerText.trim()) : null,
+    cards: document.querySelectorAll('#doc [data-station]').length,
+    tables: document.querySelectorAll('#doc table.clim').length,
+    text: document.getElementById('doc').innerText,
+    level: S.level,
+  }));
+  ok('two stations, numbered 1 and 2 on the map and 1 and 2 in the reading half',
+     clim.pins === 2 && JSON.stringify(clim.nums) === JSON.stringify(['1', '2'])
+       && clim.cards === 2, JSON.stringify(clim));
+  ok('and opening it did not move the level', clim.level === 'district');
+  ok('the screen says in words that this is not a value for the parish',
+     /שתי תחנות מדידה, ולא ערך לרובע/.test(clim.text)
+       && /אינטרפולציה/.test(clim.text), clim.text.slice(0, 80));
+  /* The one thing this screen must never do. */
+  ok('and it colours no unit at all — no fill, no scale, no legend of units',
+     await page.evaluate(() => !LG.mun && !LG.fre && !LG.cmpFill));
+  ok('nothing is unfolded until a station is chosen', clim.tables === 0);
+  await page.evaluate(() => LG.clNums.getLayers()[1].fire('click'));
+  await page.waitForTimeout(700);
+  const pick = await page.evaluate(() => ({
+    sel: S.climateSel,
+    tables: document.querySelectorAll('#doc table.clim').length,
+    rows: document.querySelectorAll('#doc table.clim tbody tr').length,
+    jan: document.querySelector('#doc table.clim tbody tr').innerText.replace(/\t/g, ' '),
+    marked: document.querySelectorAll('#doc [data-stationpick][aria-pressed="true"]').length,
+  }));
+  ok('tapping a station on the map unfolds its twelve months and marks its card',
+     pick.sel === 1 && pick.tables === 1 && pick.rows === 12 && pick.marked === 1,
+     JSON.stringify(pick));
+  /* The numbers are the numbers IPMA published, not a chart's idea of them. */
+  ok('and January at Luzim is 7.3 / 11.0 / 3.6 °C with 196 mm, as the sheet says',
+     /7\.3/.test(pick.jan) && /11\.0/.test(pick.jan) && /3\.6/.test(pick.jan)
+       && /196/.test(pick.jan), pick.jan);
+  ok('inland is hotter in summer, colder in winter and wetter than the coast',
+     await page.evaluate(() => {
+       const [coast, inland] = D.climate.items;
+       return inland.values.TX.months[7] > coast.values.TX.months[7]
+         && inland.values.TN.months[0] < coast.values.TN.months[0]
+         && inland.values.Prec.year > coast.values.Prec.year;
+     }));
+  ok('every figure on a station card opens a source record, and it is a station record',
+     await page.evaluate(() => {
+       const ks = [...document.querySelectorAll('#doc [data-src]')].map(e => e.dataset.src);
+       return ks.length > 0 && ks.every(k => k.startsWith('station.'));
+     }));
+  ok('the station record says the value belongs to a station and not to a unit',
+     await page.evaluate(() => {
+       const f = D.sources.fields['station.temp'];
+       return /1991/.test(String(f.reference_year)) && /IPMA/.test(f.source)
+         && /תחנה/.test(f.caveat_he) && /0 רובעים/.test(f.coverage);
+     }));
+  /* No parish and no municipality ever carries a temperature.  If one ever
+     does, an interpolation got in. */
+  ok('no municipality and no parish carries a climate figure of its own',
+     await page.evaluate(() => ![...D.mun, ...D.fre].some(u =>
+       'temp' in u || 'prec' in u || 'climate' in u)));
+  await page.evaluate(() => { openMenu(true);
+    document.querySelector('#menuIn [data-m="climate"]').click(); });
+  await page.waitForTimeout(800);
+  ok('switching it off takes the pins with it and gives the level document back',
+     await page.evaluate(() => S.climate === false && !LG.clNums
+       && /מחוז פורטו/.test(document.getElementById('doc').innerText)));
+  await page.evaluate(() => { S.tiles = true; if (!map.hasLayer(tileLayer)) tileLayer.addTo(map); goDistrict(); });
+  await page.waitForTimeout(600);
+
   // the layer closed the menu behind it; the block below opens on a menu row
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
 

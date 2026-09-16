@@ -962,3 +962,23 @@ body[data-view="text"] .map-only{display:none}
 .lf-short{max-width:160px}
 .lf-cred{display:flex; flex-direction:column; gap:var(--s1); padding:var(--s3); border-radius:var(--r-ctl); background:var(--bg)}
 .lf-cred h3{margin:0}
+
+/* The two IPMA stations.  A pin the size of a running number, because that is
+   what it is — 1 and 2 on the map, answering to 1 and 2 in the reading half —
+   and a colour of its own so it is never read as a municipality's number. */
+.lbl-station{--lbl-ink:var(--map-accent)}
+.lbl-station,.lbl-station > i{width:40px; height:40px}
+.lbl-station > i{font-size:var(--t-2xl); line-height:var(--lh-2xl); -webkit-text-stroke:4px var(--lbl-halo)}
+.lbl-station.is-on > i{color:var(--hi-line)}
+.station-row{display:block; width:100%; text-align:start; background:none; border:0;
+  font:inherit; color:inherit; cursor:pointer; padding:0; border-radius:var(--r-ctl)}
+.station-row:active{background:var(--bg)}
+.pin-station{background:var(--map-accent); color:var(--on-solid)}
+/* Twelve rows of four figures.  A table and not a chart: on a phone the chart
+   was 12 bars nobody could read a value off, and the value is the point. */
+.clim{width:100%; border-collapse:collapse; margin-block-start:var(--s3); font-size:var(--t-sm)}
+.clim th,.clim td{padding:var(--s1) var(--s2); text-align:start; border-block-end:1px solid var(--line)}
+.clim thead th{font-size:var(--t-xs); line-height:var(--lh-xs); color:var(--ink-2); font-weight:400}
+.clim tbody th{font-weight:400}
+.clim td{text-align:end}
+.clim tfoot th,.clim tfoot td{font-weight:700; border-block-end:0}

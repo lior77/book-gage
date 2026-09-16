@@ -322,6 +322,27 @@ def load_extra():
     return json.load(open(path, encoding="utf-8"))
 
 
+def read_dem():
+    """Elevation and mean slope per unit, from Copernicus DEM GLO-30.
+
+    Written by scripts/fetch_dem.py, which needs rasterio and 81 MB of tiles;
+    a build needs neither, because the measuring already happened and what is
+    left is a table keyed on DICOFRE.
+
+    Absent, the build carries on and the fields render "אין נתון" like any
+    other missing value — the tiles are a re-fetchable source, not a part of
+    the repository.
+    """
+    path = os.path.join(RAW, "elevation_dem.json")
+    if not os.path.exists(path):
+        print("  elevation_dem.json missing — no elevation, no slope")
+        return {}, {}
+    doc = json.load(open(path, encoding="utf-8"))
+    def by_code(rows):
+        return {str(r["code"]): r for r in rows if r.get("code")}
+    return by_code(doc.get("municipios", [])), by_code(doc.get("freguesias", []))
+
+
 def read_tipau():
     """INE's urban-area typology, one class per parish: APU, AMU or APR.
 
@@ -1085,6 +1106,7 @@ def main():
     ine_2025, mun25 = read_censos_2025()
     cons_mun, cons_fre = read_constraints()
     tipau = read_tipau()
+    dem_mun, dem_fre = read_dem()
     crus_mun = read_crus()
     app_note_of = {(i["mun_num"], i["pt"]): i["note"] for i in app_notes["items"]}
     translit_2025 = read_translit_2025()
@@ -1258,6 +1280,18 @@ def main():
             # code in that table and gets nothing.
             if rec["dicofre"] in tipau and not before:
                 rec["tipau"] = tipau[rec["dicofre"]]
+            # CONFIDENCE: approx.  Measured, not published: a statistic this
+            # project computed by cutting a 30 m raster to the parish outline.
+            # Copernicus GLO-30 is a SURFACE model, so in a built-up parish the
+            # maximum includes roofs, and a coastal minimum can read a metre or
+            # two below zero where the radar saw water against the EGM2008
+            # geoid.  The values are written as measured; the source record and
+            # the note in the app are what say so, rather than a clamp that
+            # would hide it.
+            d = dem_fre.get(rec["dicofre"])
+            if d:
+                rec["ele"] = {"min": d["min_m"], "mean": d["mean_m"],
+                              "max": d["max_m"], "slope": d["slope_deg"]}
             if "pop2021" not in rec and caop_name in extra_pop:
                 rec["pop2021"] = int(extra_pop[caop_name])
                 rec["pop_src"] = "collected"
@@ -1334,6 +1368,12 @@ def main():
         if rec["ine"] and len(str(rec["ine"])) == 4:
             rec["code"] = str(rec["ine"])[2:]
             rec["dicofre"] = str(rec["ine"])
+        # CONFIDENCE: approx.  See the parish block above — same raster, same
+        # caveats, cut to the municipality outline instead.
+        d = dem_mun.get(rec.get("dicofre", ""))
+        if d:
+            rec["ele"] = {"min": d["min_m"], "mean": d["mean_m"],
+                          "max": d["max_m"], "slope": d["slope_deg"]}
         census = ine_mun.get(rec.get("dicofre", ""))
         # The municipality comes from the same subsections as its parishes, so
         # the two levels agree by construction. Read from the 2013-boundary
@@ -1527,6 +1567,16 @@ def main():
     dump("porto_city.json", {"generated": date.today().isoformat(),
                              "quarters": city, "places": places})
     dump("zones.json", {"generated": date.today().isoformat(), "zones": zones})
+    # The climate normals pass through untouched: there is nothing to compute.
+    # They are per STATION, and this build has no station-to-unit step because
+    # two stations cannot give 275 parishes a temperature — see
+    # scripts/fetch_ipma_normals.py.  Copied rather than read from raw/ so the
+    # app keeps loading everything it needs from data/processed.
+    clim_path = os.path.join(RAW, "climate_normals.json")
+    if os.path.exists(clim_path):
+        dump("climate.json", json.load(open(clim_path, encoding="utf-8")))
+    else:
+        print("  climate_normals.json missing — no climate screen")
     dump("boundaries_municipios.geojson", mun_fc)
     layers = layer_geoms(mun_fc)
     layer_report = []

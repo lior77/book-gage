@@ -3,5 +3,9 @@ __pycache__/
 data/raw/ine/.cache/
 node_modules/
 data/raw/bgri/
+# 78 MB of Copernicus DEM tiles.  They are re-fetchable with no key and no
+# registration (scripts/fetch_dem.py), and what the build actually reads is
+# data/raw/elevation_dem.json — 46 KB, committed, derived from them.
+data/raw/copernicus/
 data/raw/dgt/caop_freguesias_3763.geojson
 build/

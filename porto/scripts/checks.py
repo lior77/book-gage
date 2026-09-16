@@ -1836,6 +1836,80 @@ def main():
                  % (name, txt.count("\n", 0, m.start()) + 1, m.group(1)))
 
 
+    # ---- 7ag. elevation and slope: measured here, so measured consistently --
+    # These are the project's first fields that no body published — they were
+    # computed by cutting a raster to a boundary.  A derived field can be wrong
+    # in ways a transcribed one cannot: a key that does not match silently
+    # attaches one unit's terrain to another, and the page still looks right.
+    # So the invariants are checked against the boundaries themselves.
+    dem_path = os.path.join(ROOT, "data", "raw", "elevation_dem.json")
+    have_dem = os.path.exists(dem_path)
+    mun_ele = [m for m in mun if "ele" in m]
+    fre_ele = [f for f in fre if "ele" in f]
+    if not have_dem:
+        # The tiles are 81 MB and re-fetchable, so a checkout without them is a
+        # legitimate state.  What is NOT legitimate is a build that half has it.
+        if mun_ele or fre_ele:
+            fail("elevation_dem.json is absent but %d units carry an elevation — "
+                 "stale processed data, rebuild" % (len(mun_ele) + len(fre_ele)))
+    else:
+        if len(mun_ele) != len(mun) or len(fre_ele) != len(fre):
+            fail("elevation covers %d/%d municipalities and %d/%d parishes — "
+                 "a partial cover means a key that did not match, not a gap in the raster"
+                 % (len(mun_ele), len(mun), len(fre_ele), len(fre)))
+        for lab, rows in (("municipality", mun_ele), ("parish", fre_ele)):
+            for r in rows:
+                e = r["ele"]
+                for k in ("min", "mean", "max", "slope"):
+                    if e.get(k) is None:
+                        fail("%s %s: elevation has no %s" % (lab, r["pt"], k))
+                        break
+                else:
+                    if not (e["min"] <= e["mean"] <= e["max"]):
+                        fail("%s %s: elevation %s/%s/%s is not min <= mean <= max"
+                             % (lab, r["pt"], e["min"], e["mean"], e["max"]))
+                    # Marão, the highest ground in the district, is 1415 m; a
+                    # value far past it means the wrong tile or the wrong units.
+                    if not (-10 <= e["min"] and e["max"] <= 1500):
+                        fail("%s %s: elevation %s..%s is outside the district's range"
+                             % (lab, r["pt"], e["min"], e["max"]))
+                    if not (0 <= e["slope"] <= 45):
+                        fail("%s %s: mean slope %s is not a hillside"
+                             % (lab, r["pt"], e["slope"]))
+        # The containment test is the one that catches a mis-key: a parish is
+        # inside its municipality, so its ground cannot be higher or lower.
+        mun_by_num = {m["num"]: m for m in mun}
+        for f in fre_ele:
+            m = mun_by_num.get(f["mun_num"])
+            if not m or "ele" not in m:
+                continue
+            e, me = f["ele"], m["ele"]
+            if e["min"] < me["min"] - 0.05 or e["max"] > me["max"] + 0.05:
+                fail("parish %s (%s): %s..%s m lies outside its municipality's %s..%s m — "
+                     "the elevation is keyed to the wrong unit"
+                     % (f["pt"], m["pt"], e["min"], e["max"], me["min"], me["max"]))
+    # Whatever the tiles' state, the records and the attribution are not optional.
+    for key in ("municipio.ele", "municipio.slope", "freguesia.ele", "freguesia.slope"):
+        rec = sources["fields"].get(key)
+        if not rec:
+            fail("data/sources.json has no entry for %s" % key)
+            continue
+        if rec.get("confidence") != "approx":
+            fail("%s: a value this project computed is approx, never reported or verified" % key)
+        if "method_he" not in rec:
+            fail("%s: a derived value has to say how it was derived (method_he)" % key)
+        if "Copernicus" not in rec.get("source", ""):
+            fail("%s: the source line does not name Copernicus" % key)
+    # Licence article 6(b): a user who ADAPTS the data owes this notice, and a
+    # per-unit statistic is an adaptation.  Same rule as ODbL's attribution,
+    # and it is checked the same way — the notice reaches the terms page.
+    notices = " ".join(sources["license_notices"])
+    for frag in ("Copernicus WorldDEM-30", "DLR e.V.", "Airbus Defence and Space",
+                 "European Union and ESA"):
+        if frag not in notices:
+            fail("data/sources.json license_notices is missing %r — the Copernicus DEM "
+                 "licence requires the full notice wherever the derived data is shown" % frag)
+
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:
     # 7v was the Android manifest check and ALSO the CRUS check, and both were

@@ -81,7 +81,10 @@ function prose(text) {
   if (!text) return '';
   const en = t(text);
   const heb = /[\u0590-\u05ff]/.test(String(en));
-  const body = html(en);
+  /* **bold** is the one mark the prose may carry.  The substitution runs
+     AFTER html(), so anything else that looked like a tag is already inert
+     and this cannot turn source text into markup. */
+  const body = html(en).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
   if (S.lang !== 'en' || !heb) return body;
   return '<span dir="rtl" lang="he">' + body + '</span>' + heOnly(en);
 }
@@ -142,6 +145,10 @@ const S = {
      at levels 1–2, and that was wrong — the regions answer a question of their
      own and they answer it on a screen of their own. */
   regions: false,
+  // The two IPMA stations.  Its own screen, like the regions, and for the
+  // same reason: what it shows is not a property of the level underneath.
+  climate: false,
+  climateSel: null,
   regionSel: null,     // the index of the region being looked at, or null
 };
 const MINE_KEY = 'porto-mine-v1';
@@ -587,6 +594,29 @@ function safetyStats(o, lvl) {
   </div>`;
 }
 
+/* Terrain: how high the ground is and how steeply it falls.  Both come from
+   the same 30 m raster and both are `approx` — a statistic this project
+   computed rather than one a body published, and computed on a model of the
+   SURFACE, which in a dense centre is the roofs.  The note says so on the
+   card rather than only in the source record, because "mean slope 5.6°" reads
+   like a survey of the plot if nothing on screen says it is not. */
+function terrainCard(o, lvl) {
+  const e = o.ele;
+  const kEle = lvl + '.ele', kSlope = lvl + '.slope';
+  if (!D.sources.fields[kEle]) return '';
+  const range = e && e.min !== null && e.max !== null
+    ? nf(e.min, 0) + '–' + nf(e.max, 0) : null;
+  return `<div class="card">
+    <h2>${t('גובה ושיפוע')}</h2>
+    <div class="stats">
+      ${stat(t('גובה ממוצע'), e ? e.mean : null, t('מ׳'), 0, kEle)}
+      ${statText(t('טווח הגבהים'), range === null ? '' : range + ' ' + t('מ׳'), kEle)}
+      ${stat(t('שיפוע ממוצע'), e ? e.slope : null, t('מעלות'), 1, kSlope)}
+    </div>
+    <p class="note">${t('נמדד מרשת של 30 מטר, ומודל פני שטח: הוא כולל בניינים וצמרות עצים ואינו הקרקע עצמה. השיפוע הוא של המדרון ולא של החלקה.')}</p>
+  </div>`;
+}
+
 function stat(label, val, unit, dec, srcKey, step, fmt) {
   const f = D.sources.fields[srcKey] || {};
   const has = val !== null && val !== undefined;
@@ -594,7 +624,14 @@ function stat(label, val, unit, dec, srcKey, step, fmt) {
   // Only when rounding actually changed something.  Porto's census population
   // is 231 800 to begin with, and offering "the exact value" beside an
   // identical figure would make the panel look like it was hiding one.
-  const exact = has ? nf(val, val === Math.round(val) ? 0 : 2) : '';
+  /* Only when rounding actually lost something.  The guard used to compare the
+     two STRINGS, so a value shown to one decimal always looked different from
+     itself at two — 18.4 against "18.40" — and every such field offered an
+     "exact value" that was the same number.  On a derived field that line also
+     said "this is what the source publishes", which for a statistic computed
+     here is not true of any published figure.  Compare the numbers. */
+  const exact = has && Math.abs(val - Number(String(text).replace(/[^\d.-]/g, ''))) > 1e-9
+    ? nf(val, val === Math.round(val) ? 0 : 2) : '';
   // One figure per line: label, value, year. Four tiles side by side made the
   // numbers compete with each other and wrapped their units onto a second line.
   return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}"${
@@ -602,7 +639,11 @@ function stat(label, val, unit, dec, srcKey, step, fmt) {
     <span class="stat-l">${html(label)}</span>
     <span class="stat-v ${has ? 'num' : ''}">${text}${
       has && unit ? ' <span class="stat-u">' + html(unit) + '</span>' : ''}</span>
-    <span class="stat-y">${f.reference_year ? html(f.reference_year) : t('מקור')}</span>
+    <span class="stat-y">${f.reference_year
+      /* Translated, not printed raw: this slot usually holds a bare year, and
+         an elevation whose reference was a sentence leaked Hebrew onto the
+         English screen until the browser suite caught it. */
+      ? html(t(String(f.reference_year))) : t('מקור')}</span>
   </button>`;
 }
 
@@ -614,7 +655,11 @@ function statText(label, text, srcKey) {
   return `<button class="stat${has ? '' : ' no'}" data-src="${html(srcKey)}">
     <span class="stat-l">${html(label)}</span>
     <span class="stat-v">${has ? html(text) : miss()}</span>
-    <span class="stat-y">${f.reference_year ? html(f.reference_year) : t('מקור')}</span>
+    <span class="stat-y">${f.reference_year
+      /* Translated, not printed raw: this slot usually holds a bare year, and
+         an elevation whose reference was a sentence leaked Hebrew onto the
+         English screen until the browser suite caught it. */
+      ? html(t(String(f.reference_year))) : t('מקור')}</span>
   </button>`;
 }
 
@@ -658,13 +703,16 @@ async function j(path) {
 }
 
 async function load() {
-  const [ind, mun, fre, city, zones, bW, bFl, sources, bM, bB, bF, bC, proseEn,
+  const [ind, mun, fre, city, zones, climate, bW, bFl, sources, bM, bB, bF, bC, proseEn,
          layersManifest] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
     j('data/processed/porto_city.json'),
     j('data/processed/zones.json'),
+    /* The two IPMA stations.  2.7 KB, so it ships with the app rather than
+       waiting behind a download: it is two cards, and it works offline. */
+    j('data/processed/climate.json').catch(() => null),
     j('data/processed/boundaries_water.geojson'),
     /* APA's flood outlines. 76 KB gzipped for all three return periods, so it
        ships here rather than through the on-demand layer store REN and RAN
@@ -691,6 +739,9 @@ async function load() {
   D.fre = fre.items;
   D.city = city.quarters;
   D.zones = zones.zones;
+  /* Absent when the fetch script has not been run — the climate row then says
+     so and no screen is offered, rather than an empty one being. */
+  D.climate = climate;
   D.sources = sources;
   D.generated = mun.generated;
   D.version = ind.app_version || '';
@@ -1156,6 +1207,8 @@ function toggleRegions() {
   if (S.regions) {
     // the list of places also owns the reading half; one screen at a time
     if (S.wp) toggleWp();
+    // one screen owns the reading half; the climate is another such screen
+    if (S.climate) toggleClimate();
     if (S.view === 'map') { S.view = 'split'; applyView(); }
     S.regionSel = null;
     /* The street background is part of what this screen shows — the regions
@@ -1231,6 +1284,132 @@ function pickRegion(i, from) {
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 }
+
+/* ======================================================= CLIMATE-START ===
+   THE TWO STATIONS.  IPMA publishes climate normals per STATION, and exactly
+   two of its 55 stations stand inside this district: Pedras Rubras on the
+   coast at 68 m, and Luzim inland at 287 m.  18 municipalities, 275 parishes,
+   two measuring points.
+
+   So this screen shows two pins and two cards, and never colours a unit.
+   Painting 18 municipalities from two stations would be an interpolation
+   nobody marked, which rule 2 forbids — and the heading says as much on
+   screen, because a temperature chart on a map of Porto reads like a value
+   for wherever you are looking unless something says otherwise.
+
+   The two are worth having precisely because they disagree: 36 km and 220 m
+   apart, the inland one is hotter in summer, colder in winter and a fifth
+   wetter over the year.  That contrast is the answer to "coast or inland",
+   and it is a thing two stations CAN say. */
+const climateStations = () => (D.climate && D.climate.items) || [];
+
+function toggleClimate() {
+  if (S.adding) stopPlacing();
+  S.climate = !S.climate;
+  if (S.climate) {
+    if (S.wp) toggleWp();
+    if (S.regions) toggleRegions();
+    if (S.view === 'map') { S.view = 'split'; applyView(); }
+    S.climateSel = null;
+    climateBefore = { tiles: S.tiles };
+    if (!S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+  } else {
+    const b = climateBefore;
+    climateBefore = null;
+    if (b && !b.tiles && S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+    S.climateSel = null;
+  }
+  closePanel();
+  applySwitches();
+  redrawLevel(); drawMine(); redrawText();
+  if (S.climate) $('#paneText').scrollTop = 0;
+  save();
+}
+let climateBefore = null;
+const climateOff = () => { if (S.climate) toggleClimate(); };
+
+function drawClimate() {
+  clearMap();
+  const st = climateStations();
+  if (!st.length) return;
+  LG.clNums = L.layerGroup(st.map((s, i) => {
+    const mk = L.marker([s.lat, s.lon], { icon: L.divIcon({
+        className: 'lbl lbl-station' + (S.climateSel === i ? ' is-on' : ''),
+        html: '<i>' + html(String(i + 1)) + '</i>', iconSize: [40, 40], iconAnchor: [20, 20] }),
+      keyboard: false, title: (i + 1) + ' · ' + s.name, riseOnHover: true });
+    mk.on('click', () => pickStation(i, 'map'));
+    return mk;
+  })).addTo(map);
+  fit(L.latLngBounds(st.map(s => [s.lat, s.lon])).pad(0.6));
+}
+
+function pickStation(i, from) {
+  S.climateSel = S.climateSel === i ? null : i;
+  drawClimate(); redrawText();
+  if (from === 'map' && S.climateSel !== null) {
+    const el = $(`#doc [data-station="${S.climateSel}"]`);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+/* One month's four figures.  A table and not a chart: twelve rows read on a
+   phone, and every number is the number rather than a pixel height. */
+function climateTable(s) {
+  const mo = (D.climate && D.climate.months_he) || [];
+  const v = s.values || {};
+  const row = (k, n) => (v[k] && v[k].months[n] !== undefined ? v[k].months[n] : null);
+  const cell = x => x === null ? miss() : `<span class="num">${nf(x, 1)}</span>`;
+  const body = mo.map((m, n) => `<tr><th scope="row">${html(t(m))}</th>
+      <td>${cell(row('TT', n))}</td><td>${cell(row('TX', n))}</td>
+      <td>${cell(row('TN', n))}</td><td>${row('Prec', n) === null ? miss()
+        : '<span class="num">' + nf(row('Prec', n), 0) + '</span>'}</td></tr>`).join('');
+  const yr = v.Prec && v.Prec.year;
+  return `<table class="clim">
+    <thead><tr><th scope="col">${t('חודש')}</th><th scope="col">${t('ממוצע')}</th>
+      <th scope="col">${t('מרבית')}</th><th scope="col">${t('מזערית')}</th>
+      <th scope="col">${t('מ״מ')}</th></tr></thead>
+    <tbody>${body}</tbody>
+    ${yr ? `<tfoot><tr><th scope="row">${t('שנה')}</th><td colspan="3"></td>
+      <td><span class="num">${nf(yr, 0)}</span></td></tr></tfoot>` : ''}
+  </table>`;
+}
+
+function renderClimate() {
+  const st = climateStations();
+  const meta = (D.climate && D.climate.meta) || {};
+  const cards = st.map((s, i) => {
+    const on = S.climateSel === i;
+    const tt = (s.values && s.values.TT && s.values.TT.months) || [];
+    const mean = tt.length === 12 ? tt.reduce((a, b) => a + b, 0) / 12 : null;
+    const yr = s.values && s.values.Prec && s.values.Prec.year;
+    return `<div class="card${on ? ' is-hi' : ''}" data-station="${i}">
+      <button class="station-row" type="button" data-stationpick="${i}"
+              aria-pressed="${on}">
+        <div class="hdr">
+          <span class="pin pin-station">${i + 1}</span>
+          <div><h2>${html(t(s.he))}</h2>
+            <p class="sub lat">${html(s.name)} · nº ${html(s.num)}</p></div>
+        </div>
+        <p class="sub">${html(t(s.where_he))} · <span class="num">${nf(s.alt_m, 1)}</span> ${t('מ׳')}</p>
+      </button>
+      <div class="stats">
+        ${stat(t('ממוצע שנתי'), mean, t('מעלות'), 1, 'station.temp')}
+        ${stat(t('משקעים בשנה'), yr, t('מ״מ'), 0, 'station.prec')}
+      </div>
+      ${on ? climateTable(s) : `<p class="note">${t('לחיצה על התחנה פותחת את שנים־עשר החודשים.')}</p>`}
+    </div>`;
+  }).join('');
+  return `<h1>${t('אקלים')}</h1>
+    <p class="lead">${t('שתי תחנות מדידה, ולא ערך לרובע שלך.')} ${t('‏IPMA מפרסמת נורמל אקלימי לתחנה, ובכל מחוז פורטו עומדות שתיים מתוך 55 התחנות שלה. המספרים כאן הם של התחנות האלה, במקום שבו הן עומדות — לא של העירייה שסביבן ולא של הרובע שאתה מסתכל עליו.')}</p>
+    <div class="warn">${t('אין כאן ולא יהיה ערך אקלים לכל רובע. להעניק 275 רובעים טמפרטורה משתי תחנות זו אינטרפולציה, וכלל 2 של חוזה הדיוק אוסר אותה כשהיא אינה מסומנת ככזאת.')}</div>
+    <p class="lead">${t('ובכל זאת השתיים אומרות הרבה, דווקא מפני שהן נבדלות: 36 ק״מ ו-220 מטר גובה ביניהן, ופנים הארץ חם יותר בקיץ, קר יותר בחורף ורטוב יותר בשנה. זה ההבדל בין חוף לפנים הארץ, וזה מה ששתי תחנות כן יכולות לומר.')}</p>
+    ${srcLine('station.temp')}
+    <div class="grp">${t('התחנות — לפי המספור במפה')}</div>
+    ${cards}
+    <p class="note">${t('התקופה היא 1991–2020, תקופת הייחוס של ארגון המטאורולוגיה העולמי.')} ${
+      meta.method_he ? html(t(meta.method_he)) : ''}</p>`;
+}
+/* ========================================================= CLIMATE-END === */
 
 function renderRegions() {
   const belts = D.belts || [];
@@ -1446,6 +1625,7 @@ function renderMun(num) {
     ${marketStats(m, 'municipio')}
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
+    ${terrainCard(m, 'municipio')}
     ${crusCard(m)}
     ${tipauCard(rows)}
     ${layerCard(m.num)}
@@ -3296,6 +3476,7 @@ function goHome() {
      The trail is what goes up one level inside a mode; this goes all the way
      out. */
   if (S.regions) toggleRegions();
+  if (S.climate) toggleClimate();
   setMode('overview');
   renderWpSheet();          // toggleWp redraws the level document, not the sheet
   if (S.level !== 'district') goDistrict();
@@ -4164,6 +4345,7 @@ function renderZone(key) {
     ${peopleStats(f, 'freguesia')}
     ${housingStats(f, 'freguesia')}
     ${marketStats(f, 'freguesia')}
+    ${terrainCard(f, 'freguesia')}
 
     ${z.bairros.length ? `
       <div class="grp">${z.bairros.length} ${curated ? t('שכונות') : t('יישובים ושכונות')} ${t('— האותיות במפה')}</div>
@@ -4253,6 +4435,7 @@ function redrawLevel() {
   // the regions are their own screen: the two of them on the street background,
   // and none of the level's own shapes
   if (S.regions) { drawRegions(); return; }
+  if (S.climate) { drawClimate(); return; }
   if (S.cmp) { drawCmp(); return; }
   if (S.lst) { drawListings(); return; }
   if (S.level === 'district') drawDistrict();
@@ -4313,6 +4496,7 @@ const ICON = {
   borders: '<circle cx="12" cy="12" r="9.5" stroke-width="3"/><circle cx="12" cy="12" r="6" stroke-width="2"/><circle cx="12" cy="12" r="2.75" stroke-width="1"/>',
   more: '<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
   regions: '<path d="M3 8h8v9H3zM11 5h10v11H11z"/>',
+  climate: '<path d="M10 14V5a2 2 0 1 1 4 0v9"/><circle cx="12" cy="17" r="3"/>',
   // a parcel with a hatched no-build patch across it
   cons: '<path d="M3.5 5h17v14h-17z"/><path d="M6 16 16 6M10 18 20 8" stroke-width="1.6" opacity=".85"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
@@ -4853,6 +5037,7 @@ const menuRows = () => [
   /* The two NUTS III regions.  A layer, and a switch again: 2.0.0 drew them on
      every map at levels 1–2 with nothing to turn them off. */
   { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
+  { k: 'climate', he: t('אקלים'), icon: 'climate', kind: 'tog' },
   { k: 'more', he: t('עוד שכבות'), icon: 'more', kind: 'act' },
   { grp: t('נתונים') },
   // The points the user marked, and only those — everything else in the app
@@ -4880,6 +5065,7 @@ function menuState(k) {
   if (k === 'glass') return S.muncol;
   if (k.startsWith('mode:')) return modeOf() === k.slice(5);
   if (k === 'regions') return S.regions;
+  if (k === 'climate') return S.climate;
   if (k === 'locate') return !!meWatch;
   return null;
 }
@@ -4981,6 +5167,7 @@ function menuPick(k) {
   switch (k) {
     case 'search':  openMenu(false); openSearch(); break;
     case 'regions': openMenu(false); toggleRegions(); break;
+    case 'climate': openMenu(false); toggleClimate(); break;
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
@@ -5136,6 +5323,7 @@ function setMode(k) {
   if (k === modeOf()) return;
   if (S.adding) stopPlacing();
   if (S.regions) regionsOff();
+  if (S.climate) climateOff();
   if (S.wp) toggleWp();
   if (S.cmp) toggleCmp();
   if (S.cons) consOff();
@@ -5151,6 +5339,7 @@ function redrawText() {
   $('#doc').classList.toggle('dense', S.dense);
   renderDocBar();
   if (S.regions) { $('#doc').innerHTML = renderRegions(); return; }
+  if (S.climate) { $('#doc').innerHTML = renderClimate(); return; }
   // the places list sits over the level document: the map is still at its
   // level and still navigable, and the mode is still the mode, until it closes
   if (S.wp) { renderWaypoints(); return; }
@@ -5351,7 +5540,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
       letters: S.letters, mine: S.mine, water: S.water, floods: S.floods,
-      cons: S.cons, lst: S.lst, regions: S.regions,
+      cons: S.cons, lst: S.lst, regions: S.regions, climate: S.climate,
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
@@ -5380,6 +5569,7 @@ function restore() {
     if (typeof o.cons === 'boolean') S.cons = o.cons;
     if (typeof o.lst === 'boolean') S.lst = o.lst;
     if (typeof o.regions === 'boolean') S.regions = o.regions;
+    if (typeof o.climate === 'boolean') S.climate = o.climate;
     if (o.consShow && typeof o.consShow === 'object')
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
@@ -5496,6 +5686,7 @@ function showSource(key, exact) {
     <p>${t('מקור:')} ${prose(f.source || (f.derived_from || []).join(' / '))}</p>
     ${f.coverage ? `<p class="note">${t('כיסוי:')} ${prose(f.coverage)}</p>` : ''}
     ${f.validation_he ? `<p class="note">${t('בדיקה:')} ${prose(f.validation_he)}</p>` : ''}
+    ${f.method_he ? `<p class="note">${t('איך חושב:')} ${prose(f.method_he)}</p>` : ''}
     ${f.caveat_he ? `<div class="warn">${prose(f.caveat_he)}</div>` : ''}
     ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`);
 }
@@ -5541,6 +5732,7 @@ function renderInfo(kind) {
       ${f.definitions_he ? `<dl class="kv">${Object.entries(f.definitions_he).map(
         ([term, v]) => `<div><dt>${html(t(term))}</dt><dd class="note">${prose(v)}</dd></div>`).join('')}</dl>` : ''}
       ${f.validation_he ? `<p class="note">${t('בדיקה:')} ${prose(f.validation_he)}</p>` : ''}
+      ${f.method_he ? `<p class="note">${t('איך חושב:')} ${prose(f.method_he)}</p>` : ''}
       ${f.caveat_he ? `<div class="warn">${prose(f.caveat_he)}</div>` : ''}
       ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}
     </div>`).join('');
@@ -5785,6 +5977,10 @@ function wire() {
     if (S.regions) {
       const r = e.target.closest('[data-region]');
       if (r) { pickRegion(Number(r.dataset.region), 'doc'); return; }
+    }
+    if (S.climate) {
+      const c = e.target.closest('[data-stationpick]');
+      if (c) { pickStation(Number(c.dataset.stationpick), 'doc'); return; }
     }
     if (S.lst && lstClick(e)) return;
     // the sort chip: reading order only, so the text is redrawn and the map is not
@@ -7519,6 +7715,86 @@ Object.assign(EN, {
     'A list of points was expected.',
   'צפיפות':
     'Density',
+  'איך חושב:':
+    'How it was computed:',
+  'אקלים':
+    'Climate',
+  'שתי תחנות מדידה, ולא ערך לרובע שלך.':
+    'Two measuring stations, and not a value for your parish.',
+  '‏IPMA מפרסמת נורמל אקלימי לתחנה, ובכל מחוז פורטו עומדות שתיים מתוך 55 התחנות שלה. המספרים כאן הם של התחנות האלה, במקום שבו הן עומדות — לא של העירייה שסביבן ולא של הרובע שאתה מסתכל עליו.':
+    'IPMA publishes a climate normal per station, and two of its 55 stations stand in the whole district of Porto. The figures here are those stations\u2019, where they stand \u2014 not the municipality around them and not the parish you are looking at.',
+  'אין כאן ולא יהיה ערך אקלים לכל רובע. להעניק 275 רובעים טמפרטורה משתי תחנות זו אינטרפולציה, וכלל 2 של חוזה הדיוק אוסר אותה כשהיא אינה מסומנת ככזאת.':
+    'There is no climate value per parish here and there will not be. Handing 275 parishes a temperature from two stations is an interpolation, and rule 2 of the accuracy contract forbids one that is not marked as such.',
+  'ובכל זאת השתיים אומרות הרבה, דווקא מפני שהן נבדלות: 36 ק״מ ו-220 מטר גובה ביניהן, ופנים הארץ חם יותר בקיץ, קר יותר בחורף ורטוב יותר בשנה. זה ההבדל בין חוף לפנים הארץ, וזה מה ששתי תחנות כן יכולות לומר.':
+    'The two still say a great deal, precisely because they differ: 36 km and 220 m of altitude apart, the inland one is hotter in summer, colder in winter and wetter over the year. That is the coast-against-interior difference, and it is what two stations can say.',
+  'התחנות — לפי המספור במפה':
+    'The stations \u2014 by the numbering on the map',
+  'לחיצה על התחנה פותחת את שנים־עשר החודשים.':
+    'Tapping the station opens the twelve months.',
+  'התקופה היא 1991–2020, תקופת הייחוס של ארגון המטאורולוגיה העולמי.':
+    'The period is 1991\u20132020, the World Meteorological Organization\u2019s reference period.',
+  'ממוצע שנתי':
+    'Annual mean',
+  'משקעים בשנה':
+    'Precipitation a year',
+  'חודש':
+    'Month',
+  'ממוצע':
+    'Mean',
+  'מרבית':
+    'Maximum',
+  'מזערית':
+    'Minimum',
+  'מ״מ':
+    'mm',
+  'שנה':
+    'Year',
+  'פורטו / פדראש רובראש':
+    'Porto / Pedras Rubras',
+  'לוזין':
+    'Luzim',
+  'מאיה, במתחם שדה התעופה, כ-6 ק״מ מהחוף':
+    'Maia, at the airport, about 6 km from the coast',
+  'פנאפיאל, בפנים הארץ, 220 מטר מעל תחנת החוף':
+    'Penafiel, inland, 220 m above the coastal station',
+  'ינואר':
+    'January',
+  'פברואר':
+    'February',
+  'מרץ':
+    'March',
+  'אפריל':
+    'April',
+  'מאי':
+    'May',
+  'יוני':
+    'June',
+  'יולי':
+    'July',
+  'אוגוסט':
+    'August',
+  'ספטמבר':
+    'September',
+  'אוקטובר':
+    'October',
+  'נובמבר':
+    'November',
+  'דצמבר':
+    'December',
+  'גובה ושיפוע':
+    'Elevation and slope',
+  'גובה ממוצע':
+    'Mean elevation',
+  'טווח הגבהים':
+    'Elevation range',
+  'שיפוע ממוצע':
+    'Mean slope',
+  'מ׳':
+    'm',
+  'מעלות':
+    'degrees',
+  'נמדד מרשת של 30 מטר, ומודל פני שטח: הוא כולל בניינים וצמרות עצים ואינו הקרקע עצמה. השיפוע הוא של המדרון ולא של החלקה.':
+    'Measured from a 30 m grid, and a surface model: it includes buildings and tree canopy and is not the ground itself. The slope is the hillside\u2019s, not the plot\u2019s.',
   'קביעת המיקום ארכה יותר מדי. נסה שוב.':
     'Locating took too long. Try again.',
   'קורא את התמונה…':

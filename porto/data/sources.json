@@ -1,742 +1,828 @@
 {
-  "generated": "2026-09-07",
-  "license_notices": [
-    "גבולות מנהליים: CAOP 2025, Direção-Geral do Território (DGT) — נתונים פתוחים.",
-    "נתוני מפקד 2021 ברמת עירייה, רובע ומקטע סטטיסטי: INE — Censos 2021, Ficheiro Síntese por Secção.",
-    "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
-    "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה.",
-    "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL.",
-    "CAOP 2025, ושכבות SRUP ו-CRUS: Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0.",
-    "מחירי מכירה ושכירות למ״ר: INE — Estatísticas de preços da habitação ao nível local, ו-Estatísticas de Rendas da Habitação ao nível local.",
-    "אזורי הצפה: Agência Portuguesa do Ambiente — Carta de zonas inundáveis, Portugal continental, דירקטיבה 2007/60/CE מחזור שני. אותר דרך dados.gov.pt."
-  ],
-  "fields": {
-    "municipio.pop2021": {
-      "label_he": "מספר תושבים (עירייה)",
-      "value_type": "integer",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18",
-      "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר. בנוסף: אותו קובץ עצמאי מגיע לאותו מספר ב-216 מ-218 הרובעים; שני ההפרשים הם אותם 33 תושבים שגבול 2025 העביר מרובע לרובע, כפי שטבלת ההמרה צופה."
-    },
-    "municipio.area_km2": {
-      "label_he": "שטח (קמ״ר)",
-      "value_type": "number",
-      "reference_year": 2025,
-      "source": "מחושב מפוליגוני CAOP 2025 (DGT) בשטח גיאודזי על אליפסואיד WGS84 (geographiclib)",
-      "url": "https://www.dgterritorio.gov.pt/dados-abertos",
-      "retrieved": "2026-09-05",
-      "coverage": "18/18",
-      "validation_he": "תואם את השטחים הרשמיים שמפרסמת DGT עד הספרה האחרונה המודפסת (פורטו 41.42, אמרנטה 301.33, באיאו 174.52). סכום המחוז 2,331.6 קמ״ר."
-    },
-    "municipio.density": {
-      "label_he": "צפיפות אוכלוסין (נפש/קמ״ר)",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "נגזר: pop2021 / area_km2",
-      "coverage": "18/18",
-      "derived_from": [
-        "municipio.pop2021",
-        "municipio.area_km2"
-      ]
-    },
-    "municipio.dist_porto_km": {
-      "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
-      "value_type": "number",
-      "source": "porto_map.py (DIST) — מהמסמך המקורי",
-      "coverage": "18/18"
-    },
-    "municipio.transport": {
-      "label_he": "תחבורה לפורטו",
-      "value_type": "text",
-      "source": "porto_freg2.py (TRANSPORT) — מהמסמך המקורי",
-      "coverage": "18/18"
-    },
-    "municipio.profile": {
-      "label_he": "פרופיל (אופי, נדל״ן, שכונות, כלכלה, מגמה, יתרון, חיסרון)",
-      "value_type": "text",
-      "source": "porto_pages.py (PROFILES) — מהמסמך המקורי",
-      "coverage": "18/18"
-    },
-    "freguesia.name_pt": {
-      "label_he": "שם הרובע (פורטוגזית)",
-      "value_type": "text",
-      "reference_year": 2025,
-      "source": "CAOP 2025, DGT",
-      "coverage": "243/243"
-    },
-    "freguesia.he": {
-      "label_he": "שם הרובע (תעתיק עברי)",
-      "value_type": "text",
-      "source": "he_origin=pdf — 140 שמות מהמסמך המקורי; he_origin=app — 103 שמות שנוספו כאן לפי כללי ההגייה שנקבעו במסמך, וניתנים לעריכה ב-data/raw/hebrew_translit_new.json",
-      "coverage": "243/243"
-    },
-    "freguesia.pop2021": {
-      "label_he": "מספר תושבים (רובע)",
-      "value_type": "integer",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "243/243",
-      "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר. בנוסף: אותו קובץ עצמאי מגיע לאותו מספר ב-216 מ-218 הרובעים; שני ההפרשים הם אותם 33 תושבים שגבול 2025 העביר מרובע לרובע, כפי שטבלת ההמרה צופה."
-    },
-    "freguesia.area_km2": {
-      "label_he": "שטח רובע (קמ״ר)",
-      "value_type": "number",
-      "reference_year": 2025,
-      "source": "מחושב מפוליגוני CAOP 2025 (DGT), שטח גיאודזי WGS84",
-      "coverage": "243/243"
-    },
-    "freguesia.density": {
-      "label_he": "צפיפות רובע",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "נגזר: pop2021 / area_km2",
-      "coverage": "243/243"
-    },
-    "freguesia.note": {
-      "label_he": "תיאור הרובע",
-      "value_type": "text",
-      "source": "140 מתוך 243 מהמסמך המקורי porto_district_map_a3.pdf. 103 הנותרות נכתבו עבור האפליקציה ונשמרות ב-data/raw/freguesia_notes_app.json",
-      "coverage": "243/243",
-      "caveat_he": "אין מקור רשמי שמפרסם טקסט תיאורי לרובע — מוסדות הסטטיסטיקה מפרסמים מספרים, לא תיאורים. לכן 103 התיאורים שנוספו נכתבו מידע כללי ולא הועתקו ממקור. הם מתארים מיקום, נוף ואופי, ואינם מכילים נתונים מספריים: כל מספר באפליקציה בא ממקור מתועד. השדה note_origin מסמן כל תיאור כזה, והאפליקציה מציגה עליו תווית. יש לאמת כל פרט שמשפיע על החלטה."
-    },
-    "freguesia.number": {
-      "label_he": "הקוד הרשמי של הרובע (DICOFRE), כתוב בטקסט",
-      "value_type": "string",
-      "reference_year": 2025,
-      "source": "הקוד הרשמי של היחידה, מתוך יחסי גבול admin_level=8 ב-OpenStreetMap שנושאים ref:ine ומסומנים source=DGT - CAOP. השיוך נעשה ב-scripts/ingest_freguesia_codes.py לפי שם ואחר כך לפי גאומטריה",
-      "url": "https://www.dgterritorio.gov.pt/dados-abertos",
-      "retrieved": "2026-09-07",
-      "coverage": "218/243",
-      "caveat_he": "האפליקציה מציירת מ-1.34.0 את חלוקת 2025: 275 רובעים, כל אחד עם קוד DICOFRE משלו הלקוח מהפוליגון עצמו. ‏25 מהיחידות של חלוקת 2013 פורקו ל-57 רובעים נפרדים, ולרובעים האלה יש קוד שלא היה קיים במפקד 2021 — ולכן כל סדרה של INE שמתחברת לפי קוד אינה מכסה אותם. כל רובע כזה אומר במפורש מאיזו יחידה יצא.",
-      "validation_he": "כל 275 נקודות המרכז נופלות בתוך העירייה שהקוד שלהן מציין (בדיקת הכלה מול פוליגוני CAOP), אין קוד כפול, וכל 275 היחידות שויכו. שבעת הקודים של פורטו (02, 03, 10, 11, 16, 17, 18) תואמים את הפרסום הרשמי."
-    },
-    "freguesia.locality": {
-      "label_he": "יישובים ושכונות בתוך הרובע (האותיות במפה)",
-      "value_type": "point",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/04_district_places.overpassql. האות (A, B, C…) היא של האפליקציה; הסדר לפי סוג היישוב ואז לפי אוכלוסייה",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "1,773 יישובים ב-243 רובעים",
-      "caveat_he": "מתחת לרובע אין בפורטוגל שכבה מנהלית רשמית: ליישובים האלה אין גבול, ויש להם נקודה אחת בלבד, במרכז בקירוב. שבע הרובעים של פורטו הן היוצאות מן הכלל — שם 53 השכונות מגיעות מהמסמך המקורי ויש להן שם עברי ותיאור. ל-1,720 היישובים האחרים אין שם עברי ואין תיאור, כי לא נכתב כזה לאף אחד מהם ולא הומצא. המיפוי ב-OSM התנדבותי ואינו אחיד — היעדר יישוב אינו ראיה שאין שם דבר."
-    },
-    "freguesia.poi": {
-      "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, מוסדות, אתרים)",
-      "value_type": "point",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/05_district_services.overpassql ו-06_district_landmarks.overpassql",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "1,530 נקודות ב-243 רובעים",
-      "caveat_he": "שאילתת המורשת דורשת מכל אובייקט גם name וגם wikidata או heritage. בלי התנאי הזה יש במחוז אלפי רשומות historic שרובן פרט אדריכלי בודד, ומפה שמסמנת את כולן אינה אומרת דבר. אף נקודה לא נבחרה ידנית. המיפוי התנדבותי ואינו אחיד."
-    },
-    "map.water": {
-      "label_he": "נהרות ומים (שכבת מפה)",
-      "value_type": "geometry",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/07_district_water.overpassql",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "270 אובייקטים בתוך המחוז",
-      "caveat_he": "הגיאומטריה נחתכה לגבול המחוז, פושטה לסובלנות של כ-20 מ׳, והוסרו ממנה גופי מים קטנים מ-3,000 מ״ר. זו שכבת תצוגה: היא נועדה להראות איפה עובר הנהר, לא למדוד ממנה מרחקים או שטחים. 180 אובייקטים נפלו מחוץ למחוז ו-62 היו קטנים מכדי להיראות."
-    },
-    "porto_city.quarter": {
-      "label_he": "שבעת רבעי עיריית פורטו",
-      "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",
-      "reference_year": 2021,
-      "coverage": "7/7 רבעים, 53 שכונות"
-    },
-    "porto_city.places": {
-      "label_he": "נקודות שכונה בתוך העיר",
-      "source": "OpenStreetMap, place=neighbourhood|quarter|suburb (ODbL)",
-      "retrieved": "2026-09-05",
-      "coverage": "339 נקודות",
-      "caveat_he": "נקודות בלבד, לא גבולות. מתחת לרמת הרובע אין שכבה מנהלית רשמית בפורטוגל, ולכן אין גבולות שכונה באפליקציה."
-    },
-    "porto_city.bairro_letter": {
-      "label_he": "אות השכונה במפה",
-      "value_type": "text",
-      "source": "אות של האפליקציה (A, B, C…) לפי סדר השכונות במסמך המקורי; הנקודה שעליה היא מסומנת מגיעה מ-OpenStreetMap (place=neighbourhood/suburb/quarter בתוך הרובע)",
-      "url": "https://www.openstreetmap.org/",
-      "coverage": "52/53",
-      "caveat_he": "לשכונות פורטו אין גבול רשמי, ולכן אין פוליגון — יש נקודה בלבד, והיא במרכז השכונה בקירוב. השכונה מטדורו (Matadouro) אינה קיימת ב-OSM ולכן אין לה נקודה, והאפליקציה אומרת זאת במפורש. שדה confidence על כל שכונה מבחין בין נקודה שהגיעה מ-OSM (reported) לנקודה שנגזרה בקירוב (approx)."
-    },
-    "porto_city.poi": {
-      "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, אוניברסיטה, מוזיאונים, אתרים)",
-      "value_type": "point",
-      "reference_year": 2026,
-      "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/01_porto_pois.overpassql",
-      "url": "https://www.openstreetmap.org/",
-      "retrieved": "2026-09-06",
-      "coverage": "709 נקודות בשבעת הרבעים",
-      "caveat_he": "OSM הוא מיפוי התנדבותי: הכיסוי אינו אחיד, והרשימה אינה ממצה. בקטגוריית ״אתרים ומונומנטים״ יש בפורטו יותר מאלף רשומות, רובן פרט אדריכלי בודד; האפליקציה מציגה מהן את אלה שיש להן ערך ויקידאטה או ויקיפדיה, בלי בחירה ידנית. חובה לשמור על הייחוס ל-OpenStreetMap."
-    },
-    "district.belts": {
-      "label_he": "שלוש החגורות",
-      "value_type": "text",
-      "source": "המסמך המקורי porto_district_map_a3.pdf (porto_freg2.py, BELTS). קווי המתאר מחושבים באיחוד פוליגוני CAOP 2025 של העיריות שבכל חגורה",
-      "coverage": "3/3",
-      "caveat_he": "החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי ולא חלוקה מנהלית רשמית. ברמה הרשמית מחוז פורטו מחולק לשתי יחידות NUTS III — Área Metropolitana do Porto ו-Tâmega e Sousa — והן אינן חופפות לחגורות."
-    },
-    "municipio.number": {
-      "label_he": "הקוד הרשמי של העירייה (DICOFRE), כתוב בטקסט",
-      "value_type": "string",
-      "reference_year": 2025,
-      "source": "שתי הספרות האחרונות של קוד DICOFRE בן ארבע הספרות, מתג ref:ine על יחס הגבול של העירייה ב-OpenStreetMap (source=DGT CAOP 2022)",
-      "url": "https://www.dgterritorio.gov.pt/dados-abertos",
-      "retrieved": "2026-09-05",
-      "coverage": "18/18",
-      "validation_he": "אומת מול פוליגוני CAOP: כל 275 יחידות הרובע במחוז נופלות בתוך העירייה שהספרות שלהן מציינות. הסדר כמעט אלף-ביתי ולא לגמרי — Paços de Ferreira הוא 09 ו-Paredes 10, וטרופה היא 18 כי נוצרה ב-1998."
-    },
-    "municipio.housing": {
-      "label_he": "דיור ובניינים",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18",
-      "definitions_he": {
-        "מספר דירות": "N_ALOJAMENTOS_FAMILIARES — דירות למשפחות, מכל הסוגים",
-        "דירות ריקות": "N_ALOJAMENTOS_VAGOS_TOTAL מתוך N_ALOJAMENTOS_FAM_CLASSICOS",
-        "בית שני": "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA מתוך אותו מכנה",
-        "בבעלות הדיירים": "N_RHABITUAL_PROP_OCUP מתוך N_CLASSICOS_RES_HABITUAL — כלומר **מתוך מגורי הקבע בלבד**, לא מתוך כלל הדירות: דירה ריקה או בית שני אינם במכנה.",
-        "בשכירות": "N_RHABITUAL_ARRENDADOS מתוך אותו מכנה — **מגורי קבע בלבד**.",
-        "עם חניה": "N_RHABITUAL_COM_ESTACIONAMENTO מתוך אותו מכנה — **מגורי קבע בלבד**.",
-        "זקוקים לתיקון": "N_EDIFICIOS_COM_NEC_REPARACAO — כולל תיקונים קלים; שווה בדיוק לסכום קלים+בינוניים+עמוקים, ולכן התווית מאומתת",
-        "תיקון עמוק": "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS **מתוך כלל בנייני המגורים**, ולא מתוך אלה שזקוקים לתיקון. במחוז: 4.7% מכלל הבניינים, שהם 11.9% מאלה שזקוקים לתיקון — והתווית ׳מהם תיקון עמוק׳ שהייתה כאן קודם אמרה את השני והציגה את הראשון.",
-        "נבנו לפני 1946": "ANTES_1919 + 1919A1945 מתוך N_EDIFICIOS_CLASSICOS",
-        "נבנו מ-2011": "2011A2015 + 2016A2021 מתוך אותו מכנה",
-        "בנייני מגורים": "N_EDIFICIOS_CLASSICOS — ‏edifícios clássicos אצל INE: מבנה קבע עם גישה עצמאית, גג, וקירות חיצוניים מהיסודות ועד הגג, **המיועד למגורים**. זה אינו מספר הבניינים ברובע: בניין שאין בו ולו דירה אחת — מפעל, בניין משרדים, מחסן, בית ספר, כנסייה — אינו נספר כאן כלל, וגם לא מבנה שאינו ״קלאסי״ (צריף, מבנה ארעי, נייד). במחוז: ‏443,980 בניינים, שמתוכם 99.1% מגורים בלבד, ‏0.8% בעיקר מגורים ו-0.1% בעיקר לא-מגורים — וכולם מסווגים לפי כמה דירות נבנו להכיל. כל השיעורים בכרטיס הזה הם מתוך המספר הזה, כלומר מתוך מלאי בנייני המגורים ולא מתוך כלל הבנייה."
-      },
-      "validation_he": "כל חלוקה בקובץ נבדקה שהיא מסתכמת לשלם: מגורים+בית שני+ריקות = דירות קלאסיות; בעלות+שכירות+אחר = מגורי קבע; עם חניה+בלי חניה = מגורי קבע; עשר תקופות הבנייה = סך הבניינים.",
-      "caveat_he": "אין כאן שורת מעלית. שתי העמודות של INE — עם מעלית ובלי מעלית — מוחלפות בקובץ: בבאיאו, שבה 92% מהבניינים בני קומה או שתיים, יוצא ש-10,668 מתוך 10,700 בניינים ׳עם מעלית׳. הספירות נכונות והתוויות הפוכות, ולנחש איזו עמודה INE התכוונה זה בדיוק מה שהפרויקט הזה לא עושה."
-    },
-    "freguesia.housing": {
-      "label_he": "דיור ובניינים",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "243/243",
-      "definitions_he": {
-        "מספר דירות": "N_ALOJAMENTOS_FAMILIARES — דירות למשפחות, מכל הסוגים",
-        "דירות ריקות": "N_ALOJAMENTOS_VAGOS_TOTAL מתוך N_ALOJAMENTOS_FAM_CLASSICOS",
-        "בית שני": "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA מתוך אותו מכנה",
-        "בבעלות הדיירים": "N_RHABITUAL_PROP_OCUP מתוך N_CLASSICOS_RES_HABITUAL — כלומר **מתוך מגורי הקבע בלבד**, לא מתוך כלל הדירות: דירה ריקה או בית שני אינם במכנה.",
-        "בשכירות": "N_RHABITUAL_ARRENDADOS מתוך אותו מכנה — **מגורי קבע בלבד**.",
-        "עם חניה": "N_RHABITUAL_COM_ESTACIONAMENTO מתוך אותו מכנה — **מגורי קבע בלבד**.",
-        "זקוקים לתיקון": "N_EDIFICIOS_COM_NEC_REPARACAO — כולל תיקונים קלים; שווה בדיוק לסכום קלים+בינוניים+עמוקים, ולכן התווית מאומתת",
-        "תיקון עמוק": "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS **מתוך כלל בנייני המגורים**, ולא מתוך אלה שזקוקים לתיקון. במחוז: 4.7% מכלל הבניינים, שהם 11.9% מאלה שזקוקים לתיקון — והתווית ׳מהם תיקון עמוק׳ שהייתה כאן קודם אמרה את השני והציגה את הראשון.",
-        "נבנו לפני 1946": "ANTES_1919 + 1919A1945 מתוך N_EDIFICIOS_CLASSICOS",
-        "נבנו מ-2011": "2011A2015 + 2016A2021 מתוך אותו מכנה",
-        "בנייני מגורים": "N_EDIFICIOS_CLASSICOS — ‏edifícios clássicos אצל INE: מבנה קבע עם גישה עצמאית, גג, וקירות חיצוניים מהיסודות ועד הגג, **המיועד למגורים**. זה אינו מספר הבניינים ברובע: בניין שאין בו ולו דירה אחת — מפעל, בניין משרדים, מחסן, בית ספר, כנסייה — אינו נספר כאן כלל, וגם לא מבנה שאינו ״קלאסי״ (צריף, מבנה ארעי, נייד). במחוז: ‏443,980 בניינים, שמתוכם 99.1% מגורים בלבד, ‏0.8% בעיקר מגורים ו-0.1% בעיקר לא-מגורים — וכולם מסווגים לפי כמה דירות נבנו להכיל. כל השיעורים בכרטיס הזה הם מתוך המספר הזה, כלומר מתוך מלאי בנייני המגורים ולא מתוך כלל הבנייה."
-      },
-      "validation_he": "כל חלוקה בקובץ נבדקה שהיא מסתכמת לשלם: מגורים+בית שני+ריקות = דירות קלאסיות; בעלות+שכירות+אחר = מגורי קבע; עם חניה+בלי חניה = מגורי קבע; עשר תקופות הבנייה = סך הבניינים.",
-      "caveat_he": "אין כאן שורת מעלית. שתי העמודות של INE — עם מעלית ובלי מעלית — מוחלפות בקובץ: בבאיאו, שבה 92% מהבניינים בני קומה או שתיים, יוצא ש-10,668 מתוך 10,700 בניינים ׳עם מעלית׳. הספירות נכונות והתוויות הפוכות, ולנחש איזו עמודה INE התכוונה זה בדיוק מה שהפרויקט הזה לא עושה."
-    },
-    "municipio.median_age": {
-      "label_he": "גיל חציוני",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה",
-      "confidence": "approx",
-      "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב. אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.median_age": {
-      "label_he": "גיל חציוני",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
-      "confidence": "approx",
-      "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב. אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "municipio.ageing_index": {
-      "label_he": "מדד הזדקנות",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.ageing_index": {
-      "label_he": "מדד הזדקנות",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "municipio.pct_65plus": {
-      "label_he": "אחוז בני 65+",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.pct_65plus": {
-      "label_he": "אחוז בני 65+",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "municipio.pct_0_14": {
-      "label_he": "אחוז בני 0–14",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.pct_0_14": {
-      "label_he": "אחוז בני 0–14",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "municipio.foreign_pct": {
-      "label_he": "אחוז בעלי אזרחות זרה",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.foreign_pct": {
-      "label_he": "אחוז בעלי אזרחות זרה",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "municipio.education_pct": {
-      "label_he": "בעלי השכלה גבוהה",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר.",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.education_pct": {
-      "label_he": "בעלי השכלה גבוהה",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר. ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "municipio.unemployment_pct": {
-      "label_he": "שיעור אבטלה",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, חלקי האוכלוסייה הפעילה כלכלית.",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.unemployment_pct": {
-      "label_he": "שיעור אבטלה",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18 · 243/243",
-      "caveat_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, חלקי האוכלוסייה הפעילה כלכלית. ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
-      "confidence": "verified",
-      "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
-    },
-    "freguesia.split2025": {
-      "label_he": "פילוח אוכלוסייה בין הרובעים שהחליפו יחידה שפורקה",
-      "value_type": "integer",
-      "reference_year": 2021,
-      "source": "INE — טבלת המרה בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025 (BGRI2021_to_CAOP2025_reassignment.csv)",
-      "url": "https://mapas.ine.pt/download/index2021.phtml",
-      "retrieved": "2026-09-07",
-      "coverage": "25/25",
-      "validation_he": "בכל אחת מ-25 היחידות שפורקו, סכום היורשים שווה בדיוק לאוכלוסיית היחידה כפי שהמפקד סופר אותה. יחידה שלא הייתה מסתדרת — הפילוח שלה לא היה נכנס בכלל.",
-      "caveat_he": "מספרי תושבים בלבד. הגבולות של רובעי 2025 אינם באפליקציה, ולכן היורשים מוצגים כרשימה ולא כשכבה על המפה."
-    },
-    "municipio.price_eur_m2": {
-      "label_he": "ערך חציוני של מכירות דירות למ״ר",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
-      "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Total",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. כל הדירות — Total אצל INE."
-    },
-    "freguesia.price_eur_m2": {
-      "label_he": "ערך חציוני של מכירות דירות למ״ר (רובע)",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
-      "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Total",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "70/243",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. כל הדירות — Total אצל INE."
-    },
-    "municipio.price_new_eur_m2": {
-      "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
-      "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Novos",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "17/18",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות חדשות בלבד — Novos אצל INE."
-    },
-    "freguesia.price_new_eur_m2": {
-      "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר (רובע)",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
-      "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Novos",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "32/243",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות חדשות בלבד — Novos אצל INE."
-    },
-    "municipio.price_used_eur_m2": {
-      "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
-      "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Existentes",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות קיימות בלבד — Existentes אצל INE."
-    },
-    "freguesia.price_used_eur_m2": {
-      "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר (רובע)",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
-      "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Existentes",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "64/243",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות קיימות בלבד — Existentes אצל INE."
-    },
-    "municipio.rent_eur_m2": {
-      "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de Rendas da Habitação ao nível local (Metodologia 2026) — אינדיקטור 0014696, פורסם 2026-06-26",
-      "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²)",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0014696&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "18/18",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
-    },
-    "freguesia.rent_eur_m2": {
-      "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר (רובע)",
-      "value_type": "number",
-      "reference_year": 2026,
-      "reference_period": "2026Q1",
-      "source": "INE, Estatísticas de Rendas da Habitação ao nível local (Metodologia 2026) — אינדיקטור 0014696, פורסם 2026-06-26",
-      "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²)",
-      "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0014696&contexto=bd&selTab=tab2",
-      "retrieved": "2026-09-07",
-      "coverage": "60/243",
-      "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
-      "confidence": "reported",
-      "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
-    },
-    "municipio.crimes_per_1000": {
-      "label_he": "עבירות רשומות לאלף תושבים",
-      "value_type": "number",
-      "reference_year": 2024,
-      "source": "INE — Taxa de criminalidade (‰) por Localização geográfica (NUTS - 2024) e Categoria de crime; Anual, אינדיקטור 0012260. המפיק: Direcção-Geral da Política de Justiça (DGPJ)",
-      "definition_pt": "Taxa de criminalidade (‰) — Categoria de crime: Total",
-      "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012260&Dim1=S7A2024&lang=PT",
-      "retrieved": "2026-09-12",
-      "coverage": "18/18",
-      "confidence": "reported",
-      "warning_he": "סך העבירות הרשומות — לא ׳פשיעה חמורה׳. ‏criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.",
-      "caveat_he": "בלשון המקור: הסכום כולל את נתוני PJ, PSP, GNR, AT, PM, PJM, ASAE, ו-SEF עד שנת 2023, וכן עבירות שמיקומן אינו ידוע או אינו ניתן לסיווג שנרשמו בידי גופים הפועלים ברמה ארצית. נתוני 2021–2025 עודכנו בעקבות עדכון אומדני האוכלוסייה השנתיים שפרסם INE ב-22 ביוני 2026. ערכי 2025 ארעיים ולכן מוצגת שנת 2024.",
-      "crosscheck_he": "אותו מדד בגרסת NUTS 2013 (אינדיקטור 0008074) לשנת 2021 מחזיר ערך זהה ב-18 מתוך 18 העיריות. זו בדיקת עקביות ולא מקור שני: אותו מפיק ואותם נתונים, ולכן רמת הביטחון נשארת reported ולא verified."
-    },
-    "municipio.median_income": {
-      "label_he": "ערך חציוני של הכנסה ברוטו מוצהרת למשק בית פיסקאלי",
-      "value_type": "number",
-      "reference_year": 2024,
-      "source": "INE — Valor mediano do rendimento bruto declarado por agregado fiscal (€), אינדיקטור 0012712. Estatísticas do Rendimento ao nível local, על בסיס מידע של Autoridade Tributária e Aduaneira",
-      "definition_pt": "Valor mediano do rendimento bruto declarado por agregado fiscal (€)",
-      "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012712&Dim1=S7A2024&lang=PT",
-      "retrieved": "2026-09-12",
-      "coverage": "18/18",
-      "confidence": "reported",
-      "warning_he": "זו הכנסה ברוטו **מוצהרת** לרשות המסים, לכל משק בית פיסקאלי — לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו. משקי בית שאינם מגישים דוח אינם נספרים, וההכנסה היא של מי שמוצהר, לא של מי שמתגורר.",
-      "caveat_he": "בלשון המקור: מ-2018 המידע מיוחס לעירייה של מען המס של הנישום ואינו כולל תושבי חוץ (כולל נישומים עם ׳תושבות מס חלקית׳), ומשום כך נתוני 2018 עודכנו.",
-      "crosscheck_he": "הגרסה הישנה של אותו מדד (NUTS 2013, אינדיקטור 0009763) מכסה 2015–2021 ועודכנה לאחרונה ב-2023-07-25; הסדרה שכאן עודכנה ב-2026-07-24. לשנת 2021 הן חלוקות ב-4 מתוך 18 העיריות (פרדש, פסוש דה פריירה, פנאפיאל, ולונגו), עד 14%. זהו עדכון של INE ולא שגיאה — הסדרה הישנה מוקפאת. ומשום כך היא **אינה** מקור שני בלתי תלוי, והביטחון נשאר reported."
-    },
-    "municipio.pop_growth_pct": {
-      "label_he": "שינוי באוכלוסייה בין מפקד 2011 למפקד 2021",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE — Taxa de variação da população residente (2011-2021) (%), אינדיקטור 0012272, מפקד 2021. מין: HM, גיל: Total",
-      "definition_pt": "Taxa de variação da população residente (2011- 2021) (%) por Local de residência à data dos Censos [2021]",
-      "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012272&Dim1=S7A2021&lang=PT",
-      "retrieved": "2026-09-12",
-      "coverage": "18/18",
-      "confidence": "reported",
-      "note_he": "‏INE מחשבת את השינוי בעצמה ומפרסמת אותו על גאוגרפיית מפקד 2021. זה מה שפותר את בעיית הגבולות: חלוקת הרובעים של 2011 אינה זו של 2021, ולכן חישוב עצמאי ברמת הרובע לא היה אפשרי. הערך כאן אינו נגזר אצלנו.",
-      "crosscheck_he": "‏pop2021 חלקי (1 + השינוי) מוחזר מול אוכלוסיית מפקד 2011 של INE (אינדיקטור 0005980), השמורה ב-data/raw/censos2011_municipios.json. ‏18 מתוך 18 העיריות תואמות עד 0.05%. בדיקה 7l אוכפת זאת. **זו הבדיקה שתפסה החלפה בין טרופה לולונגו** בטבלת קודי INE. ברמת הרובע אין השוואה כזו, כי אין אוכלוסיית 2011 על גבולות 2021. ‏אמרנטה היא היוצאת מן הכלל: השיעור שם מרמז על 56,263 תושבים ב-2011 מול 56,217 שמפקד 2011 מפרסם — 46 נפש, ‏0.08%. זהו פער בין שני פרסומים של INE עצמה, לא שגיאה כאן, והסף בבדיקה הוא 0.3% כדי שלא יכסה החלפה בין עיריות."
-    },
-    "freguesia.pop_growth_pct": {
-      "label_he": "שינוי באוכלוסייה בין מפקד 2011 למפקד 2021",
-      "value_type": "number",
-      "reference_year": 2021,
-      "source": "INE — Taxa de variação da população residente (2011-2021) (%), אינדיקטור 0012272, מפקד 2021. מין: HM, גיל: Total",
-      "definition_pt": "Taxa de variação da população residente (2011- 2021) (%) por Local de residência à data dos Censos [2021]",
-      "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012272&Dim1=S7A2021&lang=PT",
-      "retrieved": "2026-09-12",
-      "coverage": "243/243",
-      "confidence": "reported",
-      "note_he": "‏INE מחשבת את השינוי בעצמה ומפרסמת אותו על גאוגרפיית מפקד 2021. זה מה שפותר את בעיית הגבולות: חלוקת הרובעים של 2011 אינה זו של 2021, ולכן חישוב עצמאי ברמת הרובע לא היה אפשרי. הערך כאן אינו נגזר אצלנו.",
-      "crosscheck_he": "‏pop2021 חלקי (1 + השינוי) מוחזר מול אוכלוסיית מפקד 2011 של INE (אינדיקטור 0005980), השמורה ב-data/raw/censos2011_municipios.json. ‏18 מתוך 18 העיריות תואמות עד 0.05%. בדיקה 7l אוכפת זאת. **זו הבדיקה שתפסה החלפה בין טרופה לולונגו** בטבלת קודי INE. ברמת הרובע אין השוואה כזו, כי אין אוכלוסיית 2011 על גבולות 2021. ‏אמרנטה היא היוצאת מן הכלל: השיעור שם מרמז על 56,263 תושבים ב-2011 מול 56,217 שמפקד 2011 מפרסם — 46 נפש, ‏0.08%. זהו פער בין שני פרסומים של INE עצמה, לא שגיאה כאן, והסף בבדיקה הוא 0.3% כדי שלא יכסה החלפה בין עיריות."
-    },
-    "i18n.prose": {
-      "label_he": "פרוזה שנכתבה לאפליקציה — באנגלית",
-      "source": "נכתב לאפליקציה. האנגלית נכתבה בידי מחבר העברית ולא בתרגום מכונה; data/prose_en.json",
-      "reference_year": 2026,
-      "confidence": "reported",
-      "coverage": "524 מחרוזות פרוזה: 144 פרופילי עירייה, 239 הערות רובע, 60 תיאורי שכונה, ו-81 תוויות מקור והסתייגויות",
-      "note_he": "מ-1.33.0 גם הפרוזה שנכתבה לאפליקציה עוברת לאנגלית, ולא רק הממשק. זו אינה תרגום מכונה: כל מחרוזת נכתבה באנגלית בידי מי שכתב את העברית, ולכן היא טענה שמישהו כן כתב. כותרות של מקורות שמתפרסמות בפורטוגזית — שמות סדרות של INE, שמות מוסדות, מונחי מקור כמו criminalidade violenta e grave — נשמרות מילה במילה בשתי השפות, כי הן לשון המקור ולא לשון האפליקציה.",
-      "validation_he": "בדיקה 7o עוברת על כל מחרוזת עברית ב-data/processed ובקובץ הזה שמגיעה למסך, ודורשת ערך ב-prose_en.json שאינו ריק ואינו עברי. מחרוזת פרוזה חדשה בלי אנגלית מפילה את הבנייה."
-    },
-    "map.caop_2025": {
-      "label_he": "גבולות הרובעים — CAOP 2025",
-      "source": "CAOP 2025, Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0",
-      "reference_year": 2025,
-      "confidence": "verified",
-      "coverage": "275/275 רובעים, 18/18 עיריות",
-      "note_he": "מ-1.34.0 האפליקציה מציירת את חלוקת 2025 ולא את זו של 2013. הגבול והקוד מגיעים מאותו פוליגון — ‏dtmnfr יושב על הגאומטריה עצמה — ולכן אין יותר התאמה לפי שם בין הגבול לנתונים. ‏25 יחידות של 2013 פורקו ל-57 רובעים, וכל אחד מהם אומר במפורש מאיזו יחידה יצא ומה אותה יחידה מנתה.",
-      "validation_he": "מפקד 2021 נבנה מחדש על הגבולות האלה מתוך תת-המקטעים של BGRI: ‏21,337 תת-מקטעים שויכו לרובע המכיל אותם, ואף אחד לא נשאר בחוץ. סכום המחוז — 1,785,405 — זהה לסכום של חלוקת 2013. ‏57 הרובעים החדשים תואמים במדויק את טבלת ההמרה של INE, וכל 275 תואמים קובץ עצמאי שגזר את אותם ערכים בדרך אחרת. בדיקה 7r אוכפת שכל רובע שנוצר ב-2025 אומר מאיזו יחידה יצא, שאינו נושא את שמה או את תיאורה, ושהיחידה שווה לסכום יורשיה."
-    },
-    "map.ren_ran": {
-      "label_he": "מגבלות בנייה — REN ו-RAN",
-      "source": "Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0",
-      "reference_year": "לפי עירייה, 1995–2026",
-      "confidence": "reported",
-      "coverage": "REN ‏16/18 עיריות · RAN ‏17/18 · ‏22.8 מגה-בייט דחוסים, ‏1,556,351 קודקודים",
-      "note_he": "מ-1.35.0 השכבות באפליקציה, אך לא בתוכה: הן מורדות לפי דרישה, עירייה אחת בכל פעם, ונשמרות ב-IndexedDB. ‏DGT תוחם כל עירייה בחוק נפרד ובשנה נפרדת, ולכן אין ״שנת REN״ אחת — לכל עירייה מוצגת השנה שלה והחוק שלה לפני ההורדה. הגאומטריה נשמרת בדיוק כפי ש-DGT מפרסם אותה: שכבה שאומרת ״כאן אסור לבנות״ אינה מפושטת, כי פישוט מזיז את הקו. מה שהמסך מצייר בזום נתון מוחלק במרחב הפיקסלים בלבד.",
-      "caveat_he": "‏DGT אינו מפרסם REN ו-RAN לפורטו, ואינו מפרסם REN לווילה דו קונדה — המרשם לא החזיר עבורם ולו מצולע אחד בשליפה שממנה נבנה הערך הזה (2026-09-13). **זו היעדרות מהמרשם ביום שנקרא, ולא ראיה שאין תיחום חוקי.** ל-RAN ‏DGADR כן מפרסם סיבה כללית: מידע חסר מתאים לעירייה שאין לה RAN בפורמט וקטורי **או** שהמידע שלה נמצא אצלם בבדיקה — והמרשם אינו אומר איזה מהשניים, ולכן גם כאן לא נאמר. ל-REN לא מפורסמת סיבה כלל. **‏DGT מזהיר שהווקטור אינו מחליף את התיחום שפורסם ב-Diário da República:** מה שפורסם בגרסה בתוקף גובר, ולנכס מסוים יש לאמת מולו. ‏**סכנת שריפה אינה כלולה** — לא בגלל גודל אלא בגלל ש-serv_data שלה הוא תאריך החוק שהורה על המפה ולא שנת המפה, ובלי שנת ייחוס הנתון אינו עומד בכלל הראשון. בתצוגת המגבלות ויטרז׳ העיריות אינו מוצג: שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה. השכבות מצוירות מתחת לגבולות העיריות.",
-      "validation_he": "כל קובץ נושא sha256 במניפסט, והאפליקציה מאמתת אותו לפני שהיא שומרת — קובץ שאינו תואם נדחה ולא נשמר כלל, כי שכבה חלקית מציירת חצי מפה בלי לומר, והחצי החסר נראה בדיוק כמו קרקע בלי מגבלה. השכבות יושבות במסד נתונים משלהן; מחיקת כולן אינה יכולה לגעת בנקודות הציון השמורות, ובדיקת ממשק אוכפת את זה במקום להצהיר עליו.",
-      "url": "https://ogcapi.dgterritorio.gov.pt/collections/srup_ren_areal"
-    },
-    "map.floods": {
-      "label_he": "אזורי הצפה ממופים",
-      "source": "Agência Portuguesa do Ambiente (APA) — Carta de zonas inundáveis, 2.º Ciclo da Diretiva 2007/60/CE",
-      "reference_year": "2023",
-      "confidence": "reported",
-      "coverage": "‏3 מתוך 18 עיריות · שלושה מחזורי חזרה · 5.85 קמ״ר במחזור 1000 שנה",
-      "note_he": "‏APA ממפה את גבול ההצפה לשלושה מחזורי חזרה — אחת ל-20, ל-100 ול-1000 שנה. השכבה נשלחת בתוך האפליקציה ואינה דורשת הורדה: שלושת הגבולות יחד שוקלים 76 קילו-בייט. הגאומטריה נשמרת בדיוק כפי ש-APA מפרסם אותה — בלי פישוט, ובלי חיתוך לגבול המחוז, כי חיתוך הוא עריכה. **מחזור חזרה אינו תחזית**: ״אחת ל-100 שנה״ הוא אירוע שסיכויו כאחוז אחד בכל שנה, לא אירוע שקורה פעם במאה.",
-      "caveat_he": "**‏APA אינה ממפה את כל הארץ, אלא 23 אזורי מחקר בלבד** — ARPSI שהוגדרו במחזור השני של הדירקטיבה. אחד מהם נקרא ״פורטו״, וכל 22 האחרים מחוץ למחוז. לכן במחוז מכוסות **שלוש עיריות בלבד**: פורטו (‏6.4% משטחה), וילה נובה דה גאיה (‏1.8%) וגונדומאר (‏0.002%). **ב-15 העיריות האחרות אין ולו מצולע אחד — וזה אומר שלא נחקרו, לא שאין בהן סכנת הצפה.** אמרנטה, בייאו ומרקו דה קנבזש יושבות על נהר הטמגה ואינן מכוסות. **גם בתוך אזור מחקר, היעדר מצולע אינו אישור.** האחוזים לעיל חושבו כאן ואינם מתפרסמים על ידי APA.",
-      "validation_he": "הגבול נקרא משלושת קובצי המקור של APA, אומת שהוא נושא EPSG:3763 ו-PolygonZ, והוטל ל-WGS84 בלי שינוי אחר. שטחי המקור (‏5.055, 5.522 ו-5.849 קמ״ר) נשמרים על כל מצולע כפי ש-APA כתב אותם ולא חושבו מחדש. **אנומליה במקור נשמרה**: בקובץ מחזור 100 השנה רשומת פורטו נושאת `id=20` בעוד כל שאר הרשומות באותו קובץ נושאות 100 — מחזור החזרה כאן נלקח מהקובץ ולא מהשדה, ולכן הדבר אינו משנה, אך גם לא תוקן.",
-      "url": "https://sniambgeoviewer.apambiente.pt/Geodocs/shpzips/D312_APA_AI_T100_Limite_PC.zip"
-    },
-    "municipio.cons_pct": {
-      "label_he": "שיעור השטח בתוך REN/RAN (עירייה)",
-      "coverage": "18/18 · REN 16/18 · RAN 17/18",
-      "validation_he": "המכנה אומת מול מקור שני: שטח כל אחת מ-275 היחידות שחושב כאן תואם את area_ha ש-DGT מפרסם על אותו פוליגון, בפער מרבי של 0.0032%. המונה: שטח ה-REN שחושב כאן שווה בדיוק ל-area_ha ש-DGT מפרסם על כל מצולע REN (אמרנטה 12,373.7 מול 12,373.7). ל-RAN אין שטח מפורסם, ולכן אין לו מקור שני. סכום 275 הרובעים שווה לשטח העירייה שלהם בכל אחת מ-18, והזהות REN ועוד RAN פחות החפיפה שווה לאיחוד מתקיימת בכל 293 השורות. מכיוון שהשיעור עצמו נגזר ואין לו פרסום מקביל, הוא מסומן approx ולא verified.",
-      "value_type": "number",
-      "reference_year": "1995–2026",
-      "source": "DGT, SRUP — Servidões e Restrições de Utilidade Pública: Reserva Ecológica Nacional (REN) e Reserva Agrícola Nacional (RAN), מצטלבות עם גבולות CAOP 2025 ב-EPSG:3763 (ETRS89 / Portugal TM06). scripts/build_constraints.py",
-      "url": "https://snit-mais.dgterritorio.gov.pt/",
-      "retrieved": "2026-09-13",
-      "caveat_he": "REN ו-RAN הן restrições de utilidade pública — הן מגבילות ומחייבות מסלול חריג ורישוי, ואינן איסור בנייה מוחלט (DL 166/2008, DL 73/2009). הערך הוא שיעור השטח שבתוך התיחום, ולא שיעור השטח שאסור לבנות בו. לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה — הן נעות בין 1995 ל-2026, והשנה המדויקת מוצגת לצד כל עירייה. השטח נחתך לגבול העירייה: במטוזיניוש DGT מפרסם 5,072.9 הקטר REN, אך רק 1,062.7 מהם על היבשה, והשאר הוא רצועת ההגנה הימית. REN ו-RAN חופפים, ולכן אסור לחבר את שני השיעורים: השורה ׳בשתיהן׳ היא החפיפה, ו׳סך הכול׳ הוא האיחוד, כלומר REN ועוד RAN פחות החפיפה. לפורטו לא חזר תיחום לאף אחת מהשתיים, ולווילה דו קונדה לא חזר REN — היעדרות מהמרשם ביום שנקרא, ולא ראיה שאין תיחום חוקי. שם מוצג ׳אין נתון׳ ולא אפס. DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן סיבה. **‏DGT מזהיר שהווקטור אינו מחליף את התיחום שפורסם ב-Diário da República** — מה שפורסם בגרסה בתוקף גובר, ולנכס מסוים זה מה שצריך לבדוק.",
-      "confidence": "approx"
-    },
-    "freguesia.cons_pct": {
-      "label_he": "שיעור השטח בתוך REN/RAN (רובע)",
-      "coverage": "275/275 · עם שכבה אחת לפחות 268/275",
-      "validation_he": "המכנה אומת מול מקור שני: שטח כל אחת מ-275 היחידות שחושב כאן תואם את area_ha ש-DGT מפרסם על אותו פוליגון, בפער מרבי של 0.0032%. המונה: שטח ה-REN שחושב כאן שווה בדיוק ל-area_ha ש-DGT מפרסם על כל מצולע REN (אמרנטה 12,373.7 מול 12,373.7). ל-RAN אין שטח מפורסם, ולכן אין לו מקור שני. סכום 275 הרובעים שווה לשטח העירייה שלהם בכל אחת מ-18, והזהות REN ועוד RAN פחות החפיפה שווה לאיחוד מתקיימת בכל 293 השורות. מכיוון שהשיעור עצמו נגזר ואין לו פרסום מקביל, הוא מסומן approx ולא verified.",
-      "value_type": "number",
-      "reference_year": "1995–2026",
-      "source": "DGT, SRUP — Servidões e Restrições de Utilidade Pública: Reserva Ecológica Nacional (REN) e Reserva Agrícola Nacional (RAN), מצטלבות עם גבולות CAOP 2025 ב-EPSG:3763 (ETRS89 / Portugal TM06). scripts/build_constraints.py",
-      "url": "https://snit-mais.dgterritorio.gov.pt/",
-      "retrieved": "2026-09-13",
-      "caveat_he": "REN ו-RAN הן restrições de utilidade pública — הן מגבילות ומחייבות מסלול חריג ורישוי, ואינן איסור בנייה מוחלט (DL 166/2008, DL 73/2009). הערך הוא שיעור השטח שבתוך התיחום, ולא שיעור השטח שאסור לבנות בו. לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה — הן נעות בין 1995 ל-2026, והשנה המדויקת מוצגת לצד כל עירייה. השטח נחתך לגבול העירייה: במטוזיניוש DGT מפרסם 5,072.9 הקטר REN, אך רק 1,062.7 מהם על היבשה, והשאר הוא רצועת ההגנה הימית. REN ו-RAN חופפים, ולכן אסור לחבר את שני השיעורים: השורה ׳בשתיהן׳ היא החפיפה, ו׳סך הכול׳ הוא האיחוד, כלומר REN ועוד RAN פחות החפיפה. לפורטו לא חזר תיחום לאף אחת מהשתיים, ולווילה דו קונדה לא חזר REN — היעדרות מהמרשם ביום שנקרא, ולא ראיה שאין תיחום חוקי. שם מוצג ׳אין נתון׳ ולא אפס. DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן סיבה. **‏DGT מזהיר שהווקטור אינו מחליף את התיחום שפורסם ב-Diário da República** — מה שפורסם בגרסה בתוקף גובר, ולנכס מסוים זה מה שצריך לבדוק.",
-      "confidence": "approx"
-    },
-    "municipio.crus": {
-      "label_he": "ייעוד קרקע (CRUS)",
-      "source": "Direção-Geral do Território (DGT), Carta do Regime de Uso do Solo (CRUS), OGC API Features — CC BY 4.0",
-      "reference_year": "לפי עירייה, 1995–2025",
-      "confidence": "approx",
-      "coverage": "18/18 עיריות · 15,194 מצולעים · הנתונים בלבד, בלי הגאומטריה",
-      "definitions_he": {
-        "Solo Urbano": "קרקע עירונית — השטח שבתוך המתחם העירוני שתוכנית המתאר של העירייה קבעה.",
-        "Solo Rústico": "קרקע לא-עירונית — כל מה שמחוץ למתחם העירוני. זה אינו ״קרקע חקלאית״: בפנים גם יער, מחצבות, בנייה מפוזרת ומקבצים כפריים. הקטגוריה היא שאומרת מה מתוכם.",
-        "Solo Urbano (urbanizável – transitório)": "קרקע שהתוכנית ייעדה לעיור ושטרם עוירה, תחת הוראת מעבר. אינה אחד משני המעמדות ואינה מקופלת לתוכם כאן.",
-        "Não Atribuída": "‏DGT לא שייך את השטח הזה לאף מעמד. זו אמירה של המקור על עצמו, ולא סיווג.",
-        "Discrepância": "הקרקע שההרמוניזציה של DGT לא יישבה בין התוכנית העירונית לסיווג הארצי. נשארת בשמה ואינה מחולקת בין המעמדות."
-      },
-      "note_he": "נוסף ב-1.46.0 כנתונים ולא כשכבה: המחוז הוא 15,194 מצולעי CRUS, ‏369 מגה-בייט כ-GeoJSON ו-39 אחרי דחיסה — מול 22.8 של REN ו-RAN יחד, שכבר יורדות לפי דרישה במקום להישלח. הפוליגונים נשארים ב-DGT. מה שהובא הוא טבלת הנתונים, דרך פלט ה-CSV של נקודת הקצה items; ‏skipGeometry ו-properties, שתי הדרכים המתבקשות לאותו דבר, מחזירות 500 בשרת הזה. ההקטרים הם area_ha ש-DGT מפרסם לכל מצולע, מחוברים לפי מעמד ולפי קטגוריה — לא נמדד כאן דבר מגאומטריה.",
-      "caveat_he": "‏**CRUS אינו מחליף את ה-PDM.** הוא ההרמוניזציה של DGT בין תוכניות המתאר העירוניות לסיווג ארצי אחד, ולנכס מסוים קובעת התוכנית של העירייה כפי שפורסמה, על תקנונה. **שנת הייחוס היא של העירייה ולא של CRUS** — תאריכי הפרסום נעים בין 1995 (וילה דו קונדה) ל-2025, והשנה ומספר ההפקדה מוצגים על כל שורה. **בסנטו טירסו התוכנית מסומנת אצל DGT כ-Não vigente**, כלומר אינה בתוקף, והכרטיס אומר זאת מעל המספרים. **קנה מידה המקור אינו אחיד**: רוב העיריות 1/10000, מטוזיניוש 1/15000, לוזאדה 1/25000 — קו במפה של 1/25000 אינו גבול מגרש. **בפאסוש דה פריירה סכום ההקטרים של CRUS גדול ב-2.71% משטח העירייה לפי CAOP**; ‏DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן סיבה. בשאר 17 העיריות הפער אינו עולה על 0.04%. השיעורים מחושבים מול הסכום של CRUS עצמו לעירייה ולכן אינם מושפעים מהפער.",
-      "validation_he": "סכום ההקטרים של כל עירייה מושווה לשטחה מ-CAOP 2025 — 17 מתוך 18 בפער של עד 0.04%, והחריג היחיד רשום בשמו ב-checks.py כדי שחריג חדש יפיל את הבנייה. נבדק גם שהמעמדות מסתכמים ל-100%, שהקטגוריות מסתכמות לכל מעמד ולסך הכול, שלכל מעמד ולכל קטגוריה יש תווית עברית, ושלכל עירייה יש שנת ייחוס, מספר הפקדה וקנה מידה. עירייה שהשורות שלה חלוקות על תאריך הפרסום אינה מקבלת שנה כלל.",
-      "url": "https://ogcapi.dgterritorio.gov.pt/collections/crus"
-    },
-    "municipio.num": {
-      "label_he": "מספר העירייה על המפה (מספר רץ של האפליקציה)",
-      "value_type": "text",
-      "source": "מספור של האפליקציה, 1–18, בסדר של מסמך המקור: 1–11 האזור המטרופוליטני של פורטו, 12–18 טאמגה אה סוזה. אינו קוד רשמי; הקוד הרשמי (DICOFRE) כתוב בטקסט לצד השם"
-    },
-    "freguesia.num": {
-      "label_he": "מספר הרובע על המפה (מספר רץ של האפליקציה)",
-      "value_type": "text",
-      "source": "מספור של האפליקציה, 1..N בתוך כל עירייה, בסדר הקוד הרשמי (DICOFRE); נבנה ב-scripts/build.py. אינו קוד רשמי; הקוד הרשמי המלא כתוב בטקסט לצד השם"
-    },
-    "freguesia.tipau": {
-      "label_he": "טיפולוגיית אזורים עירוניים — TIPAU 2025",
-      "value_type": "category",
-      "categories": {
-        "APU": "Área predominantemente urbana",
-        "AMU": "Área mediamente urbana",
-        "APR": "Área predominantemente rural"
-      },
-      "reference_year": 2025,
-      "source": "INE — Tipologia de áreas urbanas, 2025 (TIPAU 2025), גרסה V05635 במערכת המטא-מידע של INE (smi.ine.pt). ייצוא הקטגוריות המלא, רמה 3 (רובע), לפי קוד DICOFRE. בתוקף מ-14-04-2025 לפי ההחלטה ה-76 של Secção Permanente de Coordenação Estatística, Diário da República, 2.ª série, n.º 96, 20-05-2025. scripts/fetch_tipau.py",
-      "url": "https://smi.ine.pt/Versao/Detalhes/5635",
-      "retrieved": "2026-09-15",
-      "coverage": "218/275",
-      "confidence": "reported",
-      "caveat_he": "טיפולוגיה סטטיסטית של INE, לא ייעוד תכנוני: ׳כפרי בעיקרו׳ אינו אומר שאסור לבנות, ו׳עירוני בעיקרו׳ אינו אומר שמותר — את זה אומר CRUS. הגרסה עומדת על CAOP 2020, ולכן ל-57 הרובעים שנוצרו ברפורמת 2025 אין שורה והם מוצגים כ׳אין נתון׳ — לא הסיווג של האיחוד שממנו יצאו.",
-      "validation_he": "243 שורות למחוז פורטו בקובץ, כמספר רובעי CAOP 2020. 218 מהן נמצאו ברובעי 2025 של האפליקציה לפי הקוד, ובכל 218 השם בקובץ INE זהה לשם ב-CAOP 2025. 25 הקודים הנותרים הם האיחודים שבוטלו ב-2025 ואינם באפליקציה. מקור שני עצמאי לסיווג אין, ולכן reported ולא verified."
-    }
+ "generated": "2026-09-07",
+ "license_notices": [
+  "גבולות מנהליים: CAOP 2025, Direção-Geral do Território (DGT) — נתונים פתוחים.",
+  "נתוני מפקד 2021 ברמת עירייה, רובע ומקטע סטטיסטי: INE — Censos 2021, Ficheiro Síntese por Secção.",
+  "אריחי המפה ותגי אוכלוסייה של רמת העירייה: © OpenStreetMap contributors, ODbL. חובה לשמור על הייחוס.",
+  "טקסטים תיאוריים, תעתיקים עבריים וחלוקה לחגורות: מהמסמך porto_district_map_a3.pdf שנבנה בפרויקט הזה.",
+  "קודי DICOFRE של הרובעים: תגי ref:ine ב-OpenStreetMap, שמקורם ב-CAOP של DGT — © OpenStreetMap contributors, ODbL.",
+  "CAOP 2025, ושכבות SRUP ו-CRUS: Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0.",
+  "מחירי מכירה ושכירות למ״ר: INE — Estatísticas de preços da habitação ao nível local, ו-Estatísticas de Rendas da Habitação ao nível local.",
+  "אזורי הצפה: Agência Portuguesa do Ambiente — Carta de zonas inundáveis, Portugal continental, דירקטיבה 2007/60/CE מחזור שני. אותר דרך dados.gov.pt.",
+  "Copernicus DEM GLO-30 — produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+  "נורמלים אקלימיים 1991–2020: Instituto Português do Mar e da Atmosfera (IPMA). שימוש בנתונים מחייב ציון המקור, לפי מדיניות ההפצה של IPMA."
+ ],
+ "fields": {
+  "municipio.pop2021": {
+   "label_he": "מספר תושבים (עירייה)",
+   "value_type": "integer",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר. בנוסף: אותו קובץ עצמאי מגיע לאותו מספר ב-216 מ-218 הרובעים; שני ההפרשים הם אותם 33 תושבים שגבול 2025 העביר מרובע לרובע, כפי שטבלת ההמרה צופה."
   },
-  "missing": {
-    "note_he": "השדות הבאים אינם באפליקציה כי לא הצלחתי לאמת ולו ערך אחד מהם מהסביבה שבה נבנתה: מדיניות הרשת חוסמת את ine.pt, pordata.pt, geoapi.pt, idealista.pt, AIMA, wikipedia ו-Overpass. לכל שדה יש סקריפט שמביא אותו במכונה עם רשת פתוחה, ואז build.py משלב אותו והאפליקציה מציגה אותו אוטומטית. עד אז מוצג 'אין נתון' — ולא אפס ולא הערכה.",
-    "items": [
-      {
-        "field": "housing.lift",
-        "label_he": "בניינים עם מעלית",
-        "why_he": "שתי העמודות בקובץ INE — N_EDIFICIOS_COM_ELEVADOR ו-N_EDIFICIOS_SEM_ELEVADOR — מסומנות הפוך. הן מסתכמות יחד לסך הבניינים, כלומר הספירה תקינה, אבל בבאיאו יוצא שלכמעט כל בניין בן קומה אחת יש מעלית. לא אפרסם ערך על סמך ניחוש איזו עמודה היא איזו.",
-        "candidate_sources": [
-          "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_publicacoes"
-        ]
-      },
-      {
-        "field": "freguesia.price_eur_m2 / freguesia.rent_eur_m2 — בתשע עיריות",
-        "label_he": "מחיר ושכר דירה למ״ר ברמת הרובע",
-        "why_he": "מ-1.25.0 ארבע הסדרות של INE באפליקציה: מכירות (הכל, חדשות, קיימות) ושכר דירה בחוזים חדשים, ברבעון 2026Q1. ברמת העירייה יש ערך לכל 18. ברמת הרובע יש ערך ל-55 מתוך 275, ו-220 מציגים ׳אין נתון׳. ‏**המעבר לחלוקת 2025 החמיר את זה, כפי שנצפה מראש.** קודם היו 70 רובעים עם מחיר מתוך 243; ‏INE מפרסם לפי קודי 2013, וכל רובע שהרפורמה יצרה נושא קוד שלא היה קיים ב-2021 ולכן אין לו שורה. בתשע עיריות אין ולו רובע אחד עם ערך: אמרנטה, באיאו, פלגיירש, לוזאדה, מרקו דה קנבזש, מטוזיניוש, פאסוש דה פריירה, פנפייל ופובואה דה וארזים. מטוזיניוש ופובואה דה וארזים נוספו לרשימה בדיוק מהסיבה הזו — כל הרובעים שלהן פורקו ומוספרו מחדש. זה לא חסם רשת ולא פער בהורדה.",
-        "important_he": "אסור לתת לרובע את החציון של העירייה שלו, ואסור לתת לרובע חדש את המחיר של האיחוד שהוא יצא ממנו. חציון עירוני אינו חציון של רובע, וההבדל בין רובעי אותה עירייה הוא בדיוק מה שהמשתמש בא לחפש. ‏**המחיר של היחידה הקודמת אינו מוצג כמחיר של הרובע החדש בשום מקום** — הוא אינו נספר בהשוואות, בדירוגים או בצבעי המפה.",
-        "decision_he": "שלוש הסתייגויות המקור נשמרות במלואן: (1) המדד הוא חציון של שנים עשר החודשים האחרונים, ולכן האפליקציה אינה מציגה ואינה מחשבת שינוי רבעוני; (2) הסימון ׳-׳ של INE נשמר כערך חסר ולא כאפס; (3) הגאוגרפיה היא NUTS-2024, כלומר חלוקת הרובעים של 2013, והאפליקציה מציירת מ-1.34.0 את חלוקת 2025 — ולכן השיוך נשבר בדיוק כפי שנרשם כאן מראש: ‏55 רובעים עם מחיר ו-220 בלי. המספר שנרשם לפני המעבר היה 220, והוא יצא 220.",
-        "fetch": "scripts/fetch_ine_habitacao.py · scripts/import_ine_habitacao.py",
-        "candidate_sources": [
-          "https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=0012234&lang=PT",
-          "https://www.idealista.pt/media/relatorios-preco-habitacao/",
-          "https://www.ine.pt/ine/json_indicador/pindica.jsp"
-        ],
-        "raw_data_arrived_he": "2026-09-07: ine.pt מעולם לא היה חסום — check_network.py בדק ב-HEAD, ו-INE עונה ל-HEAD בסגירת החיבור. הסדרות כאן: data/raw/ine/ine_precos_venda.csv (מדד 0012234, מכירות, 2019Q4–2026Q1) ו-ine_rendas.csv (מדד 0014696, שכירות חדשה, 2020Q1–2026Q1). שני המדדים אומתו מול המטא-דאטה של INE ולא נלקחו מהזיכרון.",
-        "idealista_he": "נבדק ב-2026-09-12. מחבר idealista בסביבה הזו מחזיר **מודעות בודדות** ולא את דוח המחירים החודשי. בפנאפיאל הוא מדווח על 126 מודעות לכל העירייה — כ-4.5 לרובע על פני 28 רובעים — והמיקום שהוא מחזיר הוא ברמת העירייה, בלי רובע. מתוך 15 שנבדקו, חמש היו יחידות באותו פרויקט חדש וארבע באחר, ו-priceByArea נע בין 474 ל-5,305 €/מ״ר: אותה קווינטה מופיעה פעמיים, פעם מול שטח הבית ופעם מול 1.5 הקטאר של כרם. חציון שהיה מחושב מזה הוא נתון נגזר, מוטה לפי תמהיל המודעות של הרגע, ואינו דוח המחירים שפורסם. **לא חושב ולא פורסם.** הדוח עצמו — idealista.pt/media/relatorios-preco-habitacao — החזיר 403 בקריאה ישירה (הגנת בוט), והוא עדיין מקור אפשרי אם יגיע בדרך אחרת.",
-        "decision_2026_09_12_he": "הרובעים בשבע העיריות נשארים ׳אין נתון׳. זו ההחלטה, לא היעדר החלטה.",
-        "decision_2026_09_13_he": "המעבר לחלוקת 2025 בוצע בידיעה מלאה של המחיר הזה ובאישור מפורש. נאמנות לחלוקה המנהלית הנוכחית נבחרה על פני כיסוי מחירים רחב יותר בחלוקה שכבר אינה בתוקף."
-      },
-      {
-        "field": "bairro.boundary",
-        "label_he": "גבולות שכונה (מתחת לרובע)",
-        "why_he": "אין שכבה מנהלית רשמית מתחת לרובע בפורטוגל. ב-OSM יש בעיקר נקודות, לא פוליגונים. אפשרות מדויקת: subsecções estatísticas (BGRI) של INE — פוליגונים ממוספרים ללא שם.",
-        "decision_he": "לא הומצאו גבולות. האפליקציה מציגה את 53 השכונות של פורטו כטקסט ואת נקודות ה-OSM על המפה."
-      },
-      {
-        "field": "map.perigosidade_incendio",
-        "label_he": "סכנת שריפה — מפת הסכנה",
-        "why_he": "אין שנת ייחוס. ‏serv_data מחזיר 2006-06-28, ו-serv_dr באותה רשומה הוא ׳Decreto-Lei 124/2006׳ — כלומר זהו תאריך החוק שהורה על המפה ולא השנה שבה המפה נערכה. הנתון עצמו נגיש ונמדד: ‏173,047 מצולעים בתיבת המחוז. זה לא חסם רשת ולא חסם גודל.",
-        "important_he": "‏perigosidade הוא **סכנה** ולא risco. אלה שני מונחים נפרדים אצל המקור ואסור לתרגם את האחד לשני, גם אם המפה תפורסם יום אחד.",
-        "decision_he": "לא מתפרסם. הכלל הראשון בחוזה הדיוק דורש שנת ייחוס לכל נתון על המסך, ומפה בלי שנה היא בדיוק הטענה שאסור להציג. זו החלטה, לא היעדר החלטה.",
-        "candidate_sources": [
-          "https://ogcapi.dgterritorio.gov.pt/collections/srup_perigosidade_inc_rural",
-          "https://www.icnf.pt/"
-        ]
-      }
-    ]
+  "municipio.area_km2": {
+   "label_he": "שטח (קמ״ר)",
+   "value_type": "number",
+   "reference_year": 2025,
+   "source": "מחושב מפוליגוני CAOP 2025 (DGT) בשטח גיאודזי על אליפסואיד WGS84 (geographiclib)",
+   "url": "https://www.dgterritorio.gov.pt/dados-abertos",
+   "retrieved": "2026-09-05",
+   "coverage": "18/18",
+   "validation_he": "תואם את השטחים הרשמיים שמפרסמת DGT עד הספרה האחרונה המודפסת (פורטו 41.42, אמרנטה 301.33, באיאו 174.52). סכום המחוז 2,331.6 קמ״ר."
+  },
+  "municipio.density": {
+   "label_he": "צפיפות אוכלוסין (נפש/קמ״ר)",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "נגזר: pop2021 / area_km2",
+   "coverage": "18/18",
+   "derived_from": [
+    "municipio.pop2021",
+    "municipio.area_km2"
+   ]
+  },
+  "municipio.dist_porto_km": {
+   "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
+   "value_type": "number",
+   "source": "porto_map.py (DIST) — מהמסמך המקורי",
+   "coverage": "18/18"
+  },
+  "municipio.transport": {
+   "label_he": "תחבורה לפורטו",
+   "value_type": "text",
+   "source": "porto_freg2.py (TRANSPORT) — מהמסמך המקורי",
+   "coverage": "18/18"
+  },
+  "municipio.profile": {
+   "label_he": "פרופיל (אופי, נדל״ן, שכונות, כלכלה, מגמה, יתרון, חיסרון)",
+   "value_type": "text",
+   "source": "porto_pages.py (PROFILES) — מהמסמך המקורי",
+   "coverage": "18/18"
+  },
+  "freguesia.name_pt": {
+   "label_he": "שם הרובע (פורטוגזית)",
+   "value_type": "text",
+   "reference_year": 2025,
+   "source": "CAOP 2025, DGT",
+   "coverage": "243/243"
+  },
+  "freguesia.he": {
+   "label_he": "שם הרובע (תעתיק עברי)",
+   "value_type": "text",
+   "source": "he_origin=pdf — 140 שמות מהמסמך המקורי; he_origin=app — 103 שמות שנוספו כאן לפי כללי ההגייה שנקבעו במסמך, וניתנים לעריכה ב-data/raw/hebrew_translit_new.json",
+   "coverage": "243/243"
+  },
+  "freguesia.pop2021": {
+   "label_he": "מספר תושבים (רובע)",
+   "value_type": "integer",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "243/243",
+   "validation_he": "כל אחת מ-18 העיריות שווה בדיוק לסכום הרובעים שלה, כי שתי הרמות מגיעות מאותו קובץ ומאותה מהדורה. עד 1.5.0 הערכים הגיעו משלושה מקורות שונים והפרש של עד 0.12% נשאר בלתי מוסבר. בנוסף: אותו קובץ עצמאי מגיע לאותו מספר ב-216 מ-218 הרובעים; שני ההפרשים הם אותם 33 תושבים שגבול 2025 העביר מרובע לרובע, כפי שטבלת ההמרה צופה."
+  },
+  "freguesia.area_km2": {
+   "label_he": "שטח רובע (קמ״ר)",
+   "value_type": "number",
+   "reference_year": 2025,
+   "source": "מחושב מפוליגוני CAOP 2025 (DGT), שטח גיאודזי WGS84",
+   "coverage": "243/243"
+  },
+  "freguesia.density": {
+   "label_he": "צפיפות רובע",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "נגזר: pop2021 / area_km2",
+   "coverage": "243/243"
+  },
+  "freguesia.note": {
+   "label_he": "תיאור הרובע",
+   "value_type": "text",
+   "source": "140 מתוך 243 מהמסמך המקורי porto_district_map_a3.pdf. 103 הנותרות נכתבו עבור האפליקציה ונשמרות ב-data/raw/freguesia_notes_app.json",
+   "coverage": "243/243",
+   "caveat_he": "אין מקור רשמי שמפרסם טקסט תיאורי לרובע — מוסדות הסטטיסטיקה מפרסמים מספרים, לא תיאורים. לכן 103 התיאורים שנוספו נכתבו מידע כללי ולא הועתקו ממקור. הם מתארים מיקום, נוף ואופי, ואינם מכילים נתונים מספריים: כל מספר באפליקציה בא ממקור מתועד. השדה note_origin מסמן כל תיאור כזה, והאפליקציה מציגה עליו תווית. יש לאמת כל פרט שמשפיע על החלטה."
+  },
+  "freguesia.number": {
+   "label_he": "הקוד הרשמי של הרובע (DICOFRE), כתוב בטקסט",
+   "value_type": "string",
+   "reference_year": 2025,
+   "source": "הקוד הרשמי של היחידה, מתוך יחסי גבול admin_level=8 ב-OpenStreetMap שנושאים ref:ine ומסומנים source=DGT - CAOP. השיוך נעשה ב-scripts/ingest_freguesia_codes.py לפי שם ואחר כך לפי גאומטריה",
+   "url": "https://www.dgterritorio.gov.pt/dados-abertos",
+   "retrieved": "2026-09-07",
+   "coverage": "218/243",
+   "caveat_he": "האפליקציה מציירת מ-1.34.0 את חלוקת 2025: 275 רובעים, כל אחד עם קוד DICOFRE משלו הלקוח מהפוליגון עצמו. ‏25 מהיחידות של חלוקת 2013 פורקו ל-57 רובעים נפרדים, ולרובעים האלה יש קוד שלא היה קיים במפקד 2021 — ולכן כל סדרה של INE שמתחברת לפי קוד אינה מכסה אותם. כל רובע כזה אומר במפורש מאיזו יחידה יצא.",
+   "validation_he": "כל 275 נקודות המרכז נופלות בתוך העירייה שהקוד שלהן מציין (בדיקת הכלה מול פוליגוני CAOP), אין קוד כפול, וכל 275 היחידות שויכו. שבעת הקודים של פורטו (02, 03, 10, 11, 16, 17, 18) תואמים את הפרסום הרשמי."
+  },
+  "freguesia.locality": {
+   "label_he": "יישובים ושכונות בתוך הרובע (האותיות במפה)",
+   "value_type": "point",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/04_district_places.overpassql. האות (A, B, C…) היא של האפליקציה; הסדר לפי סוג היישוב ואז לפי אוכלוסייה",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "1,773 יישובים ב-243 רובעים",
+   "caveat_he": "מתחת לרובע אין בפורטוגל שכבה מנהלית רשמית: ליישובים האלה אין גבול, ויש להם נקודה אחת בלבד, במרכז בקירוב. שבע הרובעים של פורטו הן היוצאות מן הכלל — שם 53 השכונות מגיעות מהמסמך המקורי ויש להן שם עברי ותיאור. ל-1,720 היישובים האחרים אין שם עברי ואין תיאור, כי לא נכתב כזה לאף אחד מהם ולא הומצא. המיפוי ב-OSM התנדבותי ואינו אחיד — היעדר יישוב אינו ראיה שאין שם דבר."
+  },
+  "freguesia.poi": {
+   "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, מוסדות, אתרים)",
+   "value_type": "point",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/05_district_services.overpassql ו-06_district_landmarks.overpassql",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "1,530 נקודות ב-243 רובעים",
+   "caveat_he": "שאילתת המורשת דורשת מכל אובייקט גם name וגם wikidata או heritage. בלי התנאי הזה יש במחוז אלפי רשומות historic שרובן פרט אדריכלי בודד, ומפה שמסמנת את כולן אינה אומרת דבר. אף נקודה לא נבחרה ידנית. המיפוי התנדבותי ואינו אחיד."
+  },
+  "map.water": {
+   "label_he": "נהרות ומים (שכבת מפה)",
+   "value_type": "geometry",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/07_district_water.overpassql",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "270 אובייקטים בתוך המחוז",
+   "caveat_he": "הגיאומטריה נחתכה לגבול המחוז, פושטה לסובלנות של כ-20 מ׳, והוסרו ממנה גופי מים קטנים מ-3,000 מ״ר. זו שכבת תצוגה: היא נועדה להראות איפה עובר הנהר, לא למדוד ממנה מרחקים או שטחים. 180 אובייקטים נפלו מחוץ למחוז ו-62 היו קטנים מכדי להיראות."
+  },
+  "porto_city.quarter": {
+   "label_he": "שבעת רבעי עיריית פורטו",
+   "source": "porto_city.py (PORTO_FREG, BAIRROS) — מהמסמך המקורי; אוכלוסייה: מפקד INE 2021",
+   "reference_year": 2021,
+   "coverage": "7/7 רבעים, 53 שכונות"
+  },
+  "porto_city.places": {
+   "label_he": "נקודות שכונה בתוך העיר",
+   "source": "OpenStreetMap, place=neighbourhood|quarter|suburb (ODbL)",
+   "retrieved": "2026-09-05",
+   "coverage": "339 נקודות",
+   "caveat_he": "נקודות בלבד, לא גבולות. מתחת לרמת הרובע אין שכבה מנהלית רשמית בפורטוגל, ולכן אין גבולות שכונה באפליקציה."
+  },
+  "porto_city.bairro_letter": {
+   "label_he": "אות השכונה במפה",
+   "value_type": "text",
+   "source": "אות של האפליקציה (A, B, C…) לפי סדר השכונות במסמך המקורי; הנקודה שעליה היא מסומנת מגיעה מ-OpenStreetMap (place=neighbourhood/suburb/quarter בתוך הרובע)",
+   "url": "https://www.openstreetmap.org/",
+   "coverage": "52/53",
+   "caveat_he": "לשכונות פורטו אין גבול רשמי, ולכן אין פוליגון — יש נקודה בלבד, והיא במרכז השכונה בקירוב. השכונה מטדורו (Matadouro) אינה קיימת ב-OSM ולכן אין לה נקודה, והאפליקציה אומרת זאת במפורש. שדה confidence על כל שכונה מבחין בין נקודה שהגיעה מ-OSM (reported) לנקודה שנגזרה בקירוב (approx)."
+  },
+  "porto_city.poi": {
+   "label_he": "נקודות במפת הרובע (תחנות, בתי חולים, אוניברסיטה, מוזיאונים, אתרים)",
+   "value_type": "point",
+   "reference_year": 2026,
+   "source": "OpenStreetMap contributors, ODbL — ייצוא Overpass, scripts/overpass/01_porto_pois.overpassql",
+   "url": "https://www.openstreetmap.org/",
+   "retrieved": "2026-09-06",
+   "coverage": "709 נקודות בשבעת הרבעים",
+   "caveat_he": "OSM הוא מיפוי התנדבותי: הכיסוי אינו אחיד, והרשימה אינה ממצה. בקטגוריית ״אתרים ומונומנטים״ יש בפורטו יותר מאלף רשומות, רובן פרט אדריכלי בודד; האפליקציה מציגה מהן את אלה שיש להן ערך ויקידאטה או ויקיפדיה, בלי בחירה ידנית. חובה לשמור על הייחוס ל-OpenStreetMap."
+  },
+  "district.belts": {
+   "label_he": "שלוש החגורות",
+   "value_type": "text",
+   "source": "המסמך המקורי porto_district_map_a3.pdf (porto_freg2.py, BELTS). קווי המתאר מחושבים באיחוד פוליגוני CAOP 2025 של העיריות שבכל חגורה",
+   "coverage": "3/3",
+   "caveat_he": "החלוקה לשלוש חגורות היא חלוקה עורכתית מהמסמך המקורי ולא חלוקה מנהלית רשמית. ברמה הרשמית מחוז פורטו מחולק לשתי יחידות NUTS III — Área Metropolitana do Porto ו-Tâmega e Sousa — והן אינן חופפות לחגורות."
+  },
+  "municipio.number": {
+   "label_he": "הקוד הרשמי של העירייה (DICOFRE), כתוב בטקסט",
+   "value_type": "string",
+   "reference_year": 2025,
+   "source": "שתי הספרות האחרונות של קוד DICOFRE בן ארבע הספרות, מתג ref:ine על יחס הגבול של העירייה ב-OpenStreetMap (source=DGT CAOP 2022)",
+   "url": "https://www.dgterritorio.gov.pt/dados-abertos",
+   "retrieved": "2026-09-05",
+   "coverage": "18/18",
+   "validation_he": "אומת מול פוליגוני CAOP: כל 275 יחידות הרובע במחוז נופלות בתוך העירייה שהספרות שלהן מציינות. הסדר כמעט אלף-ביתי ולא לגמרי — Paços de Ferreira הוא 09 ו-Paredes 10, וטרופה היא 18 כי נוצרה ב-1998."
+  },
+  "municipio.housing": {
+   "label_he": "דיור ובניינים",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "definitions_he": {
+    "מספר דירות": "N_ALOJAMENTOS_FAMILIARES — דירות למשפחות, מכל הסוגים",
+    "דירות ריקות": "N_ALOJAMENTOS_VAGOS_TOTAL מתוך N_ALOJAMENTOS_FAM_CLASSICOS",
+    "בית שני": "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA מתוך אותו מכנה",
+    "בבעלות הדיירים": "N_RHABITUAL_PROP_OCUP מתוך N_CLASSICOS_RES_HABITUAL — כלומר **מתוך מגורי הקבע בלבד**, לא מתוך כלל הדירות: דירה ריקה או בית שני אינם במכנה.",
+    "בשכירות": "N_RHABITUAL_ARRENDADOS מתוך אותו מכנה — **מגורי קבע בלבד**.",
+    "עם חניה": "N_RHABITUAL_COM_ESTACIONAMENTO מתוך אותו מכנה — **מגורי קבע בלבד**.",
+    "זקוקים לתיקון": "N_EDIFICIOS_COM_NEC_REPARACAO — כולל תיקונים קלים; שווה בדיוק לסכום קלים+בינוניים+עמוקים, ולכן התווית מאומתת",
+    "תיקון עמוק": "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS **מתוך כלל בנייני המגורים**, ולא מתוך אלה שזקוקים לתיקון. במחוז: 4.7% מכלל הבניינים, שהם 11.9% מאלה שזקוקים לתיקון — והתווית ׳מהם תיקון עמוק׳ שהייתה כאן קודם אמרה את השני והציגה את הראשון.",
+    "נבנו לפני 1946": "ANTES_1919 + 1919A1945 מתוך N_EDIFICIOS_CLASSICOS",
+    "נבנו מ-2011": "2011A2015 + 2016A2021 מתוך אותו מכנה",
+    "בנייני מגורים": "N_EDIFICIOS_CLASSICOS — ‏edifícios clássicos אצל INE: מבנה קבע עם גישה עצמאית, גג, וקירות חיצוניים מהיסודות ועד הגג, **המיועד למגורים**. זה אינו מספר הבניינים ברובע: בניין שאין בו ולו דירה אחת — מפעל, בניין משרדים, מחסן, בית ספר, כנסייה — אינו נספר כאן כלל, וגם לא מבנה שאינו ״קלאסי״ (צריף, מבנה ארעי, נייד). במחוז: ‏443,980 בניינים, שמתוכם 99.1% מגורים בלבד, ‏0.8% בעיקר מגורים ו-0.1% בעיקר לא-מגורים — וכולם מסווגים לפי כמה דירות נבנו להכיל. כל השיעורים בכרטיס הזה הם מתוך המספר הזה, כלומר מתוך מלאי בנייני המגורים ולא מתוך כלל הבנייה."
+   },
+   "validation_he": "כל חלוקה בקובץ נבדקה שהיא מסתכמת לשלם: מגורים+בית שני+ריקות = דירות קלאסיות; בעלות+שכירות+אחר = מגורי קבע; עם חניה+בלי חניה = מגורי קבע; עשר תקופות הבנייה = סך הבניינים.",
+   "caveat_he": "אין כאן שורת מעלית. שתי העמודות של INE — עם מעלית ובלי מעלית — מוחלפות בקובץ: בבאיאו, שבה 92% מהבניינים בני קומה או שתיים, יוצא ש-10,668 מתוך 10,700 בניינים ׳עם מעלית׳. הספירות נכונות והתוויות הפוכות, ולנחש איזו עמודה INE התכוונה זה בדיוק מה שהפרויקט הזה לא עושה."
+  },
+  "freguesia.housing": {
+   "label_he": "דיור ובניינים",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "243/243",
+   "definitions_he": {
+    "מספר דירות": "N_ALOJAMENTOS_FAMILIARES — דירות למשפחות, מכל הסוגים",
+    "דירות ריקות": "N_ALOJAMENTOS_VAGOS_TOTAL מתוך N_ALOJAMENTOS_FAM_CLASSICOS",
+    "בית שני": "N_ALOJAMENTOS_FAM_CLASS_RES_SECUNDARIA מתוך אותו מכנה",
+    "בבעלות הדיירים": "N_RHABITUAL_PROP_OCUP מתוך N_CLASSICOS_RES_HABITUAL — כלומר **מתוך מגורי הקבע בלבד**, לא מתוך כלל הדירות: דירה ריקה או בית שני אינם במכנה.",
+    "בשכירות": "N_RHABITUAL_ARRENDADOS מתוך אותו מכנה — **מגורי קבע בלבד**.",
+    "עם חניה": "N_RHABITUAL_COM_ESTACIONAMENTO מתוך אותו מכנה — **מגורי קבע בלבד**.",
+    "זקוקים לתיקון": "N_EDIFICIOS_COM_NEC_REPARACAO — כולל תיקונים קלים; שווה בדיוק לסכום קלים+בינוניים+עמוקים, ולכן התווית מאומתת",
+    "תיקון עמוק": "N_EDIFICIOS_COM_NEC_REPARACAO_PROFUNDAS **מתוך כלל בנייני המגורים**, ולא מתוך אלה שזקוקים לתיקון. במחוז: 4.7% מכלל הבניינים, שהם 11.9% מאלה שזקוקים לתיקון — והתווית ׳מהם תיקון עמוק׳ שהייתה כאן קודם אמרה את השני והציגה את הראשון.",
+    "נבנו לפני 1946": "ANTES_1919 + 1919A1945 מתוך N_EDIFICIOS_CLASSICOS",
+    "נבנו מ-2011": "2011A2015 + 2016A2021 מתוך אותו מכנה",
+    "בנייני מגורים": "N_EDIFICIOS_CLASSICOS — ‏edifícios clássicos אצל INE: מבנה קבע עם גישה עצמאית, גג, וקירות חיצוניים מהיסודות ועד הגג, **המיועד למגורים**. זה אינו מספר הבניינים ברובע: בניין שאין בו ולו דירה אחת — מפעל, בניין משרדים, מחסן, בית ספר, כנסייה — אינו נספר כאן כלל, וגם לא מבנה שאינו ״קלאסי״ (צריף, מבנה ארעי, נייד). במחוז: ‏443,980 בניינים, שמתוכם 99.1% מגורים בלבד, ‏0.8% בעיקר מגורים ו-0.1% בעיקר לא-מגורים — וכולם מסווגים לפי כמה דירות נבנו להכיל. כל השיעורים בכרטיס הזה הם מתוך המספר הזה, כלומר מתוך מלאי בנייני המגורים ולא מתוך כלל הבנייה."
+   },
+   "validation_he": "כל חלוקה בקובץ נבדקה שהיא מסתכמת לשלם: מגורים+בית שני+ריקות = דירות קלאסיות; בעלות+שכירות+אחר = מגורי קבע; עם חניה+בלי חניה = מגורי קבע; עשר תקופות הבנייה = סך הבניינים.",
+   "caveat_he": "אין כאן שורת מעלית. שתי העמודות של INE — עם מעלית ובלי מעלית — מוחלפות בקובץ: בבאיאו, שבה 92% מהבניינים בני קומה או שתיים, יוצא ש-10,668 מתוך 10,700 בניינים ׳עם מעלית׳. הספירות נכונות והתוויות הפוכות, ולנחש איזו עמודה INE התכוונה זה בדיוק מה שהפרויקט הזה לא עושה."
+  },
+  "municipio.median_age": {
+   "label_he": "גיל חציוני",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה",
+   "confidence": "approx",
+   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב. אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.median_age": {
+   "label_he": "גיל חציוני",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אינטרפולציה בתוך פס גיל של חמש שנים; INE לא מפרסם חציון בקובץ הזה ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
+   "confidence": "approx",
+   "validation_he": "פסי הגיל מסתכמים לסך התושבים בכל אחת מ-261 היחידות, ובאף אחת מהן החציון אינו נופל בפס הפתוח של 75+ — שם הסקריפט מסרב לחשב. אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.ageing_index": {
+   "label_he": "מדד הזדקנות",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.ageing_index": {
+   "label_he": "מדד הזדקנות",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE (נגזר)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "בני 65+ לכל מאה בני 0–14 — ההגדרה של INE",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.pct_65plus": {
+   "label_he": "אחוז בני 65+",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.pct_65plus": {
+   "label_he": "אחוז בני 65+",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.pct_0_14": {
+   "label_he": "אחוז בני 0–14",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.pct_0_14": {
+   "label_he": "אחוז בני 0–14",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.foreign_pct": {
+   "label_he": "אחוז בעלי אזרחות זרה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.foreign_pct": {
+   "label_he": "אחוז בעלי אזרחות זרה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אזרחות ביום המפקד, לא מקום לידה: מי שהתאזרח פורטוגלי אינו נספר ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.education_pct": {
+   "label_he": "בעלי השכלה גבוהה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.education_pct": {
+   "label_he": "בעלי השכלה גבוהה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "אחוז מכלל התושבים, ילדים כלולים במכנה — כך INE מציג את זה. אחוז מהבוגרים יהיה גבוה יותר. ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "municipio.unemployment_pct": {
+   "label_he": "שיעור אבטלה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, חלקי האוכלוסייה הפעילה כלכלית.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.unemployment_pct": {
+   "label_he": "שיעור אבטלה",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18 · 243/243",
+   "caveat_he": "מחפשי עבודה ראשונה ומחפשי עבודה חדשה, חלקי האוכלוסייה הפעילה כלכלית. ברובע שהמקטעים הסטטיסטיים של מפקד 2021 אינם מכסים במלואו השדה אינו מוצג: המפקד נספר לפי גבולות 2013, וחלק מהמקטעים נחצים בין שני רובעים של 2025. שיעור שהיה מחושב מהחלק שנופל בפנים הוא שיעור של רוב הרובע, מוצג כשיעור שלו — ולכן ׳אין נתון׳.",
+   "confidence": "verified",
+   "validation_he": "אומת מול קובץ עצמאי — Portugal_Property_Baseline_v2.csv, שגזר את אותם ערכים מתת-המקטעים של המפקד בדרך אחרת ועל גבולות 2025. ב-218 הרובעים שהרפורמה לא נגעה בהם ההפרש המרבי הוא 0.05, כלומר עיגול בלבד. את ההשוואה מריץ scripts/crosscheck_baseline.py."
+  },
+  "freguesia.split2025": {
+   "label_he": "פילוח אוכלוסייה בין הרובעים שהחליפו יחידה שפורקה",
+   "value_type": "integer",
+   "reference_year": 2021,
+   "source": "INE — טבלת המרה בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025 (BGRI2021_to_CAOP2025_reassignment.csv)",
+   "url": "https://mapas.ine.pt/download/index2021.phtml",
+   "retrieved": "2026-09-07",
+   "coverage": "25/25",
+   "validation_he": "בכל אחת מ-25 היחידות שפורקו, סכום היורשים שווה בדיוק לאוכלוסיית היחידה כפי שהמפקד סופר אותה. יחידה שלא הייתה מסתדרת — הפילוח שלה לא היה נכנס בכלל.",
+   "caveat_he": "מספרי תושבים בלבד. הגבולות של רובעי 2025 אינם באפליקציה, ולכן היורשים מוצגים כרשימה ולא כשכבה על המפה."
+  },
+  "municipio.price_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Total",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. כל הדירות — Total אצל INE."
+  },
+  "freguesia.price_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Total",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "70/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. כל הדירות — Total אצל INE."
+  },
+  "municipio.price_new_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Novos",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "17/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות חדשות בלבד — Novos אצל INE."
+  },
+  "freguesia.price_new_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות חדשות למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Novos",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "32/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות חדשות בלבד — Novos אצל INE."
+  },
+  "municipio.price_used_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Existentes",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות קיימות בלבד — Existentes אצל INE."
+  },
+  "freguesia.price_used_eur_m2": {
+   "label_he": "ערך חציוני של מכירות דירות קיימות למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de preços da habitação ao nível local (Metodologia 2022) — אינדיקטור 0012234, פורסם 2026-07-17",
+   "definition_pt": "Valor mediano das vendas de alojamentos familiares nos últimos 12 meses (Metodologia 2022 - €/ m²) — Existentes",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0012234&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "64/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. דירות קיימות בלבד — Existentes אצל INE."
+  },
+  "municipio.rent_eur_m2": {
+   "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de Rendas da Habitação ao nível local (Metodologia 2026) — אינדיקטור 0014696, פורסם 2026-06-26",
+   "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²)",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0014696&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "18/18",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
+  },
+  "freguesia.rent_eur_m2": {
+   "label_he": "ערך חציוני של שכר דירה בחוזים חדשים למ״ר (רובע)",
+   "value_type": "number",
+   "reference_year": 2026,
+   "reference_period": "2026Q1",
+   "source": "INE, Estatísticas de Rendas da Habitação ao nível local (Metodologia 2026) — אינדיקטור 0014696, פורסם 2026-06-26",
+   "definition_pt": "Valor mediano das rendas de novos contratos de arrendamento de alojamentos familiares nos últimos 12 meses (Metodologia 2026 - €/ m²)",
+   "url": "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_indicadores&indOcorrCod=0014696&contexto=bd&selTab=tab2",
+   "retrieved": "2026-09-07",
+   "coverage": "60/243",
+   "caveat_he": "הערך הוא החציון של שנים עשר החודשים שמסתיימים ברבעון הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשי עסקאות, ולכן אסור לגזור מכאן שינוי רבעוני. תא ש-INE אינו מפרסם נושא את הסימן ׳-׳, ובלשון המקור: ‏׳- = Dado nulo ou não aplicável׳ — נתון ריק או לא ישים. האפליקציה מציגה שם ׳אין נתון׳, ולא אפס ולא ממוצע של העירייה. הסיבה שבגללה תא מסוים ריק אינה מתפרסמת, ולכן אינה נאמרת כאן. INE מפרסם ברמת הרובע רק ב-11 מתוך 18 העיריות. באמרנטה, בייאו, פלגיירש, לוזדה, מרקו דה קנבזש, פסוש דה פריירה ופנפיאל אין ולו רובע אחד עם ערך, ולכן כל הרובעים שם מציגים ׳אין נתון׳.",
+   "confidence": "reported",
+   "validation_he": "מקור יחיד. אין מקור שני ובלתי תלוי שמגיע לאותו מספר, ולכן הערך מסומן ׳מדווח׳ ולא ׳מאומת׳. scripts/checks.py מוודא שכל ערך חיובי, שהוא נמצא בתחום שהקובץ עצמו מפרסם, ושאין ולו רובע אחד עם ערך באחת משבע העיריות שבהן INE אינו מפרסם ברמת הרובע. חוזי שכירות חדשים בלבד, לא כלל מלאי השכירות — novos contratos de arrendamento אצל INE."
+  },
+  "municipio.crimes_per_1000": {
+   "label_he": "עבירות רשומות לאלף תושבים",
+   "value_type": "number",
+   "reference_year": 2024,
+   "source": "INE — Taxa de criminalidade (‰) por Localização geográfica (NUTS - 2024) e Categoria de crime; Anual, אינדיקטור 0012260. המפיק: Direcção-Geral da Política de Justiça (DGPJ)",
+   "definition_pt": "Taxa de criminalidade (‰) — Categoria de crime: Total",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012260&Dim1=S7A2024&lang=PT",
+   "retrieved": "2026-09-12",
+   "coverage": "18/18",
+   "confidence": "reported",
+   "warning_he": "סך העבירות הרשומות — לא ׳פשיעה חמורה׳. ‏criminalidade violenta e grave מתפרסמת ב-RASI לפי מחוז ופיקוד משטרתי בלבד, ואין לה ערך ברמת עירייה.",
+   "caveat_he": "בלשון המקור: הסכום כולל את נתוני PJ, PSP, GNR, AT, PM, PJM, ASAE, ו-SEF עד שנת 2023, וכן עבירות שמיקומן אינו ידוע או אינו ניתן לסיווג שנרשמו בידי גופים הפועלים ברמה ארצית. נתוני 2021–2025 עודכנו בעקבות עדכון אומדני האוכלוסייה השנתיים שפרסם INE ב-22 ביוני 2026. ערכי 2025 ארעיים ולכן מוצגת שנת 2024.",
+   "crosscheck_he": "אותו מדד בגרסת NUTS 2013 (אינדיקטור 0008074) לשנת 2021 מחזיר ערך זהה ב-18 מתוך 18 העיריות. זו בדיקת עקביות ולא מקור שני: אותו מפיק ואותם נתונים, ולכן רמת הביטחון נשארת reported ולא verified."
+  },
+  "municipio.median_income": {
+   "label_he": "ערך חציוני של הכנסה ברוטו מוצהרת למשק בית פיסקאלי",
+   "value_type": "number",
+   "reference_year": 2024,
+   "source": "INE — Valor mediano do rendimento bruto declarado por agregado fiscal (€), אינדיקטור 0012712. Estatísticas do Rendimento ao nível local, על בסיס מידע של Autoridade Tributária e Aduaneira",
+   "definition_pt": "Valor mediano do rendimento bruto declarado por agregado fiscal (€)",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012712&Dim1=S7A2024&lang=PT",
+   "retrieved": "2026-09-12",
+   "coverage": "18/18",
+   "confidence": "reported",
+   "warning_he": "זו הכנסה ברוטו **מוצהרת** לרשות המסים, לכל משק בית פיסקאלי — לא ההכנסה הכוללת של משק הבית ולא הכנסה נטו. משקי בית שאינם מגישים דוח אינם נספרים, וההכנסה היא של מי שמוצהר, לא של מי שמתגורר.",
+   "caveat_he": "בלשון המקור: מ-2018 המידע מיוחס לעירייה של מען המס של הנישום ואינו כולל תושבי חוץ (כולל נישומים עם ׳תושבות מס חלקית׳), ומשום כך נתוני 2018 עודכנו.",
+   "crosscheck_he": "הגרסה הישנה של אותו מדד (NUTS 2013, אינדיקטור 0009763) מכסה 2015–2021 ועודכנה לאחרונה ב-2023-07-25; הסדרה שכאן עודכנה ב-2026-07-24. לשנת 2021 הן חלוקות ב-4 מתוך 18 העיריות (פרדש, פסוש דה פריירה, פנאפיאל, ולונגו), עד 14%. זהו עדכון של INE ולא שגיאה — הסדרה הישנה מוקפאת. ומשום כך היא **אינה** מקור שני בלתי תלוי, והביטחון נשאר reported."
+  },
+  "municipio.pop_growth_pct": {
+   "label_he": "שינוי באוכלוסייה בין מפקד 2011 למפקד 2021",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE — Taxa de variação da população residente (2011-2021) (%), אינדיקטור 0012272, מפקד 2021. מין: HM, גיל: Total",
+   "definition_pt": "Taxa de variação da população residente (2011- 2021) (%) por Local de residência à data dos Censos [2021]",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012272&Dim1=S7A2021&lang=PT",
+   "retrieved": "2026-09-12",
+   "coverage": "18/18",
+   "confidence": "reported",
+   "note_he": "‏INE מחשבת את השינוי בעצמה ומפרסמת אותו על גאוגרפיית מפקד 2021. זה מה שפותר את בעיית הגבולות: חלוקת הרובעים של 2011 אינה זו של 2021, ולכן חישוב עצמאי ברמת הרובע לא היה אפשרי. הערך כאן אינו נגזר אצלנו.",
+   "crosscheck_he": "‏pop2021 חלקי (1 + השינוי) מוחזר מול אוכלוסיית מפקד 2011 של INE (אינדיקטור 0005980), השמורה ב-data/raw/censos2011_municipios.json. ‏18 מתוך 18 העיריות תואמות עד 0.05%. בדיקה 7l אוכפת זאת. **זו הבדיקה שתפסה החלפה בין טרופה לולונגו** בטבלת קודי INE. ברמת הרובע אין השוואה כזו, כי אין אוכלוסיית 2011 על גבולות 2021. ‏אמרנטה היא היוצאת מן הכלל: השיעור שם מרמז על 56,263 תושבים ב-2011 מול 56,217 שמפקד 2011 מפרסם — 46 נפש, ‏0.08%. זהו פער בין שני פרסומים של INE עצמה, לא שגיאה כאן, והסף בבדיקה הוא 0.3% כדי שלא יכסה החלפה בין עיריות."
+  },
+  "freguesia.pop_growth_pct": {
+   "label_he": "שינוי באוכלוסייה בין מפקד 2011 למפקד 2021",
+   "value_type": "number",
+   "reference_year": 2021,
+   "source": "INE — Taxa de variação da população residente (2011-2021) (%), אינדיקטור 0012272, מפקד 2021. מין: HM, גיל: Total",
+   "definition_pt": "Taxa de variação da população residente (2011- 2021) (%) por Local de residência à data dos Censos [2021]",
+   "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012272&Dim1=S7A2021&lang=PT",
+   "retrieved": "2026-09-12",
+   "coverage": "243/243",
+   "confidence": "reported",
+   "note_he": "‏INE מחשבת את השינוי בעצמה ומפרסמת אותו על גאוגרפיית מפקד 2021. זה מה שפותר את בעיית הגבולות: חלוקת הרובעים של 2011 אינה זו של 2021, ולכן חישוב עצמאי ברמת הרובע לא היה אפשרי. הערך כאן אינו נגזר אצלנו.",
+   "crosscheck_he": "‏pop2021 חלקי (1 + השינוי) מוחזר מול אוכלוסיית מפקד 2011 של INE (אינדיקטור 0005980), השמורה ב-data/raw/censos2011_municipios.json. ‏18 מתוך 18 העיריות תואמות עד 0.05%. בדיקה 7l אוכפת זאת. **זו הבדיקה שתפסה החלפה בין טרופה לולונגו** בטבלת קודי INE. ברמת הרובע אין השוואה כזו, כי אין אוכלוסיית 2011 על גבולות 2021. ‏אמרנטה היא היוצאת מן הכלל: השיעור שם מרמז על 56,263 תושבים ב-2011 מול 56,217 שמפקד 2011 מפרסם — 46 נפש, ‏0.08%. זהו פער בין שני פרסומים של INE עצמה, לא שגיאה כאן, והסף בבדיקה הוא 0.3% כדי שלא יכסה החלפה בין עיריות."
+  },
+  "i18n.prose": {
+   "label_he": "פרוזה שנכתבה לאפליקציה — באנגלית",
+   "source": "נכתב לאפליקציה. האנגלית נכתבה בידי מחבר העברית ולא בתרגום מכונה; data/prose_en.json",
+   "reference_year": 2026,
+   "confidence": "reported",
+   "coverage": "524 מחרוזות פרוזה: 144 פרופילי עירייה, 239 הערות רובע, 60 תיאורי שכונה, ו-81 תוויות מקור והסתייגויות",
+   "note_he": "מ-1.33.0 גם הפרוזה שנכתבה לאפליקציה עוברת לאנגלית, ולא רק הממשק. זו אינה תרגום מכונה: כל מחרוזת נכתבה באנגלית בידי מי שכתב את העברית, ולכן היא טענה שמישהו כן כתב. כותרות של מקורות שמתפרסמות בפורטוגזית — שמות סדרות של INE, שמות מוסדות, מונחי מקור כמו criminalidade violenta e grave — נשמרות מילה במילה בשתי השפות, כי הן לשון המקור ולא לשון האפליקציה.",
+   "validation_he": "בדיקה 7o עוברת על כל מחרוזת עברית ב-data/processed ובקובץ הזה שמגיעה למסך, ודורשת ערך ב-prose_en.json שאינו ריק ואינו עברי. מחרוזת פרוזה חדשה בלי אנגלית מפילה את הבנייה."
+  },
+  "map.caop_2025": {
+   "label_he": "גבולות הרובעים — CAOP 2025",
+   "source": "CAOP 2025, Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0",
+   "reference_year": 2025,
+   "confidence": "verified",
+   "coverage": "275/275 רובעים, 18/18 עיריות",
+   "note_he": "מ-1.34.0 האפליקציה מציירת את חלוקת 2025 ולא את זו של 2013. הגבול והקוד מגיעים מאותו פוליגון — ‏dtmnfr יושב על הגאומטריה עצמה — ולכן אין יותר התאמה לפי שם בין הגבול לנתונים. ‏25 יחידות של 2013 פורקו ל-57 רובעים, וכל אחד מהם אומר במפורש מאיזו יחידה יצא ומה אותה יחידה מנתה.",
+   "validation_he": "מפקד 2021 נבנה מחדש על הגבולות האלה מתוך תת-המקטעים של BGRI: ‏21,337 תת-מקטעים שויכו לרובע המכיל אותם, ואף אחד לא נשאר בחוץ. סכום המחוז — 1,785,405 — זהה לסכום של חלוקת 2013. ‏57 הרובעים החדשים תואמים במדויק את טבלת ההמרה של INE, וכל 275 תואמים קובץ עצמאי שגזר את אותם ערכים בדרך אחרת. בדיקה 7r אוכפת שכל רובע שנוצר ב-2025 אומר מאיזו יחידה יצא, שאינו נושא את שמה או את תיאורה, ושהיחידה שווה לסכום יורשיה."
+  },
+  "map.ren_ran": {
+   "label_he": "מגבלות בנייה — REN ו-RAN",
+   "source": "Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0",
+   "reference_year": "לפי עירייה, 1995–2026",
+   "confidence": "reported",
+   "coverage": "REN ‏16/18 עיריות · RAN ‏17/18 · ‏22.8 מגה-בייט דחוסים, ‏1,556,351 קודקודים",
+   "note_he": "מ-1.35.0 השכבות באפליקציה, אך לא בתוכה: הן מורדות לפי דרישה, עירייה אחת בכל פעם, ונשמרות ב-IndexedDB. ‏DGT תוחם כל עירייה בחוק נפרד ובשנה נפרדת, ולכן אין ״שנת REN״ אחת — לכל עירייה מוצגת השנה שלה והחוק שלה לפני ההורדה. הגאומטריה נשמרת בדיוק כפי ש-DGT מפרסם אותה: שכבה שאומרת ״כאן אסור לבנות״ אינה מפושטת, כי פישוט מזיז את הקו. מה שהמסך מצייר בזום נתון מוחלק במרחב הפיקסלים בלבד.",
+   "caveat_he": "‏DGT אינו מפרסם REN ו-RAN לפורטו, ואינו מפרסם REN לווילה דו קונדה — המרשם לא החזיר עבורם ולו מצולע אחד בשליפה שממנה נבנה הערך הזה (2026-09-13). **זו היעדרות מהמרשם ביום שנקרא, ולא ראיה שאין תיחום חוקי.** ל-RAN ‏DGADR כן מפרסם סיבה כללית: מידע חסר מתאים לעירייה שאין לה RAN בפורמט וקטורי **או** שהמידע שלה נמצא אצלם בבדיקה — והמרשם אינו אומר איזה מהשניים, ולכן גם כאן לא נאמר. ל-REN לא מפורסמת סיבה כלל. **‏DGT מזהיר שהווקטור אינו מחליף את התיחום שפורסם ב-Diário da República:** מה שפורסם בגרסה בתוקף גובר, ולנכס מסוים יש לאמת מולו. ‏**סכנת שריפה אינה כלולה** — לא בגלל גודל אלא בגלל ש-serv_data שלה הוא תאריך החוק שהורה על המפה ולא שנת המפה, ובלי שנת ייחוס הנתון אינו עומד בכלל הראשון. בתצוגת המגבלות ויטרז׳ העיריות אינו מוצג: שני מישורי צבע זה על זה אינם שתי קריאות אלא אחת עכורה. השכבות מצוירות מתחת לגבולות העיריות.",
+   "validation_he": "כל קובץ נושא sha256 במניפסט, והאפליקציה מאמתת אותו לפני שהיא שומרת — קובץ שאינו תואם נדחה ולא נשמר כלל, כי שכבה חלקית מציירת חצי מפה בלי לומר, והחצי החסר נראה בדיוק כמו קרקע בלי מגבלה. השכבות יושבות במסד נתונים משלהן; מחיקת כולן אינה יכולה לגעת בנקודות הציון השמורות, ובדיקת ממשק אוכפת את זה במקום להצהיר עליו.",
+   "url": "https://ogcapi.dgterritorio.gov.pt/collections/srup_ren_areal"
+  },
+  "map.floods": {
+   "label_he": "אזורי הצפה ממופים",
+   "source": "Agência Portuguesa do Ambiente (APA) — Carta de zonas inundáveis, 2.º Ciclo da Diretiva 2007/60/CE",
+   "reference_year": "2023",
+   "confidence": "reported",
+   "coverage": "‏3 מתוך 18 עיריות · שלושה מחזורי חזרה · 5.85 קמ״ר במחזור 1000 שנה",
+   "note_he": "‏APA ממפה את גבול ההצפה לשלושה מחזורי חזרה — אחת ל-20, ל-100 ול-1000 שנה. השכבה נשלחת בתוך האפליקציה ואינה דורשת הורדה: שלושת הגבולות יחד שוקלים 76 קילו-בייט. הגאומטריה נשמרת בדיוק כפי ש-APA מפרסם אותה — בלי פישוט, ובלי חיתוך לגבול המחוז, כי חיתוך הוא עריכה. **מחזור חזרה אינו תחזית**: ״אחת ל-100 שנה״ הוא אירוע שסיכויו כאחוז אחד בכל שנה, לא אירוע שקורה פעם במאה.",
+   "caveat_he": "**‏APA אינה ממפה את כל הארץ, אלא 23 אזורי מחקר בלבד** — ARPSI שהוגדרו במחזור השני של הדירקטיבה. אחד מהם נקרא ״פורטו״, וכל 22 האחרים מחוץ למחוז. לכן במחוז מכוסות **שלוש עיריות בלבד**: פורטו (‏6.4% משטחה), וילה נובה דה גאיה (‏1.8%) וגונדומאר (‏0.002%). **ב-15 העיריות האחרות אין ולו מצולע אחד — וזה אומר שלא נחקרו, לא שאין בהן סכנת הצפה.** אמרנטה, בייאו ומרקו דה קנבזש יושבות על נהר הטמגה ואינן מכוסות. **גם בתוך אזור מחקר, היעדר מצולע אינו אישור.** האחוזים לעיל חושבו כאן ואינם מתפרסמים על ידי APA.",
+   "validation_he": "הגבול נקרא משלושת קובצי המקור של APA, אומת שהוא נושא EPSG:3763 ו-PolygonZ, והוטל ל-WGS84 בלי שינוי אחר. שטחי המקור (‏5.055, 5.522 ו-5.849 קמ״ר) נשמרים על כל מצולע כפי ש-APA כתב אותם ולא חושבו מחדש. **אנומליה במקור נשמרה**: בקובץ מחזור 100 השנה רשומת פורטו נושאת `id=20` בעוד כל שאר הרשומות באותו קובץ נושאות 100 — מחזור החזרה כאן נלקח מהקובץ ולא מהשדה, ולכן הדבר אינו משנה, אך גם לא תוקן.",
+   "url": "https://sniambgeoviewer.apambiente.pt/Geodocs/shpzips/D312_APA_AI_T100_Limite_PC.zip"
+  },
+  "municipio.cons_pct": {
+   "label_he": "שיעור השטח בתוך REN/RAN (עירייה)",
+   "coverage": "18/18 · REN 16/18 · RAN 17/18",
+   "validation_he": "המכנה אומת מול מקור שני: שטח כל אחת מ-275 היחידות שחושב כאן תואם את area_ha ש-DGT מפרסם על אותו פוליגון, בפער מרבי של 0.0032%. המונה: שטח ה-REN שחושב כאן שווה בדיוק ל-area_ha ש-DGT מפרסם על כל מצולע REN (אמרנטה 12,373.7 מול 12,373.7). ל-RAN אין שטח מפורסם, ולכן אין לו מקור שני. סכום 275 הרובעים שווה לשטח העירייה שלהם בכל אחת מ-18, והזהות REN ועוד RAN פחות החפיפה שווה לאיחוד מתקיימת בכל 293 השורות. מכיוון שהשיעור עצמו נגזר ואין לו פרסום מקביל, הוא מסומן approx ולא verified.",
+   "value_type": "number",
+   "reference_year": "1995–2026",
+   "source": "DGT, SRUP — Servidões e Restrições de Utilidade Pública: Reserva Ecológica Nacional (REN) e Reserva Agrícola Nacional (RAN), מצטלבות עם גבולות CAOP 2025 ב-EPSG:3763 (ETRS89 / Portugal TM06). scripts/build_constraints.py",
+   "url": "https://snit-mais.dgterritorio.gov.pt/",
+   "retrieved": "2026-09-13",
+   "caveat_he": "REN ו-RAN הן restrições de utilidade pública — הן מגבילות ומחייבות מסלול חריג ורישוי, ואינן איסור בנייה מוחלט (DL 166/2008, DL 73/2009). הערך הוא שיעור השטח שבתוך התיחום, ולא שיעור השטח שאסור לבנות בו. לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה — הן נעות בין 1995 ל-2026, והשנה המדויקת מוצגת לצד כל עירייה. השטח נחתך לגבול העירייה: במטוזיניוש DGT מפרסם 5,072.9 הקטר REN, אך רק 1,062.7 מהם על היבשה, והשאר הוא רצועת ההגנה הימית. REN ו-RAN חופפים, ולכן אסור לחבר את שני השיעורים: השורה ׳בשתיהן׳ היא החפיפה, ו׳סך הכול׳ הוא האיחוד, כלומר REN ועוד RAN פחות החפיפה. לפורטו לא חזר תיחום לאף אחת מהשתיים, ולווילה דו קונדה לא חזר REN — היעדרות מהמרשם ביום שנקרא, ולא ראיה שאין תיחום חוקי. שם מוצג ׳אין נתון׳ ולא אפס. DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן סיבה. **‏DGT מזהיר שהווקטור אינו מחליף את התיחום שפורסם ב-Diário da República** — מה שפורסם בגרסה בתוקף גובר, ולנכס מסוים זה מה שצריך לבדוק.",
+   "confidence": "approx"
+  },
+  "freguesia.cons_pct": {
+   "label_he": "שיעור השטח בתוך REN/RAN (רובע)",
+   "coverage": "275/275 · עם שכבה אחת לפחות 268/275",
+   "validation_he": "המכנה אומת מול מקור שני: שטח כל אחת מ-275 היחידות שחושב כאן תואם את area_ha ש-DGT מפרסם על אותו פוליגון, בפער מרבי של 0.0032%. המונה: שטח ה-REN שחושב כאן שווה בדיוק ל-area_ha ש-DGT מפרסם על כל מצולע REN (אמרנטה 12,373.7 מול 12,373.7). ל-RAN אין שטח מפורסם, ולכן אין לו מקור שני. סכום 275 הרובעים שווה לשטח העירייה שלהם בכל אחת מ-18, והזהות REN ועוד RAN פחות החפיפה שווה לאיחוד מתקיימת בכל 293 השורות. מכיוון שהשיעור עצמו נגזר ואין לו פרסום מקביל, הוא מסומן approx ולא verified.",
+   "value_type": "number",
+   "reference_year": "1995–2026",
+   "source": "DGT, SRUP — Servidões e Restrições de Utilidade Pública: Reserva Ecológica Nacional (REN) e Reserva Agrícola Nacional (RAN), מצטלבות עם גבולות CAOP 2025 ב-EPSG:3763 (ETRS89 / Portugal TM06). scripts/build_constraints.py",
+   "url": "https://snit-mais.dgterritorio.gov.pt/",
+   "retrieved": "2026-09-13",
+   "caveat_he": "REN ו-RAN הן restrições de utilidade pública — הן מגבילות ומחייבות מסלול חריג ורישוי, ואינן איסור בנייה מוחלט (DL 166/2008, DL 73/2009). הערך הוא שיעור השטח שבתוך התיחום, ולא שיעור השטח שאסור לבנות בו. לכל עירייה תיחום משלה, חוק משלה ושנת ייחוס משלה — הן נעות בין 1995 ל-2026, והשנה המדויקת מוצגת לצד כל עירייה. השטח נחתך לגבול העירייה: במטוזיניוש DGT מפרסם 5,072.9 הקטר REN, אך רק 1,062.7 מהם על היבשה, והשאר הוא רצועת ההגנה הימית. REN ו-RAN חופפים, ולכן אסור לחבר את שני השיעורים: השורה ׳בשתיהן׳ היא החפיפה, ו׳סך הכול׳ הוא האיחוד, כלומר REN ועוד RAN פחות החפיפה. לפורטו לא חזר תיחום לאף אחת מהשתיים, ולווילה דו קונדה לא חזר REN — היעדרות מהמרשם ביום שנקרא, ולא ראיה שאין תיחום חוקי. שם מוצג ׳אין נתון׳ ולא אפס. DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן סיבה. **‏DGT מזהיר שהווקטור אינו מחליף את התיחום שפורסם ב-Diário da República** — מה שפורסם בגרסה בתוקף גובר, ולנכס מסוים זה מה שצריך לבדוק.",
+   "confidence": "approx"
+  },
+  "municipio.crus": {
+   "label_he": "ייעוד קרקע (CRUS)",
+   "source": "Direção-Geral do Território (DGT), Carta do Regime de Uso do Solo (CRUS), OGC API Features — CC BY 4.0",
+   "reference_year": "לפי עירייה, 1995–2025",
+   "confidence": "approx",
+   "coverage": "18/18 עיריות · 15,194 מצולעים · הנתונים בלבד, בלי הגאומטריה",
+   "definitions_he": {
+    "Solo Urbano": "קרקע עירונית — השטח שבתוך המתחם העירוני שתוכנית המתאר של העירייה קבעה.",
+    "Solo Rústico": "קרקע לא-עירונית — כל מה שמחוץ למתחם העירוני. זה אינו ״קרקע חקלאית״: בפנים גם יער, מחצבות, בנייה מפוזרת ומקבצים כפריים. הקטגוריה היא שאומרת מה מתוכם.",
+    "Solo Urbano (urbanizável – transitório)": "קרקע שהתוכנית ייעדה לעיור ושטרם עוירה, תחת הוראת מעבר. אינה אחד משני המעמדות ואינה מקופלת לתוכם כאן.",
+    "Não Atribuída": "‏DGT לא שייך את השטח הזה לאף מעמד. זו אמירה של המקור על עצמו, ולא סיווג.",
+    "Discrepância": "הקרקע שההרמוניזציה של DGT לא יישבה בין התוכנית העירונית לסיווג הארצי. נשארת בשמה ואינה מחולקת בין המעמדות."
+   },
+   "note_he": "נוסף ב-1.46.0 כנתונים ולא כשכבה: המחוז הוא 15,194 מצולעי CRUS, ‏369 מגה-בייט כ-GeoJSON ו-39 אחרי דחיסה — מול 22.8 של REN ו-RAN יחד, שכבר יורדות לפי דרישה במקום להישלח. הפוליגונים נשארים ב-DGT. מה שהובא הוא טבלת הנתונים, דרך פלט ה-CSV של נקודת הקצה items; ‏skipGeometry ו-properties, שתי הדרכים המתבקשות לאותו דבר, מחזירות 500 בשרת הזה. ההקטרים הם area_ha ש-DGT מפרסם לכל מצולע, מחוברים לפי מעמד ולפי קטגוריה — לא נמדד כאן דבר מגאומטריה.",
+   "caveat_he": "‏**CRUS אינו מחליף את ה-PDM.** הוא ההרמוניזציה של DGT בין תוכניות המתאר העירוניות לסיווג ארצי אחד, ולנכס מסוים קובעת התוכנית של העירייה כפי שפורסמה, על תקנונה. **שנת הייחוס היא של העירייה ולא של CRUS** — תאריכי הפרסום נעים בין 1995 (וילה דו קונדה) ל-2025, והשנה ומספר ההפקדה מוצגים על כל שורה. **בסנטו טירסו התוכנית מסומנת אצל DGT כ-Não vigente**, כלומר אינה בתוקף, והכרטיס אומר זאת מעל המספרים. **קנה מידה המקור אינו אחיד**: רוב העיריות 1/10000, מטוזיניוש 1/15000, לוזאדה 1/25000 — קו במפה של 1/25000 אינו גבול מגרש. **בפאסוש דה פריירה סכום ההקטרים של CRUS גדול ב-2.71% משטח העירייה לפי CAOP**; ‏DGT אינו מפרסם סיבה, ולכן לא נאמרת כאן סיבה. בשאר 17 העיריות הפער אינו עולה על 0.04%. השיעורים מחושבים מול הסכום של CRUS עצמו לעירייה ולכן אינם מושפעים מהפער.",
+   "validation_he": "סכום ההקטרים של כל עירייה מושווה לשטחה מ-CAOP 2025 — 17 מתוך 18 בפער של עד 0.04%, והחריג היחיד רשום בשמו ב-checks.py כדי שחריג חדש יפיל את הבנייה. נבדק גם שהמעמדות מסתכמים ל-100%, שהקטגוריות מסתכמות לכל מעמד ולסך הכול, שלכל מעמד ולכל קטגוריה יש תווית עברית, ושלכל עירייה יש שנת ייחוס, מספר הפקדה וקנה מידה. עירייה שהשורות שלה חלוקות על תאריך הפרסום אינה מקבלת שנה כלל.",
+   "url": "https://ogcapi.dgterritorio.gov.pt/collections/crus"
+  },
+  "municipio.num": {
+   "label_he": "מספר העירייה על המפה (מספר רץ של האפליקציה)",
+   "value_type": "text",
+   "source": "מספור של האפליקציה, 1–18, בסדר של מסמך המקור: 1–11 האזור המטרופוליטני של פורטו, 12–18 טאמגה אה סוזה. אינו קוד רשמי; הקוד הרשמי (DICOFRE) כתוב בטקסט לצד השם"
+  },
+  "freguesia.num": {
+   "label_he": "מספר הרובע על המפה (מספר רץ של האפליקציה)",
+   "value_type": "text",
+   "source": "מספור של האפליקציה, 1..N בתוך כל עירייה, בסדר הקוד הרשמי (DICOFRE); נבנה ב-scripts/build.py. אינו קוד רשמי; הקוד הרשמי המלא כתוב בטקסט לצד השם"
+  },
+  "freguesia.tipau": {
+   "label_he": "טיפולוגיית אזורים עירוניים — TIPAU 2025",
+   "value_type": "category",
+   "categories": {
+    "APU": "Área predominantemente urbana",
+    "AMU": "Área mediamente urbana",
+    "APR": "Área predominantemente rural"
+   },
+   "reference_year": 2025,
+   "source": "INE — Tipologia de áreas urbanas, 2025 (TIPAU 2025), גרסה V05635 במערכת המטא-מידע של INE (smi.ine.pt). ייצוא הקטגוריות המלא, רמה 3 (רובע), לפי קוד DICOFRE. בתוקף מ-14-04-2025 לפי ההחלטה ה-76 של Secção Permanente de Coordenação Estatística, Diário da República, 2.ª série, n.º 96, 20-05-2025. scripts/fetch_tipau.py",
+   "url": "https://smi.ine.pt/Versao/Detalhes/5635",
+   "retrieved": "2026-09-15",
+   "coverage": "218/275",
+   "confidence": "reported",
+   "caveat_he": "טיפולוגיה סטטיסטית של INE, לא ייעוד תכנוני: ׳כפרי בעיקרו׳ אינו אומר שאסור לבנות, ו׳עירוני בעיקרו׳ אינו אומר שמותר — את זה אומר CRUS. הגרסה עומדת על CAOP 2020, ולכן ל-57 הרובעים שנוצרו ברפורמת 2025 אין שורה והם מוצגים כ׳אין נתון׳ — לא הסיווג של האיחוד שממנו יצאו.",
+   "validation_he": "243 שורות למחוז פורטו בקובץ, כמספר רובעי CAOP 2020. 218 מהן נמצאו ברובעי 2025 של האפליקציה לפי הקוד, ובכל 218 השם בקובץ INE זהה לשם ב-CAOP 2025. 25 הקודים הנותרים הם האיחודים שבוטלו ב-2025 ואינם באפליקציה. מקור שני עצמאי לסיווג אין, ולכן reported ולא verified."
+  },
+  "municipio.ele": {
+   "label_he": "גובה מעל פני הים — מזערי, ממוצע ומרבי",
+   "label_en": "Elevation above sea level — minimum, mean and maximum",
+   "value_type": "metres",
+   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
+   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
+   "reference_year": 2019,
+   "retrieved": "2026-09-16",
+   "coverage": "18/18 עיריות",
+   "confidence": "approx",
+   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. ביחידות החוף המינימום עשוי לרדת מעט מתחת לאפס: המכ״ם ראה מים, והאפס הוא גאואיד EGM2008 ולא מפלס הים בקאשקאיש. הערך נרשם כפי שנמדד ולא נחתך לאפס.",
+   "method_he": "חיתוך הרשת לגבול העירייה לפי CAOP 2025, ואז המינימום, הממוצע והמרבי של הפיקסלים שבתוכו. הרשת היא 30 מטר, ולכן פסגה צרה או גיא צר מ-30 מטר אינם בה."
+  },
+  "municipio.slope": {
+   "label_he": "שיפוע ממוצע",
+   "label_en": "Mean slope",
+   "value_type": "degrees",
+   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
+   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
+   "reference_year": 2019,
+   "retrieved": "2026-09-16",
+   "coverage": "18/18 עיריות",
+   "confidence": "approx",
+   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. השיפוע מחושב על אותה רשת של 30 מטר, ולכן הוא השיפוע של המדרון ולא של החלקה: מדרגה בת שני מטרים בתוך פיקסל אחת אינה בו.",
+   "method_he": "שיפוע כל פיקסל מחושב מהגרדיאנט של הרשת, כשמרווח המזרח־מערב מוכפל ב-cos(41°) — מעלת אורך קצרה ממעלת רוחב, וספָּק יחיד היה מטה כל מדרון מזרח־מערב בשליש. הערך הוא ממוצע העירייה."
+  },
+  "freguesia.ele": {
+   "label_he": "גובה מעל פני הים — מזערי, ממוצע ומרבי",
+   "label_en": "Elevation above sea level — minimum, mean and maximum",
+   "value_type": "metres",
+   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
+   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
+   "reference_year": 2019,
+   "retrieved": "2026-09-16",
+   "coverage": "275/275 רובעים",
+   "confidence": "approx",
+   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. ביחידות החוף המינימום עשוי לרדת מעט מתחת לאפס: המכ״ם ראה מים, והאפס הוא גאואיד EGM2008 ולא מפלס הים בקאשקאיש. הערך נרשם כפי שנמדד ולא נחתך לאפס.",
+   "method_he": "חיתוך הרשת לגבול הרובע לפי CAOP 2025, ואז המינימום, הממוצע והמרבי של הפיקסלים שבתוכו. הרשת היא 30 מטר, ולכן פסגה צרה או גיא צר מ-30 מטר אינם בה."
+  },
+  "freguesia.slope": {
+   "label_he": "שיפוע ממוצע",
+   "label_en": "Mean slope",
+   "value_type": "degrees",
+   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
+   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
+   "reference_year": 2019,
+   "retrieved": "2026-09-16",
+   "coverage": "275/275 רובעים",
+   "confidence": "approx",
+   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. השיפוע מחושב על אותה רשת של 30 מטר, ולכן הוא השיפוע של המדרון ולא של החלקה: מדרגה בת שני מטרים בתוך פיקסל אחת אינה בו.",
+   "method_he": "שיפוע כל פיקסל מחושב מהגרדיאנט של הרשת, כשמרווח המזרח־מערב מוכפל ב-cos(41°) — מעלת אורך קצרה ממעלת רוחב, וספָּק יחיד היה מטה כל מדרון מזרח־מערב בשליש. הערך הוא ממוצע הרובע."
+  },
+  "station.temp": {
+   "label_he": "טמפרטורה — נורמל 1991–2020 בתחנה",
+   "label_en": "Air temperature — 1991–2020 normal at the station",
+   "value_type": "°C",
+   "source": "Instituto Português do Mar e da Atmosfera (IPMA), נורמלים אקלימיים 1991–2020. הערכים נקראים מדף הנתונים של כל תחנה (www.ipma.pt/bin/file.data/climate-normal/), ב-scripts/fetch_ipma_normals.py.",
+   "url": "https://www.ipma.pt/pt/oclima/normais.clima/1991-2020/",
+   "reference_year": "1991–2020",
+   "retrieved": "2026-09-16",
+   "coverage": "2 תחנות במחוז, מתוך 55 בפורטוגל · 0 עיריות, 0 רובעים",
+   "confidence": "reported",
+   "caveat_he": "‏**זהו ערך של תחנה, לא של יחידה מנהלית.** ‏IPMA מפרסמת נורמל לתחנה, ומתוך 55 התחנות שלה שתיים בלבד עומדות במחוז פורטו: פדראש רובראש (החוף, 68 מ׳) ולוזין (פנים הארץ, 287 מ׳). אין כאן ערך לעירייה או לרובע, ולא יהיה — להעניק 275 רובעים טמפרטורה משתי תחנות היא אינטרפולציה שכלל 2 אוסר כשאינה מסומנת.",
+   "method_he": "ערכים חסרים בסדרה הושלמו ממודל WRF, והסדרות הומוגנו ב-RClimDex — כך IPMA מתארת את עבודתה. ערך חודשי נשען על 18 שנים לפחות מתוך 30, לפי כללי WMO (‏WCDP 10 / WMO TD 341).",
+   "validation_he": "ערכי תחנת פדראש רובראש נקראו פעמיים — מדף הנתונים ומהטבלה שדף הנורמלים מטמיע — והסקריפט מסרב לכתוב אם השניים נחלקים. זו קריאה שנייה ולא מקור שני: שניהם IPMA."
+  },
+  "station.prec": {
+   "label_he": "משקעים — נורמל 1991–2020 בתחנה",
+   "label_en": "Precipitation — 1991–2020 normal at the station",
+   "value_type": "mm",
+   "source": "Instituto Português do Mar e da Atmosfera (IPMA), נורמלים אקלימיים 1991–2020. הערכים נקראים מדף הנתונים של כל תחנה (www.ipma.pt/bin/file.data/climate-normal/), ב-scripts/fetch_ipma_normals.py.",
+   "url": "https://www.ipma.pt/pt/oclima/normais.clima/1991-2020/",
+   "reference_year": "1991–2020",
+   "retrieved": "2026-09-16",
+   "coverage": "2 תחנות במחוז, מתוך 55 בפורטוגל · 0 עיריות, 0 רובעים",
+   "confidence": "reported",
+   "caveat_he": "‏**זהו ערך של תחנה, לא של יחידה מנהלית.** ‏IPMA מפרסמת נורמל לתחנה, ומתוך 55 התחנות שלה שתיים בלבד עומדות במחוז פורטו: פדראש רובראש (החוף, 68 מ׳) ולוזין (פנים הארץ, 287 מ׳). אין כאן ערך לעירייה או לרובע, ולא יהיה — להעניק 275 רובעים טמפרטורה משתי תחנות היא אינטרפולציה שכלל 2 אוסר כשאינה מסומנת.",
+   "method_he": "ערכים חסרים בסדרה הושלמו ממודל WRF, והסדרות הומוגנו ב-RClimDex — כך IPMA מתארת את עבודתה. ערך חודשי נשען על 18 שנים לפחות מתוך 30, לפי כללי WMO (‏WCDP 10 / WMO TD 341).",
+   "validation_he": "ערכי תחנת פדראש רובראש נקראו פעמיים — מדף הנתונים ומהטבלה שדף הנורמלים מטמיע — והסקריפט מסרב לכתוב אם השניים נחלקים. זו קריאה שנייה ולא מקור שני: שניהם IPMA."
   }
+ },
+ "missing": {
+  "note_he": "השדות הבאים אינם באפליקציה כי לא הצלחתי לאמת ולו ערך אחד מהם מהסביבה שבה נבנתה: מדיניות הרשת חוסמת את ine.pt, pordata.pt, geoapi.pt, idealista.pt, AIMA, wikipedia ו-Overpass. לכל שדה יש סקריפט שמביא אותו במכונה עם רשת פתוחה, ואז build.py משלב אותו והאפליקציה מציגה אותו אוטומטית. עד אז מוצג 'אין נתון' — ולא אפס ולא הערכה.",
+  "items": [
+   {
+    "field": "housing.lift",
+    "label_he": "בניינים עם מעלית",
+    "why_he": "שתי העמודות בקובץ INE — N_EDIFICIOS_COM_ELEVADOR ו-N_EDIFICIOS_SEM_ELEVADOR — מסומנות הפוך. הן מסתכמות יחד לסך הבניינים, כלומר הספירה תקינה, אבל בבאיאו יוצא שלכמעט כל בניין בן קומה אחת יש מעלית. לא אפרסם ערך על סמך ניחוש איזו עמודה היא איזו.",
+    "candidate_sources": [
+     "https://www.ine.pt/xportal/xmain?xpid=INE&xpgid=ine_publicacoes"
+    ]
+   },
+   {
+    "field": "freguesia.price_eur_m2 / freguesia.rent_eur_m2 — בתשע עיריות",
+    "label_he": "מחיר ושכר דירה למ״ר ברמת הרובע",
+    "why_he": "מ-1.25.0 ארבע הסדרות של INE באפליקציה: מכירות (הכל, חדשות, קיימות) ושכר דירה בחוזים חדשים, ברבעון 2026Q1. ברמת העירייה יש ערך לכל 18. ברמת הרובע יש ערך ל-55 מתוך 275, ו-220 מציגים ׳אין נתון׳. ‏**המעבר לחלוקת 2025 החמיר את זה, כפי שנצפה מראש.** קודם היו 70 רובעים עם מחיר מתוך 243; ‏INE מפרסם לפי קודי 2013, וכל רובע שהרפורמה יצרה נושא קוד שלא היה קיים ב-2021 ולכן אין לו שורה. בתשע עיריות אין ולו רובע אחד עם ערך: אמרנטה, באיאו, פלגיירש, לוזאדה, מרקו דה קנבזש, מטוזיניוש, פאסוש דה פריירה, פנפייל ופובואה דה וארזים. מטוזיניוש ופובואה דה וארזים נוספו לרשימה בדיוק מהסיבה הזו — כל הרובעים שלהן פורקו ומוספרו מחדש. זה לא חסם רשת ולא פער בהורדה.",
+    "important_he": "אסור לתת לרובע את החציון של העירייה שלו, ואסור לתת לרובע חדש את המחיר של האיחוד שהוא יצא ממנו. חציון עירוני אינו חציון של רובע, וההבדל בין רובעי אותה עירייה הוא בדיוק מה שהמשתמש בא לחפש. ‏**המחיר של היחידה הקודמת אינו מוצג כמחיר של הרובע החדש בשום מקום** — הוא אינו נספר בהשוואות, בדירוגים או בצבעי המפה.",
+    "decision_he": "שלוש הסתייגויות המקור נשמרות במלואן: (1) המדד הוא חציון של שנים עשר החודשים האחרונים, ולכן האפליקציה אינה מציגה ואינה מחשבת שינוי רבעוני; (2) הסימון ׳-׳ של INE נשמר כערך חסר ולא כאפס; (3) הגאוגרפיה היא NUTS-2024, כלומר חלוקת הרובעים של 2013, והאפליקציה מציירת מ-1.34.0 את חלוקת 2025 — ולכן השיוך נשבר בדיוק כפי שנרשם כאן מראש: ‏55 רובעים עם מחיר ו-220 בלי. המספר שנרשם לפני המעבר היה 220, והוא יצא 220.",
+    "fetch": "scripts/fetch_ine_habitacao.py · scripts/import_ine_habitacao.py",
+    "candidate_sources": [
+     "https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=0012234&lang=PT",
+     "https://www.idealista.pt/media/relatorios-preco-habitacao/",
+     "https://www.ine.pt/ine/json_indicador/pindica.jsp"
+    ],
+    "raw_data_arrived_he": "2026-09-07: ine.pt מעולם לא היה חסום — check_network.py בדק ב-HEAD, ו-INE עונה ל-HEAD בסגירת החיבור. הסדרות כאן: data/raw/ine/ine_precos_venda.csv (מדד 0012234, מכירות, 2019Q4–2026Q1) ו-ine_rendas.csv (מדד 0014696, שכירות חדשה, 2020Q1–2026Q1). שני המדדים אומתו מול המטא-דאטה של INE ולא נלקחו מהזיכרון.",
+    "idealista_he": "נבדק ב-2026-09-12. מחבר idealista בסביבה הזו מחזיר **מודעות בודדות** ולא את דוח המחירים החודשי. בפנאפיאל הוא מדווח על 126 מודעות לכל העירייה — כ-4.5 לרובע על פני 28 רובעים — והמיקום שהוא מחזיר הוא ברמת העירייה, בלי רובע. מתוך 15 שנבדקו, חמש היו יחידות באותו פרויקט חדש וארבע באחר, ו-priceByArea נע בין 474 ל-5,305 €/מ״ר: אותה קווינטה מופיעה פעמיים, פעם מול שטח הבית ופעם מול 1.5 הקטאר של כרם. חציון שהיה מחושב מזה הוא נתון נגזר, מוטה לפי תמהיל המודעות של הרגע, ואינו דוח המחירים שפורסם. **לא חושב ולא פורסם.** הדוח עצמו — idealista.pt/media/relatorios-preco-habitacao — החזיר 403 בקריאה ישירה (הגנת בוט), והוא עדיין מקור אפשרי אם יגיע בדרך אחרת.",
+    "decision_2026_09_12_he": "הרובעים בשבע העיריות נשארים ׳אין נתון׳. זו ההחלטה, לא היעדר החלטה.",
+    "decision_2026_09_13_he": "המעבר לחלוקת 2025 בוצע בידיעה מלאה של המחיר הזה ובאישור מפורש. נאמנות לחלוקה המנהלית הנוכחית נבחרה על פני כיסוי מחירים רחב יותר בחלוקה שכבר אינה בתוקף."
+   },
+   {
+    "field": "bairro.boundary",
+    "label_he": "גבולות שכונה (מתחת לרובע)",
+    "why_he": "אין שכבה מנהלית רשמית מתחת לרובע בפורטוגל. ב-OSM יש בעיקר נקודות, לא פוליגונים. אפשרות מדויקת: subsecções estatísticas (BGRI) של INE — פוליגונים ממוספרים ללא שם.",
+    "decision_he": "לא הומצאו גבולות. האפליקציה מציגה את 53 השכונות של פורטו כטקסט ואת נקודות ה-OSM על המפה."
+   },
+   {
+    "field": "map.perigosidade_incendio",
+    "label_he": "סכנת שריפה — מפת הסכנה",
+    "why_he": "אין שנת ייחוס. ‏serv_data מחזיר 2006-06-28, ו-serv_dr באותה רשומה הוא ׳Decreto-Lei 124/2006׳ — כלומר זהו תאריך החוק שהורה על המפה ולא השנה שבה המפה נערכה. הנתון עצמו נגיש ונמדד: ‏173,047 מצולעים בתיבת המחוז. זה לא חסם רשת ולא חסם גודל.",
+    "important_he": "‏perigosidade הוא **סכנה** ולא risco. אלה שני מונחים נפרדים אצל המקור ואסור לתרגם את האחד לשני, גם אם המפה תפורסם יום אחד.",
+    "decision_he": "לא מתפרסם. הכלל הראשון בחוזה הדיוק דורש שנת ייחוס לכל נתון על המסך, ומפה בלי שנה היא בדיוק הטענה שאסור להציג. זו החלטה, לא היעדר החלטה.",
+    "candidate_sources": [
+     "https://ogcapi.dgterritorio.gov.pt/collections/srup_perigosidade_inc_rural",
+     "https://www.icnf.pt/"
+    ]
+   }
+  ]
+ }
 }
