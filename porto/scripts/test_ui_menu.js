@@ -286,10 +286,12 @@ const css = (page, sel, prop) =>
   const rowsNow = () => page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
   const CATS = ['cat:station', 'cat:hospital', 'cat:university', 'cat:museum',
                 'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
-  const WANT = ['search', 'mine', 'locate', 'cats', 'cats-open', 'cmp',
+  const WANT = ['search',
+    'mode:overview', 'mode:cons', 'mode:cmp', 'mode:lst', 'mode:mine',
+    'locate', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark', 'lang:he', 'lang:en',
-    'tiles', 'glass', 'cons', 'regions', 'more', 'save', 'load', 'info', 'dev', 'terms'];
+    'tiles', 'glass', 'regions', 'more', 'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -354,8 +356,10 @@ const css = (page, sel, prop) =>
   await page.waitForTimeout(400);
   ok('another tap brings them all back', await catsOn() === 8, String(await catsOn()));
 
-  const HE = { search: 'חיפוש', mine: 'המקומות שלי', locate: 'המיקום שלי',
-    cats: 'נקודות ציון',
+  const HE = { search: 'חיפוש', locate: 'המיקום שלי',
+    'mode:overview': 'סקירה', 'mode:cmp': 'השוואה', 'mode:lst': 'נכסים',
+    'mode:mine': 'המקומות שלי',
+    cats: 'נקודות ציון', regions: 'אזורים',
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
     'theme:light': 'תצוגת יום', 'theme:dark': 'תצוגת לילה',
     'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
@@ -374,9 +378,12 @@ const css = (page, sel, prop) =>
        if (!svg || !svg.children.length) return false;
        return svg.getBoundingClientRect().right > lab.getBoundingClientRect().right;
      })));
-  ok('the four groups are titled',
+  /* The mode is the first thing the menu offers, under the search: which of
+     the five readings of the same ground is on screen.  Everything below it
+     is how that reading is drawn. */
+  ok('the five groups are titled, and the mode comes first',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean)))
-       .join('|') === 'תצוגה|שפה|שכבות|נתונים',
+       .join('|') === 'מוד|תצוגה|שפה|שכבות|נתונים',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean))).join('|'));
 
   /* 5. the switches: a tap flips the row and the state behind it */
@@ -489,6 +496,17 @@ const css = (page, sel, prop) =>
   ok('the outline is the orange line at its documented width', rg.width === '3.2', String(rg.width));
   ok('and each region carries its key number at its centre',
      JSON.stringify(rg.nums) === JSON.stringify(['1', '2']), JSON.stringify(rg.nums));
+  /* A key number on a region the size of a metropolitan area is read at the
+     zoom that fits the region on screen; at the 24px the running numbers use
+     it was not legible there. */
+  const numBox = await page.evaluate(() => {
+    const el = LG.rgNums.getLayers()[0].getElement().querySelector('i');
+    const r = el.getBoundingClientRect();
+    return { w: Math.round(r.width), h: Math.round(r.height),
+             font: parseFloat(getComputedStyle(el).fontSize) };
+  });
+  ok('and it is drawn big, not at the size of a running number',
+     numBox.font >= 28 && numBox.w >= 40 && numBox.h >= 40, JSON.stringify(numBox));
   ok('opening the layer did not move the level', rg.level === 'district' && rg.mun === null, JSON.stringify(rg));
   const rtxt = await page.$eval('#doc', el => el.innerText);
   for (const need of ['אזורים', 'האזור המטרופוליטני של פורטו', 'טאמגה אה סוזה', 'NUTS III'])
@@ -500,6 +518,12 @@ const css = (page, sel, prop) =>
   /* tapping a row fills that region, and only that one */
   await page.click('#doc [data-region="1"]');
   await page.waitForTimeout(700);
+  const outside = () => page.evaluate(() => {
+    if (!LG.rgFill) return null;
+    const f = LG.rgFill.getBounds(), d = L.geoJSON(D.bM).getBounds();
+    return Math.max(d.getSouth() - f.getSouth(), d.getWest() - f.getWest(),
+                    f.getNorth() - d.getNorth(), f.getEast() - d.getEast());
+  });
   const sel1 = await page.evaluate(() => ({ sel: S.regionSel,
     fill: LG.rgFill ? LG.rgFill.getLayers().length : 0,
     op: LG.rgFill ? LG.rgFill.getLayers()[0].options.fillOpacity : null,
@@ -507,8 +531,13 @@ const css = (page, sel, prop) =>
     marked: document.querySelectorAll('#doc .region-row[aria-pressed="true"]').length }));
   ok('tapping a region in the list fills it orange at 40%',
      sel1.sel === 1 && sel1.op === 0.4 && sel1.colour === '#e2761b', JSON.stringify(sel1));
-  ok('and it fills that region\'s municipalities and no others',
-     sel1.fill === await page.evaluate(() => D.belts[1].nums.length), JSON.stringify(sel1.fill));
+  /* The whole region, not the part of it that happens to lie inside Porto
+     district.  Until 2.0.2 the fill was built from the region's municipalities
+     in this district, so the colour stopped at the district edge while the
+     orange outline around it did not — the fill has to reach past that edge. */
+  ok('and the fill is the whole region, reaching past the district edge',
+     sel1.fill === 1 && await outside() > 0.02,
+     JSON.stringify([sel1.fill, await outside()]));
   ok('and exactly one row is marked', sel1.marked === 1, String(sel1.marked));
 
   /* tapping the other one on the map does the same, and marks its card */
@@ -518,8 +547,8 @@ const css = (page, sel, prop) =>
     fill: LG.rgFill ? LG.rgFill.getLayers().length : 0,
     which: (document.querySelector('#doc .region-row[aria-pressed="true"]') || { dataset: {} }).dataset.region }));
   ok('tapping a region on the map fills it and marks its card in the reading half',
-     sel2.sel === 0 && sel2.which === '0'
-       && sel2.fill === await page.evaluate(() => D.belts[0].nums.length), JSON.stringify(sel2));
+     sel2.sel === 0 && sel2.which === '0' && sel2.fill === 1
+       && await outside() > 0.02, JSON.stringify([sel2, await outside()]));
   ok('tapping the same one again clears the choice',
      await page.evaluate(async () => { pickRegion(0, 'doc'); return S.regionSel === null && !LG.rgFill; }));
 
@@ -618,7 +647,7 @@ const css = (page, sel, prop) =>
 
   /* 7b. המקומות שלי: two buttons on a line, the heading under them. */
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
-  await page.click('[data-m="mine"]');
+  await page.click('[data-m="mode:mine"]');
   await page.waitForTimeout(800);
   ok('the screen is headed המקומות שלי',
      (await page.$eval('#doc h1', e => e.textContent)).trim() === 'המקומות שלי',
@@ -636,9 +665,15 @@ const css = (page, sel, prop) =>
      (await page.$eval('[data-wpact="new"]', e => e.textContent)).trim() === 'חדש');
   ok('and sits at the start edge — the right — 10px in',
      near(pane.right - newBtn.right, 10, 2), `${(pane.right - newBtn.right).toFixed(1)}px`);
-  ok('רשימה is to its left, on the same line',
-     modeBtn.right <= newBtn.x + 1 && near(modeBtn.y, newBtn.y),
-     `mode right ${modeBtn.right.toFixed(1)}, new x ${newBtn.x.toFixed(1)}`);
+  /* רשימה is not one of the page's own buttons: it controls how the page
+     below it is drawn, so it lives in the fixed bar at the head of the reading
+     half, above חדש and above the heading, and it does not scroll away. */
+  ok('רשימה sits in the fixed bar, above the page rather than on its first line',
+     await page.$('#docBar [data-dense]') !== null && modeBtn.bottom <= newBtn.y + 1,
+     `chip bottom ${modeBtn.bottom.toFixed(1)}, new y ${newBtn.y.toFixed(1)}`);
+  ok('and the bar is a single short line, not a band',
+     modeBtn.h <= 28 && (await box(page, '#docBar')).h <= 40,
+     JSON.stringify([modeBtn.h, (await box(page, '#docBar')).h]));
   ok('the heading is under the buttons, not beside them', h1.y > newBtn.bottom - 1,
      `buttons end ${newBtn.bottom.toFixed(1)}, heading ${h1.y.toFixed(1)}`);
 
@@ -1153,7 +1188,7 @@ const css = (page, sel, prop) =>
      tilesBefore === true);
   ok('and so are the rivers', await page.evaluate(() => S.water) === true);
   if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(300); }
-  await page.click('[data-m="cmp"]');
+  await page.click('[data-m="mode:cmp"]');
   await page.waitForTimeout(1000);
   ok('the menu row opens השוואת נתונים', await page.evaluate(() => S.cmp) === true);
   ok('it opens on the district, the eighteen municipalities',
@@ -1391,11 +1426,13 @@ const css = (page, sel, prop) =>
      back as it was. */
   await page.click('#homeBtn');
   await page.waitForTimeout(900);
-  ok('home keeps the comparison open — it is a level, not a mode', await page.evaluate(() => S.cmp) === true);
+  ok('home leaves the comparison — it is the one way back to the start', await page.evaluate(() => S.cmp) === false);
   ok('and comes back to the district', await page.evaluate(() => S.level) === 'district');
-  await page.click('#modeBar [data-mode="overview"]');
+  await page.evaluate(() => { if (!S.cmp) toggleCmp(); }); await page.waitForTimeout(700);
+  await page.click('#menuBtn'); await page.waitForTimeout(250);
+  await page.click('#menuIn [data-m="mode:overview"]');
   await page.waitForTimeout(700);
-  ok('the סקירה tab closes the comparison', await page.evaluate(() => S.cmp) === false);
+  ok('the סקירה row closes the comparison', await page.evaluate(() => S.cmp) === false);
   ok('and gives the street background back exactly as it was',
      await page.evaluate(() => S.tiles) === tilesBefore,
      `${tilesBefore} → ${await page.evaluate(() => S.tiles)}`);
@@ -1534,7 +1571,7 @@ const css = (page, sel, prop) =>
   });
   await page.evaluate(() => goHome()); await page.waitForTimeout(400);
   await page.evaluate(() => openMenu(true)); await page.waitForTimeout(300);
-  await page.click('[data-m="mine"]').catch(() => {});
+  await page.click('[data-m="mode:mine"]').catch(() => {});
   await page.waitForTimeout(600);
   ok("a point the user saved keeps their own words, in English too",
      await page.evaluate(() => /נקודה שלי/.test(document.getElementById('doc').innerText)),
@@ -1723,14 +1760,12 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => openMenu(true));
   await page.waitForTimeout(300);
   const mrows = await page.$$eval('#menuIn [data-m]', els => els.map(e => e.dataset.m));
-  ok('the menu carries one row for the constraints', mrows.indexOf('cons') >= 0,
-     JSON.stringify(mrows.slice(mrows.indexOf('tiles'), mrows.indexOf('tiles') + 5)));
-  ok('and it sits under שכבות, between the stained glass and the regions',
-     mrows.indexOf('cons') === mrows.indexOf('glass') + 1
-       && mrows.indexOf('regions') === mrows.indexOf('cons') + 1
-       && mrows.indexOf('more') === mrows.indexOf('regions') + 1, JSON.stringify(mrows.slice(mrows.indexOf('tiles'))));
+  ok('the menu carries one row for the constraints', mrows.indexOf('mode:cons') >= 0,
+     JSON.stringify(mrows.slice(0, 7)));
+  ok('and it is a mode, second in the list of five',
+     mrows.indexOf('mode:cons') === mrows.indexOf('mode:overview') + 1, JSON.stringify(mrows.slice(0, 7)));
   const consLabel = await page.evaluate(() =>
-    document.querySelector('#menuIn [data-m="cons"]').innerText);
+    document.querySelector('#menuIn [data-m="mode:cons"]').innerText);
   ok('the row says what is still to download before it is pressed',
      /MB/.test(consLabel), JSON.stringify(consLabel));
 
@@ -1753,7 +1788,7 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { goDistrict(); S.tiles = true; tileLayer.addTo(map); S.muncol = true; });
   await page.evaluate(() => openMenu(true));
   await page.waitForTimeout(250);
-  page.evaluate(() => { document.querySelector('#menuIn [data-m="cons"]').click(); });
+  page.evaluate(() => { document.querySelector('#menuIn [data-m="mode:cons"]').click(); });
   await page.waitForFunction(() => S.cons === true, null, { timeout: 20000 });
   await page.waitForTimeout(500);
   ok('opening the page does not move the level', await page.evaluate(() => S.level) === 'district');
@@ -1890,35 +1925,42 @@ const css = (page, sel, prop) =>
   ok('and it is still centred on the home button here',
      Math.abs(await crumbMid()) <= 1, `${await crumbMid()}px off centre`);
 
-  /* Home is a level, not a mode: from level 3 of this page it goes to the
-     district and the page stays open there.  The סקירה tab is the way out,
-     and it is what gives the level fill back. */
+  /* Home is the way out of a mode, not a way up a level: from level 3 of this
+     page it leaves the mode and lands on the overview at level 1.  Going one
+     level up is what the trail directly above the map is for. */
   await page.evaluate(() => goHome());
   await page.waitForTimeout(900);
-  ok('home from level 3 of the page goes to the district and keeps the page',
-     await page.evaluate(() => S.cons === true && S.level === 'district'
-       && /מגבלת בנייה/.test(document.getElementById("doc").innerText)));
-  await page.click('#modeBar [data-mode="overview"]');
-  await page.waitForTimeout(800);
-  ok('the סקירה tab leaves the page',
-     await page.evaluate(() => S.cons === false
+  ok('home from level 3 of the page leaves the mode and lands at level 1',
+     await page.evaluate(() => S.cons === false && S.level === 'district'
        && !/מגבלת בנייה/.test(document.getElementById("doc").innerText)));
-  ok('and the level fill it had taken away is back',
+  ok('and the level fill the page had taken away is back',
      await page.evaluate(() => S.muncol === true));
-  /* And back in from the tab, at level 1. */
-  await page.click('#modeBar [data-mode="cons"]');
+  ok('and the menu marks the overview as the mode in force', await page.evaluate(() => {
+    openMenu(true);
+    const on = document.querySelector('#menuIn [data-m="mode:overview"]')
+      .getAttribute('aria-current') === 'true';
+    openMenu(false); return on; }));
+  /* And back in from the menu, at level 1. */
+  await page.click('#menuBtn'); await page.waitForTimeout(250);
+  await page.click('#menuIn [data-m="mode:cons"]');
   await page.waitForFunction(() => consPhase === 'ready', null, { timeout: 120000 });
   await page.waitForTimeout(600);
-  ok('the page reopens from the tab with no second download', await page.evaluate(() =>
+  ok('the page reopens from the menu with no second download', await page.evaluate(() =>
     S.cons === true && S.level === 'district' && consMissing().length === 0));
-  ok('and the tab row marks it as the mode in force',
-     await page.$eval('#modeBar [data-mode="cons"]', e => e.getAttribute('aria-selected')) === 'true');
+  await page.click('#menuBtn'); await page.waitForTimeout(300);
+  ok('and the menu marks it as the mode in force',
+     await page.$eval('#menuIn [data-m="mode:cons"]', e => e.getAttribute('aria-current')) === 'true');
+  await page.click('#menuClose'); await page.waitForTimeout(250);
   ok('and at level 1 the trail names the district, with nothing above it',
      (await page.$eval('#crumb', e => e.innerText)).trim().indexOf('\n') < 0);
   await page.evaluate(() => goHome());
   await page.waitForTimeout(800);
-  ok('home at level 1 of the page changes nothing — it is already home, and home is not a way out',
-     await page.evaluate(() => S.cons === true && S.level === 'district'));
+  ok('home at level 1 of the page leaves it too — home is a mode, not a level',
+     await page.evaluate(() => S.cons === false && S.level === 'district'));
+  /* Back on, for the map's own click path. */
+  await page.evaluate(() => { openMenu(true);
+    document.querySelector('#menuIn [data-m="mode:cons"]').click(); });
+  await page.waitForFunction(() => S.cons && consPhase === 'ready', null, { timeout: 120000 });
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
   await page.evaluate(() => {
@@ -1942,7 +1984,7 @@ const css = (page, sel, prop) =>
   /* Off is off. It is not a refund. */
   await page.evaluate(() => openMenu(true));
   await page.waitForTimeout(250);
-  await page.evaluate(() => document.querySelector('#menuIn [data-m="cons"]').click());
+  await page.evaluate(() => document.querySelector('#menuIn [data-m="mode:overview"]').click());
   await page.waitForFunction(() => S.cons === false, null, { timeout: 30000 });
   await page.waitForTimeout(500);
   ok('switching it off takes the page and the drawing away',
@@ -1957,7 +1999,7 @@ const css = (page, sel, prop) =>
 
   /* 13e. THE KEY IS THREE SWITCHES, and the map is what they switch. */
   await page.evaluate(() => { if (!S.cons) { openMenu(true);
-    document.querySelector('#menuIn [data-m="cons"]').click(); } });
+    document.querySelector('#menuIn [data-m="mode:cons"]').click(); } });
   await page.waitForFunction(() => S.cons && consPhase === 'ready', null, { timeout: 120000 });
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
@@ -2870,9 +2912,9 @@ const css = (page, sel, prop) =>
      navigating keeps the mode.  Read off S and the tab row after each step. */
   {
     const cell = () => page.evaluate(() => ({ level: S.level, mun: S.mun, zone: S.zone,
-      mode: S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview',
-      tab: (document.querySelector('#modeBar [aria-selected="true"]') || { dataset: {} }).dataset.mode,
-      tabs: document.querySelectorAll('#modeBar [role="tab"]').length,
+      mode: modeOf(),
+      tab: (document.querySelector('#menuIn [data-m^="mode:"][aria-current="true"]') || { dataset: { m: '' } }).dataset.m.slice(5),
+      tabs: document.querySelectorAll('#menuIn [data-m^="mode:"]').length,
       text: document.getElementById('doc').innerText.length }));
     const go = async level => {
       await page.evaluate(l => {
@@ -2883,40 +2925,51 @@ const css = (page, sel, prop) =>
       await page.waitForTimeout(600);
     };
     const mode = async k => {
-      await page.click(`#modeBar [data-mode="${k}"]`);
+      if (!(await page.$eval('#menu', e => !e.hidden))) { await page.click('#menuBtn'); await page.waitForTimeout(250); }
+      await page.click(`#menuIn [data-m="mode:${k}"]`);
       await page.waitForFunction(() => !S.cons || consPhase === 'ready', null, { timeout: 120000 });
       await page.waitForTimeout(600);
     };
     await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); });
-    ok('the tab row offers the four modes', (await cell()).tabs === 4, JSON.stringify(await cell()));
-    ok('and it sits at the head of the text half',
+    ok('the menu offers the five modes, ״המקומות שלי״ among them',
+       (await cell()).tabs === 5, JSON.stringify(await cell()));
+    ok('and they sit at the top of the menu, right under חיפוש',
        await page.evaluate(() => {
-         const b = document.querySelector('#modeBar').getBoundingClientRect();
-         const p = document.querySelector('#paneText').getBoundingClientRect();
-         return Math.abs(b.top - p.top) <= 1 && b.height >= 44;
+         const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
+         return rows[0] === 'search' && rows.slice(1, 6).every(r => r.startsWith('mode:'));
        }));
+    ok('and no mode bar takes a strip off the reading half any more',
+       await page.evaluate(() => !document.getElementById('modeBar')));
     for (const level of ['district', 'mun', 'zone']) {
       await mode('overview'); await go(level);
       const before = await cell();
-      for (const k of ['cons', 'cmp', 'lst', 'overview']) {
+      for (const k of ['cons', 'cmp', 'lst', 'mine', 'overview']) {
         await mode(k);
         const c = await cell();
+        /* המקומות שלי with nothing saved yet is a heading and a חדש button,
+           and that is the whole of it — it does not invent rows to fill. */
         ok(`${level} × ${k}: the cell exists, the tab says so, and the text half says something`,
-           c.mode === k && c.tab === k && c.text > 40, JSON.stringify(c));
+           c.mode === k && c.tab === k && c.text > (k === 'mine' ? 10 : 40), JSON.stringify(c));
         ok(`${level} × ${k}: switching to it kept the level and the unit`,
            c.level === before.level && c.mun === before.mun && c.zone === before.zone,
            JSON.stringify([before, c]));
       }
     }
-    /* the other axis: navigate inside a mode and the mode stays, home included */
-    for (const k of ['cons', 'cmp', 'lst']) {
+    /* The other axis: navigating inside a mode keeps the mode.  The home
+       button is not navigation — it is the one way back to the overview at
+       level 1, from any mode and any level.  Going UP one level is what the
+       trail above the map is for. */
+    for (const k of ['cons', 'cmp', 'lst', 'mine']) {
       await go('district'); await mode(k);
       await go('mun'); const a = await cell();
       await go('zone'); const b = await cell();
       await page.click('#homeBtn'); await page.waitForTimeout(700); const c = await cell();
-      ok(`${k}: two levels down and home again, and the mode never changed`,
-         a.mode === k && a.level === 'mun' && b.mode === k && b.level === 'zone'
-           && c.mode === k && c.level === 'district', JSON.stringify([a, b, c]));
+      ok(`${k}: two levels down and the mode never changed`,
+         a.mode === k && a.level === 'mun' && b.mode === k && b.level === 'zone',
+         JSON.stringify([a, b]));
+      ok(`${k}: and the home button is the way out — the overview, at level 1`,
+         c.mode === 'overview' && c.level === 'district' && c.tab === 'overview',
+         JSON.stringify(c));
     }
     /* level 3 of the comparison: the parish among its siblings, and marked */
     await go('zone'); await mode('cmp');
@@ -2928,14 +2981,14 @@ const css = (page, sel, prop) =>
        await page.evaluate(() => { let black = 0, n = 0;
          LG.lnFre.eachLayer(l => { n++; if (l.options.color === C.white) black++; });
          return n >= 2 && black === 1; }));
-    /* the places list is not a mode: it opens over the comparison and closes back into it */
-    await page.evaluate(() => toggleWp()); await page.waitForTimeout(500);
-    const over = await cell();
-    await page.evaluate(() => toggleWp()); await page.waitForTimeout(500);
-    const back = await cell();
-    ok('the places list opens over the comparison without closing it, and closes back into it',
-       over.mode === 'cmp' && over.level === 'zone' && back.mode === 'cmp' && back.level === 'zone'
-         && back.text > 40, JSON.stringify([over, back]));
+    /* המקומות שלי is the fifth mode, not a drawer over a fourth: choosing
+       it leaves whatever was on, and choosing that one again comes back to it
+       at the level it was left on. */
+    await mode('mine'); const over = await cell();
+    await mode('cmp'); const back = await cell();
+    ok('המקומות שלי leaves the comparison, and the comparison comes back to the same unit',
+       over.mode === 'mine' && over.level === 'zone' && back.mode === 'cmp'
+         && back.level === 'zone' && back.text > 40, JSON.stringify([over, back]));
     await mode('overview'); await go('district');
   }
 
@@ -2948,7 +3001,8 @@ const css = (page, sel, prop) =>
     const fixture = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'listings_lousada.json'), 'utf8'));
     await page.route('**img4.idealista.pt/**', r => r.abort());
     await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); goDistrict(); });
-    await page.click('#modeBar [data-mode="lst"]'); await page.waitForTimeout(600);
+    await page.click('#menuBtn'); await page.waitForTimeout(250);
+    await page.click('#menuIn [data-m="mode:lst"]'); await page.waitForTimeout(600);
     ok('the listings tab opens a search form and moves nothing', await page.evaluate(() =>
       S.lst === true && S.level === 'district' && !!document.querySelector('#lstForm') && !!document.querySelector('#lstSearch')));
     ok('the form is one column with a label above every field', await page.evaluate(() => {
@@ -2993,7 +3047,8 @@ const css = (page, sel, prop) =>
     await page.click(`#doc [data-lstact="del"][data-code="${fixture.items[1].code}"]`).catch(() => {});
     await page.evaluate(c => { lstSetState(c, 'deleted'); redrawText(); }, fixture.items[1].code); await page.waitForTimeout(400);
     ok('delete removes a listing from the results', await page.evaluate(() => lstLive().length) === 5);
-    await page.click('#modeBar [data-mode="overview"]'); await page.waitForTimeout(700);
+    await page.click('#menuBtn'); await page.waitForTimeout(250);
+    await page.click('#menuIn [data-m="mode:overview"]'); await page.waitForTimeout(700);
     const ov = await page.evaluate(() => ({ level: S.level, zone: S.zone, lst: document.querySelectorAll('#doc .lst, #doc .lst-quote').length,
       euros: /€ ?69|69[,.]000/.test(document.getElementById('doc').innerText), chips: document.querySelectorAll('#doc [data-src]').length }));
     ok('the overview of the same parish shows the statistics and not one listing — two screens, no mixing', ov.level === 'zone' && ov.lst === 0 && !ov.euros && ov.chips > 0, JSON.stringify(ov));
@@ -3107,24 +3162,40 @@ const css = (page, sel, prop) =>
     await page.click('#homeBtn'); await page.waitForTimeout(400);
     if (await page.evaluate(() => S.dense)) { await page.click('[data-dense]'); await page.waitForTimeout(300); }
     const vis = sel => page.$$eval(sel, els => els.filter(e => e.getClientRects().length > 0).length);
-    const chipIn = async () => (await page.$('#doc [data-dense]')) !== null;
+    const chipIn = async () => (await page.$('#docBar [data-dense]')) !== null;
     const where = [];
     where.push(['district', await chipIn()]);
     await page.evaluate(() => toggleCmp()); await page.waitForTimeout(300); where.push(['comparison', await chipIn()]);
     await page.evaluate(() => toggleCmp()); await page.evaluate(async () => { await toggleCons(); }); await page.waitForTimeout(300); where.push(['constraints', await chipIn()]);
     await page.evaluate(async () => { await toggleCons(); }); await page.waitForTimeout(300);
     ok('list/expanded: the same chip in the district, comparison and constraints views', where.every(w => w[1]), JSON.stringify(where));
+    /* It governs the page below it, so it stays where it is when that page
+       scrolls.  Until 2.0.2 it was part of the page and went with it. */
+    const stuck = await page.evaluate(async () => {
+      const bar = document.getElementById('docBar');
+      const sc = document.getElementById('paneText');
+      sc.scrollTop = 0; await new Promise(r => setTimeout(r, 120));
+      const top0 = bar.getBoundingClientRect().top;
+      sc.scrollTop = 600; await new Promise(r => setTimeout(r, 200));
+      const out = { top0, top1: bar.getBoundingClientRect().top, scrolled: sc.scrollTop,
+                    h: Math.round(bar.getBoundingClientRect().height) };
+      sc.scrollTop = 0; return out;
+    });
+    ok('list/expanded: the chip stays at the head of the reading half when the page scrolls',
+       stuck.scrolled > 200 && Math.abs(stuck.top1 - stuck.top0) <= 1, JSON.stringify(stuck));
+    ok('list/expanded: and the bar it sits in is one short line, not a band',
+       stuck.h > 0 && stuck.h <= 40, JSON.stringify(stuck));
     const before = { d: await vis('#doc .row-d'), y: await vis('#doc .stat-y'), no: await vis('#doc .stat.no'), src: await vis('#doc [data-src]') };
-    await page.click('#doc [data-dense]'); await page.waitForTimeout(400);
+    await page.click('#docBar [data-dense]'); await page.waitForTimeout(400);
     const after = { d: await vis('#doc .row-d'), y: await vis('#doc .stat-y'), no: await vis('#doc .stat.no'), src: await vis('#doc [data-src]') };
     ok('list: descriptions fold away', before.d > 5 && after.d === 0, `${before.d} → ${after.d}`);
     ok('list: every year, every "אין נתון" and every source button stay visible',
        after.y === before.y && after.no === before.no && after.src === before.src && before.src > 0, JSON.stringify({ before, after }));
     await page.click('#doc [data-mun="14"]'); await page.waitForTimeout(500);
     ok('list: one state — still compact inside Lousada, chip offers מורחב',
-       await page.$eval('#doc', e => e.classList.contains('dense')) && (await page.$eval('#doc [data-dense]', e => e.textContent.trim())) === 'מורחב'
+       await page.$eval('#doc', e => e.classList.contains('dense')) && (await page.$eval('#docBar [data-dense]', e => e.textContent.trim())) === 'מורחב'
          && await vis('#doc .row-d') === 0 && await vis('#doc .stat-y') > 0);
-    await page.click('#doc [data-dense]'); await page.waitForTimeout(300);
+    await page.click('#docBar [data-dense]'); await page.waitForTimeout(300);
   }
 
   /* ---- the three pages behind the one drawer -----------------------------

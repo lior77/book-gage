@@ -200,19 +200,16 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
    is this column and the inset belongs here. */
 .doc{padding:10px 10px calc(10px + var(--safe-b));
      display:flex; flex-direction:column; gap:var(--s4)}
-/* The mode switcher.  Sticky at the head of the text half, so it is in the
-   same place at every level and under every scroll: the matrix is three levels
-   by four modes, and this row is the mode axis made visible.  Tabs, not chips:
-   exactly one is ever selected, and the selected one is underlined in the
-   accent, which is the one colour reserved for what is interactive. */
-.modebar{position:sticky; inset-block-start:0; z-index:5; display:flex; gap:var(--s1);
-         padding:0 var(--s2); background:var(--card); border-block-end:1px solid var(--line)}
-.mode{flex:1 1 0; min-width:0; min-height:var(--ctl-size); padding:var(--s2) var(--s1);
-      font-family:inherit; font-size:var(--t-sm); font-weight:700; line-height:var(--lh-sm);
-      color:var(--ink-2); background:none; border:0; border-block-end:3px solid transparent;
-      cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.mode[aria-selected="true"]{color:var(--accent); border-block-end-color:var(--accent)}
-.mode:active{background:var(--bg)}
+/* The strip above the page: the mode's own display controls, and nothing that
+   navigates.  Sticky at the head of the reading half, so it does not scroll
+   away with the text under it — and compact, because the space it takes is
+   taken from every screen.  2.0.0 put the four mode tabs here instead, at
+   44px plus a border; that strip belonged to these controls. */
+.docbar{position:sticky; inset-block-start:0; z-index:5; display:flex; align-items:center;
+        gap:var(--s2); min-height:34px; padding:var(--s1) var(--s3);
+        background:var(--card); border-block-end:1px solid var(--line)}
+.docbar:empty{display:none}
+.docbar .chip{padding:var(--s1) var(--s3); font-size:var(--t-xs); line-height:var(--lh-xs)}
 
 /* The seam between the halves is a line, not a handle.  Dragging it is gone:
    the split is half and half, and the layout button is the only thing that
@@ -926,8 +923,13 @@ body[data-view="text"] .map-only{display:none}
   color:inherit; cursor:pointer; border-radius:var(--r-ctl)}
 .region-row:active{background:var(--bg)}
 .region-row[aria-pressed="true"]{background:var(--hi); box-shadow:inset 2px 0 0 var(--hi-line)}
-/* the number on a region is the map's own label, in the regions' orange */
+/* The number on a region: the map's own label in the regions' orange, at four
+   times the area of a municipality's.  Two numbers on a screen that is about
+   them can afford the room, and at the municipality size they read as a stray
+   label rather than as the region's own mark. */
 .lbl-region{--lbl-ink:var(--map-region)}
+.lbl-region,.lbl-region > i{width:48px; height:48px}
+.lbl-region > i{font-size:var(--t-3xl); line-height:var(--lh-3xl); -webkit-text-stroke:5px var(--lbl-halo)}
 
 /* ---------- מוד נכסים ---------- */
 /* A listing card: the quote's own price line, the provider's picture beside it,

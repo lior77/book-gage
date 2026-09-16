@@ -1420,6 +1420,21 @@ def main():
                  if f["properties"]["code"] == code}
         if "solo" not in parts:
             fail("NUTS III %s has no line of its own" % code)
+        # the area polygon: what the app fills when a region is chosen.  Until
+        # 2.0.1 there was none and the app filled the region's municipalities
+        # inside the district, so the colour stopped at the district edge while
+        # the outline around it did not.
+        if "area" not in parts:
+            fail("NUTS III %s has no area polygon, so the app cannot fill the "
+                 "whole region — only the part inside the district" % code)
+        else:
+            area = [f for f in nuts if f["properties"]["code"] == code
+                    and f["properties"]["part"] == "area"]
+            if len(area) != 1:
+                fail("NUTS III %s has %d area polygons; one is expected" % (code, len(area)))
+            elif area[0]["geometry"]["type"] not in ("Polygon", "MultiPolygon"):
+                fail("NUTS III %s: the area is a %s, which cannot be filled"
+                     % (code, area[0]["geometry"]["type"]))
         if "shared" not in parts:
             fail("NUTS III %s has no stepped-in line along the shared border, "
                  "so the two regions would draw one line on top of the other"
@@ -1428,6 +1443,11 @@ def main():
         fail("boundaries_belts.geojson carries a district outline again; the district "
              "is the municipalities' outer edge and is drawn once, by them")
     for f in belts:
+        # `area` is the one feature here that is meant to be a polygon — it is
+        # what the app fills.  Every other feature is a line, and a polygon
+        # among them would be a filled shape where a border was meant.
+        if f["properties"].get("part") == "area":
+            continue
         if f["geometry"]["type"] not in ("LineString", "MultiLineString"):
             fail("outline %s/%s is a %s; these are lines, not areas"
                  % (f["properties"].get("kind"), f["properties"].get("part"),

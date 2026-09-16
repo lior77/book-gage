@@ -124,8 +124,8 @@ const S = {
   muncol: true,        // ★ the level's own colour fill: 18 municipalities at
                        //   level 1, the parishes at 2, the parish itself at 3
   mine: true,          // draw the points the user added
-  // The four boundary layers.  Each is drawn at every level and switched on
-  // its own; the level decides which of them are black and which recede.
+  // No boundary flags: from 2.0.0 what is drawn is a function of (level, mode)
+  // and nothing about boundaries is saved.  See drawLines().
   sortDesc: false,     // ranked lists run smallest first; the chip flips the reading order only
   dense: false,        // one list/expanded state for every mode; false = expanded
   adding: false,       // waiting for a tap on the map to place a new point
@@ -1139,9 +1139,14 @@ function regionCentre(belt) {
    on `code`: the boundary file has it and municipios.json → belts does not, so
    every filter returned nothing and the two outlines were an empty layer that
    drew nothing and said nothing.  A silent empty layer is the failure this
-   project dislikes most, so the browser suite counts the paths. */
-const regionFeatures = belt => ({ type: 'FeatureCollection',
-  features: D.bB.features.filter(ft => ft.properties.kind === 'nuts3' && ft.properties.he === belt.he) });
+   project dislikes most, so the browser suite counts the paths.
+
+   `area` is the region itself and `solo`/`shared` are the two halves of its
+   outline — see build.py, which splits the line the two regions share. */
+const regionParts = (belt, want) => ({ type: 'FeatureCollection',
+  features: D.bB.features.filter(ft => ft.properties.kind === 'nuts3'
+    && ft.properties.he === belt.he
+    && (want === 'area' ? ft.properties.part === 'area' : ft.properties.part !== 'area')) });
 
 let regionsBefore = null;      // the switches the screen borrowed
 
@@ -1176,15 +1181,17 @@ function drawRegions() {
   clearMap();
   const belts = D.belts || [];
   /* The chosen region is filled first, under the outlines, so no fill ever
-     sits on top of a line and softens it. */
+     sits on top of a line and softens it.  The WHOLE region is filled, not the
+     part of it inside the district: 2.0.1 filled its municipalities, so the
+     colour stopped at the district edge while the outline around it carried
+     on — six of the metropolitan area's municipalities are in Aveiro and four
+     of Tâmega e Sousa's are in Viseu, and the fill said they were not there. */
   if (S.regionSel !== null && belts[S.regionSel]) {
-    const nums = belts[S.regionSel].nums;
-    LG.rgFill = L.geoJSON({ type: 'FeatureCollection',
-        features: D.bM.features.filter(ft => nums.indexOf(ft.properties.num) >= 0) },
+    LG.rgFill = L.geoJSON(regionParts(belts[S.regionSel], 'area'),
       { interactive: false,
         style: { weight: 0, fillColor: REGION_COLOUR, fillOpacity: REGION_FILL } }).addTo(map);
   }
-  LG.rgLine = L.layerGroup(belts.map((b, i) => L.geoJSON(regionFeatures(b), {
+  LG.rgLine = L.layerGroup(belts.map((b, i) => L.geoJSON(regionParts(b, 'line'), {
     pane: PANE_OF.region,
     style: { color: lineColour('region'), weight: LINE_W.region, opacity: .95,
              fill: true, fillOpacity: 0, lineJoin: 'round', lineCap: 'round' },
@@ -1197,12 +1204,19 @@ function drawRegions() {
   LG.rgNums = L.layerGroup(belts.map((b, i) => {
     const c = regionCentre(b);
     if (!c) return null;
-    const mk = L.marker(c, { icon: numIcon(String(i + 1), 'lbl-region'), keyboard: false,
-      title: (i + 1) + ' · ' + nm(b), riseOnHover: true });
+    /* Not numIcon(): a municipality number is one of eighteen on a crowded
+       plate and is sized to stay out of the way.  These are two numbers on a
+       screen that is about them, and at the municipality size they read as a
+       stray label rather than as the region's own mark. */
+    const mk = L.marker(c, { icon: L.divIcon({ className: 'lbl lbl-region',
+        html: '<i>' + html(String(i + 1)) + '</i>', iconSize: [48, 48], iconAnchor: [24, 24] }),
+      keyboard: false, title: (i + 1) + ' · ' + nm(b), riseOnHover: true });
     mk.on('click', () => pickRegion(i, 'map'));
     return mk;
   }).filter(Boolean)).addTo(map);
-  fit(L.geoJSON(D.bM).getBounds());
+  // both regions whole, so what the outline encloses is what the screen shows
+  fit(LG.rgLine.getLayers().reduce((b, g) => b.extend(g.getBounds()), L.latLngBounds(
+    LG.rgLine.getLayers()[0].getBounds())));
 }
 
 /* One place decides what "this region is the one" means, whichever half the
@@ -1231,7 +1245,7 @@ function renderRegions() {
         <span class="row-m">${t('העיריות:')} <span class="num">${html(b.nums.slice().sort((x, y) => x - y).join(' · '))}</span></span>
       </span></button>`;
   }).join('');
-  return `${viewBar()}<div class="card">
+  return `<div class="card">
       <h1>${t('אזורים')} <span class="en lat">(NUTS III)</span></h1>
       <p class="lead">${t('מחוז פורטו מחולק לשני אזורים סטטיסטיים, וזו החלוקה שלפיה INE מפרסם חלק מהנתונים. אזור אינו רשות מנהלית ואינו גובה מס: הוא יחידת מדידה של האיחוד האירופי, ברמה NUTS III, שלפיה משווים אזורים בין מדינות.')}</p>
       <p class="note">${t('הקו הכתום במפה מקיף את העיריות של כל אזור. המספר במרכזו הוא מספר האזור באפליקציה — לחיצה עליו, או על שורה ברשימה, צובעת את האזור.')}</p>
@@ -1260,8 +1274,7 @@ function renderDistrict() {
     </button>`;
   }).join('');
 
-  $('#doc').innerHTML = `${viewBar()}
-    <div class="card">
+  $('#doc').innerHTML = `<div class="card">
       <h1>${S.lang === 'en' ? 'Distrito do Porto' : t('מחוז פורטו') + ' <span class="en lat">(Distrito do Porto)</span>'}</h1>
       <!-- The population and the area are the two rows of the table right
            below, and a lead that says them again is the same fact twice. -->
@@ -1411,8 +1424,7 @@ function renderMun(num) {
     </button>`;
   }).join('');
 
-  $('#doc').innerHTML = `${viewBar()}
-    <div class="card">
+  $('#doc').innerHTML = `<div class="card">
       <div class="hdr">
         <span class="pin" style="--c:${html(m.fill)}">${html(munNum(m))}</span>
         <div><h1>${nmPair(m, m.en)}</h1>
@@ -2392,8 +2404,9 @@ const sortBar = () => `<div class="chips"><button class="chip${S.sortDesc ? ' is
    descriptions and notes only: a value row keeps its value, unit, year and
    "אין נתון", and every source button stays, so what is unknown and where a
    number came from can never be folded away. */
-const viewBar = () => `<div class="chips"><button class="chip${S.dense ? ' is-on' : ''}" data-dense
-    aria-pressed="${S.dense}">${S.dense ? t('מורחב') : t('רשימה')}</button></div>`;
+/* The list/expanded chip is in #docBar now — one element above the page, and
+   it does not scroll.  It opened every document before, which made it the
+   first thing in the scrolling text and the first thing to disappear. */
 const sortAria = () => `aria-sort="${S.sortDesc ? 'descending' : 'ascending'}"`;
 const consSrc = () => S.level === 'district' || S.level === 'mun'
   ? 'municipio.cons_pct' : 'freguesia.cons_pct';
@@ -2465,7 +2478,7 @@ function renderCons() {
       (m ? `<div class="grp">${t('העירייה')}</div>${consNumbers(m, 'municipio.cons_pct')}` : '');
   }
 
-  return `${viewBar()}<div class="card" id="consCard">
+  return `<div class="card" id="consCard">
     ${ready ? consKeyLine() : ''}
     <h1>${title}</h1>
     ${sub ? `<p class="sub">${sub}</p>` : ''}
@@ -3003,11 +3016,9 @@ function renderWaypoints() {
   /* Two buttons on a line and the heading under them.  חדש is at the start edge
      — the right — and רשימה sits to its left; the label on רשימה names the mode
      the next tap gives you, not the one you are in. */
-  $('#doc').innerHTML = `
-    <div class="card">
+  $('#doc').innerHTML = `<div class="card">
       <div class="wp-top">
         <button class="chip is-on" data-wpact="new">${t('חדש')}</button>
-        <button class="chip${S.dense ? ' is-on' : ''}" data-dense aria-pressed="${S.dense}">${S.dense ? t('מורחב') : t('רשימה')}</button>
       </div>
       <h1>${t('המקומות שלי')}</h1>
     </div>
@@ -3279,13 +3290,13 @@ function goHome() {
   wpWay = null; wpNew = false;
   mineEditing = null; minePending = null; dropPhotoUrl();
   wpArmed = null;
-  if (S.wp) toggleWp();
-  // the regions screen is not a level and not a mode; home leaves it
+  /* Home is the one way back to the start: ״סקירה״ at the district.  2.0.0
+     made it a level control only — it went to the district and left you in
+     whatever mode you were in — and then no single control undid everything.
+     The trail is what goes up one level inside a mode; this goes all the way
+     out. */
   if (S.regions) toggleRegions();
-  /* Home is a level, not a mode: it goes to the district and leaves the mode
-     as it is, because the mode switcher is the one way between modes and the
-     trail and this button are the one way between levels.  Two axes, and a
-     control on each. */
+  setMode('overview');
   renderWpSheet();          // toggleWp redraws the level document, not the sheet
   if (S.level !== 'district') goDistrict();
   else if (!busy) refit();
@@ -4127,8 +4138,7 @@ function renderZone(key) {
       <span class="chip-c" style="background:${html(CAT_COLOUR[c] || C.mapInk)}"></span>${html(poiLabel(c))}
       <span class="num">${z.pois.filter(p => p.cat === c).length}</span></button>`).join('');
 
-  $('#doc').innerHTML = `${viewBar()}
-    <div class="card">
+  $('#doc').innerHTML = `<div class="card">
       <div class="hdr">
         <span class="pin" style="--c:${html(f.colour || '#ddd')}">${freNum(f)}</span>
         <div><h1>${html(nm(f))}</h1>
@@ -4658,7 +4668,7 @@ function renderCmp() {
           <span class="cmp-f-c num">${n}/${rows.length}</span>
         </button>`;
       }).join('')}</div>`).join('');
-    return `${viewBar()}<div class="cmp-top">
+    return `<div class="cmp-top">
         <h1 class="cmp-h">${t('החלפת נתון')}</h1>
         <button class="cmp-swap" data-cmppick="0">${t('חזרה')}</button>
       </div>
@@ -4711,7 +4721,7 @@ function renderCmp() {
     }).join('')}</div>
     <p class="note">${t('ערך חסר אינו מקום אחרון. היחידות האלה אינן מדורגות, אינן צבועות ואינן נספרות — במפה הן מפוספסות.')}</p>` : '';
 
-  return `${viewBar()}<div class="cmp-top">
+  return `<div class="cmp-top">
       ${scope}
       <button class="cmp-swap" data-cmppick="1">${t('החלפת נתון')}</button>
     </div>
@@ -4797,7 +4807,11 @@ function cmpClick(e) {
 
 const menuRows = () => [
   { k: 'search', he: t('חיפוש'), icon: 'search', kind: 'act' },
-  { k: 'mine', he: t('המקומות שלי'), icon: 'pin', kind: 'act' },
+  /* The modes, first thing under חיפוש: the one question the whole screen
+     answers, and the only control that changes it. */
+  { grp: t('מוד') },
+  ...MODES().map(m => ({ k: 'mode:' + m.k, he: m.he, icon: m.icon, kind: 'radio' })),
+  { grp: '' },
   { k: 'locate', he: t('המיקום שלי'), icon: 'locate', kind: 'act', mapOnly: true },
   /* The eight categories under one heading that switches them together, with a
      chevron beside it that opens the list so each can be set on its own.  Eight
@@ -4810,7 +4824,6 @@ const menuRows = () => [
   // Below the eight, not between the heading and them: the expanded categories
   // have to follow their own heading with nothing in between or they stop
   // reading as belonging to it.
-  { k: 'cmp', he: t('השוואת נתונים'), icon: 'cmp', kind: 'tog' },
   { grp: t('תצוגה') },
   { k: 'view:split', he: t('גרפיקה וטקסט'), icon: 'split', kind: 'radio' },
   { k: 'view:map', he: t('גרפיקה בלבד'), icon: 'maponly', kind: 'radio' },
@@ -4837,10 +4850,6 @@ const menuRows = () => [
   { grp: t('שכבות') },
   { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
   { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
-  /* The district's constraint view, above the boundaries because that is what
-     it draws them over.  The row carries what is still to download, so the
-     price is on it before it is pressed. */
-  { k: 'cons', he: t('מגבלות בנייה') + consHe(), icon: 'cons', kind: 'tog' },
   /* The two NUTS III regions.  A layer, and a switch again: 2.0.0 drew them on
      every map at levels 1–2 with nothing to turn them off. */
   { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
@@ -4869,11 +4878,9 @@ function menuState(k) {
   if (k.startsWith('lang:')) return (S.lang || 'he') === k.slice(5);
   if (k === 'tiles') return S.tiles;
   if (k === 'glass') return S.muncol;
-  if (k === 'cons') return S.cons;
+  if (k.startsWith('mode:')) return modeOf() === k.slice(5);
   if (k === 'regions') return S.regions;
   if (k === 'locate') return !!meWatch;
-  if (k === 'mine') return S.wp;
-  if (k === 'cmp') return S.cmp;
   return null;
 }
 
@@ -4970,15 +4977,13 @@ function menuPick(k) {
     if (n) mapNote(n.redraw(), n.bad, true, n.redraw);
     return;
   }
+  if (k.startsWith('mode:')) { openMenu(false); setMode(k.slice(5)); return; }
   switch (k) {
     case 'search':  openMenu(false); openSearch(); break;
-    case 'mine':    openMenu(false); toggleWp(); break;
-    case 'cmp':     openMenu(false); setMode(S.cmp ? 'overview' : 'cmp'); break;
     case 'regions': openMenu(false); toggleRegions(); break;
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
-    case 'cons':    setMode(S.cons ? 'overview' : 'cons'); break;
     case 'more':    openMenu(false); toggleLayers(true); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
@@ -5096,19 +5101,32 @@ function toggleLayers(force) {
    goDistrict(), and navigating never leaves a mode.  Until 2.0.0 opening the
    comparison jumped to the district and opening a parish left it; both were
    the mode moving the reader. */
+/* Five modes, and ״המקומות שלי״ is one of them: it takes over the reading half
+   and changes what the map draws, which is what a mode does.  It sat apart
+   because it was written before the matrix existed.
+
+   They live at the top of the menu, under חיפוש — not in a bar over the
+   reading half.  A bar there costs a strip of the text on every screen, and
+   that strip belonged to the mode's own display controls before 2.0.0 took
+   it; #docBar is what holds those now. */
 const MODES = () => [
-  { k: 'overview', he: t('סקירה') },
-  { k: 'cons', he: t('מגבלות') },
-  { k: 'cmp', he: t('השוואה') },
-  { k: 'lst', he: t('נכסים') },
+  { k: 'overview', he: t('סקירה'), icon: 'info' },
+  { k: 'cons', he: t('מגבלות') + consHe(), icon: 'cons' },
+  { k: 'cmp', he: t('השוואה'), icon: 'cmp' },
+  { k: 'lst', he: t('נכסים'), icon: 'pin' },
+  { k: 'mine', he: t('המקומות שלי'), icon: 'pin' },
 ];
-const modeOf = () => (S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
-function renderModeBar() {
-  const bar = $('#modeBar');
+const modeOf = () => (S.wp ? 'mine' : S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
+
+/* The strip above the page: the controls that belong to the mode's own
+   display, and nothing that navigates.  One element, rendered once, outside
+   the scrolling document — the list/expanded chip used to be the first thing
+   inside it and scrolled away with the text. */
+function renderDocBar() {
+  const bar = $('#docBar');
   if (!bar) return;
-  const now = modeOf();
-  bar.innerHTML = MODES().map(m => `<button class="mode" role="tab" data-mode="${m.k}"
-      aria-selected="${m.k === now}">${html(m.he)}</button>`).join('');
+  bar.innerHTML = `<button class="chip${S.dense ? ' is-on' : ''}" data-dense
+      aria-pressed="${S.dense}">${S.dense ? t('מורחב') : t('רשימה')}</button>`;
 }
 /* One mode on at a time.  The primitives (toggleCmp, toggleCons, consOff) each
    know how to enter and leave their own screen; this is the only place that
@@ -5125,12 +5143,13 @@ function setMode(k) {
   if (k === 'cmp') toggleCmp();
   else if (k === 'cons') toggleCons();
   else if (k === 'lst') toggleLst();
-  renderModeBar();
+  else if (k === 'mine') toggleWp();
+  renderMenu();
 }
 
 function redrawText() {
   $('#doc').classList.toggle('dense', S.dense);
-  renderModeBar();
+  renderDocBar();
   if (S.regions) { $('#doc').innerHTML = renderRegions(); return; }
   // the places list sits over the level document: the map is still at its
   // level and still navigable, and the mode is still the mode, until it closes
@@ -5642,9 +5661,12 @@ function wire() {
   // places screen itself — and comes back to the district.  There is no cancel
   // button anywhere any more; this is it.
   $('#homeBtn').addEventListener('click', goHome);
-  $('#modeBar').addEventListener('click', e => {
-    const b = e.target.closest('[data-mode]');
-    if (b) setMode(b.dataset.mode);
+  $('#docBar').addEventListener('click', e => {
+    if (e.target.closest('[data-dense]')) {
+      S.dense = !S.dense; save();
+      redrawText();
+      if (S.wp) wpThumbs();
+    }
   });
   $('#menuBtn').addEventListener('click', menuTap);
   $('#menuClose').addEventListener('click', () => openMenu(false));
@@ -6236,7 +6258,7 @@ function lstCard(it, open) {
 function renderListings() {
   const q = S.lstQ || lstDefaultQ();
   const items = lstLive();
-  const head = `${viewBar()}`;
+  const head = ``;
   if (!D.lst || S.lstForm) return head + lstFormHtml();
   const summary = `<div class="card">
     <h1>${t('נכסים')}</h1>
@@ -6985,6 +7007,8 @@ Object.assign(EN, {
     'Compare data',
   'השוואה':
     'Compare',
+  'מוד':
+    'Mode',
   'אזורים':
     'Regions',
   'העיריות:':

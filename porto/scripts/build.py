@@ -762,6 +762,12 @@ def belt_outlines(belts, mun_geom, name_of):
     for i, (belt, poly) in enumerate(zip(belts, regions)):
         base = {"kind": "nuts3", "code": codes[i], "he": belt["he"],
                 "en": belt["en"], "colour": belt["colour"], "nums": belt["nums"]}
+        # The region as an AREA, not only as a line.  The app fills the chosen
+        # region, and until 2.0.1 it filled the region's municipalities INSIDE
+        # the district instead — so the colour stopped at the district edge
+        # while the outline around it did not.  Same simplification as the
+        # outline, so the fill and the line coincide at every zoom.
+        add(poly, dict(base, part="area"))
         if corridor is None:
             add(poly.boundary, dict(base, part="solo"))
             continue
