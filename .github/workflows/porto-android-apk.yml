@@ -14,6 +14,12 @@ on:
   push:
     branches: [claude/mobile-app-pdf-knowledge-aoomsp]
     paths:
+      # VERSION was missing until 2026-09-17: build.gradle reads it, the APK
+      # name and the in-app version come from it, yet a release that bumped
+      # only VERSION never built.  Same family as the three-copy file list in
+      # ARCHITECTURE.md §11 — a path filter that does not know every input is
+      # a green build that proves nothing.
+      - 'porto/VERSION'
       - 'porto/android/**'
       - 'porto/index.html'
       - 'porto/app.js'

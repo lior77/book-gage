@@ -3,7 +3,7 @@
    precached (there are millions of them) — tiles you have already looked at are
    kept in a small runtime cache, and without a connection the map simply falls
    back to the vector boundaries, which are local. */
-const VERSION = 'porto-2.0.6-2026-09-17';
+const VERSION = 'porto-2.0.7-2026-09-17';
 const SHELL = VERSION + '-shell';
 const TILES = VERSION + '-tiles';
 const TILE_LIMIT = 400;
