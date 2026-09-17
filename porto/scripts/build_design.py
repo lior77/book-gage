@@ -347,7 +347,7 @@ PATTERNS = [
      ["station-row", "lbl-station", "pin-station", "clim"]),
     ("maplbl", "תווית מפה",
      "מספר או אות על הגרפיקה, בלי משטח מתחתיה — הילה במקום לוחית.",
-     ["lbl", "lbl-ltr", "cmp-lbl", "wide"]),
+     ["lbl", "lbl-ltr", "cmp-lbl", "wide", "poi-m"]),
     ("menu", "מסך התפריט",
      "רשימה אחת שכל שורה בה אומרת את מצבה.",
      ["menu", "menu-in", "mrow-", "mrow", "mgrp", "mnote"]),

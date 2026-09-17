@@ -52,7 +52,13 @@ const css = (page, sel, prop) =>
      The app then dropped the background, correctly, and three checks that were
      never about the background went red.  The worker has no checks of its own
      in this file; blocking it leaves this file testing the interface. */
+  /* A Hebrew phone, in daylight.  From 2.0.6 the app opens in the language the
+     DEVICE asks for, so a context that declares none opened this suite in
+     English and every Hebrew assertion below failed at once — which is the
+     feature working, not a bug in it.  The English half of the app is tested
+     by switching to it deliberately, further down. */
   const ctx = await browser.newContext({ viewport: { width: 412, height: 900 },  // a phone, portrait
+                                         locale: 'he-IL', colorScheme: 'light',
                                          serviceWorkers: 'block' });
   const page = await ctx.newPage();
   /* Everything below reads the rendered page, and a page that threw still
@@ -288,12 +294,16 @@ const css = (page, sel, prop) =>
                 'cat:culture', 'cat:market', 'cat:landmark', 'cat:green'];
   /* המיקום שלי and the language are not rows any more — they are the two
      buttons beside the menu's close control, checked in their own block. */
+  /* What is ON the map comes before how it looks, and ״עוד שכבות״ is gone
+     from 2.0.6 — the four switches only that panel carried (אזורי הצפה,
+     נהרות, הנקודות השמורות, אותיות היישובים) are rows here now. */
   const WANT = ['search',
     'mode:overview', 'mode:cons', 'mode:cmp', 'mode:lst', 'mode:mine',
+    'tiles', 'glass', 'regions', 'climate',
+    'cons-src', 'floods', 'water', 'mine', 'letters', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark',
-    'tiles', 'glass', 'regions', 'climate', 'cats', 'cats-open',
-    'more', 'save', 'load', 'info', 'dev', 'terms'];
+    'save', 'load', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -320,10 +330,32 @@ const css = (page, sel, prop) =>
      Portuguese ones, because that is what an English reader wants and what is
      on the road signs. Prose written for this app in Hebrew stays Hebrew and
      says so, rather than being machine-translated in the app's own voice. */
-  ok('Hebrew is the language the app opens in',
+  ok('this Hebrew phone opens the app in Hebrew',
      await page.evaluate(() => S.lang) === 'he');
   ok('and the page is right-to-left',
      await page.evaluate(() => document.documentElement.dir) === 'rtl');
+  /* From 2.0.6 the opening language is the DEVICE's, not a constant.  This
+     needs a second device to mean anything: with one Hebrew context, code that
+     hard-codes 'he' and code that reads navigator are indistinguishable.  So a
+     second context is opened on an English phone, and a third on a language
+     the app does not have — which must fall to Hebrew, because Hebrew is what
+     the prose is native in and English is its translation. */
+  for (const [loc, want, what] of [['en-GB', 'en', 'an English phone'],
+                                   ['pt-PT', 'he', 'a phone in a language the app does not have']]) {
+    const c2 = await browser.newContext({ viewport: { width: 412, height: 900 },
+                                          locale: loc, serviceWorkers: 'block' });
+    const p2 = await c2.newPage();
+    await p2.route('**tile.openstreetmap.org/**', r => r.abort());
+    await p2.goto(URL, { waitUntil: 'domcontentloaded' });
+    await p2.waitForFunction(() => document.body.dataset.view, null, { timeout: 30000 });
+    await p2.waitForTimeout(800);
+    const got = await p2.evaluate(() => S.lang);
+    const dir = await p2.evaluate(() => document.documentElement.dir);
+    ok(`${what} opens it in ${want}`, got === want, `${loc} -> ${got}`);
+    ok(`and the direction follows the language, not the device`,
+       dir === (want === 'en' ? 'ltr' : 'rtl'), `${loc} -> ${dir}`);
+    await c2.close();
+  }
   ok('the menu carries exactly the rows asked for, in order',
      (await rowsNow()).join(' ') === WANT.join(' '), (await rowsNow()).join(' '));
   const folded = await rowsNow();
@@ -364,7 +396,8 @@ const css = (page, sel, prop) =>
     cats: 'נקודות ציון', regions: 'אזורים', climate: 'אקלים',
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
     'theme:light': 'מראה יום', 'theme:dark': 'מראה לילה',
-    'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות', 'more': 'עוד שכבות',
+    'tiles': 'מפת רקע', 'glass': 'ויטרז׳ מפות',
+    'floods': 'אזורי הצפה', 'water': 'נהרות ומים', 'letters': 'אותיות היישובים',
     'save': 'שמירת נתונים', 'load': 'ייבוא נתונים',
     'info': 'על האפליקציה', 'dev': 'מאחורי הקלעים', 'terms': 'תנאים והגבלות' };
   const labels = await page.$$eval('#menuIn [data-m]',
@@ -387,13 +420,36 @@ const css = (page, sel, prop) =>
      Hebrew; the theme group took "מראה" so the two do not collide. */
   ok('the four groups are titled, and the reading comes first',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean)))
-       .join('|') === 'תצוגה|מראה|שכבות|נתונים',
+       .join('|') === 'תצוגה|שכבות|מראה|נתונים',
      (await page.$$eval('#menuIn .mgrp', els => els.map(e => e.textContent).filter(Boolean))).join('|'));
   ok('נקודות ציון sits with the layers it is one of',
      await page.evaluate(() => {
        const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
        return rows.indexOf('cats') > rows.indexOf('tiles')
-         && rows.indexOf('cats') < rows.indexOf('more');
+         && rows.indexOf('cats') < rows.indexOf('view:split');
+     }));
+  /* ״עוד שכבות״ is gone, and nothing it alone carried went with it: the four
+     switches that had no other control are rows in שכבות now.  A panel deleted
+     WITH its only switches is a feature deleted. */
+  ok('the layers panel is gone and every switch it alone held survived it',
+     await page.evaluate(() => {
+       const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
+       return rows.indexOf('more') < 0
+         && ['floods', 'water', 'mine', 'letters'].every(k => rows.indexOf(k) >= 0);
+     }));
+  ok('and each of the four actually drives its own state',
+     await page.evaluate(async () => {
+       const flip = async k => {
+         const was = JSON.stringify([S.floods, S.water, S.mine, S.letters]);
+         document.querySelector(`#menuIn [data-m="${k}"]`).click();
+         await new Promise(r => setTimeout(r, 120));
+         const now = JSON.stringify([S.floods, S.water, S.mine, S.letters]);
+         document.querySelector(`#menuIn [data-m="${k}"]`).click();
+         await new Promise(r => setTimeout(r, 120));
+         return was !== now;
+       };
+       for (const k of ['floods', 'water', 'mine', 'letters']) if (!(await flip(k))) return false;
+       return true;
      }));
 
   /* The menu's own header: close, then המיקום שלי, then the language — along
@@ -403,6 +459,16 @@ const css = (page, sel, prop) =>
       return { x: b.x, w: b.width, h: b.height }; };
     return { close: r('#menuClose'), locate: r('#menuLocate'), lang: r('#menuLang') };
   });
+  /* A rule across the screen under the three controls, and the list clipped at
+     it: a row scrolling up THROUGH the close button read as part of the header
+     for the moment it was behind it. */
+  ok('a rule runs under the header controls, and the list is clipped at it',
+     await page.evaluate(() => {
+       const after = getComputedStyle(document.querySelector('.menu'), '::after');
+       const clip = getComputedStyle(document.querySelector('.menu-in')).clipPath;
+       return after.content !== 'none' && parseFloat(after.blockSize) <= 2
+         && /inset\(/.test(clip) && parseFloat(clip.replace(/[^\d.]/g, ' ').trim()) > 40;
+     }), await page.evaluate(() => getComputedStyle(document.querySelector('.menu-in')).clipPath));
   ok('the three header controls sit in one row, close in the corner',
      topBox.close.x > topBox.locate.x && topBox.locate.x > topBox.lang.x,
      JSON.stringify(topBox));
@@ -790,7 +856,6 @@ const css = (page, sel, prop) =>
   for (const [k, check, back] of [
     ['search', async () => !(await page.$eval('#panel', e => e.hidden)), '#panelClose'],
     ['load',   async () => (await page.$eval('#panelTitle', e => e.textContent)).includes('ייבוא'), '#panelClose'],
-    ['more',   async () => (await page.$eval('#panelTitle', e => e.textContent)).includes('שכבות'), '#panelClose'],
     ['info',   async () => !(await page.$eval('#infoDrawer', e => e.hidden)) && (await page.$eval('#infoTitle', e => e.textContent)) === 'על האפליקציה', '#infoClose'],
     ['dev',    async () => !(await page.$eval('#infoDrawer', e => e.hidden)) && (await page.$eval('#infoTitle', e => e.textContent)) === 'מאחורי הקלעים', '#infoClose'],
     ['terms',  async () => !(await page.$eval('#infoDrawer', e => e.hidden)) && (await page.$eval('#infoTitle', e => e.textContent)) === 'תנאים והגבלות', '#infoClose'],
@@ -1099,8 +1164,13 @@ const css = (page, sel, prop) =>
   ok('and differs only in being bigger', two.on.w > two.off.w, `${two.off.w} -> ${two.on.w}`);
   ok('there is one points layer, not one for photos and one without',
      await page.evaluate(() => typeof S.photos === 'undefined' && typeof S.mine === 'boolean'));
-  ok('the layer panel offers one row for them',
-     await page.evaluate(() => (renderLayers().match(/data-lay="(mine|photos)"/g) || []).join() === 'data-lay="mine"'));
+  /* One row, not two: photos are part of a saved place, never a layer of their
+     own.  The row moved from the deleted panel into the menu's שכבות group. */
+  ok('the menu offers one row for them, and none for photos',
+     await page.evaluate(() => {
+       const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
+       return rows.filter(k => k === 'mine' || k === 'photos').join() === 'mine';
+     }));
 
   /* 8. the close button, and Escape */
   await page.click('#menuBtn'); await page.waitForTimeout(300);
@@ -1674,18 +1744,28 @@ const css = (page, sel, prop) =>
   /* One line here, because this is level 2 and there is exactly one level
      above it. The trail names where you came from, not where you are — the
      municipality's own name is the heading of the page under it. */
-  ok('and at level 2 it names the one level above, on one line',
-     (await page.$eval('#crumb', e => e.innerText)).split('\n')
-       .filter(x => x.trim()).length === 1,
-     await page.$eval('#crumb', e => JSON.stringify(e.innerText)));
+  /* From 2.0.6 the trail answers "where am I" on its own: the parent, then the
+     unit the page is about.  It used to name only the levels ABOVE, on the
+     reasoning that the page heading already carries the unit's name — which
+     treated the two halves as one surface.  In ״גרפיקה בלבד״ the text half is
+     not on screen, and the trail was then the only thing naming the unit and
+     named everything except it. */
+  ok('and at level 2 it names the municipality, under the district',
+     await page.evaluate(() => {
+       const ls = document.getElementById('crumb').innerText.split('\n').filter(x => x.trim());
+       return ls.length === 2 && /Porto District/.test(ls[0]) && ls[1].trim() === 'Porto';
+     }), await page.$eval('#crumb', e => JSON.stringify(e.innerText)));
   /* Line by line, not substring: the municipality here is Porto, and "Porto"
      is inside "Porto District" — a substring test would fail on a trail that is
      perfectly correct. */
   const enLines = (await page.$eval('#crumb', e => e.innerText))
     .split('\n').map(x => x.trim()).filter(Boolean);
   const enMun = await page.evaluate(() => nm(D.munByNum.get(S.mun)));
-  ok('and no line of it is the municipality the page is already titled with',
-     !enLines.includes(enMun), JSON.stringify([enLines, enMun]));
+  ok('and the line naming where you are is not a way back to anywhere',
+     enLines.includes(enMun)
+       && (await page.$eval('#crumb .now', e => e.tagName)) === 'SPAN'
+       && (await page.$$eval('#crumb button', e => e.length)) === 1,
+     JSON.stringify([enLines, enMun]));
   /* the same logical rule, now pointing the other way: in English the trail
      reads rightward from the home button. A rule that only held in Hebrew
      would be a physical left, not a logical start. */
@@ -2100,11 +2180,14 @@ const css = (page, sel, prop) =>
   const tr3 = await page.$eval('#crumb', e => e.innerText.split('\n').filter(x => x.trim()));
   const here3 = await page.evaluate(() => nm(D.freByKey.get(S.zone)));
   const up3 = await page.evaluate(() => nm(D.munByNum.get(S.mun)));
-  ok('at level 3 the trail names the district and the municipality above it',
-     tr3.length === 2 && /פורטו/.test(tr3[0]) && tr3[1].trim() === up3, JSON.stringify(tr3));
-  ok('and does not repeat the parish the page is already titled with',
-     !tr3.some(x => x.trim() === here3), JSON.stringify([tr3, here3]));
-  ok('both of its lines are a way back', await page.$$eval('#crumb button', e => e.length) === 2);
+  ok('at level 3 the trail names the municipality, then the parish it is about',
+     tr3.length === 2 && tr3[0].trim() === up3 && tr3[1].trim() === here3,
+     JSON.stringify([tr3, up3, here3]));
+  /* The line you are ON is not a link.  It is where you are, and a trail whose
+     last line goes nowhere is the only one that cannot mislead. */
+  ok('the parish line is where you are, not a way back',
+     await page.$$eval('#crumb button', e => e.length) === 1
+       && (await page.$eval('#crumb .now', e => e.tagName)) === 'SPAN');
   ok('and it is still centred on the home button here',
      Math.abs(await crumbMid()) <= 1, `${await crumbMid()}px off centre`);
 
@@ -2845,11 +2928,18 @@ const css = (page, sel, prop) =>
      drawn && !drawn.cols.some(c => ['#4a9ad4', '#2f7fc1'].includes(String(c).toLowerCase())),
      JSON.stringify(drawn && drawn.cols));
 
-  const layHtml = await page.evaluate(() =>
-    typeof renderLayers === 'function' ? renderLayers() : '');
-  const floodRow = (layHtml.match(/<button[^>]*data-lay="floods"[\s\S]*?<\/button>/) || [''])[0];
+  /* The count came off the deleted panel onto the menu row with the switch.
+     It is not decoration: 3 of 18 is the whole caveat in two numbers, and it
+     is on screen before the switch is ever touched. */
+  const floodRow = await page.evaluate(() => {
+    openMenu(true);
+    const b = document.querySelector('#menuIn [data-m="floods"]');
+    const txt = b ? b.innerText.replace(/\s+/g, ' ').trim() : '';
+    openMenu(false);
+    return txt;
+  });
   ok('the menu row carries the coverage as a count, before the switch is touched',
-     /3\/18/.test(floodRow), JSON.stringify(floodRow.replace(/<[^>]+>/g, ' ').trim().slice(0, 70)));
+     /3\/18/.test(floodRow), JSON.stringify(floodRow.slice(0, 70)));
 
   /* The case the layer exists for.  Porto is mapped; Amarante is not, and
      turning the layer on there must not leave a reader with a clean map and no
@@ -2920,29 +3010,52 @@ const css = (page, sel, prop) =>
   /* Rule 1 again, this time as a route and not as a file: the record has to be
      reachable by tapping, or it is not published.  "3/18" sits inside the
      row's own <button>, so the link cannot be the number itself. */
-  const srcHtml = await page.evaluate(() => { try { return renderLayers(); } catch (e) { return String(e); } });
-  ok('the layers panel carries a link to the flood record',
+  /* Rule 1 again, this time as a route and not as a file: the record has to be
+     reachable by tapping, or it is not published.  Both links hung off the
+     שכבות panel until 2.0.6; deleting the panel without carrying them would
+     have unpublished two sources.  "3/18" sits inside the row's own button, so
+     the link cannot be the number itself. */
+  const srcHtml = await page.evaluate(() => {
+    openMenu(true);
+    const h = document.querySelector('#menuIn').innerHTML;
+    openMenu(false);
+    return h;
+  });
+  ok('the menu carries a link to the flood record, beside its switch',
      /data-src="map\.floods"/.test(srcHtml));
   ok('and one to the building-constraints record, which was just as unreachable',
-     /data-src="map\.ren_ran"/.test(srcHtml));
+     /data-src="map\.ren_ran"/.test(srcHtml) || /data-m="cons-src"/.test(srcHtml));
+  ok('and the constraints row actually opens that record',
+     await page.evaluate(async () => {
+       openMenu(true);
+       document.querySelector('#menuIn [data-m="cons-src"]').click();
+       await new Promise(r => setTimeout(r, 400));
+       const el = document.querySelector('#panel');
+       const open = el && !el.hidden && /REN|RAN/.test(el.innerText);
+       closePanel();
+       return !!open;
+     }));
 
   const viewBefore = await page.evaluate(() => S.view);
-  await page.evaluate(() => toggleLayers(true));
+  await page.evaluate(() => openMenu(true));
   await page.waitForTimeout(400);
   /* A <button> inside a <button> is invalid HTML and the inner one never
      receives the tap, so the link being its own line is the whole design and
      not a layout preference.  This is the check that would catch someone
      folding it back into the row. */
   ok('the link is its own control, not one buried inside the row switch',
-     await page.evaluate(() => !document.querySelector('.lay [data-src]')
-                            && !!document.querySelector('#panelBody .srcln[data-src="map.floods"]')));
+     await page.evaluate(() => !document.querySelector('#menuIn .mrow [data-src]')
+                            && !!document.querySelector('#menuIn .srcln[data-src="map.floods"]')));
+  await page.evaluate(() => { document.querySelector('#menuIn .srcln[data-src="map.floods"]').click(); });
+  await page.waitForTimeout(600);
 
   /* Report, do not abort.  Against code without the link this block used to
      stop the whole run at the click, so the six checks after it never said
      anything — and a suite that goes quiet is worse than one that goes red. */
-  const linkThere = !!(await page.$('#panelBody .srcln[data-src="map.floods"]'));
-  if (linkThere) { await page.click('#panelBody .srcln[data-src="map.floods"]'); }
-  await page.waitForTimeout(400);
+  const linkThere = await page.evaluate(() => {
+    const el = document.querySelector('#panel');
+    return !!(el && !el.hidden);
+  });
   const srcRec = !linkThere ? { title: '(no link)', body: '(no link)' }
     : await page.evaluate(() => ({
         title: (document.getElementById('panelTitle') || {}).textContent || '',

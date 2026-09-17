@@ -328,6 +328,18 @@ body[data-view="text"] .pane-text{flex:1 1 auto}
 .menu-in{height:100%; overflow-y:auto; overscroll-behavior:contain;
       display:flex; flex-direction:column;
       padding:calc(20px + var(--ctl-size) + var(--s3)) 10px calc(10px + var(--safe-b))}
+/* A rule across the screen under the three header controls, and the list stops
+   at it: a row scrolling up THROUGH the close button read as part of the
+   header for the moment it was behind it.  The rule sits on the menu rather
+   than inside the scroller, so it does not move; the scroller's own top
+   padding already clears it by --s3. */
+.menu::after{content:""; position:absolute; z-index:1; pointer-events:none;
+      inset-inline:0; inset-block-start:calc(20px + var(--ctl-size) + var(--s2));
+      block-size:1px; background:var(--ctl-line)}
+/* What would otherwise show above that rule is clipped at it.  clip-path and
+   not a mask: a mask needs a colour to be opaque with, and every colour in
+   this stylesheet is a token — an inset needs none. */
+.menu-in{clip-path:inset(calc(20px + var(--ctl-size) + var(--s2)) 0 0 0)}
 .mrow,.mgrp,.mnote,.mrow-pair{max-width:520px; width:100%}
 /* The heading switches all eight; the chevron beside it opens the list.  Two
    buttons, not one with two targets: a row that does one thing when tapped in
@@ -989,3 +1001,21 @@ body[data-view="text"] .map-only{display:none}
 .clim tbody th{font-weight:400}
 .clim td{text-align:end}
 .clim tfoot th,.clim tfoot td{font-weight:700; border-block-end:0}
+
+/* A point at level 3 wears its category's own glyph, the one the menu shows —
+   a colour alone is a legend you have to go and read, and this map already
+   spends colour on the municipality and on the constraint classes.  The plate
+   is the category colour, the glyph is drawn on it in the plate's own ink, and
+   --c is set per marker because there are eight of them. */
+.poi-m > i{display:grid; place-items:center; width:26px; height:26px;
+  border-radius:50%; background:var(--c); color:var(--on-solid);
+  border:2px solid var(--lbl-halo); box-shadow:var(--shadow-raised)}
+.poi-m svg{width:15px; height:15px; fill:none; stroke:currentColor;
+  stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+/* Chosen from the list or tapped on the map: the same ring the letters get. */
+.poi-m.is-hi > i{border-color:var(--hi-line); transform:scale(1.25)}
+/* A count on a menu row — "3/18" beside אזורי הצפה.  It sits before the state
+   mark, in the quiet ink, because it qualifies the label rather than answering
+   the switch. */
+.mrow-n{margin-inline-start:auto; padding-inline-end:var(--s2);
+  font-size:var(--t-xs); line-height:var(--lh-xs); color:var(--ink-2)}

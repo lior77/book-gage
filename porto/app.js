@@ -102,8 +102,26 @@ const MISSING_HE = 'אין נתון';   // the source string; miss() translates 
 const miss = () => t(MISSING_HE);
 const KEY = 'porto-split-v1';
 
+/* The language the device asks for, when it is one of the two this app has.
+   Hebrew is still what the app is WRITTEN in — the prose, the transliterations
+   and the source records are Hebrew first and English second — but a phone set
+   to English should not open in a language its owner may not read.  Anything
+   that is neither he nor en falls to Hebrew, because that is the language the
+   content is native in and English is its translation. */
+function deviceLang() {
+  try {
+    const want = [navigator.language || ''].concat(navigator.languages || []);
+    for (const l of want) {
+      const two = String(l).slice(0, 2).toLowerCase();
+      if (two === 'he' || two === 'iw') return 'he';   // iw is the old ISO code
+      if (two === 'en') return 'en';
+    }
+  } catch (e) { /* no navigator worth asking */ }
+  return 'he';
+}
+
 const S = {
-  lang: 'he',          // 'he' | 'en' — Hebrew is the default
+  lang: deviceLang(),  // 'he' | 'en' — the device's, when it is one of the two
   level: 'district',   // district | mun | zone
   mun: null,           // municipality number, 1..18
   zone: null,          // level 3: the parish key, "mun_num|name"
@@ -2315,7 +2333,7 @@ async function tapLayer(id) {
   if (layerArmed !== id) { layerArmed = id; redrawText(); return; }
   layerArmed = null;
   await tapLayerFetch(kind, code);
-  save(); renderLayers(); redrawText();
+  save(); renderMenu(); redrawText();
 }
 
 /* The only thing that removes a downloaded layer. */
@@ -2330,7 +2348,7 @@ async function tapLayerDel(id) {
   // the district view cannot stand with a hole in it: ground with no layer
   // looks exactly like ground with no constraint on it
   if (S.cons) { S.cons = false; applyCons(); consRestore(); }
-  save(); renderLayers(); redrawText();
+  save(); renderMenu(); redrawText();
 }
 
 /* The download itself, one municipality.  On success the layer is stored; the
@@ -2481,7 +2499,7 @@ function consOff() {
   if (layerBusy) { layerBusy.abort(); layerBusy = null; }
   applyCons();
   consRestore();
-  save(); applySwitches(); renderLayers(); redrawText();
+  save(); applySwitches(); renderMenu(); redrawText();
 }
 
 /* One tap opens the page.  The page is what says what is happening — the size,
@@ -2502,7 +2520,7 @@ async function toggleCons() {
   if (S.view === 'map') { S.view = 'split'; applyView(); }
   // The page opens at whatever level the reader is on: the mode is a question
   // about the place, and the place does not change because the question did.
-  applySwitches(); renderLayers(); redrawText();
+  applySwitches(); renderMenu(); redrawText();
 
   if (consMissing().length && !await consFetchAll()) { consOff(); return; }
   if (!S.cons) return;                      // cancelled while it was running
@@ -2510,7 +2528,7 @@ async function toggleCons() {
   if (!S.cons) return;
   consPhase = 'ready';
   applyCons();
-  save(); applySwitches(); renderLayers(); redrawText();
+  save(); applySwitches(); renderMenu(); redrawText();
 }
 
 /* ---- the constraints page ----
@@ -4131,7 +4149,7 @@ async function importAll(rows, bag) {
   saveMine();
   closePanel();
   drawMine(); redrawText();
-  if (layers) { renderLayers(); }
+  if (layers) { renderMenu(); }
 
   const parts = [];
   if (added) parts.push(added === 1 ? t('מקום אחד') : nf(added) + t(' מקומות'));
@@ -4265,7 +4283,8 @@ function drawZone(key) {
   // highlights its record in the list, and tapping the record highlights the dot.
   LG.pois = L.layerGroup(z.pois.map((p, i) => {
     if (!S.cats.has(p.cat) || bare) return null;
-    const mk = L.circleMarker(p.ll, poiStyle(false, p.cat));
+    const mk = L.marker(p.ll, { icon: poiIcon(p.cat), keyboard: false,
+      title: p.name + ' · ' + poiLabel(p.cat), riseOnHover: true });
     mk.__hi = { kind: 'poi', id: i };
     mk.__cat = p.cat;
     mk.bindTooltip(`${html(p.name)}<br><span class="note">${html(poiLabel(p.cat))}</span>`,
@@ -4277,11 +4296,22 @@ function drawZone(key) {
   fit(LG.edge.getBounds());
 }
 
-const poiStyle = (on, cat) => on
-  ? { radius: 9, weight: 3, color: C.hi, fillColor: CAT_COLOUR[cat] || C.mapInk,
-      fillOpacity: 1, opacity: 1 }
-  : { radius: 4.5, weight: 1.4, color: C.white, fillColor: CAT_COLOUR[cat] || C.mapInk,
-      fillOpacity: 1, opacity: 1 };
+/* A point on the map wears the SAME glyph the menu uses for its category.
+   Until 2.0.6 these were coloured discs, and a colour is a legend you have to
+   go and read: eight of them, on a map that already carries a colour per
+   municipality and a colour per constraint class.  The glyph says what the
+   thing is without a key, and the colour stays as the second signal for anyone
+   who has learnt it.  The station, the hospital and the university are exactly
+   the ones this was worst for — they are why it was asked for. */
+function poiIcon(cat) {
+  const g = ICON[cat] || ICON.dots;
+  return L.divIcon({
+    className: 'poi-m',
+    html: '<i style="--c:' + html(CAT_COLOUR[cat] || C.mapInk) + '">'
+        + '<svg viewBox="0 0 24 24" aria-hidden="true">' + g + '</svg></i>',
+    iconSize: [26, 26], iconAnchor: [13, 13],
+  });
+}
 
 function renderZone(key) {
   const f = D.freByKey.get(key);
@@ -4472,6 +4502,9 @@ function consHe() {
 const ICON = {
   search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
   pin: '<path d="M12 21.5s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0c0 4.5 6.5 10.5 6.5 10.5z"/><circle cx="12" cy="10.5" r="2.4"/>',
+  /* נכסים: a house with a tag on it.  It wore the pin until 2.0.6, which is
+     also המקומות שלי's — two of the five rows drawn with one glyph. */
+  listing: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.8V20h13V9.8"/><path d="M9 20v-5.5h6V20"/><circle cx="12" cy="11.6" r="1"/>',
   locate: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   station: '<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 20l-2 2M15 20l2 2"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M8 16h8"/>',
   hospital: '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M12 9v7M8.5 12.5h7"/>',
@@ -4500,6 +4533,9 @@ const ICON = {
   // a parcel with a hatched no-build patch across it
   cons: '<path d="M3.5 5h17v14h-17z"/><path d="M6 16 16 6M10 18 20 8" stroke-width="1.6" opacity=".85"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  flood: '<path d="M3 15.5c1.8 0 1.8-1.5 3.6-1.5s1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5 1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5"/><path d="M3 19.5c1.8 0 1.8-1.5 3.6-1.5s1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5 1.8 1.5 3.6 1.5 1.8-1.5 3.6-1.5"/><path d="M7 11V6.5L12 3l5 3.5V11"/>',
+  water: '<path d="M12 3s5.5 6.2 5.5 9.8A5.5 5.5 0 0 1 12 18.5a5.5 5.5 0 0 1-5.5-5.7C6.5 9.2 12 3 12 3z"/>',
+  letters: '<path d="M4 18 8.5 6l4.5 12"/><path d="M5.6 14.3h5.8"/><path d="M20 10.5v7.5"/><path d="M20 12.4a3 3 0 1 0 0 4.2"/>',
   dots: '<circle cx="7" cy="8" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="9" cy="16" r="2"/><circle cx="5" cy="18" r="1.4"/>',
   save: '<path d="M12 3v11M8 10.5l4 3.5 4-3.5"/><path d="M4 16v3.5h16V16"/>',
   load: '<path d="M12 14V3M8 6.5 12 3l4 3.5"/><path d="M4 16v3.5h16V16"/>',
@@ -5000,6 +5036,40 @@ const menuRows = () => [
   /* המיקום שלי and the language are NOT here: they are the two buttons beside
      the menu's close control.  Both are one tap that you want on the way out,
      not a row to scroll to. */
+  { grp: t('שכבות') },
+  { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
+  { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
+  /* The two NUTS III regions.  A layer, and a switch again: 2.0.0 drew them on
+     every map at levels 1–2 with nothing to turn them off. */
+  { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
+  { k: 'climate', he: t('אקלים'), icon: 'climate', kind: 'tog' },
+  /* REN and RAN are switched from the מגבלות reading, not from here — but the
+     record of what they are had nowhere else to be reached from once the panel
+     went, and a drawn layer whose source is unreachable breaks rule 1. */
+  { k: 'cons-src', he: t('מגבלות בנייה — מה הן ומאיפה'), icon: 'cons', kind: 'act' },
+  /* The four that had no switch outside the נשלף panel, and the panel is gone
+     from 2.0.6.  אזורי הצפה was asked for by name; the other three came with
+     it, because deleting the panel without them would have deleted them:
+     nothing else turns the rivers, the letters or the saved-points layer on.
+     ‏`muncol` is NOT here — ״ויטרז׳ מפות״ above is the same switch. */
+  { k: 'floods', he: t('אזורי הצפה'), icon: 'flood', kind: 'tog',
+    count: (D.bFl ? Object.keys(D.bFl.coverage || {}).length : 0) + '/18',
+    src: 'map.floods' },
+  { k: 'water', he: t('נהרות ומים'), icon: 'water', kind: 'tog' },
+  { k: 'mine', he: t('נקודות שמורות על המפה'), icon: 'pin', kind: 'tog' },
+  { k: 'letters', he: t('אותיות היישובים'), icon: 'letters', kind: 'tog' },
+  /* The eight categories under one heading that switches them together, with a
+     chevron beside it that opens the list so each can be set on its own.  They
+     are a layer — points drawn on the map — and they sit with the layers now.
+     Eight rows at the top of the menu were eight-ninths of what you scrolled
+     past to reach anything else. */
+  { k: 'cats', he: t('נקודות ציון'), icon: 'dots', kind: 'tog', more: 'cats-open' },
+  ...(S.catsOpen
+    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: poiLabel(c), icon: c, kind: 'tog', sub: true }))
+    : []),
+  // Below the eight, not between the heading and them: the expanded categories
+  // have to follow their own heading with nothing in between or they stop
+  // reading as belonging to it.
   { grp: t('מראה') },
   { k: 'view:split', he: t('גרפיקה וטקסט'), icon: 'split', kind: 'radio' },
   { k: 'view:map', he: t('גרפיקה בלבד'), icon: 'maponly', kind: 'radio' },
@@ -5016,26 +5086,6 @@ const menuRows = () => [
   { k: 'theme:auto', he: t('מראה לפי המכשיר'), icon: 'auto', kind: 'radio' },
   { k: 'theme:light', he: t('מראה יום'), icon: 'day', kind: 'radio' },
   { k: 'theme:dark', he: t('מראה לילה'), icon: 'night', kind: 'radio' },
-  { grp: t('שכבות') },
-  { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
-  { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
-  /* The two NUTS III regions.  A layer, and a switch again: 2.0.0 drew them on
-     every map at levels 1–2 with nothing to turn them off. */
-  { k: 'regions', he: t('אזורים'), icon: 'regions', kind: 'tog' },
-  { k: 'climate', he: t('אקלים'), icon: 'climate', kind: 'tog' },
-  /* The eight categories under one heading that switches them together, with a
-     chevron beside it that opens the list so each can be set on its own.  They
-     are a layer — points drawn on the map — and they sit with the layers now.
-     Eight rows at the top of the menu were eight-ninths of what you scrolled
-     past to reach anything else. */
-  { k: 'cats', he: t('נקודות ציון'), icon: 'dots', kind: 'tog', more: 'cats-open' },
-  ...(S.catsOpen
-    ? D.poiOrder.map(c => ({ k: 'cat:' + c, he: poiLabel(c), icon: c, kind: 'tog', sub: true }))
-    : []),
-  // Below the eight, not between the heading and them: the expanded categories
-  // have to follow their own heading with nothing in between or they stop
-  // reading as belonging to it.
-  { k: 'more', he: t('עוד שכבות'), icon: 'more', kind: 'act' },
   { grp: t('נתונים') },
   // The points the user marked, and only those — everything else in the app
   // ships with it and needs no saving.  Both were reachable only from inside
@@ -5063,6 +5113,10 @@ function menuState(k) {
   if (k.startsWith('mode:')) return modeOf() === k.slice(5);
   if (k === 'regions') return S.regions;
   if (k === 'climate') return S.climate;
+  if (k === 'floods') return S.floods;
+  if (k === 'water') return S.water;
+  if (k === 'mine') return S.mine;
+  if (k === 'letters') return S.letters;
   if (k === 'locate') return !!meWatch;
   return null;
 }
@@ -5097,12 +5151,18 @@ function renderMenu() {
     const on = menuState(r.k);
     const flag = on === null ? ''
       : (r.kind === 'radio' ? ` aria-current="${on}"` : ` aria-pressed="${on}"`);
+    /* `count` and `src` both came off the שכבות panel when it was deleted in
+       2.0.6.  The count is not decoration: "3/18" beside אזורי הצפה is the
+       whole caveat in two numbers, and it is on screen BEFORE the switch is
+       ever touched.  The source link is rule 1 — a layer drawn from a source
+       has to be able to say which. */
     const row = `<button class="mrow${r.mapOnly ? ' map-only' : ''}${r.sub ? ' mrow-sub' : ''}"
         data-m="${html(r.k)}"${flag}>
         <svg viewBox="0 0 24 24" aria-hidden="true">${ICON[r.icon] || ''}</svg>
         <span class="mrow-l">${html(t(r.he))}</span>
+        ${r.count === undefined ? '' : `<span class="mrow-n">${html(String(r.count))}</span>`}
         <span class="mrow-k" aria-hidden="true">${r.kind === 'radio' ? '●' : '✓'}</span>
-      </button>`;
+      </button>` + (r.src ? srcLine(r.src) : '');
     if (!r.more) return row;
     // the heading switches all eight; the chevron beside it opens the list
     return `<div class="mrow-pair">${row}
@@ -5188,13 +5248,22 @@ function menuPick(k) {
     case 'climate': openMenu(false); toggleClimate(); break;
     case 'locate':  openMenu(false); toggleLocate(); break;
     case 'tiles':   toggleTiles(); renderMenu(); break;
+    case 'floods':  S.floods = !S.floods; applyNature(); floodNote();
+                    save(); renderMenu(); break;
+    case 'water':   S.water = !S.water; applyNature(); save(); renderMenu(); break;
+    case 'mine':    S.mine = !S.mine; drawMine(); save(); renderMenu(); break;
+    /* Only level 3 has letters to draw, and the switch is kept and applied
+       there — the same shape as the point categories above it. */
+    case 'letters': S.letters = !S.letters;
+                    if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
+                    save(); renderMenu(); break;
     case 'glass':   toggleFills(); renderMenu(); break;
-    case 'more':    openMenu(false); toggleLayers(true); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
     case 'info':    openMenu(false); openInfo('about'); break;
     case 'dev':     openMenu(false); openInfo('dev'); break;
     case 'terms':   openMenu(false); openInfo('terms'); break;
+    case 'cons-src': openMenu(false); showSource('map.ren_ran'); break;
   }
 }
 
@@ -5211,7 +5280,6 @@ function openPanel(kind, title, body) {
   $('#panelTitle').textContent = title;
   $('#panelBody').innerHTML = body;
   $('#panel').hidden = false;
-  { const b = $('#layerListBtn'); if (b) b.setAttribute('aria-expanded', String(kind === 'layers')); }
   // the panel lives in the text half, so that half has to be on screen
   if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
   $('#paneText').scrollTop = 0;
@@ -5220,83 +5288,10 @@ function closePanel() {
   panelKind = null;
   $('#panel').hidden = true;
   $('#panelBody').innerHTML = '';
-  { const b = $('#layerListBtn'); if (b) b.setAttribute('aria-expanded', 'false'); }
 }
 const panelIs = k => panelKind === k;
 
 /* ------------------------------------------------------------- layers --- */
-function renderLayers() {
-  const z = S.level === 'zone' ? zoneOf(S.zone) : null;
-  const counts = {};
-  if (z) z.pois.forEach(p => { counts[p.cat] = (counts[p.cat] || 0) + 1; });
-
-  const row = (on, key, name, colour, square, n) =>
-    `<button class="lay" aria-pressed="${on}" data-lay="${html(key)}">
-       <span class="lay-x">✓</span>
-       ${colour ? `<span class="lay-c${square ? ' sq' : ''}" style="background:${html(colour)}"></span>` : ''}
-       <span class="lay-n">${html(name)}</span>
-       ${n === undefined ? '' : `<span class="lay-k">${n}</span>`}
-     </button>`;
-
-  let h = t('<h3>שכבות</h3>') +
-    row(S.tiles, 'tiles', t('רקע המפה (רחובות)'), C.tilesSwatch, true) +
-    row(S.muncol, 'muncol', t('צבעי 18 העיריות'), C.munSwatch, true) +
-    row(S.water, 'water', t('נהרות ומים'), C.waterFill, true) +
-    /* The count is the point, not decoration: 3 of 18 is the whole caveat in
-       two numbers, and it is on screen before the switch is ever touched. */
-    row(S.floods, 'floods', t('אזורי הצפה ממופים'), FLOOD_COLOUR[100], true,
-        (D.bFl ? Object.keys(D.bFl.coverage || {}).length : 0) + '/18') +
-    srcLine('map.floods') +
-    row(S.mine, 'mine', t('המקומות שלי'), MINE_COLOUR, true, D.mine.length) +
-    (S.wp ? t('<p class="note">בזמן ניהול המקומות מוצגים כולם, והשכבה הזאת ') +
-            t('חוזרת לפעול ביציאה ממנו.</p>') : '');
-
-  /* One row, and it is the district's.  A constraint layer that stops at a
-     municipal line is a map that says "you may build here" about ground nobody
-     looked at, so the switch brings the whole district or nothing — which is
-     why the row carries what the rest of it still weighs. */
-  if (!S.cmp && D.layers) {
-    const miss = consMissing();
-    h += t('<h3>מגבלות בנייה</h3>') +
-      row(!!S.cons, 'lay:cons',
-          t('מגבלות בנייה במחוז') + (miss.length
-            ? ' · ' + consMB(consBytes(miss)) + ' MB'
-            : ''),
-          LAYER_STYLE.ren.fillColor, true) +
-      t('<p class="note" style="margin-block-start:6px">REN ו-RAN לכל 18 העיריות, ב-40% מעל מפת הרקע. ההורדה פעם אחת ומכאן בלי רשת; כיבוי אינו מוחק.</p>') +
-      srcLine('map.ren_ran');
-  }
-
-  // Which of these are black and which are grey is the level's decision, not
-  // No rows here since 2.0.0: which boundaries are drawn is a function of
-  // the level and the mode, and the note says the rule rather than offering
-  // a switch.
-  h += t('<h3>קווי גבול</h3>') +
-    t('<p class="note" style="margin-block-start:6px">הגבולות נקבעים לפי הרמה ואין להם מתג: מה ששייך למסך שחור, והשאר אפור. האזורים הם שכבה נפרדת בתפריט.</p>');
-  // the letters only exist at level 3, and they are neighbourhoods in Porto and
-  // localities everywhere else — the row says which, and counts them like the
-  // other rows do
-  if (z) {
-    h += row(S.letters, 'letters',
-      z.origin === 'pdf' ? t('אותיות השכונות') : t('אותיות היישובים'),
-      C.letterSwatch, true, z.bairros.filter(b => b.ll).length);
-  }
-  if (z && z.pois.length) {
-    h += t('<h3>נקודות במפה</h3>') + D.poiOrder.filter(c => counts[c])
-      .map(c => row(S.cats.has(c), 'cat:' + c, poiLabel(c), CAT_COLOUR[c], false, counts[c]))
-      .join('');
-  } else {
-    h += t('<p class="note" style="margin-block-start:8px">קטגוריות הנקודות נבחרות ברמת הרובע.</p>');
-  }
-  if (panelIs('layers')) $('#panelBody').innerHTML = h;
-  return h;
-}
-function toggleLayers(force) {
-  const show = force === undefined ? !panelIs('layers') : force;
-  if (show) openPanel('layers', t('שכבות המפה'), renderLayers());
-  else closePanel();
-}
-
 // after a change that alters what the text half should say
 /* ------------------------------------------------------------- the modes --- */
 /* Three levels by three modes (four once the listings come), and every cell
@@ -5318,7 +5313,7 @@ const MODES = () => [
   { k: 'overview', he: t('סקירה'), icon: 'info' },
   { k: 'cons', he: t('מגבלות') + consHe(), icon: 'cons' },
   { k: 'cmp', he: t('השוואה'), icon: 'cmp' },
-  { k: 'lst', he: t('נכסים'), icon: 'pin' },
+  { k: 'lst', he: t('נכסים'), icon: 'listing' },
   { k: 'mine', he: t('המקומות שלי'), icon: 'pin' },
 ];
 const modeOf = () => (S.wp ? 'mine' : S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
@@ -5470,8 +5465,8 @@ function applyHi(from) {
   });
   if (LG.pois) LG.pois.eachLayer(l => {
     const on = hi && hi.kind === 'poi' && String(l.__hi.id) === String(hi.id);
-    l.setStyle(poiStyle(on, l.__cat));
-    if (on) l.bringToFront();
+    const e = l.getElement(); if (e) e.classList.toggle('is-hi', !!on);
+    if (on) l.setZIndexOffset(1200); else l.setZIndexOffset(0);
   });
   // asked for from the list: make sure the thing is actually on screen
   if (hi && from === 'list') {
@@ -5516,22 +5511,30 @@ function goUp() {
 
 function afterNav() {
   drawMine();
-  if (panelIs('layers')) renderLayers();
-  /* Where you came from, not where you are.  The page under it already carries
-     the name of the unit being looked at, in a heading, in full — and the trail
-     repeating it in an ellipsis spent both of its lines saying one thing. So it
-     names the levels ABOVE this one: the district at level 2, the district and
-     the municipality at level 3, and at level 1 the district itself, because
-     there is nothing above it to name.  Every line is a way back. */
+  /* WHERE YOU ARE, and the one step above it.  Two lines at every level below
+     the first: the parent, then the unit the page is about.
+
+     Until 2.0.6 the trail named only the levels ABOVE — the reasoning being
+     that the page's own heading already carries the unit's name, so repeating
+     it spent a line saying one thing twice.  That reasoning treated the two
+     halves as one surface.  They are not: in ״גרפיקה בלבד״ the text half is
+     not on screen at all, and the trail was then the only thing naming the
+     unit — and it named everything except it.  Landscape parts them further.
+     So the trail answers "where am I" on its own, and the last line, the unit
+     itself, is marked `now` and is not a way back to anywhere.
+
+     Level 1 names the district alone: there is nothing above it, and it IS
+     where you are. */
   const c = [];
+  const munName = () => html(nm(D.munByNum.get(S.mun)));
   if (S.level === 'district') {
     c.push(t('<span class="now">מחוז פורטו</span>'));
   } else if (S.level === 'mun') {
-    c.push(t('<button class="now" data-go="district">מחוז פורטו</button>'));
-  } else {
     c.push(t('<button data-go="district">מחוז פורטו</button>'));
-    c.push('<button class="now" data-go="mun">' +
-           html(nm(D.munByNum.get(S.mun))) + '</button>');
+    c.push('<span class="now">' + munName() + '</span>');
+  } else {
+    c.push('<button data-go="mun">' + munName() + '</button>');
+    c.push('<span class="now">' + html(nm(D.freByKey.get(S.zone))) + '</span>');
   }
   const crumb = $('#crumb');
   crumb.innerHTML = c.join('');
@@ -5886,6 +5889,12 @@ function wire() {
      is visible on the menu itself — the same reason the theme rows do. */
   $('#menuLang').addEventListener('click', () => menuPick('lang:' + (S.lang === 'he' ? 'en' : 'he')));
   $('#menuIn').addEventListener('click', e => {
+    /* A source record, reached from beside the layer it belongs to.  These
+       links moved into the menu when the שכבות panel was deleted in 2.0.6,
+       and a link with no listener is an unpublished source — rule 1.  It is
+       tested first: the row below would swallow it otherwise. */
+    const src = e.target.closest('[data-src]');
+    if (src) { openMenu(false); showSource(src.dataset.src, src.dataset.exact); return; }
     const r = e.target.closest('[data-m]');
     if (r) menuPick(r.dataset.m);
   });
@@ -5930,7 +5939,7 @@ function wire() {
     }
     save();
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
-    drawMine(); renderLayers(); applyHi(); applySwitches();
+    drawMine(); renderMenu(); applyHi(); applySwitches();
   });
   $('#doc').addEventListener('input', e => { if (S.lst) lstInput(e); });
   $('#panelBody').addEventListener('input', e => {
@@ -6150,7 +6159,7 @@ function wire() {
       if (S.muncol) { S.muncol = false; redrawLevel(); }
       applyCons();
     } else S.cons = false;
-    save(); applySwitches(); renderLayers(); redrawText();
+    save(); applySwitches(); renderMenu(); redrawText();
   });
 
   // The Android wrapper asks this before it lets the system back button close
@@ -7804,6 +7813,12 @@ Object.assign(EN, {
     'November',
   'דצמבר':
     'December',
+  'מגבלות בנייה — מה הן ומאיפה':
+    'Building constraints — what they are and where from',
+  'אזורי הצפה':
+    'Mapped flood zones',
+  'נקודות שמורות על המפה':
+    'Saved points on the map',
   'מראה':
     'Appearance',
   'מראה לפי המכשיר':
