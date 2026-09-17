@@ -1569,6 +1569,7 @@ def main():
         "docs/DATA-REQUEST.md": "record",      # the brief sent out, as sent
         "docs/DATA-ACQUIRED.md": "record",     # "מה נמשך בפועל — 2026-09-07"
         "docs/DELIVERY.md": "record",          # "ההחלטות שהתקבלו ב-13.9.2026"
+        "docs/INFORMATION-PLAN.md": "record",  # "נכתב ב-2026-09-17 מול 2.0.6"
     }
     md_paths = sorted(
         os.path.relpath(x, ROOT).replace(os.sep, "/")

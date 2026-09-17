@@ -2099,4 +2099,6 @@ app's manifest, then request this permission at runtime*״.
 `docs/DATA-ACQUIRED.md` (מה נמשך בפועל, מאיפה, ומה ההסתייגויות),
 `docs/DATA-REQUEST.md` (מה לבקש ממי שיש לו רשת),
 `docs/NETWORK-ALLOWLIST.md` (איך לפתוח את הרשת),
+`docs/INFORMATION-PLAN.md` (מה עוד אפשר להוציא מהנתונים שכבר יש, ובאיזה סדר —
+נכתב ב-2.0.6 ולא בוצע), `docs/research/` (המקורות שנקראו, כפי שנקראו),
 `data/source_files/INDEX.md` (מה התקבל ומתי), `android/SIGNING.md`.
