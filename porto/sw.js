@@ -3,7 +3,7 @@
    precached (there are millions of them) — tiles you have already looked at are
    kept in a small runtime cache, and without a connection the map simply falls
    back to the vector boundaries, which are local. */
-const VERSION = 'porto-2.0.7-2026-09-17';
+const VERSION = 'porto-2.0.8-2026-09-17';
 const SHELL = VERSION + '-shell';
 const TILES = VERSION + '-tiles';
 const TILE_LIMIT = 400;
@@ -26,7 +26,18 @@ const ASSETS = [
   './icons/icon-180.png',
   './icons/favicon-32.png',
   './icons/icon-maskable-512.png',
+  /* All sixteen files the loader fetches, and the list is no longer kept by
+     hand: checks.py §7p reads app.js and fails if one of them is missing here.
+     Four were missing until 2.0.8 — boundaries_floods, climate, prose_en and
+     layers_manifest, each added to the loader in a later release than this
+     list — which meant a browser-installed copy had no offline copy of them
+     and its loader's Promise.all rejected on the first run without network.
+     The APK was unaffected: the WebView serves its assets locally whether the
+     worker has them or not. */
   './data/sources.json',
+  './data/prose_en.json',
+  './data/layers_manifest.json',
+  './data/processed/manifest.json',
   './data/processed/indicators.json',
   './data/processed/municipios.json',
   './data/processed/freguesias.json',
@@ -37,6 +48,8 @@ const ASSETS = [
   './data/processed/boundaries_belts.geojson',
   './data/processed/boundaries_freguesias.geojson',
   './data/processed/boundaries_porto_city.geojson',
+  './data/processed/boundaries_floods.geojson',
+  './data/processed/climate.json',
 ];
 
 self.addEventListener('install', e => {

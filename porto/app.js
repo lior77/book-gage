@@ -722,7 +722,7 @@ async function j(path) {
 
 async function load() {
   const [ind, mun, fre, city, zones, climate, bW, bFl, sources, bM, bB, bF, bC, proseEn,
-         layersManifest] = await Promise.all([
+         layersManifest, manifest] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
@@ -749,6 +749,11 @@ async function load() {
        which law — 16 KB, so the app can say all of it BEFORE anything is
        downloaded. The polygons themselves are a release asset. */
     j('data/layers_manifest.json'),
+    /* The build's own stamp: when the data was built, and which version this
+       is.  Both used to sit INSIDE five data files, which made every release
+       look like a data change to any diff.  Moved out in 2.0.8 — see
+       ARCHITECTURE.md §8 and scripts/build_diff.py. */
+    j('data/processed/manifest.json'),
   ]);
   Object.assign(EN, proseEn.text || {});
   D.layers = layersManifest;
@@ -761,8 +766,8 @@ async function load() {
      so and no screen is offered, rather than an empty one being. */
   D.climate = climate;
   D.sources = sources;
-  D.generated = mun.generated;
-  D.version = ind.app_version || '';
+  D.generated = manifest.generated;
+  D.version = manifest.app_version || '';
   D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW; D.bFl = bFl;
   // an undefined layer renders as nothing at all, in silence; say so instead
   for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW, bFl })) {
@@ -4646,6 +4651,19 @@ const CMP_ALL = [
   { g: 'מגבלות בנייה', k: 'ran_pct', he: 'מגבלה חקלאית (RAN)', unit: '%', dec: 1 },
   { g: 'מגבלות בנייה', k: 'ren_pct', he: 'מגבלה אקולוגית (REN)', unit: '%', dec: 1 },
   { g: 'מגבלות בנייה', k: 'both_pct', he: 'בשתי השכבות', unit: '%', dec: 1 },
+  /* Topography, and the first NESTED keys this screen can read.  The values
+     were on every unit since 2.0.3 and reachable nowhere but the unit's own
+     card: cmpFields() offered flat keys only, so the one question a buyer asks
+     about a hillside — is this parish higher or steeper than that one — could
+     not be asked.  Move ג׳ of INFORMATION-PLAN.md; the fix is cmpValue()
+     walking a dotted path and CMP_NESTED naming the source record.
+     Degrees, not percent: it is what the app has always shown for slope and
+     what fetch_dem.py computed — rule 4, a source's own unit is not restated
+     into a friendlier one. */
+  { g: 'טופוגרפיה', k: 'ele.mean', he: 'גובה ממוצע', unit: 'מ׳', dec: 0 },
+  { g: 'טופוגרפיה', k: 'ele.max', he: 'הנקודה הגבוהה', unit: 'מ׳', dec: 0 },
+  { g: 'טופוגרפיה', k: 'ele.min', he: 'הנקודה הנמוכה', unit: 'מ׳', dec: 0 },
+  { g: 'טופוגרפיה', k: 'ele.slope', he: 'שיפוע ממוצע', unit: 'מעלות', dec: 1 },
   { g: 'שטח ומרחק', k: 'area_km2', he: 'שטח', unit: 'קמ״ר', dec: 1 },
   { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי מפורטו', unit: 'ק״מ', dec: 1,
     only: 'municipio' },
@@ -4655,12 +4673,24 @@ const CMP_ALL = [
    inside `housing`, or inside `cons`. The source record each maps to differs
    with it, and one table decides both so they cannot drift apart. */
 const CMP_CONS = new Set(['ran_pct', 'ren_pct', 'both_pct', 'either_pct']);
+/* A nested key and the source record it answers to.  The mapping is not
+   derivable from the path: `ele.min`, `ele.mean` and `ele.max` all come from
+   the one `ele` record, while `ele.slope` — which lives inside the same object
+   because that is how fetch_dem.py writes it — has a record of its own. */
+const CMP_NESTED = { 'ele.min': 'ele', 'ele.mean': 'ele', 'ele.max': 'ele',
+                     'ele.slope': 'slope' };
 const cmpSrcKey = (lvl, k) => lvl + '.' +
-  (CMP_HOUSING.has(k) ? 'housing' : CMP_CONS.has(k) ? 'cons_pct' : k);
+  (CMP_NESTED[k] ? CMP_NESTED[k]
+   : CMP_HOUSING.has(k) ? 'housing' : CMP_CONS.has(k) ? 'cons_pct' : k);
 const cmpValue = (o, k) => {
-  const v = CMP_HOUSING.has(k) ? (o.housing || {})[k]
+  /* A dotted key reads down: 'ele.mean' -> o.ele.mean, and a missing step on
+     the way is a missing value rather than a throw — a unit outside the DEM's
+     coverage has no `ele` at all. */
+  const v = CMP_NESTED[k] ? k.split('.').reduce((x, part) =>
+              (x === null || x === undefined ? undefined : x[part]), o)
+          : CMP_HOUSING.has(k) ? (o.housing || {})[k]
           : CMP_CONS.has(k) ? (o.cons || {})[k] : o[k];
-  return v === undefined ? null : v;
+  return v === undefined || v === null ? null : v;
 };
 
 // 'municipio' when the units being compared are municipalities, 'freguesia'
@@ -7885,6 +7915,12 @@ Object.assign(EN, {
     'Housing market — INE',
   'שטח':
     'Area',
+  'טופוגרפיה':
+    'Topography',
+  'הנקודה הגבוהה':
+    'Highest point',
+  'הנקודה הנמוכה':
+    'Lowest point',
   'שטח ומרחק':
     'Area and distance',
   'שינוי מ-2011':

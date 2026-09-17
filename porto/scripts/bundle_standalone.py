@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 DATA_FILES = [
+    "data/processed/manifest.json",
     "data/processed/indicators.json",
     "data/processed/municipios.json",
     "data/processed/freguesias.json",

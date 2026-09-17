@@ -1661,6 +1661,67 @@ const css = (page, sel, prop) =>
   ok('the key names the missing group too, with its own hatch',
      k2.some(k => k.nd && k.n === 8), JSON.stringify(k2));
 
+  /* Move ג׳ — the nested fields.  `ele` and `slope` have been on every unit
+     since 2.0.3, and until 2.0.8 this screen could not offer them: cmpFields()
+     read FLAT keys only, so the one question a buyer asks about a hillside —
+     is this parish higher, or steeper, than that one — could not be asked at
+     all.  Four things are checked, and every one of them fails against the
+     code of 2.0.7: the picker offers the four fields, choosing one ranks the
+     units, the value chip opens the record the value really came from (`ele`
+     for the three heights, `slope` for the gradient — two records inside one
+     object), and the number shown is the number the data holds. */
+  await page.evaluate(() => goDistrict());
+  await page.waitForTimeout(700);
+  if (await page.evaluate(() => !S.cmpPick)) { await page.click('[data-cmppick="1"]'); await page.waitForTimeout(400); }
+  const nested = ['ele.mean', 'ele.max', 'ele.min', 'ele.slope'];
+  const offered = await Promise.all(nested.map(k => page.$(`#doc [data-cmpf="${k}"]`)));
+  ok('the field picker offers the four topography fields',
+     offered.every(el => el !== null),
+     nested.filter((k, i) => offered[i] === null).join(', ') || 'all four');
+  ok('and each says it covers all eighteen municipalities',
+     await page.$$eval('#doc [data-cmpf^="ele."] .cmp-f-c',
+       els => els.every(e => e.textContent.trim() === '18/18')),
+     await page.$$eval('#doc [data-cmpf^="ele."] .cmp-f-c',
+       els => els.map(e => e.textContent.trim()).join(' ')));
+
+  /* Guarded, not asserted twice: against code that does not offer the field,
+     page.click() times out and takes the whole run with it — and a suite that
+     dies on the first missing thing reports one line instead of the rest of
+     its checks.  Proved on a copy with move ג׳ removed: the four assertions
+     above go red and everything after them still runs. */
+  const havePick = async k => await page.$(`#doc [data-cmpf="${k}"]`) !== null;
+  if (await havePick('ele.slope')) {
+    await page.click('#doc [data-cmpf="ele.slope"]');
+    await page.waitForTimeout(900);
+  }
+  const slopeRows = await cmpRows();
+  ok('choosing the nested slope field ranks every municipality',
+     slopeRows.length === 18 && slopeRows.every(r => !r.none),
+     `${slopeRows.length} rows, ${slopeRows.filter(r => r.none).length} without a value`);
+  ok('and the chip beside the value opens the slope record, not the elevation one',
+     slopeRows.every(r => r.src === 'municipio.slope'),
+     [...new Set(slopeRows.map(r => r.src))].join(', '));
+
+  await page.click('[data-cmppick="1"]').catch(() => {});
+  await page.waitForTimeout(400);
+  if (await havePick('ele.mean')) {
+    await page.click('#doc [data-cmpf="ele.mean"]');
+    await page.waitForTimeout(900);
+  }
+  const eleRows = await cmpRows();
+  ok('the three heights answer to the ele record',
+     eleRows.length === 18 && eleRows.every(r => r.src === 'municipio.ele'),
+     [...new Set(eleRows.map(r => r.src))].join(', '));
+  ok('and the number on the row is the number in the data, rounded as declared',
+     await page.evaluate(rows => {
+       const want = new Map(D.mun.map(m => [m.he, Math.round(m.ele.mean)]));
+       return rows.every(r => {
+         const n = Number(r.val.replace(/[^\d.-]/g, ''));
+         return want.has(r.name) && n === want.get(r.name);
+       });
+     }, eleRows),
+     eleRows.slice(0, 3).map(r => `${r.name}=${r.val}`).join(' '));
+
   /* Home is the level axis: it goes to the district and leaves the mode alone.
      The mode switcher is the way out, and that is what puts the background
      back as it was. */

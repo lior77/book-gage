@@ -24,6 +24,7 @@ Rules enforced (from BRIEF.md):
 Exit code 0 = all green, 1 = at least one hard failure.
 """
 import glob
+import hashlib
 import json
 import io
 import os
@@ -834,8 +835,53 @@ def main():
         fail("%d files the app loads are not copied into the APK by "
              "android/app/build.gradle, so the phone build opens to nothing: %s"
              % (len(missing_apk), missing_apk))
-    print("data files shipped %d/%d by both the bundle and the APK"
-          % (len(wanted), len(wanted)))
+    # THE THIRD AND FOURTH LISTS, added 2026-09-17 with move ו׳.  This check
+    # said "every list that ships it" and compared two of the four.  The other
+    # two were both already wrong:
+    #
+    #   sw.js ASSETS — the precache list. FOUR files the loader fetches were
+    #   missing (boundaries_floods, climate, prose_en, layers_manifest), each
+    #   added to the loader in a later release than this list. A copy installed
+    #   from a browser therefore had no offline copy of them, and its loader's
+    #   Promise.all rejects on the first run with no network. The APK was fine,
+    #   which is why nobody saw it: the WebView serves its assets locally
+    #   whether the worker holds them or not.
+    #
+    #   the APK workflow's path filter — a data file outside its globs builds
+    #   no APK at all. That is the VERSION bug of 2.0.7, in the same file, and
+    #   the same lesson as ARCHITECTURE.md §11: a list that does not know every
+    #   input is a green build that proves nothing.
+    sw = io.open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
+    sw_listed = set(re.findall(r"'\./([^']+\.(?:json|geojson))'", sw))
+    missing_sw = sorted(w for w in wanted if w not in sw_listed)
+    if missing_sw:
+        fail("%d files the app loads are not in sw.js ASSETS, so a copy installed "
+             "from a browser has no offline copy of them and fails to open on the "
+             "first run without network: %s" % (len(missing_sw), missing_sw))
+
+    wf = os.path.join(os.path.dirname(ROOT), ".github", "workflows",
+                      "porto-android-apk.yml")
+    if not os.path.exists(wf):
+        warn("the APK workflow is not where §7p looks for it (%s) — the path "
+             "filter is unchecked" % wf)
+    else:
+        filt = set(re.findall(r"^\s*-\s*'([^']+)'", io.open(wf, encoding="utf-8").read(), re.M))
+        def triggers(rel):
+            full = "porto/" + rel
+            for pat in filt:
+                if pat == full:
+                    return True
+                if pat.endswith("/**") and full.startswith(pat[:-2]):
+                    return True
+            return False
+        missing_wf = sorted(w for w in wanted if not triggers(w))
+        if missing_wf:
+            fail("%d files the app loads are not in the APK workflow's path filter, "
+                 "so changing one of them publishes no APK: %s"
+                 % (len(missing_wf), missing_wf))
+
+    print("data files shipped %d/%d by the bundle, the APK, the worker and the "
+          "build trigger" % (len(wanted), len(wanted)))
 
     # ---- 7q. nothing is FULLY published and still listed as missing --------
     # missing.items is part of the product: it is the app telling the reader
@@ -1571,12 +1617,27 @@ def main():
         "docs/DELIVERY.md": "record",          # "ההחלטות שהתקבלו ב-13.9.2026"
         "docs/INFORMATION-PLAN.md": "record",  # "נכתב ב-2026-09-17 מול 2.0.6"
     }
+    # A generated change record is a RECORD by construction: build_diff.py
+    # writes one per release, dated, naming the revision it was taken against,
+    # and nobody edits it.  Declared by PATTERN and not by name, because a rule
+    # that has to be edited at every release is a rule that will be forgotten —
+    # and the alternative, leaving them undeclared, is the hole §7x exists to
+    # close.  §7ai checks that each one really is generated.
+    DOC_PATTERNS = [(re.compile(r"^docs/CHANGES-\d+\.\d+\.\d+\.md$"), "record")]
+
+    def doc_kind(rel):
+        if rel in DOC_KIND:
+            return DOC_KIND[rel]
+        for pat, kind in DOC_PATTERNS:
+            if pat.match(rel):
+                return kind
+        return None
     md_paths = sorted(
         os.path.relpath(x, ROOT).replace(os.sep, "/")
         for x in glob.glob(os.path.join(ROOT, "*.md"))
         + glob.glob(os.path.join(ROOT, "docs", "*.md")))
     for rel in md_paths:
-        if rel not in DOC_KIND:
+        if doc_kind(rel) is None:
             fail("%s is not declared live or record in checks.py §7x DOC_KIND. "
                  "A document nobody classified is a document nobody checks — "
                  "say which it is" % rel)
@@ -1703,7 +1764,7 @@ def main():
         return spans
 
     for rel in md_paths:
-        if DOC_KIND.get(rel) != "live":
+        if doc_kind(rel) != "live":
             continue
         txt = io.open(os.path.join(ROOT, rel), encoding="utf-8").read()
         lines = txt.split("\n")
@@ -2111,6 +2172,316 @@ def main():
         if frag not in notices:
             fail("data/sources.json license_notices is missing %r — the Copernicus DEM "
                  "licence requires the full notice wherever the derived data is shown" % frag)
+
+    # ---- 7ah. the read-path measurement says what it measured --------------
+    # Added with move ח׳ of INFORMATION-PLAN.md, 2026-09-17.  Until then the
+    # app had never been measured: the bundle is 3MB and every sentence about
+    # "fast enough" was an opinion.  scripts/measure_readpath.js writes one
+    # file per release under data/readpath/, and this reads those files the way
+    # chapter 2 of Designing Data-Intensive Applications says a latency
+    # measurement has to be read:
+    #
+    #   1. the HISTOGRAM is the measurement, and the percentiles are derived
+    #      from it — so they are recomputed here and must match to the digit.
+    #      A hand-edited percentile is the whole point of this check.
+    #   2. every file shares one set of bucket edges, because pooling two
+    #      releases means ADDING their counts, and counts over different
+    #      buckets cannot be added.
+    #   3. a percentile needs at least 1/(1-p) samples to exist.  p99 out of
+    #      40 runs is the largest of 40 numbers wearing a name it did not
+    #      earn, so it is null — rule 2 of the accuracy contract, applied to
+    #      our own numbers.
+    #   4. no mean, anywhere.  "The mean is not a good metric... percentiles
+    #      are better" is the reason this file measures at all, and a mean
+    #      added later would quietly undo it.
+    rp_dir = os.path.join(ROOT, "data", "readpath")
+    rp_files = sorted(glob.glob(os.path.join(rp_dir, "*.json")))
+    version_now = io.open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
+    OPS = ("first_paint", "level_switch", "search")
+    edges_seen = {}
+
+    def nearest_rank(counts, edges, p):
+        """The percentile the histogram supports: the upper edge of the bucket
+        the rank falls in, or None when there are too few samples to name it or
+        the rank lands in the overflow slot, which has no upper edge."""
+        n = sum(counts)
+        import math
+        if n < math.ceil(1.0 / (1.0 - p)):
+            return None
+        rank, seen = math.ceil(p * n), 0
+        for i, c in enumerate(counts):
+            seen += c
+            if seen >= rank:
+                return edges[i] if i < len(edges) else None
+        return None
+
+    if not rp_files:
+        warn("data/readpath/ holds no measurement at all — the read path is "
+             "unmeasured again, which is the state move ח׳ existed to end")
+    for path_ in rp_files:
+        rel = os.path.relpath(path_, ROOT).replace(os.sep, "/")
+        base = os.path.basename(path_)[:-len(".json")]
+        try:
+            m = json.load(io.open(path_, encoding="utf-8"))
+        except Exception as exc:
+            fail("%s is not readable JSON: %s" % (rel, exc))
+            continue
+        if not re.match(r"^\d+\.\d+\.\d+$", base):
+            fail("%s: a measurement is named after the release it measured "
+                 "(2.0.8.json), so the file name is the version" % rel)
+        if m.get("version") != base:
+            fail("%s declares version %r inside — a measurement filed under the "
+                 "wrong release is worse than none" % (rel, m.get("version")))
+        if not re.match(r"^20\d\d-\d\d-\d\d$", str(m.get("measured_at", ""))):
+            fail("%s: measured_at has to be a YYYY-MM-DD date" % rel)
+        if not str(m.get("device", "")).strip():
+            fail("%s: a latency without the machine it was measured on is not a "
+                 "measurement" % rel)
+        if m.get("device_class") not in ("headless-container", "phone"):
+            fail("%s: device_class is 'headless-container' or 'phone'. The app is "
+                 "for a mid-range Android and a container is faster than one; "
+                 "the file has to say which it was" % rel)
+        if m.get("phone_measured") is not (m.get("device_class") == "phone"):
+            fail("%s: phone_measured must agree with device_class" % rel)
+        flat = json.dumps(m)
+        for word in ('"mean"', '"avg"', '"average"'):
+            if word in flat:
+                fail("%s carries %s. Chapter 2: the mean hides the tail this "
+                     "whole file exists to see. Percentiles, or nothing" % (rel, word))
+        ops = m.get("operations") or {}
+        for op in OPS:
+            if op not in ops:
+                fail("%s does not measure %s — the three operations are the read "
+                     "path: opening, moving a level, searching" % (rel, op))
+                continue
+            o = ops[op]
+            h = o.get("histogram") or {}
+            edges_, counts = h.get("edges"), h.get("counts")
+            if not isinstance(edges_, list) or not isinstance(counts, list):
+                fail("%s %s: the histogram IS the measurement; it cannot be absent"
+                     % (rel, op))
+                continue
+            if any(edges_[i] >= edges_[i + 1] for i in range(len(edges_) - 1)):
+                fail("%s %s: histogram edges have to ascend" % (rel, op))
+            if len(counts) != len(edges_) + 1:
+                fail("%s %s: %d buckets for %d edges — the last slot is the "
+                     "overflow, so there is exactly one more count than edges"
+                     % (rel, op, len(counts), len(edges_)))
+                continue
+            if sum(counts) != o.get("n"):
+                fail("%s %s: n is %r and the histogram holds %d samples"
+                     % (rel, op, o.get("n"), sum(counts)))
+            for key, p in (("p50_ms", 0.50), ("p95_ms", 0.95), ("p99_ms", 0.99)):
+                want = nearest_rank(counts, edges_, p)
+                if o.get(key) != want:
+                    fail("%s %s: %s says %r, and the histogram says %r. The "
+                         "percentile is derived, never typed" % (rel, op, key,
+                                                                o.get(key), want))
+            edges_seen.setdefault(tuple(edges_), []).append("%s/%s" % (base, op))
+    if len(edges_seen) > 1:
+        fail("data/readpath/ holds %d different sets of bucket edges (%s). Two "
+             "releases are compared by ADDING their histograms, and counts over "
+             "different buckets cannot be added"
+             % (len(edges_seen), "; ".join(sorted(v[0] for v in edges_seen.values()))))
+    if rp_files and not os.path.exists(os.path.join(rp_dir, version_now + ".json")):
+        warn("no read-path measurement for %s. Run scripts/measure_readpath.js "
+             "before the release, or the next move's cost is unknowable" % version_now)
+
+    # ---- 7ai. the build stamps itself, and hashes what it produced ---------
+    # Added with move ו׳ of INFORMATION-PLAN.md, 2026-09-17, and it closed a
+    # bug that had already shipped.  Two things came out of that move:
+    #
+    #   1. `generated` and `app_version` no longer sit INSIDE five data files.
+    #      They are properties of the build, not of the district, and stamped
+    #      into the data they made every release look like a data change — so
+    #      a diff of what a release did to the data could not be read.  They
+    #      live in data/processed/manifest.json now.
+    #   2. The manifest carries a sha256 per file, which finally ENFORCES the
+    #      rule this project has stated since the first commit: data/processed
+    #      is generated and must never be hand-edited.  "Trust, but verify" —
+    #      chapter 13 has S3 and HDFS read their own files back and compare;
+    #      this compares the bytes on disk with what the build recorded.
+    #
+    # The shipped bug: until 2.0.8 the release gate bumped VERSION LAST, after
+    # the build, so data/processed always carried the PREVIOUS version — and
+    # since the app's info page reads it, the 2.0.7 APK told the reader it was
+    # 2.0.6.  build_diff.py found it by comparing the release with its
+    # predecessor, which is exactly what it exists for.  The app_version line
+    # below makes it impossible to ship again: VERSION rises FIRST, then the
+    # build, or this check fails.
+    man_path = os.path.join(PROC, "manifest.json")
+    version_file = io.open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
+    if not os.path.exists(man_path):
+        fail("data/processed/manifest.json is missing — run scripts/build.py. "
+             "Without it the app has no build date and no version to show")
+    else:
+        man = json.load(io.open(man_path, encoding="utf-8"))
+        if not re.match(r"^20\d\d-\d\d-\d\d$", str(man.get("generated", ""))):
+            fail("manifest.json: generated has to be a YYYY-MM-DD date")
+        if man.get("app_version") != version_file:
+            fail("manifest.json says app_version %r and VERSION says %r. The app's "
+                 "info page shows the manifest's value, so this is what the reader "
+                 "would be told. Raise VERSION *before* running build.py"
+                 % (man.get("app_version"), version_file))
+        on_disk = {n for n in os.listdir(PROC)
+                   if os.path.isfile(os.path.join(PROC, n)) and n != "manifest.json"
+                   and not n.startswith(".")}
+        recorded = set((man.get("files") or {}).keys())
+        for n in sorted(on_disk - recorded):
+            fail("data/processed/%s is not in manifest.json. Every file in the "
+                 "output is part of the output — run scripts/build.py, which "
+                 "writes the manifest last" % n)
+        for n in sorted(recorded - on_disk):
+            fail("manifest.json records data/processed/%s, which is not there" % n)
+        for n in sorted(on_disk & recorded):
+            rec = man["files"][n]
+            path_ = os.path.join(PROC, n)
+            got_bytes = os.path.getsize(path_)
+            h = hashlib.sha256()
+            with open(path_, "rb") as fh:
+                for chunk in iter(lambda: fh.read(1 << 16), b""):
+                    h.update(chunk)
+            if rec.get("bytes") != got_bytes or rec.get("sha256") != h.hexdigest():
+                fail("data/processed/%s does not match the manifest (%s bytes "
+                     "recorded, %s on disk). Either it was edited by hand — which "
+                     "the next build would silently undo — or a script rewrote it "
+                     "without rebuilding" % (n, rec.get("bytes"), got_bytes))
+    # The stamp must not come back into the data.  A future edit that re-adds it
+    # would quietly restore the noisy diff this move removed.
+    for n in ("indicators.json", "municipios.json", "freguesias.json",
+              "porto_city.json", "zones.json"):
+        d = load(n)
+        for k in ("generated", "app_version"):
+            if k in d:
+                fail("data/processed/%s carries %r again. The build's own stamp "
+                     "belongs in manifest.json; inside the data it makes every "
+                     "release look like a data change" % (n, k))
+
+    # The generated change record, one per release: §7x declares it a record by
+    # pattern, and this is what makes that safe — it has to really be generated.
+    for rel in sorted(os.path.basename(x) for x in
+                      glob.glob(os.path.join(ROOT, "docs", "CHANGES-*.md"))):
+        txt = io.open(os.path.join(ROOT, "docs", rel), encoding="utf-8").read()
+        ver = rel[len("CHANGES-"):-len(".md")]
+        if "scripts/build_diff.py" not in txt:
+            fail("docs/%s does not say it was generated by scripts/build_diff.py. "
+                 "A change record that was typed is a changelog, and a changelog "
+                 "says what its author remembered" % rel)
+        if ver not in txt.splitlines()[0]:
+            fail("docs/%s does not name %s in its heading — a record filed under "
+                 "the wrong release" % (rel, ver))
+
+    # ---- 7aj. a nested comparison field names the record it came from ------
+    # Move ג׳, 2026-09-17.  The comparison screen read FLAT keys only, so
+    # `ele` and `slope` — on every unit since 2.0.3 — could not be compared at
+    # all.  Dotted keys work now, and they bring a failure mode that a flat key
+    # does not have: the source record is NOT derivable from the path.
+    # `ele.min`, `ele.mean` and `ele.max` answer to the one `ele` record, while
+    # `ele.slope` lives inside the same object and has a record of its own.
+    # A dotted key with no entry in CMP_NESTED would silently look for a record
+    # called `municipio.ele.slope`, find nothing, and cmpFields() would DROP the
+    # field — a feature that disappears in silence, which is the worst kind.
+    # So: every dotted key is mapped, every mapping is used, and every mapped
+    # record exists at both levels.
+    cmp_block = re.search(r"const CMP_ALL = \[(.*?)\n\];", appjs_txt, re.S)
+    if not cmp_block:
+        fail("7aj cannot find CMP_ALL in app.js — the comparison screen's shape "
+             "changed and this check is looking at the wrong thing")
+    else:
+        # Commented-out rows do not count: the first cut of this check read the
+        # block as text, so a field that had been commented out still looked
+        # offered — and "the nested fields were taken away again" passed.
+        live_cmp = "\n".join(l for l in cmp_block.group(1).splitlines()
+                             if not l.lstrip().startswith(("//", "/*", "*")))
+        cmp_keys = re.findall(r"k: '([^']+)'", live_cmp)
+        nested_block = re.search(r"const CMP_NESTED = \{(.*?)\};", appjs_txt, re.S)
+        mapping = dict(re.findall(r"'([^']+)':\s*'([^']+)'",
+                                  nested_block.group(1) if nested_block else ""))
+        dotted = [k for k in cmp_keys if "." in k]
+        if not dotted:
+            fail("7aj: no nested comparison field is offered any more. ele and "
+                 "slope were added in 2.0.8 because they were unreachable; "
+                 "losing them again is a regression, not a simplification")
+        for k in dotted:
+            if k not in mapping:
+                fail("app.js offers the comparison field %r and CMP_NESTED does "
+                     "not say which source record it answers to. cmpFields() "
+                     "would drop it in silence" % k)
+                continue
+            for lvl in ("municipio", "freguesia"):
+                key = "%s.%s" % (lvl, mapping[k])
+                if key not in sources["fields"]:
+                    fail("comparison field %r maps to %r, which is not in "
+                         "data/sources.json" % (k, key))
+        for k in mapping:
+            if k not in cmp_keys:
+                fail("checks.py §7aj: CMP_NESTED maps %r and no comparison field "
+                     "uses it — a mapping nobody reads is a mapping nobody "
+                     "maintains" % k)
+
+    # ---- 7ak. a coverage string is counted, never remembered ---------------
+    # Found 2026-09-17 while implementing move א׳, and it was thirteen records
+    # deep: `freguesia.price_eur_m2` told the reader "70/243", every other
+    # parish record said "243/243", and the app has drawn 275 parishes since
+    # 1.34.0.  The true numbers are 55/275 for the sale price, 218/275 for the
+    # descriptions, and 0/275 for the population change — INE publishes that
+    # one per parish on the 2013 division and the join is by DICOFRE alone, so
+    # not one 2025 parish receives it.
+    #
+    # Why nothing caught it: §7x binds the COUNTS in prose, and a fraction was
+    # deliberately exempted there — "70/243" was a true sentence about the 2013
+    # division, and a check that cried wolf on it would have been switched off.
+    # The right rule is not "243 may not appear" but "the fraction must equal
+    # what the data holds", and that is arithmetic, not pattern matching.
+    #
+    # Every record whose coverage reads N/M is counted here: N is the units
+    # that actually carry a value, M is the units at that level.  A field the
+    # data stores under another name is listed in FIELD_AT; a record whose N/M
+    # counts something else entirely is exempted BY NAME, with its reason.
+    FIELD_AT = {           # record key suffix -> where the value really lives
+        "name_pt": "pt", "number": "num", "split2025": "was_part_of",
+        "ele": ("ele", "mean"), "slope": ("ele", "slope"),
+    }
+    COVERAGE_NOT_UNITS = {
+        # "25/25" is the dissolved UNIONS whose population was split, not units
+        # carrying a value — the 25 became 57 parishes.  Its own validation_he
+        # says so.
+        "freguesia.split2025": "counts the 25 dissolved unions, not units",
+    }
+
+    def value_at(obj, field):
+        where = FIELD_AT.get(field, field)
+        if isinstance(where, tuple):
+            return (obj.get(where[0]) or {}).get(where[1])
+        if where in obj:
+            return obj[where]
+        for holder in ("housing", "cons"):
+            if where in (obj.get(holder) or {}):
+                return obj[holder][where]
+        return None
+
+    LEVEL_ITEMS = {"municipio": mun, "freguesia": fre}
+    counted = 0
+    for key, rec in sorted(sources["fields"].items()):
+        cov = str(rec.get("coverage", ""))
+        if not re.match(r"^\d+/\d+$", cov) or key in COVERAGE_NOT_UNITS:
+            continue
+        lvl, _, field = key.partition(".")
+        items = LEVEL_ITEMS.get(lvl)
+        if items is None:
+            continue
+        have = sum(1 for o in items
+                   if value_at(o, field) not in (None, "", [], {}))
+        want = "%d/%d" % (have, len(items))
+        counted += 1
+        if cov != want:
+            fail("data/sources.json %s says coverage %s and the data holds %s. "
+                 "The reader sees this number in the source record; a coverage "
+                 "string is counted, never remembered" % (key, cov, want))
+    print("coverage strings counted %d" % counted)
+    for key, why in COVERAGE_NOT_UNITS.items():
+        if key not in sources["fields"]:
+            fail("checks.py §7ak exempts %s (%s) and there is no such record" % (key, why))
 
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:

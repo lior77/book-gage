@@ -1,0 +1,54 @@
+{
+ "app_version": "2.0.8",
+ "files": {
+  "boundaries_belts.geojson": {
+   "bytes": 125797,
+   "sha256": "e23ca44f12ceeb0c9b9546f444727a101b7473be2456953f5fe0ee0fdfa51e36"
+  },
+  "boundaries_floods.geojson": {
+   "bytes": 269938,
+   "sha256": "3960090ea63fa108373e209f5893930aec74dc1ba972d003dd098c04be55c810"
+  },
+  "boundaries_freguesias.geojson": {
+   "bytes": 256008,
+   "sha256": "c00bfdcfb630aad05a49de57285635f1163e3c45af881598e2f7637d00d9e404"
+  },
+  "boundaries_municipios.geojson": {
+   "bytes": 51769,
+   "sha256": "ff9ba16f6db9fc574754f3d5f119b1165a9f2a86f6b82be14a9d3714a7a8c060"
+  },
+  "boundaries_porto_city.geojson": {
+   "bytes": 9903,
+   "sha256": "ca147f2afdd53c3f31107b09f31e474d083c320fe9eb03fabcacd45240a09a4f"
+  },
+  "boundaries_water.geojson": {
+   "bytes": 143007,
+   "sha256": "299138b899123ddc5498741c8ecc4ef56cd3c5f8d393a55160eb57981aeb6213"
+  },
+  "climate.json": {
+   "bytes": 2736,
+   "sha256": "988e04ff948cd540955f3ffac668d50ea0d52c1cd41dbd612fa2ce11535fcc84"
+  },
+  "freguesias.json": {
+   "bytes": 327701,
+   "sha256": "a53ada393b3c2b72371a9be0e19d8a84286a0787d2a2732518084046199654af"
+  },
+  "indicators.json": {
+   "bytes": 11723,
+   "sha256": "9b5fd61821e84d299a89af70af3db9eec347e7fbfd9ed664f87318c5e9a86f6a"
+  },
+  "municipios.json": {
+   "bytes": 92610,
+   "sha256": "21e0f0f7fd13fb6f88377f9e59fd85d9dbe3a16d03421b1ee24e3e553efdde6b"
+  },
+  "porto_city.json": {
+   "bytes": 125277,
+   "sha256": "892ad6f194e4d6535d0a16b920b3f9e8fd261754a42b830639a990e0c096eb7b"
+  },
+  "zones.json": {
+   "bytes": 604449,
+   "sha256": "3baea4698acc5aca83266d4097db885f2a0e21d7bf55a3536a0d0e33700e65c4"
+  }
+ },
+ "generated": "2026-09-17"
+}

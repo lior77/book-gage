@@ -26,6 +26,7 @@ so) and "approx" (derived or proxied, never a measurement).  Anything below
 it carries a comment saying the same.  Search this file for CONFIDENCE.
 """
 import csv
+import hashlib
 import json
 import itertools
 import math
@@ -1545,11 +1546,15 @@ def main():
         written.append((name, os.path.getsize(path)))
 
     version = open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
-    dump("indicators.json", {"generated": date.today().isoformat(),
-                             "app_version": version,
-                             "items": indicators})
-    dump("municipios.json", {"generated": date.today().isoformat(),
-                             "belts": belts, "items": municipios})
+    # No date and no version INSIDE the data.  Both used to be stamped into
+    # five of these files, and both are properties of the BUILD, not of the
+    # district: a release that changed nothing but the day showed five data
+    # files as modified, and a diff of what the release did to the data was
+    # unreadable.  They live in manifest.json now — move ו׳ of
+    # docs/INFORMATION-PLAN.md, and the reason build_diff.py can say "not one
+    # field changed" and be believed.
+    dump("indicators.json", {"items": indicators})
+    dump("municipios.json", {"belts": belts, "items": municipios})
     # The number on the map is the app's own: 1..N inside each municipality,
     # in the official order (by DICOFRE), so the map and the list read the
     # same thing and no municipality shows 02 next to 44. The official code
@@ -1562,11 +1567,9 @@ def main():
     for kids in by_mun.values():
         for i, f in enumerate(sorted(kids, key=lambda f: f["code"]), 1):
             f["num"] = i
-    dump("freguesias.json", {"generated": date.today().isoformat(),
-                             "items": freguesias})
-    dump("porto_city.json", {"generated": date.today().isoformat(),
-                             "quarters": city, "places": places})
-    dump("zones.json", {"generated": date.today().isoformat(), "zones": zones})
+    dump("freguesias.json", {"items": freguesias})
+    dump("porto_city.json", {"quarters": city, "places": places})
+    dump("zones.json", {"zones": zones})
     # The climate normals pass through untouched: there is nothing to compute.
     # They are per STATION, and this build has no station-to-unit step because
     # two stations cannot give 275 parishes a temperature — see
@@ -1591,6 +1594,45 @@ def main():
     dump("boundaries_belts.geojson", belt_fc)
     dump("boundaries_freguesias.geojson", fre_fc)
     dump("boundaries_porto_city.geojson", city_bounds)
+
+    # ---- manifest.json: what the build stamped, and what it produced -------
+    # Three jobs in one small file:
+    #   1. it carries the build date and the app version, which used to be
+    #      stamped inside the data itself;
+    #   2. it is the app's only source for both, so the info page still says
+    #      when the data was built and which version is running;
+    #   3. it records a sha256 per file, so a hand-edited file in
+    #      data/processed — the one rule this project could state but never
+    #      enforce — is caught by checks.py §7ai.  "Trust, but verify":
+    #      chapter 13 has S3 and HDFS read their own files back and compare.
+    #
+    # It covers EVERY file in data/processed, not only the ones dumped above,
+    # because a file another script wrote (boundaries_floods.geojson comes from
+    # build_floods.py) is just as much of the output.  Running one of those
+    # scripts alone therefore makes the manifest stale and §7ai says so — the
+    # right answer being to run build.py, which is the last step of the loop
+    # anyway.
+    def sha256_of(path):
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 16), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    files = {}
+    for name in sorted(os.listdir(OUT)):
+        path = os.path.join(OUT, name)
+        if name == "manifest.json" or name.startswith(".") or not os.path.isfile(path):
+            continue
+        files[name] = {"bytes": os.path.getsize(path), "sha256": sha256_of(path)}
+    man = os.path.join(OUT, "manifest.json")
+    # Indented and key-sorted, unlike the data files: this one is read by people
+    # in a diff, and it is 1.5 KB either way.
+    with open(man, "w", encoding="utf-8") as fh:
+        json.dump({"generated": date.today().isoformat(), "app_version": version,
+                   "files": files}, fh, ensure_ascii=False, indent=1, sort_keys=True)
+        fh.write("\n")
+    written.append(("manifest.json", os.path.getsize(man)))
 
     for name, size in written:
         print("  %-38s %7.1f KB" % (name, size / 1024))

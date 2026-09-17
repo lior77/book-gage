@@ -798,6 +798,8 @@
   "טמפרטורה — נורמל 1991–2020 בתחנה": "Air temperature — 1991–2020 normal at the station",
   "משקעים — נורמל 1991–2020 בתחנה": "Precipitation — 1991–2020 normal at the station",
   "נורמלים אקלימיים 1991–2020: Instituto Português do Mar e da Atmosfera (IPMA). שימוש בנתונים מחייב ציון המקור, לפי מדיניות ההפצה של IPMA.": "Climate normals 1991–2020: Instituto Português do Mar e da Atmosfera (IPMA). Use of the data obliges the user to cite the source, under IPMA's distribution policy.",
-  "1991–2020": "1991–2020"
+  "1991–2020": "1991–2020",
+  "218 מתוך 275 הרובעים נושאים תיאור: 120 מהמסמך המקורי porto_district_map_a3.pdf ו-98 שנכתבו עבור האפליקציה ונשמרות ב-data/raw/freguesia_notes_app.json. ל-57 הרובעים שנוצרו ברפורמת 2025 אין תיאור": "218 of the 275 parishes carry a description: 120 from the original porto_district_map_a3.pdf and 98 written for the app and kept in data/raw/freguesia_notes_app.json. The 57 parishes created by the 2025 reform have none.",
+  "‏0 מתוך 275. ‏INE מפרסמת את השינוי גם לרמת הרובע — 243 רובעים על גבולות מפקד 2021, שהם חלוקת 2013 — והקבצים שמורים ב-data/raw/extra_indicators.json. החיבור ליחידות האפליקציה נעשה לפי קוד DICOFRE בלבד, במכוון, ולקבצים האלה אין קוד — לכן אף רובע אינו מקבל את הערך, והמסך אומר ”אין נתון“. ראו ARCHITECTURE.md §12": "0 of 275. INE does publish the change per parish — 243 parishes on the 2021 census boundaries, which are the 2013 division — and those files are kept in data/raw/extra_indicators.json. The join to this app's units is by DICOFRE alone, deliberately, and those files carry no code, so no parish receives the value and the screen says “no data”. See ARCHITECTURE.md §12"
  }
 }
