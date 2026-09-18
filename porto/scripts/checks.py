@@ -2755,6 +2755,63 @@ def main():
         fail("app.js no longer reads sources.json's missing.items — the list of "
              "what is NOT known is half of that screen")
 
+    # ---- 7ao. the audit stays a SECOND path, and does not become the first --
+    # Move ז׳, 2.3.0.  The audit re-derives published numbers from data/raw and
+    # compares; its entire value rests on getting there by a different route.
+    # The day someone writes `from build import geom_area_km2` to save twenty
+    # lines, the area probe stops being evidence and becomes build.py agreeing
+    # with itself — and nothing would look wrong: the run would still be green,
+    # faster, and shorter.  That is the failure this check exists to prevent,
+    # because it is the one that leaves no trace.
+    #
+    # It also holds the shape: every probe_* function is registered, and every
+    # one carries a docstring.  A probe with no docstring is a probe whose
+    # author never wrote down what agreement means, and a tolerance nobody
+    # justified is a tolerance that will be widened the first time it fails.
+    audit_path = os.path.join(ROOT, "scripts", "audit_e2e.py")
+    if not os.path.exists(audit_path):
+        fail("scripts/audit_e2e.py is gone. It is the only thing that reads the "
+             "shipped numbers back out of data/raw; checks.py validates the "
+             "shape of the output and the arithmetic inside it, and neither is "
+             "the same question")
+    else:
+        au = io.open(audit_path, encoding="utf-8").read()
+        for bad in ("from build import", "import build\n", "from porto_map",
+                    "import build_constraints", "from build_constraints"):
+            if bad in au:
+                fail("scripts/audit_e2e.py contains %r. The audit's whole value "
+                     "is that it reaches the number by a different route; a "
+                     "probe that calls the build's own function confirms only "
+                     "that the build agrees with itself" % bad)
+        probes = set(re.findall(r"^def (probe_[a-z_]+)\(", au, re.M))
+        block = re.search(r"^PROBES = \[(.*?)^\]", au, re.S | re.M)
+        listed = set(re.findall(r"probe_[a-z_]+", block.group(1))) if block else set()
+        if not block:
+            fail("scripts/audit_e2e.py no longer declares a PROBES list — "
+                 "nothing then says which probes a full run covers")
+        for orphan in sorted(probes - listed):
+            fail("scripts/audit_e2e.py defines %s() and never registers it in "
+                 "PROBES, so a full run does not call it" % orphan)
+        for ghost in sorted(listed - probes):
+            fail("PROBES names %s and no such function exists" % ghost)
+        undoc = sorted(n for n in probes
+                       if not re.search(r"^def %s\(.*?\):\n    \"\"\"" % n, au, re.S | re.M))
+        for n in undoc:
+            fail("scripts/audit_e2e.py: %s() carries no docstring. Every probe "
+                 "has to say what it re-derives, by which route, and inside "
+                 "what tolerance — a tolerance nobody wrote down is one that "
+                 "gets widened the first time it fails" % n)
+        print("audit %d probes, all registered and documented, no build import"
+              % len(probes))
+        # And the loop has to name it, or it is a script that exists and never
+        # runs.  ARCHITECTURE section 9 is the loop the project actually runs.
+        arch_txt = io.open(os.path.join(ROOT, "docs", "ARCHITECTURE.md"),
+                           encoding="utf-8").read()
+        if "audit_e2e.py" not in arch_txt:
+            fail("docs/ARCHITECTURE.md does not mention scripts/audit_e2e.py — "
+                 "a verification step that no document names is a step nobody "
+                 "runs")
+
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:
     # 7v was the Android manifest check and ALSO the CRUS check, and both were

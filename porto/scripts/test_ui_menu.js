@@ -3995,6 +3995,49 @@ const css = (page, sel, prop) =>
     await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; openMenu(false); });
   }
 
+  /* ---- the distance from Porto says which two points it measured --------
+     Move ז׳, 2.3.0.  The field used to be eighteen numbers copied out of the
+     original document under a label that said "from the CENTRE of Porto",
+     and against the centres this app draws it was out by up to 6.25km.  What
+     is asserted here is not the arithmetic — audit_e2e.py re-derives that by
+     a second route — but the thing the audit could not see: that the label on
+     the glass, the source record behind it and the number in the file are
+     three statements about the SAME measurement. */
+  {
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
+    await page.click('#homeBtn'); await page.waitForTimeout(400);
+    await page.evaluate(() => goMun(2)); await page.waitForTimeout(600);
+    const row = await page.$('#doc [data-src="municipio.dist_porto_km"]');
+    ok('distance: the municipality card carries it, and it opens its source', row !== null);
+    const card = await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#doc [data-src="municipio.dist_porto_km"]')][0];
+      const line = b && b.closest('.stat, .row, li, div');
+      return { text: line ? line.textContent.replace(/\s+/g, ' ').trim() : '',
+               rec: D.sources.fields['municipio.dist_porto_km'] };
+    });
+    ok('distance: the source record is a derivation of this project, not a copied table',
+       card.rec.confidence === 'approx'
+         && !/porto_map|DIST/.test(card.rec.source || '')
+         && /CAOP 2025/.test(card.rec.source || ''),
+       `${card.rec.confidence} · ${(card.rec.source || '').slice(0, 60)}`);
+    ok('distance: its label names BOTH ends, so it cannot be read as a distance to the boundary',
+       /מרכז/.test(card.rec.label_he) && /פורטו/.test(card.rec.label_he),
+       card.rec.label_he);
+    ok('distance: the record says which point, on which ellipsoid, and admits what it is not',
+       /WGS84/.test(card.rec.source) && /נקודת התווית/.test(card.rec.method_he || '')
+         && /גבולות/.test(card.rec.caveat_he || ''));
+    /* And the number on screen is the number in the file, at the level of
+       rounding the card prints — a label corrected without the value behind
+       it moving would be the same fault in the other direction. */
+    const agree = await page.evaluate(() => {
+      const m = D.munByNum.get(2);
+      return { shown: m.dist_porto_km, porto: D.munByNum.get(1).dist_porto_km };
+    });
+    ok('distance: Porto is zero from itself, and its neighbour is not',
+       agree.porto === 0 && agree.shown > 0, JSON.stringify(agree));
+    await page.click('#homeBtn'); await page.waitForTimeout(400);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);

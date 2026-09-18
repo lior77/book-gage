@@ -60,10 +60,36 @@ NUM = {name: i for i, name in enumerate(MUNICIPALITIES, 1)}
 
 # Straight-line distance to central Porto, in km, as printed in the PDF.
 # Parsed out of pdf_source/porto_map.py so the two can never drift apart.
-def read_dist():
-    txt = open(os.path.join(RAW, "pdf_source", "porto_map.py"), encoding="utf-8").read()
-    block = re.search(r"^DIST\s*=\s*\{(.*?)\}", txt, re.S | re.M).group(1)
-    return {int(k): float(v) for k, v in re.findall(r"(\d+)\s*:\s*\"([\d.]+) km\"", block)}
+def dist_porto_km(centres):
+    """Straight-line distance from Porto's label point to every other one, km.
+
+    Until 2.3.0 this field was a table of eighteen numbers copied out of the
+    original document (porto_map.py, DIST).  scripts/audit_e2e.py re-derived
+    it and found the table does not measure what its own label claims: it
+    said "aerial distance from the CENTRE of Porto", and against the centres
+    this app actually draws it was out by up to 6.25km — Vila Nova de Gaia
+    said 2.9km where the two centres are 9.15km apart, Gondomar 6.7 against
+    11.48.  Thirteen of the eighteen were whole kilometres.  Whatever that
+    table measured (boundary to boundary, most likely, for two municipalities
+    that share the Douro), it was not the distance between centres, and rule 4
+    of the accuracy contract is about exactly this: a label must not say more
+    than the number behind it supports.
+
+    So the number is derived here instead, where both ends are visible and
+    reproducible: the geodesic between the two LABEL POINTS — the point inside
+    each outline farthest from its edge, which is the point the map puts the
+    unit's number on.  Not the centroid, which for a crescent-shaped
+    municipality can fall outside it altogether.  Derived, therefore `approx`,
+    and the source record says which two points and on which ellipsoid.
+    """
+    porto = centres.get(NUM["Porto"])
+    if porto is None:
+        return {}
+    out = {}
+    for n, pt in centres.items():
+        s = Geodesic.WGS84.Inverse(porto[1], porto[0], pt[1], pt[0])["s12"]
+        out[n] = round(s / 1000.0, 1)
+    return out
 
 
 # ---------------------------------------------------------------- geometry ---
@@ -228,8 +254,9 @@ BASE_INDICATORS = [
     {"key": "area_km2", "label_he": "שטח", "unit": "קמ״ר",
      "reference_year": 2020, "source_he": "CAOP 2020 (DGT), שטח גיאודזי",
      "decimals": 1, "high_is": "neutral", "levels": ["municipio", "freguesia"]},
-    {"key": "dist_porto_km", "label_he": "מרחק אווירי מפורטו", "unit": "ק״מ",
-     "reference_year": None, "source_he": "המסמך המקורי (porto_map.py, DIST)",
+    {"key": "dist_porto_km", "label_he": "מרחק אווירי בין המרכזים", "unit": "ק״מ",
+     "reference_year": 2025,
+     "source_he": "מחושב כאן מגבולות CAOP 2025 — גאודזי בין נקודות התווית",
      "decimals": 1, "high_is": "low", "levels": ["municipio"]},
 ]
 
@@ -1182,7 +1209,6 @@ def round_geom(g, nd=5):
 
 # ------------------------------------------------------------------- build ---
 def main():
-    dist_km = read_dist()
     caop_mun = json.load(open(os.path.join(RAW, "caop2020_porto_municipios.geojson")))
     caop_fre = read_caop2025()
     collected = json.load(open(os.path.join(RAW, "census2021_freguesias_collected.json")))
@@ -1465,7 +1491,9 @@ def main():
             # opening map and page 1 of the document are the same picture
             "fill": mcol.get(n, "#dddddd"),
             "belt": belt_of.get(n), "area_km2": round(area, 2),
-            "dist_porto_km": dist_km.get(n),
+            # filled after the loop: it needs Porto's centre, and Porto is
+            # not guaranteed to be the first municipality read
+            "dist_porto_km": None,
             "transport": porto_freg2.TRANSPORT.get(n),
             "profile": [{"label": lab, "text": txt} for lab, txt in fields],
             "center": [round(pt.x, 5), round(pt.y, 5)],
@@ -1532,6 +1560,11 @@ def main():
         if rec.get("pop2021"):
             rec["density"] = round(rec["pop2021"] / area, 1)
         municipios.append(rec)
+
+    # Every centre is known now, so the distance from Porto's can be measured.
+    dist_km = dist_porto_km({m["num"]: m["center"] for m in municipios})
+    for m in municipios:
+        m["dist_porto_km"] = dist_km.get(m["num"])
 
     # ---- Porto city: 7 quarters and 53 bairros ------------------------------
     city = []

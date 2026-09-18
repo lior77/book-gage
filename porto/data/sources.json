@@ -16,8 +16,8 @@
   "municipio.pop2021": {
    "label_he": "מספר תושבים (עירייה)",
    "value_type": "integer",
-      "confidence": "reported",
-      "confidence_he": "‏INE מפרסם; העובדה שסכום הרובעים שווה לעירייה היא עקביות **של אותו קובץ**, ולא מקור שני. ברמת הרובע יש מקור שני, ולכן שם `verified`.",
+   "confidence": "reported",
+   "confidence_he": "‏INE מפרסם; העובדה שסכום הרובעים שווה לעירייה היא עקביות **של אותו קובץ**, ולא מקור שני. ברמת הרובע יש מקור שני, ולכן שם `verified`.",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -28,8 +28,8 @@
   "municipio.area_km2": {
    "label_he": "שטח (קמ״ר)",
    "value_type": "number",
-      "confidence": "verified",
-      "confidence_he": "השטח מחושב כאן מהפוליגון, ו-validation_he מתעד שהוא תואם את השטחים הרשמיים ש-DGT מפרסמת עד הספרה האחרונה המודפסת — מקור שני שמגיע לאותו מספר.",
+   "confidence": "verified",
+   "confidence_he": "השטח מחושב כאן מהפוליגון, ו-validation_he מתעד שהוא תואם את השטחים הרשמיים ש-DGT מפרסמת עד הספרה האחרונה המודפסת — מקור שני שמגיע לאותו מספר.",
    "reference_year": 2025,
    "source": "מחושב מפוליגוני CAOP 2025 (DGT) בשטח גיאודזי על אליפסואיד WGS84 (geographiclib)",
    "url": "https://www.dgterritorio.gov.pt/dados-abertos",
@@ -40,7 +40,7 @@
   "municipio.density": {
    "label_he": "צפיפות אוכלוסין (נפש/קמ״ר)",
    "value_type": "number",
-      "confidence": "approx",
+   "confidence": "approx",
    "reference_year": 2021,
    "source": "נגזר: pop2021 / area_km2",
    "coverage": "18/18",
@@ -50,11 +50,16 @@
    ]
   },
   "municipio.dist_porto_km": {
-   "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
+   "label_he": "מרחק אווירי בין מרכז העירייה למרכז פורטו (ק״מ)",
    "value_type": "number",
-      "confidence": "reported",
-   "source": "porto_map.py (DIST) — מהמסמך המקורי",
-   "coverage": "18/18"
+   "confidence": "approx",
+   "source": "מחושב כאן מגבולות CAOP 2025 (DGT): המרחק הגאודזי על אליפסואיד WGS84 בין נקודת התווית של העירייה לנקודת התווית של פורטו. scripts/build.py → dist_porto_km(), ו-scripts/audit_e2e.py גוזר אותו שוב בנוסחת haversine כמסלול שני.",
+   "coverage": "18/18",
+   "confidence_he": "נגזר בפרויקט הזה. עד 2.2.0 הערך היה טבלה של שמונה־עשר מספרים שהועתקה מהמסמך המקורי; scripts/audit_e2e.py גזר אותו מחדש ומצא שהטבלה אינה מודדת את מה שהתווית שלה טענה — פער של עד 6.25 ק״מ, ושלושה־עשר מתוך שמונה־עשר ערכים היו קילומטרים שלמים.",
+   "reference_year": 2025,
+   "method_he": "נקודת התווית היא הנקודה שבתוך המתאר הרחוקה ביותר משפתו — אותה נקודה שעליה יושב מספר היחידה על המפה — ולא הצנטרואיד, שעבור מתאר מעוקל עלול ליפול מחוץ ליחידה. המרחק הוא קו אווירי בין שתי הנקודות האלה, לא מרחק נסיעה ולא מרחק בין גבולות.",
+   "caveat_he": "קו אווירי בין שני מרכזים אינו זמן נסיעה ואינו מרחק בין הגבולות: לווילה נובה דה גאיה, שחולקת עם פורטו את הדואורו, הגבולות נוגעים והמרכזים רחוקים 9.2 ק״מ. שני הדברים נכונים ומודדים דברים שונים.",
+   "validation_he": "scripts/audit_e2e.py מודד את אותם שמונה־עשר מרחקים בנוסחת haversine על ספירה, בלי geographiclib, ומשווה בסבילות של 0.5% — ההפרש בין מודל כדורי לאליפסואידי בקווי הרוחב האלה. כל שמונה־עשר עוברים."
   },
   "municipio.transport": {
    "label_he": "תחבורה לפורטו",
@@ -84,8 +89,8 @@
   "freguesia.pop2021": {
    "label_he": "מספר תושבים (רובע)",
    "value_type": "integer",
-      "confidence": "verified",
-      "confidence_he": "‏crosscheck_baseline.py משווה מול Portugal_Property_Baseline_v2.csv — קובץ שנגזר מתת-מקטעי המפקד בדרך אחרת — והאוכלוסייה **זהה ב-275 מתוך 275**.",
+   "confidence": "verified",
+   "confidence_he": "‏crosscheck_baseline.py משווה מול Portugal_Property_Baseline_v2.csv — קובץ שנגזר מתת-מקטעי המפקד בדרך אחרת — והאוכלוסייה **זהה ב-275 מתוך 275**.",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -96,8 +101,8 @@
   "freguesia.area_km2": {
    "label_he": "שטח רובע (קמ״ר)",
    "value_type": "number",
-      "confidence": "approx",
-      "confidence_he": "שטח גיאודזי שמחושב כאן מהפוליגון. ברמת העירייה יש השוואה לשטחים ש-DGT מפרסמת ולכן שם `verified`; ברמת הרובע אין פרסום להשוות אליו.",
+   "confidence": "approx",
+   "confidence_he": "שטח גיאודזי שמחושב כאן מהפוליגון. ברמת העירייה יש השוואה לשטחים ש-DGT מפרסמת ולכן שם `verified`; ברמת הרובע אין פרסום להשוות אליו.",
    "reference_year": 2025,
    "source": "מחושב מפוליגוני CAOP 2025 (DGT), שטח גיאודזי WGS84",
    "coverage": "275/275"
@@ -105,7 +110,7 @@
   "freguesia.density": {
    "label_he": "צפיפות רובע",
    "value_type": "number",
-      "confidence": "approx",
+   "confidence": "approx",
    "reference_year": 2021,
    "source": "נגזר: pop2021 / area_km2",
    "coverage": "275/275"
@@ -209,7 +214,7 @@
   "municipio.housing": {
    "label_he": "דיור ובניינים",
    "value_type": "number",
-      "confidence": "reported",
+   "confidence": "reported",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -234,7 +239,7 @@
   "freguesia.housing": {
    "label_he": "דיור ובניינים",
    "value_type": "number",
-      "confidence": "reported",
+   "confidence": "reported",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -423,7 +428,7 @@
   "freguesia.split2025": {
    "label_he": "פילוח אוכלוסייה בין הרובעים שהחליפו יחידה שפורקה",
    "value_type": "integer",
-      "confidence": "reported",
+   "confidence": "reported",
    "reference_year": 2021,
    "source": "INE — טבלת המרה בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025 (BGRI2021_to_CAOP2025_reassignment.csv)",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -594,7 +599,7 @@
    "url": "https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=0012272&Dim1=S7A2021&lang=PT",
    "retrieved": "2026-09-12",
    "coverage": "0/275",
-      "coverage_he": "‏0 מתוך 275. ‏INE מפרסמת את השינוי גם לרמת הרובע — 243 רובעים על גבולות מפקד 2021, שהם חלוקת 2013 — והקבצים שמורים ב-data/raw/extra_indicators.json. החיבור ליחידות האפליקציה נעשה לפי קוד DICOFRE בלבד, במכוון, ולקבצים האלה אין קוד — לכן אף רובע אינו מקבל את הערך, והמסך אומר ”אין נתון“. ראו ARCHITECTURE.md §12",
+   "coverage_he": "‏0 מתוך 275. ‏INE מפרסמת את השינוי גם לרמת הרובע — 243 רובעים על גבולות מפקד 2021, שהם חלוקת 2013 — והקבצים שמורים ב-data/raw/extra_indicators.json. החיבור ליחידות האפליקציה נעשה לפי קוד DICOFRE בלבד, במכוון, ולקבצים האלה אין קוד — לכן אף רובע אינו מקבל את הערך, והמסך אומר ”אין נתון“. ראו ARCHITECTURE.md §12",
    "confidence": "reported",
    "note_he": "‏INE מחשבת את השינוי בעצמה ומפרסמת אותו על גאוגרפיית מפקד 2021. זה מה שפותר את בעיית הגבולות: חלוקת הרובעים של 2011 אינה זו של 2021, ולכן חישוב עצמאי ברמת הרובע לא היה אפשרי. הערך כאן אינו נגזר אצלנו.",
    "crosscheck_he": "‏pop2021 חלקי (1 + השינוי) מוחזר מול אוכלוסיית מפקד 2011 של INE (אינדיקטור 0005980), השמורה ב-data/raw/censos2011_municipios.json. ‏18 מתוך 18 העיריות תואמות עד 0.05%. בדיקה 7l אוכפת זאת. **זו הבדיקה שתפסה החלפה בין טרופה לולונגו** בטבלת קודי INE. ברמת הרובע אין השוואה כזו, כי אין אוכלוסיית 2011 על גבולות 2021. ‏אמרנטה היא היוצאת מן הכלל: השיעור שם מרמז על 56,263 תושבים ב-2011 מול 56,217 שמפקד 2011 מפרסם — 46 נפש, ‏0.08%. זהו פער בין שני פרסומים של INE עצמה, לא שגיאה כאן, והסף בבדיקה הוא 0.3% כדי שלא יכסה החלפה בין עיריות."

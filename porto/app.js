@@ -4851,7 +4851,7 @@ const CMP_ALL = [
   { g: 'טופוגרפיה', k: 'ele.min', he: 'הנקודה הנמוכה', unit: 'מ׳', dec: 0 },
   { g: 'טופוגרפיה', k: 'ele.slope', he: 'שיפוע ממוצע', unit: 'מעלות', dec: 1 },
   { g: 'שטח ומרחק', k: 'area_km2', he: 'שטח', unit: 'קמ״ר', dec: 1 },
-  { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי מפורטו', unit: 'ק״מ', dec: 1,
+  { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי בין המרכזים', unit: 'ק״מ', dec: 1,
     only: 'municipio' },
 ];
 
@@ -8388,8 +8388,8 @@ Object.assign(EN, {
     'Where a new place comes from',
   'מקור:':
     'Source:',
-  'מרחק אווירי מפורטו':
-    'Straight-line distance from Porto',
+  'מרחק אווירי בין המרכזים':
+    'Straight-line distance between the centres',
   'מ׳ <button type="button" data-jump="fre:':
     'm <button type="button" data-jump="fre:',
   'מ׳.':

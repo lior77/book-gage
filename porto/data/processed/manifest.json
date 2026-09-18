@@ -1,5 +1,5 @@
 {
- "app_version": "2.2.0",
+ "app_version": "2.3.0",
  "files": {
   "boundaries_belts.geojson": {
    "bytes": 125797,
@@ -34,12 +34,12 @@
    "sha256": "a53ada393b3c2b72371a9be0e19d8a84286a0787d2a2732518084046199654af"
   },
   "indicators.json": {
-   "bytes": 11723,
-   "sha256": "9b5fd61821e84d299a89af70af3db9eec347e7fbfd9ed664f87318c5e9a86f6a"
+   "bytes": 11780,
+   "sha256": "0becc1fba3c0a743d4d5ba1ab52e5a6b72f0fcc7506ce6edf00b748a23f53aaf"
   },
   "municipios.json": {
-   "bytes": 92610,
-   "sha256": "21e0f0f7fd13fb6f88377f9e59fd85d9dbe3a16d03421b1ee24e3e553efdde6b"
+   "bytes": 92612,
+   "sha256": "17ed1627040d433e007fcda4bbae5c9ef59df44dfd7368ac2233260e9210d3e0"
   },
   "porto_city.json": {
    "bytes": 125277,
