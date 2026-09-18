@@ -55,6 +55,7 @@ import glob
 import io
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -89,28 +90,50 @@ def fold(s):
     return "".join(c for c in s if unicodedata.category(c) != "Mn").lower()
 
 
+# https://www.idealista.pt/arrendar-casas/<place>/com-preco-max_1500,...
+SLUG = re.compile(r"idealista\.[a-z]+/(?:geo/)?[a-z-]*(?:casas|imoveis)/([^/?]+)/")
+
+
 def aimed_where(d):
     """Did this slice land where it was aimed, or somewhere else entirely?
 
     This is the one failure mode of slicing that does not look like a failure.
     Asked for "freguesia de Cristelos, Lousada", the connector's geocoder
     resolved it to a STREET — rua-lucia-lousada-cristelos-boim-ordem-lousada —
-    dropped `locationName` from the answer, and returned `total: 0`.  A zero
-    that means "I looked somewhere else" is indistinguishable on screen from a
-    zero that means "there is nothing here", and the second one is a fact
-    about the market while the first is a bug.
+    and returned `total: 0`.  Asked for "no concelho do Porto" it answered
+    about VILA DO CONDE.  A zero that means "I looked somewhere else" is
+    indistinguishable on screen from a zero that means "there is nothing
+    here", and the second is a fact about the market while the first is a bug.
 
-    So: the place the connector says it searched has to appear in the text it
-    was asked.  A slice with no `locationName` at all fails outright.
+    THE FIRST VERSION OF THIS FUNCTION READ `locationName`, AND IT WAS WRONG.
+    The connector omits that field from EVERY empty answer, including a
+    correct one — a real search for flats under 1,000 € in Porto came back
+    with the right `searchUrl` and no `locationName` at all.  Read that way,
+    the guard rejected honest zeros, which is the same fault it exists to
+    prevent, pointed the other way.
+
+    `searchUrl` is the field that is always there and always carries the place
+    idealista actually resolved: the slug between the operation and the
+    filters.  `locationName` is used when present because it is the tidier
+    name; the URL is the fallback, and only when neither can be read does the
+    slice fail for want of evidence.
     """
-    where = d.get("locationName")
-    if not where:
-        return "the connector returned no locationName — it did not resolve to a place"
     asked = fold(d.get("query") or "")
-    head = fold(where).split(",")[0].strip()
-    if head and head not in asked:
+    where = d.get("locationName")
+    if where:
+        head = fold(where).split(",")[0].strip()
+        if head and head in asked:
+            return None
         return "resolved to %r, which is not in the query" % where
-    return None
+    m = SLUG.search(d.get("searchUrl") or "")
+    if not m:
+        return ("no locationName and no readable place in the searchUrl — "
+                "there is no evidence of where this slice looked")
+    slug = m.group(1)
+    # "vila-do-conde" -> "vila do conde"; the query has to contain it
+    if fold(slug.replace("-", " ")) in asked:
+        return None
+    return ("the searchUrl says it looked at %r, which is not in the query" % slug)
 
 
 def item_of(p, op, keep_contact):

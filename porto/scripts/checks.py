@@ -2805,6 +2805,23 @@ def main():
             if owed not in cv:
                 fail("scripts/connector_listings.py no longer carries %r — %s"
                      % (owed, why))
+        # WHICH FIELD THE GUARD READS.  Its first version read `locationName`
+        # alone, and that was wrong in the direction that costs the most: the
+        # connector omits that field from EVERY empty answer, a correct one
+        # included.  A real search for T3 flats under 1,000 EUR in Porto came
+        # back with the right searchUrl, no locationName, and total 0 — an
+        # honest statement about the market, which the guard called a
+        # mis-aimed slice and refused.  A guard that rejects true answers is
+        # the same fault it exists to prevent, pointed the other way.
+        # `searchUrl` is the field that is always present and always carries
+        # the place idealista actually resolved, so it is the evidence.
+        i = cv.find("def aimed_where")
+        aw = cv[i:i + 2400] if i >= 0 else ""
+        if "searchUrl" not in aw or "SLUG" not in aw:
+            fail("aimed_where() no longer falls back to the searchUrl slug. "
+                 "locationName is absent from every empty answer, so a guard "
+                 "that reads it alone refuses honest zeros and calls them "
+                 "searches of the wrong place")
         # Contact off unless asked: the default decides what ends up in a file
         # that may be committed, and a default nobody chose is the one that
         # ships.
