@@ -514,6 +514,45 @@ def read_tipau():
     return out
 
 
+def adjacency(codes, geoms):
+    """Which units share a BORDER with which, from the outlines themselves.
+
+    Move ה׳ of docs/INFORMATION-PLAN.md.  The district's geometry has always
+    contained this and the app never held it: "what is next to this one" was a
+    question the data could answer and no screen could ask.
+
+    A SHARED BORDER IS A LINE, NOT A POINT.  Four parishes meeting at a corner
+    touch, and calling them neighbours would make "next to" mean something
+    nobody means by it — so the test is that the intersection has LENGTH.  The
+    threshold is 1e-9 degrees rather than zero because a corner computed in
+    floating point is not exactly a corner; anything above it is a border with
+    a direction, and anything below is arithmetic.
+
+    Candidates come from an R-tree, so this is 879 intersections rather than
+    the 37,675 of every pair against every other.
+
+    CONFIDENCE: `approx`.  No source publishes this list — it is derived here
+    from CAOP 2025, and it inherits whatever that edition says.  Two parishes
+    separated by a river are neighbours in this graph; whether you can get
+    from one to the other is a different question, and rule 4 forbids letting
+    this answer it.
+    """
+    from shapely.strtree import STRtree
+    tree = STRtree(geoms)
+    adj = {c: set() for c in codes}
+    for i, g in enumerate(geoms):
+        for j in tree.query(g):
+            j = int(j)
+            if j <= i:
+                continue
+            inter = geoms[i].intersection(geoms[j])
+            if inter.is_empty or getattr(inter, "length", 0) <= 1e-9:
+                continue
+            adj[codes[i]].add(codes[j])
+            adj[codes[j]].add(codes[i])
+    return {c: sorted(v) for c, v in adj.items()}
+
+
 def load_raw(name):
     """Optional raw file produced by ingest_overpass.py."""
     path = os.path.join(RAW, name)
@@ -1466,6 +1505,16 @@ def main():
 
     number_parishes(freguesias)
 
+    # ---- who is next to whom, move ה׳ ---------------------------------------
+    # From the CAOP 2025 polygons themselves, by DICOFRE, and attached to the
+    # records rather than written to a file of its own: a neighbour list is a
+    # property of a parish in the same way its area is, and a second file would
+    # be a second thing to keep in step.
+    fre_adj = adjacency([f["properties"]["dtmnfr"] for f in caop_fre["features"]],
+                        [shape(f["geometry"]).buffer(0) for f in caop_fre["features"]])
+    for f in freguesias:
+        f["adj"] = fre_adj.get(f["dicofre"], [])
+
     # ---- municipalities -----------------------------------------------------
     belt_of = {}
     belts = []
@@ -1565,6 +1614,15 @@ def main():
     dist_km = dist_porto_km({m["num"]: m["center"] for m in municipios})
     for m in municipios:
         m["dist_porto_km"] = dist_km.get(m["num"])
+
+    # And who is next to whom at this level too — the same rule, the same
+    # function, on the outlines the app already draws.  Eighteen units, so the
+    # R-tree is beside the point here; using the one function means the two
+    # levels cannot drift apart in what "next to" means.
+    mun_adj = adjacency([m["dicofre"] for m in municipios],
+                        [mun_geom[m["pt"]] for m in municipios])
+    for m in municipios:
+        m["adj"] = mun_adj.get(m["dicofre"], [])
 
     # ---- Porto city: 7 quarters and 53 bairros ------------------------------
     city = []

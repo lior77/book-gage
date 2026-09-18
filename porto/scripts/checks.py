@@ -2718,7 +2718,15 @@ def main():
     # source for the classification itself, therefore `reported`.  So a category
     # MAY carry a confidence word without it being a copy-paste; prose, a point,
     # an outline may not.
-    CONF_CLASSIFIABLE = CONF_NUMERIC | {"category"}
+    # A derived LIST is the same case: `municipio.adj` is not a number, but
+    # "computed here" is exactly what `approx` means, and a second derivation
+    # could reach the same list — which is what the audit does for numbers.
+    CONF_CLASSIFIABLE = CONF_NUMERIC | {"category", "list"}
+    # And the other direction, named rather than inferred: these are the types
+    # for which a confidence word means nothing at all.  A type in NEITHER set
+    # also warns, because a value type §7an has never been told about is one
+    # nobody has decided the question for.
+    CONF_PROSE = {"text", "string", "point", "geometry"}
     n_conf = {"verified": 0, "reported": 0, "approx": 0}
     for key, rec in sorted(sources["fields"].items()):
         conf, vt = rec.get("confidence"), rec.get("value_type")
@@ -2734,13 +2742,18 @@ def main():
                  % (key, conf, sorted(CONF_WORDS)))
             continue
         n_conf[conf] += 1
-        if vt is not None and vt not in CONF_CLASSIFIABLE:
+        if vt in CONF_PROSE:
             # Not a failure, but worth seeing: a confidence word on a paragraph
             # of prose, on a coordinate or on an outline is usually a
             # copy-paste from the field above it.
             warn("data/sources.json %s is a %s and carries confidence %r — rule 3 "
                  "is about a second source reaching the same value, and a %s "
                  "has none to reach" % (key, vt, conf, vt))
+        elif vt is not None and vt not in CONF_CLASSIFIABLE:
+            warn("data/sources.json %s is a %s and carries confidence %r, and "
+                 "§7an has never been told whether that means anything. Add "
+                 "%r to CONF_CLASSIFIABLE or to CONF_PROSE, with the reason"
+                 % (key, vt, conf, vt))
     print("confidence: %d verified, %d reported, %d approx, %d fields in all"
           % (n_conf["verified"], n_conf["reported"], n_conf["approx"],
              len(sources["fields"])))
@@ -2754,6 +2767,140 @@ def main():
     if "missing" not in appjs_txt or "missing.items" not in appjs_txt:
         fail("app.js no longer reads sources.json's missing.items — the list of "
              "what is NOT known is half of that screen")
+
+    # ---- 7aq. next to is a relation, and a relation has laws ----------------
+    # Move ה׳, 2.4.0.  The neighbour lists are derived from geometry, and
+    # geometry is exactly where a derivation goes wrong quietly: a polygon that
+    # fails to clean, a sliver of a border that rounds to nothing, an R-tree
+    # query that returns a candidate the intersection then rejects.  None of
+    # that looks wrong in the output — it looks like a parish with one fewer
+    # neighbour than it has.
+    #
+    # What a relation does have is laws, and they do not need a second source:
+    # if A borders B then B borders A, nothing borders itself, and in one
+    # continuous district nothing borders nothing.  §7ag is the same idea for
+    # a derived NUMBER; this is it for a derived EDGE.
+    for lvl, rows, key in (("freguesia", fre, "dicofre"),
+                           ("municipio", mun, "dicofre")):
+        by = {}
+        missing_list = 0
+        for r in rows:
+            if "adj" not in r:
+                missing_list += 1
+                continue
+            by[r[key]] = set(r["adj"])
+        if missing_list:
+            fail("%d %s records carry no `adj` at all. Move ה׳ derives it for "
+                 "every unit; a record without one is a unit the build did not "
+                 "find in the boundary file" % (missing_list, lvl))
+        for code, nb in sorted(by.items()):
+            if not nb:
+                fail("%s %s borders nothing. The district is one continuous "
+                     "area and has no islands in it" % (lvl, code))
+            if code in nb:
+                fail("%s %s is its own neighbour. `touches` against itself is "
+                     "how that happens, and the answer is meaningless" % (lvl, code))
+            for other in sorted(nb):
+                if other not in by:
+                    fail("%s %s names %s as a neighbour and no such unit is in "
+                         "the app. A neighbour list that points outside the "
+                         "data is a dead link on a screen" % (lvl, code, other))
+                elif code not in by[other]:
+                    fail("%s: %s borders %s and %s does not border %s. Sharing "
+                         "a border is symmetric — there is one line and it has "
+                         "two sides" % (lvl, code, other, other, code))
+        if by:
+            n = [len(v) for v in by.values()]
+            print("%s adjacency: %d units, %d..%d neighbours each, symmetric"
+                  % (lvl, len(by), min(n), max(n)))
+    # And the app has to be able to turn a code back into a unit, or the list
+    # is a set of codes nobody can follow.
+    # The rows have to be reachable, not only present.  The first version of
+    # adjCard used `data-jump`, which #doc does not delegate — every row
+    # rendered, looked like a button and did nothing, and only a browser
+    # assertion that CLICKED one found it.  So both halves are named here.
+    for owed in ("data-adjmun", "data-adjfre",
+                 "closest('[data-adjmun]')", "closest('[data-adjfre]')"):
+        if owed not in appjs_txt:
+            fail("app.js no longer carries %s. A neighbour row that #doc does "
+                 "not delegate renders as a button and does nothing — which is "
+                 "exactly how the first version of this card shipped" % owed)
+    for owed in ("D.freByDicofre", "D.munByDicofre", "function adjCard"):
+        if owed not in appjs_txt:
+            fail("app.js no longer carries %s — the neighbour lists are DICOFRE "
+                 "codes, and without the lookup and the card they are data that "
+                 "never reaches a screen" % owed)
+    # Rule 4, in the one place it is easy to lose: the card may not call a
+    # shared border a distance, a nearness or a travel time.
+    i = appjs_txt.find("function adjCard")
+    card = appjs_txt[i:i + 2600] if i >= 0 else ""
+    for bad in ("דקות", "מרחק נסיעה", "ק״מ מ"):
+        if bad in card:
+            fail("adjCard() says %r. A shared border is not a distance and not "
+                 "a journey: two parishes across the Douro border each other "
+                 "and are twenty minutes apart. Rule 4" % bad)
+
+    # ---- 7ap. the search answers with everything it found -------------------
+    # Move ד׳, 2.4.0.  What was there before was a substring scan with
+    # `if (out.length > 60) break;` INSIDE the loop over the 275 parishes — and
+    # the bug was never speed (search measured 1/2/3ms then and does now).  The
+    # break made the ANSWER WRONG: "מטרו" returned whichever stations sat in the
+    # parishes `Object.keys` happened to reach first, stopped, and then printed
+    # the number it had reached as though it were the number there are.  A list
+    # truncated in an order the reader cannot see, with a count that looks like
+    # a fact, is the same fault as a filter that counts a missing value as a
+    # pass — §7am — wearing different clothes.
+    #
+    # So: both search paths go through the one index, the cap applies to the
+    # DRAWING and never to the counting, and neither path may grow a substring
+    # scan again.  The second half matters because the scan is the obvious
+    # thing to reach for — it is four lines and it looks like it works.
+    for owed in ("function srchBuild", "function srchQuery", "function srchLower",
+                 "srchTokens", "D.poiTerms"):
+        if owed not in appjs_txt:
+            fail("app.js no longer carries %s — move ד׳ put every name behind "
+                 "one index, and both the search screen and the place picker "
+                 "read it" % owed)
+    for fn in ("function runSearch", "function placeHits"):
+        i = appjs_txt.find(fn)
+        if i < 0:
+            fail("app.js no longer defines %s" % fn)
+            continue
+        body = appjs_txt[i:i + 2600]
+        if "srchQuery(" not in body:
+            fail("%s no longer goes through srchQuery(). Two search paths that "
+                 "scan the same names separately can disagree about what the "
+                 "app contains, and they did" % fn)
+        if ".includes(q)" in body or ".indexOf(q) >= 0" in body:
+            fail("%s has grown a substring scan again. It is four lines and it "
+                 "looks like it works; what it cannot do is stop early without "
+                 "lying about the count" % fn)
+        if re.search(r"out\.length\s*>\s*\d+\s*\)\s*break", body):
+            fail("%s caps the SEARCH and not the drawing. The number on screen "
+                 "then counts what was reached, not what matched" % fn)
+    # The count printed has to be the length of the whole answer.  `.slice` is
+    # what draws sixty of them; a count taken after the slice is the old bug.
+    m = re.search(r"const SHOW = (\d+);", appjs_txt)
+    if not m:
+        fail("app.js no longer declares the search's draw cap as SHOW — the cap "
+             "has to be visibly separate from the count, which is the whole "
+             "point of §7ap")
+    else:
+        i = appjs_txt.find("function runSearch")
+        body = appjs_txt[i:i + 2600]
+        if "out.length > SHOW" not in body or "${out.length}" not in body:
+            fail("runSearch no longer prints out.length as the number of "
+                 "results. A count taken from the drawn slice is the number "
+                 "the reader was shown, not the number there are")
+    # Rule 6: the index READS `he`.  Folding is for the query and the index
+    # key; a folded string that reaches a name is a transliteration this
+    # project generated, which rule 6 forbids outright.
+    for bad in (".he = srchFold", ".he = srchTokens", "he: srchFold"):
+        if bad in appjs_txt:
+            fail("app.js writes a folded string into a name (%s). Rule 6: "
+                 "transliterations are read, never generated, corrected or "
+                 "suggested" % bad)
+    print("search: one index, two renderings, the count is the whole answer")
 
     # ---- 7ao. the audit stays a SECOND path, and does not become the first --
     # Move ז׳, 2.3.0.  The audit re-derives published numbers from data/raw and

@@ -962,6 +962,11 @@ async function load() {
     f.mun_he = D.munByNum.get(f.mun_num).he;
   });
   D.freByMun.forEach(list => list.sort((a, b) => freOrder(a).localeCompare(freOrder(b))));
+  /* Move ה׳: the neighbour lists on the records are DICOFRE codes, because
+     that is what the geometry carries and it is the one identifier both
+     levels share.  These two maps are how a code becomes a unit. */
+  D.freByDicofre = new Map(D.fre.filter(f => f.dicofre).map(f => [f.dicofre, f]));
+  D.munByDicofre = new Map(D.mun.filter(m => m.dicofre).map(m => [m.dicofre, m]));
   D.quarterByNum = new Map(D.city.map(q => [q.num, q]));
   // Porto's seven parishes *are* the seven city quarters; keep one numbering
   // for both so level 2 and level 3 agree.
@@ -1828,6 +1833,7 @@ function renderMun(num) {
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
     ${terrainCard(m, 'municipio')}
+    ${adjCard(m, 'municipio')}
     ${crusCard(m)}
     ${tipauCard(rows)}
     ${layerCard(m.num)}
@@ -3435,33 +3441,34 @@ function placePickerHtml() {
     </div>`;
 }
 function placeHits(term) {
-  const q = term.trim().toLowerCase();
-  if (q.length < 2) return null;
-  const hit = x => String(x || '').toLowerCase().includes(q);
+  const hits = srchQuery(term);
+  if (hits === null) return null;
+  /* The same index as the search panel, and deliberately so: before move ד׳
+     these were two substring scans over the same names, each with its own cap
+     and its own idea of which fields to look at, and they could disagree about
+     what the app contains.  One index, two renderings. */
   const out = [];
-  D.mun.forEach(m => {
-    if (hit(m.he) || hit(m.pt) || hit(m.dicofre)) out.push(
-      { t: nm(m), s: m.pt, k: t('עירייה'), ll: latlng(m.center) });
-  });
-  D.fre.forEach(f => {
-    if (hit(f.he) || hit(f.pt) || hit(f.dicofre)) out.push(
-      { t: nm(f), s: bare(f.pt) + ' · ' + f.mun_he, k: t('רובע'),
-        ll: f.center ? latlng(f.center) : null });
-  });
-  for (const key of Object.keys(D.zones)) {
-    if (out.length > 60) break;
-    const f = D.freByKey.get(key);
-    if (!f) continue;
-    const where = nm(f) + ' · ' + f.mun_he;
-    D.zones[key].bairros.forEach(b => {
-      if (b.ll && (hit(b.he) || hit(b.en))) out.push(
-        { t: b.he || b.en, s: b.en + ' · ' + where, k: t(b.kind_he || 'יישוב'), ll: b.ll });
-    });
-    D.zones[key].pois.forEach(pp => {
-      if (hit(pp.name)) out.push(
-        { t: pp.name, s: poiLabel(pp.cat) + ' · ' + where, k: t('אתר'), ll: pp.ll });
-    });
+  for (const d of hits) {
+    const r = srchRec(d);
+    if (!r) continue;
+    if (d.k === SRCH_MUN) {
+      out.push({ t: nm(r), s: r.pt, k: t('עירייה'), ll: latlng(r.center) });
+    } else if (d.k === SRCH_FRE) {
+      out.push({ t: nm(r), s: bare(r.pt) + ' · ' + r.mun_he, k: t('רובע'),
+                 ll: r.center ? latlng(r.center) : null });
+    } else {
+      const f = D.freByKey.get(d.f);
+      const where = (f ? nm(f) + ' · ' + f.mun_he : '');
+      if (d.k === SRCH_BAIRRO) {
+        out.push({ t: r.he || r.en, s: r.en + ' · ' + where,
+                   k: t(r.kind_he || 'יישוב'), ll: r.ll });
+      } else {
+        out.push({ t: r.name, s: poiLabel(r.cat) + ' · ' + where,
+                   k: t('אתר'), ll: r.ll });
+      }
+    }
   }
+  // a place with no coordinate cannot be picked as one
   return out.filter(r => r.ll);
 }
 function runPlaceSearch(term) {
@@ -4561,6 +4568,7 @@ function renderZone(key) {
     ${marketStats(f, 'freguesia')}
     ${seriesCard(f, 'freguesia')}
     ${terrainCard(f, 'freguesia')}
+    ${adjCard(f, 'freguesia')}
 
     ${z.bairros.length ? `
       <div class="grp">${z.bairros.length} ${curated ? t('שכונות') : t('יישובים ושכונות')} ${t('— האותיות במפה')}</div>
@@ -4585,6 +4593,52 @@ function renderZone(key) {
       return at && D.freKey(at) === key;
     })}`;
   $('#paneText').scrollTop = 0;
+}
+
+/* WHO IS NEXT TO WHOM — move ה׳ of docs/INFORMATION-PLAN.md, from 2.4.0.
+
+   The district's geometry has always contained this and no screen could ask
+   it.  For someone looking for somewhere to live it is one of the questions
+   that actually gets asked — "what is next to this?" — and the answer was
+   sitting in the outlines unread.
+
+   THREE THINGS THIS CARD IS CAREFUL NOT TO SAY, and all three are rule 4.
+   It says גובל (shares a border), never קרוב (near): two parishes on opposite
+   banks of the Douro share a border and are twenty minutes apart by road.  It
+   offers no distance and no travel time — the app has no routing engine and
+   an air-line between two label points is not a journey.  And it is marked
+   `approx`, because no source publishes this list: it is derived here from
+   CAOP 2025 and it inherits whatever that edition says, including the fifty-
+   seven parishes the 2025 reform created. */
+function adjCard(unit, level) {
+  const codes = unit.adj || [];
+  if (!codes.length) return '';
+  const src = level === 'municipio' ? 'municipio.adj' : 'freguesia.adj';
+  const rows = codes.map(code => {
+    if (level === 'municipio') {
+      const m = D.munByDicofre.get(code);
+      if (!m) return null;
+      return `<button class="row" data-adjmun="${m.num}">
+        <span class="pin" style="--c:${html(m.fill || '#ddd')}">${munNum(m)}</span>
+        <span class="row-body"><span class="row-t">${html(nm(m))}</span>
+          <span class="row-m"><span class="lat">${html(m.pt)}</span></span></span></button>`;
+    }
+    const f = D.freByDicofre.get(code);
+    if (!f) return null;
+    const other = f.mun_num !== unit.mun_num;
+    return `<button class="row" data-adjfre="${html(D.freKey(f))}">
+      <span class="pin" style="--c:${html(f.colour || '#ddd')}">${freNum(f)}</span>
+      <span class="row-body"><span class="row-t">${html(nm(f))}${
+        other ? ` <span class="flag">${html(nm(D.munByNum.get(f.mun_num)))}</span>` : ''}</span>
+        <span class="row-m"><span class="lat">${html(bare(f.pt))}</span> ·
+          <span class="lat num">${html(f.dicofre)}</span></span></span></button>`;
+  }).filter(Boolean);
+  if (!rows.length) return '';
+  return `<div class="card">
+      <h2>${t('גובל ב-')} <span class="note num">${rows.length}</span></h2>
+      <p class="note">${t('יחידות שחולקות עם זו גבול — קו, לא נקודה: יחידות שנפגשות בפינה אחת אינן ברשימה. נגזר כאן מגבולות CAOP 2025, ולכן ')}<button class="src" data-src="${html(src)}">${t('מחושב כאן')}</button>.</p>
+    </div>
+    <div class="rows">${rows.join('')}</div>`;
 }
 
 /* The user's own points, listed.  `within` decides which ones: everything at
@@ -6241,6 +6295,227 @@ function restore() {
 }
 
 /* ---------------------------------------------------------------- search --- */
+/* THE INDEX — move ד׳ of docs/INFORMATION-PLAN.md, from 2.4.0.
+
+   What was here before was a substring scan over every name in the app, run
+   again on every keystroke, with `if (out.length > 60) break;` inside the loop
+   over the 275 parishes.  That break is the reason this was rewritten, and it
+   is not about speed: search already measured 1/2/3ms, and it still does.  It
+   is that the break made the ANSWER WRONG.  Typing "מטרו" returned whichever
+   metro stations happened to sit in the parishes the loop reached first, in
+   `Object.keys` order, and then stopped — and the screen said "60 results" as
+   if that were the number there are.  A list that is silently truncated in an
+   order the user cannot see is the same fault as a filter that counts a
+   missing value as a pass: a plausible answer to a question nobody asked.
+
+   Now: term → postings, whole words, built ONCE and then queried.  Every
+   match is found, the caller decides how many to draw, and the count on
+   screen is the count there is.
+
+   WHOLE WORDS, NOT TRIGRAMS, and the plan said to decide this by measuring.
+   Measured on this data: 3,597 named things, 3,014 distinct terms, 10,247
+   postings.  A shipped whole-word index is 115KB raw / 38.6KB gzipped; the
+   trigram→term map alone is another 43.9KB gzipped, more than doubling it, to
+   buy tolerance for misspelling in a gazetteer where the user is usually
+   picking a name they have just read off the screen.  So: whole words, with
+   PREFIX matching over a sorted term list, which is what typing actually
+   needs — "מטר" has to find "מטרו" before the user finishes the word.
+
+   AND IT IS NOT SHIPPED AT ALL, which is a deliberate deviation from the
+   plan's "build-time index".  Every string in it is already in the payload:
+   the index would be 38.6KB of gzipped duplication.  It is built here, on the
+   first search, from data already in memory — nothing added to the download,
+   nothing added to the open (move ח׳ measures first_paint, and this runs
+   after it, only if the user searches).  The build cost is asserted in the
+   browser suite so that "it is fast enough" stays a measurement.
+
+   RULE 6.  The index READS `he` as it is.  It does not generate, correct or
+   suggest a transliteration, and folding is applied to the QUERY and to the
+   index key only — never written back to a name. */
+let SRCH = null;
+
+/* Diacritics off, case down.  Portuguese is written with them and typed
+   without: "Penafiel" and "Paços" have to be reachable from "penafiel" and
+   "pacos".  Hebrew has no case and carries no marks here, so it passes
+   through untouched. */
+function srchFold(s) {
+  return String(s == null ? '' : s).normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+/* Letters and digits of the two alphabets this app is written in; everything
+   else — spaces, hyphens, apostrophes, "de", punctuation — is a separator.
+   A DICOFRE code is digits, so it indexes as a word of its own. */
+const SRCH_WORD = /[0-9a-z֐-׿]+/g;
+function srchTokens(s) { return srchFold(s).match(SRCH_WORD) || []; }
+
+/* Four kinds, in the order a result list should offer them: a municipality
+   before a parish before a locality before a single point. */
+const SRCH_MUN = 0, SRCH_FRE = 1, SRCH_BAIRRO = 2, SRCH_POI = 3;
+
+/* Two postings lists per term, and the difference between them is what keeps
+   a one-word search honest.
+
+   STRONG is what the thing IS: its own names, its code, and for a point its
+   category — INE's own word for it, in both languages, which is how "מטרו"
+   reaches every metro station in the district rather than the one whose name
+   happens to carry the word.
+
+   WEAK is what the thing is INSIDE: the parish and the municipality that
+   contain it.  Indexed, because "porto campanhã" and "gaia mercado" are how
+   people narrow a search, and searching without that is searching with one
+   hand.  But a weak field alone may never produce a result: typing "porto"
+   must return Porto, the parishes named Porto and the places called Porto —
+   not the eleven hundred points that merely sit in it.  So the rule is that
+   at least ONE typed word has to land on a strong field, and the others may
+   land anywhere.  One word: strong only.  Two: the second can be the place. */
+function srchBuild() {
+  const docs = [], name = new Map(), aux = new Map(), weak = new Map();
+  const put = (map, w, i) => { const a = map.get(w); if (a) { if (a[a.length - 1] !== i) a.push(i); } else map.set(w, [i]); };
+  const add = (doc, own, cat, inside) => {
+    const i = docs.length;
+    docs.push(doc);
+    const fill = (map, fields, skip) => {
+      const s = new Set();
+      for (const f of (fields || [])) {
+        for (const w of srchTokens(f)) if (w.length > 1 && !skip.has(w)) s.add(w);
+      }
+      s.forEach(w => { put(map, w, i); skip.add(w); });
+      return skip;
+    };
+    const seen = new Set();
+    fill(name, own, seen);
+    fill(aux, cat, seen);
+    fill(weak, inside, seen);
+  };
+  D.mun.forEach(m => add({ k: SRCH_MUN, m: m.num }, [m.he, m.pt, m.en, m.dicofre]));
+  D.fre.forEach(f => add({ k: SRCH_FRE, f: D.freKey(f) },
+    [f.he, f.pt, f.dicofre], null, [f.mun_he, (D.munByNum.get(f.mun_num) || {}).pt]));
+  Object.keys(D.zones).forEach(key => {
+    const z = D.zones[key];
+    const f = D.freByKey.get(key) || {};
+    const m = D.munByNum.get(f.mun_num) || {};
+    const inside = [f.he, f.pt, f.mun_he, m.pt];
+    (z.bairros || []).forEach(b => add({ k: SRCH_BAIRRO, f: key, b: b.letter },
+      [b.he, b.en], null, inside));
+    /* Only the categories the app can actually SHOW.  build.py ships a ninth,
+       `civic` (189 points, labelled 'מוסדות ציבור' in build.py itself), and
+       app.js never put it in D.poiOrder — so it is not drawn, not switchable
+       and has no Hebrew name here.  The substring scan this index replaced
+       found those points and printed `civic` in Latin letters on a Hebrew row,
+       then jumped to a dot the map does not draw.  Search now describes what
+       the app contains and nothing else; whether the ninth category should be
+       shown is a question for the person whose app it is, and it is written
+       down in ARCHITECTURE §12 rather than answered here. */
+    /* The index `i` has to stay the position in z.pois, because that is what
+       srchRec() and the jump target look up — filtering the array first would
+       renumber every point after the first skipped one. */
+    (z.pois || []).forEach((p, i) => { if (!D.poiLabel[p.cat]) return; add({ k: SRCH_POI, f: key, i }, [p.name],
+      // the category is what the thing IS, and both languages of it are how
+      // it is asked for.  EN[] is read directly rather than through t(),
+      // because the index outlives whichever language it was built in.
+      [p.cat, D.poiLabel[p.cat], EN[D.poiLabel[p.cat]], D.poiTerms[p.cat]], inside); });
+  });
+  const terms = [...new Set([...name.keys(), ...aux.keys(), ...weak.keys()])].sort();
+  return { docs, terms,
+           name: terms.map(w => name.get(w) || null),
+           aux: terms.map(w => aux.get(w) || null),
+           weak: terms.map(w => weak.get(w) || null) };
+}
+
+/* The first index in `terms` that is not before `pre` — the left edge of the
+   prefix range.  A sorted array and a binary search, rather than a second
+   map keyed by every prefix, because the prefixes of 3,014 terms are far
+   more numerous than the terms. */
+function srchLower(terms, pre) {
+  let lo = 0, hi = terms.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (terms[mid] < pre) lo = mid + 1; else hi = mid;
+  }
+  return lo;
+}
+
+/* Every doc reachable from one typed word, with three things noted about how
+   it was reached: whether the word was the WHOLE term or only its start,
+   whether it landed on the thing's own NAME (or code), and whether it landed
+   on a strong field at all.  All three are ranking, not filtering, except the
+   last — see srchQuery. */
+function srchOne(ix, word) {
+  const hits = new Map();
+  const mark = (d, whole, named, isStrong) => {
+    const cur = hits.get(d);
+    if (!cur) { hits.set(d, { whole, named, strong: isStrong }); return; }
+    if (whole) cur.whole = true;
+    if (named) cur.named = true;
+    if (isStrong) cur.strong = true;
+  };
+  for (let i = srchLower(ix.terms, word); i < ix.terms.length; i++) {
+    const term = ix.terms[i];
+    if (term.indexOf(word) !== 0) break;
+    const whole = term.length === word.length;
+    if (ix.name[i]) for (const d of ix.name[i]) mark(d, whole, true, true);
+    if (ix.aux[i]) for (const d of ix.aux[i]) mark(d, whole, false, true);
+    if (ix.weak[i]) for (const d of ix.weak[i]) mark(d, whole, false, false);
+  }
+  return hits;
+}
+
+/* All the typed words, ANDed.  Two words are a narrowing ("porto campanhã"),
+   never a widening — a search that returns more the more you type is one
+   nobody can steer.  And at least one of them has to be what the thing IS. */
+function srchQuery(term) {
+  const q = srchTokens(term).filter(w => w.length > 1);
+  if (!q.length) return null;
+  if (!SRCH) SRCH = srchBuild();
+  let acc = null;
+  for (const w of q) {
+    const hits = srchOne(SRCH, w);
+    if (!hits.size) return [];
+    if (acc === null) { acc = hits; continue; }
+    const next = new Map();
+    hits.forEach((h, d) => {
+      const a = acc.get(d);
+      if (a) {
+        next.set(d, { whole: h.whole && a.whole, named: h.named || a.named,
+                      strong: h.strong || a.strong });
+      }
+    });
+    acc = next;
+    if (!acc.size) return [];
+  }
+  const out = [];
+  acc.forEach((h, d) => { if (h.strong) out.push({ d: SRCH.docs[d], h, n: srchName(SRCH.docs[d]) }); });
+  /* Order, and every step of it is a claim about what the typist meant:
+     an exact word before a prefix of one; the thing NAMED that before the
+     thing merely classified as it; a municipality before a parish before a
+     locality before a single point; a shorter name, which is usually the
+     thing itself rather than something named after it; then alphabetical, so
+     that a list of forty museums has an order a reader can predict. */
+  out.sort((a, b) => (b.h.whole - a.h.whole) || (b.h.named - a.h.named)
+    || (a.d.k - b.d.k) || (a.h.named ? a.n.length - b.n.length : 0)
+    || a.n.localeCompare(b.n));
+  return out.map(r => r.d);
+}
+
+/* The live record behind a doc, and its name — the index stores neither, so
+   that a name can never drift from the one the rest of the app draws. */
+function srchRec(d) {
+  if (d.k === SRCH_MUN) return D.munByNum.get(d.m);
+  if (d.k === SRCH_FRE) return D.freByKey.get(d.f);
+  const z = D.zones[d.f];
+  if (!z) return null;
+  if (d.k === SRCH_BAIRRO) return (z.bairros || []).find(b => b.letter === d.b);
+  return (z.pois || [])[d.i];
+}
+function srchName(d) {
+  const r = srchRec(d);
+  if (!r) return '';
+  if (d.k === SRCH_POI) return r.name || '';
+  if (d.k === SRCH_BAIRRO) return r.he || r.en || '';
+  return nm(r) || r.he || r.pt || '';
+}
+
+
 function openSearch() {
   openPanel('search', t('חיפוש'), `
     <input id="q" type="search" inputmode="search" autocomplete="off" enterkeyhint="search"
@@ -6255,54 +6530,49 @@ function panelSearchClick(e) {
 }
 
 function runSearch(term) {
-  const q = term.trim().toLowerCase();
-  if (q.length < 2) {
-    $('#qres').innerHTML = t('<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>');
-    return;
-  }
-  const hit = s => String(s || '').toLowerCase().includes(q);
-  const out = [];
-  D.mun.forEach(m => {
-    if (hit(m.he) || hit(m.pt) || hit(m.en) || hit(m.dicofre)) out.push({
-      t: munNum(m) + ' · ' + m.he, s: m.pt + ' · ' + munCode(m), k: t('עירייה'), go: `data-jump="mun:${m.num}"` });
-  });
-  D.fre.forEach(f => {
-    // the official code is searchable too: it is what appears on a form
-    if (hit(f.he) || hit(f.pt) || hit(f.dicofre)) out.push({
-      t: (f.he || f.pt), s: bare(f.pt) + ' · ' + f.mun_he
-        + (f.dicofre ? ' · ' + f.dicofre : ''),
-      k: f.mun_num === 1 ? t('רובע בפורטו') : t('רובע'),
-      go: `data-jump="zone:${html(D.freKey(f))}"` });
-  });
-  // 1,773 localities and 1,531 dots across the district; stop once the list is
-  // long enough rather than walk all of them for every keystroke
-  const CAP = 60;
-  for (const key of Object.keys(D.zones)) {
-    if (out.length > CAP) break;
-    const f = D.freByKey.get(key);
-    if (!f) continue;
-    const where = nm(f) + ' · ' + f.mun_he;
-    const z = D.zones[key];
-    z.bairros.forEach(b => {
-      if (hit(b.he) || hit(b.en)) out.push({
-        t: b.letter + ' · ' + (b.he || b.en), s: b.en + ' · ' + where,
-        k: t(b.kind_he || 'שכונה'), go: `data-jump="bairro:${html(key)}:${html(b.letter)}"` });
-    });
-    z.pois.forEach((p, i) => {
-      if (hit(p.name)) out.push({
-        t: p.name, s: poiLabel(p.cat) + ' · ' + where,
-        k: t('נקודה'), go: `data-jump="poi:${html(key)}:${i}"` });
-    });
-  }
-
+  const hits = srchQuery(term);
   const box = $('#qres');
   if (!box) return;
+  if (hits === null) {
+    box.innerHTML = t('<p class="note">שתי אותיות ומעלה — בעברית, פורטוגזית או אנגלית.</p>');
+    return;
+  }
+  /* The whole answer is counted; only the drawing is capped.  Before move ד׳
+     the LOOP stopped at sixty and the count printed was the count of what had
+     been reached, which is a different number from the number of matches and
+     read as if it were the same one. */
+  const SHOW = 60;
+  const row = d => {
+    const r = srchRec(d);
+    if (!r) return null;
+    if (d.k === SRCH_MUN) {
+      return { t: munNum(r) + ' · ' + r.he, s: r.pt + ' · ' + munCode(r),
+               k: t('עירייה'), go: `data-jump="mun:${r.num}"` };
+    }
+    if (d.k === SRCH_FRE) {
+      // the official code is searchable too: it is what appears on a form
+      return { t: (r.he || r.pt),
+               s: bare(r.pt) + ' · ' + r.mun_he + (r.dicofre ? ' · ' + r.dicofre : ''),
+               k: r.mun_num === 1 ? t('רובע בפורטו') : t('רובע'),
+               go: `data-jump="zone:${html(D.freKey(r))}"` };
+    }
+    const f = D.freByKey.get(d.f);
+    const where = (f ? nm(f) + ' · ' + f.mun_he : '');
+    if (d.k === SRCH_BAIRRO) {
+      return { t: r.letter + ' · ' + (r.he || r.en), s: r.en + ' · ' + where,
+               k: t(r.kind_he || 'שכונה'),
+               go: `data-jump="bairro:${html(d.f)}:${html(r.letter)}"` };
+    }
+    return { t: r.name, s: poiLabel(r.cat) + ' · ' + where, k: t('נקודה'),
+             go: `data-jump="poi:${html(d.f)}:${d.i}"` };
+  };
+  const out = hits.map(row).filter(Boolean);
   box.innerHTML = out.length
-    ? '<div class="rows">' + out.slice(0, 60).map(r => `<button class="row" ${r.go}>
+    ? '<div class="rows">' + out.slice(0, SHOW).map(r => `<button class="row" ${r.go}>
         <span class="row-body"><span class="row-t">${html(r.t)}</span>
           <span class="row-m"><span class="lat">${html(r.s)}</span></span></span>
         <span class="note">${html(r.k)}</span></button>`).join('') + '</div>' +
-      (out.length > 60 ? `<p class="note" style="margin-block-start:8px">${out.length} ${t('תוצאות, מוצגות 60.')}</p>` : '')
+      (out.length > SHOW ? `<p class="note" style="margin-block-start:8px">${out.length} ${t('תוצאות, מוצגות 60.')}</p>` : '')
     : `<p class="note">${t('אין תוצאות ל״')}${html(term)}${t('״.')}</p>`;
 }
 
@@ -6756,6 +7026,18 @@ function wire() {
       drawZone(S.zone); renderZone(S.zone); applyHi(); renderMenu();
       return;
     }
+    /* Move ה׳.  A neighbour row has to GO to the unit, and the two attributes
+       #doc already understands do something else: `data-fre` highlights a
+       parish inside the municipality being read, which is wrong for a
+       neighbour in a different one, and `data-mun` is the municipality list.
+       So the card carries attributes of its own, and they are read here,
+       before either of those can claim the click.  (The first version of this
+       card used `data-jump`, which is only delegated inside the panel — the
+       rows rendered, looked like buttons, and did nothing at all.) */
+    const adjM = e.target.closest('[data-adjmun]');
+    if (adjM) { goMun(Number(adjM.dataset.adjmun)); return; }
+    const adjF = e.target.closest('[data-adjfre]');
+    if (adjF) { goZone(adjF.dataset.adjfre); return; }
     const act = e.target.closest('[data-mine-act]');
     if (act) {
       if (act.dataset.mineAct === 'export') openExport(); else openImport('');
@@ -6839,6 +7121,28 @@ function wire() {
     station: 'תחנות מטרו ורכבת', hospital: 'בתי חולים', university: 'אוניברסיטה והשכלה',
     museum: 'מוזיאונים וגלריות', culture: 'תיאטרון, ספריות ותרבות', market: 'שווקים',
     landmark: 'אתרים ומונומנטים', green: 'פארקים, גנים וחופים',
+  };
+  /* Search words for each category, written by hand, in both languages.
+     Move ד׳ indexes the LABEL as well as the name, so that "מטרו" finds the
+     metro stations and not only the one place with the word in its name —
+     but a label is a phrase, and a whole-word index splits it into the words
+     it happens to contain.  'תחנות מטרו ורכבת' yields "ורכבת" with the
+     conjunction attached, so "רכבת" found nothing, and this app is not going
+     to acquire a Hebrew morphological analyser.
+     These are synonyms OF THE CATEGORY, nothing wider: a landmark is not
+     indexed under "כנסייה" because not every landmark is a church, and a
+     category that claims more than it holds is the rule-4 failure in a new
+     place.  Rule 6's spirit holds too — a person wrote these, in both
+     languages, exactly as a person wrote the labels above them. */
+  D.poiTerms = {
+    station: 'מטרו רכבת תחנה תחנות metro comboio estacao station',
+    hospital: 'חולים בית רפואה hospital',
+    university: 'אוניברסיטה מכללה השכלה universidade faculdade',
+    museum: 'מוזיאון גלריה museu galeria',
+    culture: 'תיאטרון ספריה ספרייה תרבות teatro biblioteca cultura',
+    market: 'שוק שווקים mercado',
+    landmark: 'אתר מונומנט אנדרטה monumento landmark',
+    green: 'פארק גן גנים חוף parque jardim praia',
   };
   S.cats = new Set(D.poiOrder);
 
@@ -8608,6 +8912,10 @@ Object.assign(EN, {
     'Area',
   'טופוגרפיה':
     'Topography',
+  'גובל ב-':
+    'Shares a border with',
+  'יחידות שחולקות עם זו גבול — קו, לא נקודה: יחידות שנפגשות בפינה אחת אינן ברשימה. נגזר כאן מגבולות CAOP 2025, ולכן ':
+    'Units that share a border with this one — a line, not a point: units that meet at a single corner are not on the list. Derived here from the CAOP 2025 boundaries, and therefore ',
   'מקורות ומה חסר':
     'Sources, and what is missing',
   'מקורות — כל שדה, ומה חסר':

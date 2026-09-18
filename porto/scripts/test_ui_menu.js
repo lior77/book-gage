@@ -4038,6 +4038,164 @@ const css = (page, sel, prop) =>
     await page.click('#homeBtn'); await page.waitForTimeout(400);
   }
 
+  /* ---- the index: every match, not the first sixty reached ---------------
+     Move ד׳, 2.4.0.  The assertion that matters is a COUNT: "מטרו" has to
+     return every station in the district, and the number of stations is a
+     number the data knows independently of the search.  The scan this
+     replaced could not pass that test at any speed, because it stopped at
+     sixty results partway through the parishes. */
+  {
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; openMenu(false); });
+    const cats = await page.evaluate(() => {
+      const n = {};
+      Object.values(D.zones).forEach(z => (z.pois || []).forEach(p => { n[p.cat] = (n[p.cat] || 0) + 1; }));
+      return n;
+    });
+    const q = async s => page.evaluate(x => srchQuery(x).map(d => ({ k: d.k, n: srchName(d) })), s);
+    const metro = await q('מטרו');
+    ok('search: מטרו returns every station in the district, counted from the data',
+       metro.length === cats.station && metro.every(r => r.k === 3),
+       `${metro.length} hits, ${cats.station} stations`);
+    ok('search: and the same question in Portuguese and in English reaches the same set',
+       (await q('metro')).length === cats.station && (await q('station')).length === cats.station);
+    /* The label is 'תחנות מטרו ורכבת', and a whole-word index splits it into
+       the words it happens to contain — "ורכבת", with the conjunction stuck
+       to it.  D.poiTerms is why "רכבת" works, and it is hand-written. */
+    ok('search: רכבת works too, although the label only carries it with a vav attached',
+       (await q('רכבת')).length === cats.station, `${(await q('רכבת')).length}`);
+    for (const [word, cat] of [['שוק', 'market'], ['מוזיאון', 'museum'], ['בתי חולים', 'hospital']]) {
+      const got = await q(word);
+      ok(`search: "${word}" reaches every ${cat}, and only adds things named that`,
+         got.length >= cats[cat] && got.filter(r => r.k === 3).length >= cats[cat],
+         `${got.length} hits, ${cats[cat]} of that category`);
+    }
+
+    /* Both alphabets, and the official code, reach the same parish. */
+    const he = await q('בונפים'), pt = await q('bonfim'), code = await q('131202');
+    ok('search: a parish is reachable in Hebrew, in Portuguese and by its DICOFRE',
+       he.length && pt.length && code.length === 1
+         && he[0].n === pt[0].n && pt[0].n === code[0].n,
+       `${he[0] && he[0].n} · ${pt[0] && pt[0].n} · ${code[0] && code[0].n}`);
+    ok('search: diacritics are not required — "pacos" finds Paços de Ferreira',
+       (await q('pacos')).some(r => /פריירה|Ferreira/.test(r.n)));
+
+    /* One word searches what a thing IS; a second word may say where it is.
+       Typing one word must NOT return everything inside the place named. */
+    const one = await q('porto'), two = await q('porto campanha');
+    ok('search: one word does not drag in the eleven hundred points inside Porto',
+       one.length < 200 && one[0].k === 0, `${one.length} hits, first kind ${one[0] && one[0].k}`);
+    ok('search: two words narrow — never widen — and the place may be the second',
+       two.length > 0 && two.length < one.length && two[0].k === 1,
+       `${one.length} → ${two.length}`);
+    ok('search: a word that is nowhere returns nothing, not everything',
+       (await q('xyzzy')).length === 0);
+
+    /* It costs nothing until it is used, and what it costs then is measured
+       rather than asserted to be small. */
+    const cost = await page.evaluate(() => {
+      const t0 = performance.now(); const ix = srchBuild(); const t1 = performance.now();
+      const t2 = performance.now(); srchQuery('campanha'); const t3 = performance.now();
+      return { build: t1 - t0, query: t3 - t2, docs: ix.docs.length, terms: ix.terms.length };
+    });
+    ok('search: the index is built once, in well under a fifth of a second',
+       cost.build < 200 && cost.docs > 3000 && cost.terms > 2000,
+       `${Math.round(cost.build)}ms for ${cost.docs} names and ${cost.terms} terms`);
+    ok('search: and a query after it is under a millisecond',
+       cost.query < 5, `${Math.round(cost.query * 100) / 100}ms`);
+
+    /* The screen, not just the function: the count printed is the count of
+       matches, and the rows drawn are capped at sixty. */
+    await page.evaluate(() => openSearch()); await page.waitForTimeout(300);
+    await page.fill('#q', 'מטרו'); await page.waitForTimeout(400);
+    /* `> p.note` and not `.note`: every row carries a .note of its own for the
+       kind chip, and the first one in the box is "נקודה", not the count. */
+    const screen = await page.evaluate(() => ({
+      rows: document.querySelectorAll('#qres .row').length,
+      note: (document.querySelector('#qres > p.note') || {}).textContent || '' }));
+    ok('search screen: sixty rows drawn, and the note says how many there are',
+       screen.rows === 60 && screen.note.indexOf(String(metro.length)) === 0,
+       `${screen.rows} rows · ${screen.note.trim()}`);
+    await page.fill('#q', 'בונפים'); await page.waitForTimeout(400);
+    ok('search screen: a small answer draws every row and prints no note',
+       await page.evaluate(() => document.querySelectorAll('#qres .row').length) === 2
+         && !(await page.evaluate(() => !!document.querySelector('#qres > p.note'))));
+    await page.evaluate(() => closePanel()); await page.waitForTimeout(200);
+  }
+
+  /* ---- who is next to whom -----------------------------------------------
+     Move ה׳, 2.4.0.  The district's geometry always contained this and no
+     screen could ask it.  What is asserted here is that the card on the glass
+     agrees with the relation in the data, that a neighbour is reachable by a
+     tap, and — the part that is rule 4 rather than arithmetic — that it says
+     "shares a border" and never "near", "minutes" or a distance. */
+  {
+    await page.evaluate(async () => {
+      if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.flt) toggleFlt();
+      if (S.cons) await toggleCons();
+      document.getElementById('infoDrawer').hidden = true; openMenu(false);
+    });
+    await page.click('#homeBtn'); await page.waitForTimeout(400);
+    await page.evaluate(() => goMun(14)); await page.waitForTimeout(600);
+    const munAdj = await page.evaluate(() => (D.munByNum.get(14).adj || []).slice());
+    const munRows = await page.$$eval('#doc [data-adjmun]', els => els.map(e => e.dataset.adjmun));
+    ok('neighbours: the municipality card lists exactly the units the data says border it',
+       munAdj.length > 0 && munRows.length === munAdj.length,
+       `${munRows.length} rows, ${munAdj.length} in the data`);
+    ok('neighbours: and each row is one of them, by code',
+       await page.evaluate(codes => {
+         const want = new Set(codes);
+         return [...document.querySelectorAll('#doc [data-adjmun]')].every(e => {
+           const m = D.munByNum.get(Number(e.dataset.adjmun));
+           return m && want.has(m.dicofre);
+         });
+       }, munAdj));
+
+    /* Rule 4 on the glass, not only in the source record. */
+    const words = await page.evaluate(() => {
+      const h = [...document.querySelectorAll('#doc h2')].find(x => /גובל/.test(x.textContent));
+      const card = h && h.closest('.card');
+      return { head: h ? h.textContent.trim() : '', note: card ? card.textContent : '' };
+    });
+    ok('neighbours: the heading says it shares a border, not that it is near',
+       /גובל/.test(words.head) && !/קרוב/.test(words.note), words.head);
+    ok('neighbours: and the card offers no distance and no travel time',
+       !/דקות/.test(words.note) && !/ק״מ/.test(words.note) && !/נסיעה/.test(words.note.replace(/זמן נסיעה/g, '')));
+    ok('neighbours: the card says the value is computed here, and opens its source record',
+       await page.evaluate(() => !!document.querySelector('#doc [data-src="municipio.adj"]')));
+
+    /* A parish, where the interesting case is a neighbour in ANOTHER
+       municipality: the graph crosses the level, which is the whole reason
+       chapter 3 of the book is about graphs and not about trees. */
+    const cross = await page.evaluate(() => {
+      for (const f of D.fre) {
+        const out = (f.adj || []).map(c => D.freByDicofre.get(c))
+          .filter(x => x && x.mun_num !== f.mun_num);
+        if (out.length) return { key: D.freKey(f), n: (f.adj || []).length, out: out.length };
+      }
+      return null;
+    });
+    ok('neighbours: some parish borders one in another municipality — the graph is not a tree',
+       cross !== null && cross.out > 0, JSON.stringify(cross));
+    if (cross) {
+      await page.evaluate(k => goZone(k), cross.key); await page.waitForTimeout(600);
+      const rows = await page.$$eval('#doc [data-adjfre]', els => els.length);
+      ok('neighbours: the parish card lists every one of them',
+         rows === cross.n, `${rows} rows, ${cross.n} in the data`);
+      ok('neighbours: and the ones outside the municipality are marked as such',
+         await page.$$eval('#doc [data-adjfre] .flag', els => els.length) === cross.out,
+         `${await page.$$eval('#doc [data-adjfre] .flag', els => els.length)} marked, ${cross.out} outside`);
+      /* And it navigates: the list is not decoration. */
+      const first = await page.$eval('#doc [data-adjfre]', e => e.dataset.adjfre);
+      await page.evaluate(() => document.querySelector('#doc [data-adjfre]').click());
+      await page.waitForTimeout(800);
+      ok('neighbours: tapping one opens it — the rows navigate, they are not decoration',
+         await page.evaluate(() => S.level) === 'zone'
+           && await page.evaluate(k => S.zone === k, first),
+         `${first} → ${await page.evaluate(() => `${S.level} ${S.zone}`)}`);
+    }
+    await page.click('#homeBtn'); await page.waitForTimeout(500);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);
