@@ -1,0 +1,14 @@
+{
+ "portoland_quarters": 1,
+ "base": "https://cdn.jsdelivr.net/gh/lior77/book-gage@claude/mobile-app-pdf-knowledge-aoomsp/porto/data/quarter/",
+ "fallback": "https://raw.githubusercontent.com/lior77/book-gage/claude/mobile-app-pdf-knowledge-aoomsp/porto/data/quarter/",
+ "quarters": [
+  {
+   "period": "2026Q1",
+   "file": "2026Q1.json",
+   "bytes": 5805,
+   "sha256": "b21329b20a7d584480e497ee34ca6410668cd74dcbaa16d57813e9dbd13aabe4",
+   "units": 74
+  }
+ ]
+}

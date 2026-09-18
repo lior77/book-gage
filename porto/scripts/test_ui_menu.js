@@ -306,7 +306,9 @@ const css = (page, sel, prop) =>
     'cons-src', 'floods', 'water', 'mine', 'letters', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark',
-    'save', 'load',
+    /* 'quarter' joined in 2.5.0, first of the three data rows: it is the one
+       row in the app that asks for a network on purpose. */
+    'quarter', 'save', 'load',
     /* 'sources' joined in 2.2.0, above 'info': it is the row that answers
        "says who?" about every number on every other screen, and CLAUDE.md
        calls the list of what is NOT known part of the product. */
@@ -4194,6 +4196,233 @@ const css = (page, sel, prop) =>
          `${first} → ${await page.evaluate(() => `${S.level} ${S.zone}`)}`);
     }
     await page.click('#homeBtn'); await page.waitForTimeout(500);
+  }
+
+  /* ---- a deleted place stays deleted -------------------------------------
+     Move ט׳, 2.5.0.  This is the shopping-cart anomaly of chapter 6, on a
+     list of places somebody has ruled out: delete one here, import a file
+     exported before the deletion, and a union merge brings it back.  Nothing
+     errors and nothing is lost — a place you deliberately removed is simply
+     back among the ones you are still considering, which is the worst kind
+     of bug to find.
+
+     So the assertions here do not read code, they do the thing: export,
+     delete, re-import, and look. */
+  {
+    await page.evaluate(async () => {
+      if (S.cmp) toggleCmp(); if (S.flt) toggleFlt(); if (S.cons) await toggleCons();
+      document.getElementById('infoDrawer').hidden = true; openMenu(false); closePanel();
+      // a clean slate that does not disturb what the rest of the suite saved
+      D.mine = []; D.gone = {}; saveMine();
+    });
+    /* The timestamps are fixed and far in the past, not built from the clock:
+       an earlier version of this fixture wrote the file's `rev` as a time that
+       happened to be LATER than the deletion the test then performed, and the
+       place came back — correctly, by the rule, because the file claimed a
+       write after the delete.  The test was wrong and looked like the code
+       was.  So: the file is from 2020, and everything done here is now. */
+    const seed = await page.evaluate(() => {
+      const mk = (id, name) => ({ id, name, desc: '', ll: [41.15, -8.61],
+                                  at: '2020-01-01', rev: '2020-01-01T00:00:00.000Z' });
+      D.mine = [mk('t-keep', 'שמור'), mk('t-gone', 'נמחק'), mk('t-edit', 'ייערך')];
+      saveMine();
+      // the file, as it was BEFORE anything was deleted or edited
+      return JSON.stringify({ portoland: 1, saved: '2020-01-02T00:00:00.000Z',
+                              points: JSON.parse(JSON.stringify(D.mine)), removed: [] });
+    });
+    ok('my places: three placed, and the file was written while all three were there',
+       await page.evaluate(() => D.mine.length) === 3);
+
+    await page.evaluate(() => deleteMine('t-gone'));
+    await page.waitForTimeout(200);
+    ok('my places: deleting one leaves two, and records the deletion itself',
+       await page.evaluate(() => D.mine.length) === 2
+         && await page.evaluate(() => !!D.gone['t-gone']),
+       await page.evaluate(() => JSON.stringify(Object.keys(D.gone))));
+
+    /* And one is edited AFTER the file was written, so the merge has a real
+       conflict to resolve rather than only an absence. */
+    await page.evaluate(() => {
+      const p = D.mine.find(x => x.id === 't-edit');
+      p.name = 'נערך כאן'; p.rev = nowStamp();
+      saveMine();
+    });
+
+    await page.evaluate(async txt => { await importAll(JSON.parse(txt).points, JSON.parse(txt)); }, seed);
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => D.mine.map(p => ({ id: p.id, name: p.name })));
+    ok('my places: the deleted one does NOT come back from a file written before the deletion',
+       !after.some(p => p.id === 't-gone'), JSON.stringify(after));
+    ok('my places: the other two are still there, and the edit made here survives',
+       after.length === 2 && after.some(p => p.id === 't-keep')
+         && (after.find(p => p.id === 't-edit') || {}).name === 'נערך כאן',
+       JSON.stringify(after));
+    const note = await page.evaluate(() => (document.querySelector('#msgs') || {}).textContent || '');
+    ok('my places: and the merge says what it held back rather than dropping it in silence',
+       /חדש יותר/.test(note), note.replace(/\s+/g, ' ').trim().slice(0, 90));
+
+    /* The other direction: a deletion that happened on the OTHER phone has to
+       arrive here, and an edit here that is later than it has to win. */
+    await page.evaluate(() => {
+      D.mine = [{ id: 't-keep', name: 'שמור', desc: '', ll: [41.15, -8.61], at: '2020-01-01',
+                  rev: '2020-01-01T00:00:00.000Z' },
+                { id: 't-live', name: 'נערך אחרי המחיקה', desc: '', ll: [41.16, -8.62],
+                  at: '2020-01-01', rev: nowStamp() }];
+      D.gone = {}; saveMine();
+    });
+    await page.evaluate(async () => {
+      // the other phone deleted both, half a year after the file's records
+      // were written and long before the edit made here
+      const file = { portoland: 1, points: [],
+        removed: [{ id: 't-keep', at: '2020-06-01T00:00:00.000Z' },
+                  { id: 't-live', at: '2020-06-01T00:00:00.000Z' }] };
+      await importAll(file.points, file);
+    });
+    await page.waitForTimeout(400);
+    const both = await page.evaluate(() => D.mine.map(p => p.id));
+    ok('my places: a deletion from the other phone removes the place here too',
+       !both.includes('t-keep'), JSON.stringify(both));
+    ok('my places: unless it was edited here afterwards — an edit beats an older delete',
+       both.includes('t-live'), JSON.stringify(both));
+
+    /* And the deletions leave the phone with the places, in the file the
+       export actually writes — not in a shape the test made up. */
+    const payload = await page.evaluate(async () => await exportPayload());
+    ok('my places: the export carries the deletions beside the places',
+       Array.isArray(payload.removed) && payload.removed.length >= 2
+         && payload.removed.every(r => r.id && r.at),
+       `${(payload.points || []).length} places, ${(payload.removed || []).length} deletions`);
+    /* A tombstone has to survive a restart, or it only works while the app is
+       open — which is every case except the one that matters. */
+    const survived = await page.evaluate(() => {
+      D.mine = []; D.gone = {};
+      loadMine();
+      return { gone: Object.keys(D.gone).length, mine: D.mine.length };
+    });
+    ok('my places: the deletions survive a restart — they are on disk, not in memory',
+       survived.gone >= 2, JSON.stringify(survived));
+    await page.evaluate(() => { D.mine = []; D.gone = {}; saveMine(); drawMine(); redrawText(); });
+  }
+
+  /* ---- a quarter that arrives after the app shipped -----------------------
+     Move יא.1, 2.5.0.  INE publishes every three months and it reached a
+     reader only in a new APK.  Both hosts are stubbed here, so what is being
+     tested is the app's own gate and not the network: a good file is taken,
+     and five kinds of bad file are refused, each for its own stated reason.
+
+     The sha256 is computed in the page from the bytes the stub serves, so the
+     "good" case cannot pass by accident and the "tampered" case cannot fail
+     for the wrong one. */
+  {
+    await page.evaluate(() => { closePanel(); openMenu(false); localStorage.removeItem('porto-quarter-v1'); });
+    const nextPeriod = await page.evaluate(() => {
+      const per = D.series.periods, last = per[per.length - 1];
+      const y = Number(last.slice(0, 4)), q = Number(last.slice(5));
+      return q === 4 ? (y + 1) + 'Q1' : y + 'Q' + (q + 1);
+    });
+    const unit = await page.evaluate(() => Object.keys(D.series.units)[0]);
+    const before = await page.evaluate(() => ({ n: D.series.periods.length,
+      last: D.series.periods[D.series.periods.length - 1] }));
+
+    /* One route for both hosts and every file; the body it serves is whatever
+       the test last put in window.__q. */
+    await page.route('**/data/quarter/**', route => {
+      const url = route.request().url();
+      const bag = JSON.parse(url.indexOf('index.json') >= 0 ? '"index"' : '"file"');
+      route.fulfill({ status: 200, contentType: 'application/json',
+                      body: bag === 'index' ? global.__qIndex : global.__qFile });
+    });
+    const serve = async body => {
+      const text = JSON.stringify(body);
+      const meta = await page.evaluate(async s => {
+        const bytes = new TextEncoder().encode(s);
+        return { bytes: bytes.length, sha256: await sha256Hex(bytes) };
+      }, text);
+      global.__qFile = text;
+      global.__qIndex = JSON.stringify({ portoland_quarters: 1,
+        base: 'https://cdn.jsdelivr.net/gh/x/y@z/porto/data/quarter/',
+        fallback: 'https://raw.githubusercontent.com/x/y/z/porto/data/quarter/',
+        quarters: [{ period: body.period, file: body.period + '.json',
+                     bytes: meta.bytes, sha256: meta.sha256, units: 1 }] });
+      return meta;
+    };
+    const good = period => ({ portoland_quarter: 1, period,
+      source: 'INE', confidence: 'reported',
+      units: { [unit]: { sale: 1234, rent: 7.5 } } });
+
+    /* Every refusal, one at a time. The app must say WHICH rule was broken:
+       "the file was rejected" tells a reader nothing about what to do next. */
+    const tryOne = async body => {
+      await serve(body);
+      return page.evaluate(async () => {
+        try {
+          const idx = await quarterIndex();
+          const q = idx.quarters[0];
+          const got = await quarterFetch(idx, q);
+          return { ok: true, got };
+        } catch (e) { return { ok: false, err: String(e.message || e) }; }
+      });
+    };
+    const wrongShape = await tryOne({ portoland_quarter: 9, period: nextPeriod, units: {} });
+    ok('quarter: a file that is not a quarter file is refused, and says so',
+       !wrongShape.ok && /פורטולנד/.test(wrongShape.err), wrongShape.err);
+    const old = await tryOne(good(before.last));
+    ok('quarter: a quarter already in the bundle is refused — a file cannot rewrite what shipped',
+       !old.ok && /כבר באפליקציה/.test(old.err), old.err);
+    const alien = await tryOne({ ...good(nextPeriod), units: { 'm9999': { sale: 1 } } });
+    ok('quarter: a unit this atlas does not draw is refused, by name',
+       !alien.ok && /m9999/.test(alien.err), alien.err);
+    const negative = await tryOne({ ...good(nextPeriod), units: { [unit]: { sale: -5 } } });
+    ok('quarter: a value that is not a positive number is refused',
+       !negative.ok && /מספר חיובי/.test(negative.err), negative.err);
+    const unknownSeries = await tryOne({ ...good(nextPeriod), units: { [unit]: { yield_pct: 5 } } });
+    ok('quarter: a series the app does not know is refused',
+       !unknownSeries.ok && /סדרה/.test(unknownSeries.err), unknownSeries.err);
+
+    /* Tampering: the index's hash stays, the bytes change. */
+    await serve(good(nextPeriod));
+    global.__qFile = global.__qFile.replace('1234', '9999');
+    const tampered = await page.evaluate(async () => {
+      try {
+        const idx = await quarterIndex();
+        await quarterFetch(idx, idx.quarters[0]);
+        return { ok: true };
+      } catch (e) { return { ok: false, err: String(e.message || e) }; }
+    });
+    ok('quarter: bytes that do not match the published sha256 are refused and not stored',
+       !tampered.ok && /sha256/.test(tampered.err), tampered.err);
+    ok('quarter: and nothing was added by any of the six refusals',
+       await page.evaluate(() => D.series.periods.length) === before.n,
+       `${before.n} → ${await page.evaluate(() => D.series.periods.length)}`);
+
+    /* And the good one. */
+    const taken = await tryOne(good(nextPeriod));
+    ok('quarter: a file that passes every rule is taken, and says how much it added',
+       taken.ok && taken.got.period === nextPeriod && taken.got.values === 2,
+       JSON.stringify(taken));
+    const after = await page.evaluate(k => ({
+      n: D.series.periods.length,
+      last: D.series.periods[D.series.periods.length - 1],
+      len: D.series.units[k].sale.length,
+      val: D.series.units[k].sale[D.series.units[k].sale.length - 1],
+    }), unit);
+    ok('quarter: every series grew by exactly one, and the new value is at the end',
+       after.n === before.n + 1 && after.last === nextPeriod && after.val === 1234,
+       JSON.stringify(after));
+    ok('quarter: a unit the file did not mention grew by a gap, not by a guess',
+       await page.evaluate(() => {
+         const k = Object.keys(D.series.units).find(x => D.series.units[x].sale);
+         return D.series.units[k].sale.length === D.series.periods.length;
+       }));
+    /* It survives a restart: the bundle is the floor and the store is what was
+       added to it. */
+    ok('quarter: what was fetched is kept for the next launch',
+       await page.evaluate(p => {
+         try { return !!JSON.parse(localStorage.getItem('porto-quarter-v1') || '{}')[p]; }
+         catch (e) { return false; }
+       }, nextPeriod));
+    await page.unroute('**/data/quarter/**');
+    await page.evaluate(() => { localStorage.removeItem('porto-quarter-v1'); closePanel(); });
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

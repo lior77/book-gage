@@ -2768,6 +2768,144 @@ def main():
         fail("app.js no longer reads sources.json's missing.items — the list of "
              "what is NOT known is half of that screen")
 
+    # ---- 7as. a fetched quarter is checked before it is believed ------------
+    # Move יא.1, 2.5.0.  A number that arrives over the network after the app
+    # shipped is still a number under the accuracy contract: it needs a source,
+    # a reference period and a classification, and it needs to be the file that
+    # was published rather than whatever the network handed over.
+    #
+    # The plan chose GitHub Releases and that cannot be used: a release
+    # download sends no Access-Control-Allow-Origin, which is exactly why the
+    # constraint layers are in the repository and go out through jsDelivr with
+    # raw.githubusercontent behind them.  So the quarter files take the same
+    # two hosts — and this checks that no THIRD host crept in, because §7ab
+    # reads the online list and a host the app reaches but does not list is the
+    # promise broken quietly.
+    qdir = os.path.join(ROOT, "data", "quarter")
+    qindex = os.path.join(qdir, "index.json")
+    if not os.path.exists(qindex):
+        fail("data/quarter/index.json is missing — run scripts/pack_quarter.py. "
+             "Without it the app has nothing to ask for and the row in the menu "
+             "is a button that cannot work")
+    else:
+        idx = json.load(io.open(qindex, encoding="utf-8"))
+        series_units = set(json.load(io.open(
+            os.path.join(ROOT, "data", "processed", "series.json"),
+            encoding="utf-8"))["units"])
+        lay = json.load(io.open(os.path.join(ROOT, "data", "layers_manifest.json"),
+                                encoding="utf-8"))
+        for k in ("base", "fallback"):
+            want = lay[k].replace("/data/layers/", "/data/quarter/")
+            if idx.get(k) != want:
+                fail("data/quarter/index.json %s is %r and the layers use %r. "
+                     "One host list, or the online page and the code disagree"
+                     % (k, idx.get(k), want))
+        seen = set()
+        for q in idx.get("quarters", []):
+            for field in ("period", "file", "bytes", "sha256"):
+                if not q.get(field):
+                    fail("a quarter in index.json has no %s. Every one of the "
+                         "four is what the app checks before it stores the "
+                         "file" % field)
+            path = os.path.join(qdir, q.get("file") or "")
+            if not os.path.exists(path):
+                fail("index.json names %s and the file is not there" % q.get("file"))
+                continue
+            raw = open(path, "rb").read()
+            if len(raw) != q["bytes"] or hashlib.sha256(raw).hexdigest() != q["sha256"]:
+                fail("%s does not match its own index entry (%d bytes, sha %s "
+                     "on disk). The app refuses a file that does not match, so "
+                     "this one could never be downloaded"
+                     % (q["file"], len(raw), hashlib.sha256(raw).hexdigest()[:12]))
+            body = json.loads(raw.decode("utf-8"))
+            if body.get("period") != q["period"]:
+                fail("%s says it is %s and the index calls it %s"
+                     % (q["file"], body.get("period"), q["period"]))
+            if body.get("confidence") != "reported":
+                fail("%s carries confidence %r. A fetched number is one source's "
+                     "word like any other — rule 3" % (q["file"], body.get("confidence")))
+            if not body.get("source"):
+                fail("%s carries no source. Rule 1 does not stop at the network "
+                     "boundary" % q["file"])
+            for key in body.get("units", {}):
+                if key not in series_units:
+                    fail("%s carries unit %s, which this atlas does not draw"
+                         % (q["file"], key))
+            seen.add(q["period"])
+        print("quarters published: %d (%s)"
+              % (len(seen), ", ".join(sorted(seen)) or "none"))
+    # And the app side: the refusals have to exist, each with its own sentence.
+    for owed in ("function quarterCheck", "function quarterApply",
+                 "function quarterFetch", "QUARTER_KEY", "quarterLoad()"):
+        if owed not in appjs_txt:
+            fail("app.js no longer carries %s — a quarter that arrives over the "
+                 "network with nothing checking it is a number from a stranger "
+                 "on a screen that promises sources" % owed)
+    i = appjs_txt.find("function quarterCheck")
+    body = appjs_txt[i:i + 2200] if i >= 0 else ""
+    for rule, why in (("portoland_quarter !== 1", "it has to BE a quarter file"),
+                      ("QPERIOD.test", "the period has to be a period"),
+                      ("per.indexOf(body.period) >= 0", "it may not rewrite a packed quarter"),
+                      ("body.period <= per[per.length - 1]", "it has to be NEWER than what is here"),
+                      ("D.series.units[k]", "it may only name units this atlas draws")):
+        if rule not in body:
+            fail("quarterCheck() no longer tests %r — %s. The sha256 proves the "
+                 "bytes arrived intact, not that they say anything true"
+                 % (rule, why))
+    if "quarterApply" in appjs_txt and "u[s].push(" not in appjs_txt:
+        fail("quarterApply no longer APPENDS. Adding a quarter grows every "
+             "array by one and touches nothing already in the bundle; anything "
+             "else is a fetched file editing what shipped")
+
+    # ---- 7ar. a deletion is a fact, and it travels ---------------------------
+    # Move ט׳, 2.5.0.  The import merged by union: an id already here was
+    # skipped, a new id was added.  Which means a place DELETED on this phone
+    # came back the moment a file exported before the deletion was imported —
+    # the shopping-cart anomaly of chapter 6, word for word, on someone's own
+    # list of places they had ruled out.  And it is the worst kind of bug to
+    # find: nothing errors, nothing is lost, a place you deliberately removed
+    # is simply back among the ones you are still considering.
+    #
+    # What this enforces is the shape of the answer, because the behaviour
+    # itself is proved by browser assertions that delete and re-import:
+    # tombstones exist and are written on delete, they leave in BOTH exports,
+    # the import reads them, and the merge does not throw a loser away in
+    # silence — every outcome is counted and printed.
+    for owed in ("MINE_GONE_KEY", "function mineAlive", "D.gone[gone] = nowStamp()",
+                 "removed:", "bag.removed"):
+        if owed not in appjs_txt:
+            fail("app.js no longer carries %s — without it a place deleted here "
+                 "comes back from any file written before the deletion, which "
+                 "is the one thing move ט׳ exists to stop" % owed)
+    # Both exports, or the two disagree about what the phone knows.
+    n_removed = appjs_txt.count("removed: Object.keys(D.gone)")
+    if n_removed < 2:
+        fail("only %d of the two exports carries `removed`. The file export and "
+             "the clipboard export are two ways out of the same phone, and a "
+             "deletion that leaves by one and not the other is a deletion that "
+             "comes back" % n_removed)
+    # And the merge has to say what it did with every row.
+    i = appjs_txt.find("async function importAll")
+    body = appjs_txt[i:i + 4200] if i >= 0 else ""
+    for word in ("added++", "updated++", "held++", "removed++", "skipped++"):
+        if word not in body:
+            fail("importAll() no longer counts %s. Chapter 6's objection to "
+                 "last-write-wins is not that it picks a winner, it is that it "
+                 "discards the loser in silence — so every outcome is counted "
+                 "and printed" % word)
+    for owed in ("מקומות עודכנו", "העותק כאן חדש יותר", "המחיקה מאוחרת מהקובץ"):
+        if owed not in appjs_txt:
+            fail("the import note no longer says %r. A merge that reports only "
+                 "what it added is a merge whose losses are invisible" % owed)
+    # `rev` is what decides both questions; `at` is what the card shows.  One
+    # field cannot be both, and reusing `at` would silently change what the
+    # card means.
+    if "rev: nowStamp()" not in appjs_txt:
+        fail("commitMine no longer stamps `rev`. Without a moment of last "
+             "write there is nothing to compare when both sides hold the same "
+             "id, and the merge is back to first-wins by accident")
+    print("my places: tombstones kept, both exports carry them, five outcomes counted")
+
     # ---- 7aq. next to is a relation, and a relation has laws ----------------
     # Move ה׳, 2.4.0.  The neighbour lists are derived from geometry, and
     # geometry is exactly where a derivation goes wrong quietly: a polygon that

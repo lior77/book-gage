@@ -3075,15 +3075,57 @@ function openLightbox(url, alt) {
    this browser.  Nothing is uploaded, and the app says so — there is no server
    here to upload to.  localStorage can be cleared by the browser, so the panel
    offers a copy of them as text. */
+/* TOMBSTONES — move ט׳ of docs/INFORMATION-PLAN.md, from 2.5.0.
+
+   The import merged by union: a row whose id was already here was skipped, a
+   row whose id was new was added.  Which means a place DELETED on this phone
+   came back the moment a file exported before the deletion was imported —
+   word for word the shopping-cart anomaly of chapter 6, where merging two
+   carts by union resurrects the item somebody removed.  The book's answer is
+   the one taken here: track the DELETIONS themselves, not only the state.
+
+   A tombstone is an id and the moment it was deleted.  It is tiny (about
+   thirty bytes) and it is kept forever, because it has to outlive every file
+   that might still carry the record — a message you sent yourself two years
+   ago is exactly the case this exists for.
+
+   And every record carries `rev`, the moment it was last written.  That is
+   what decides the two questions a union cannot answer on its own: a record
+   is alive when it has no tombstone OR its `rev` is newer than the tombstone
+   (an edit after a delete wins), and when both sides have the same id the
+   newer `rev` wins.  The book is right that last-write-wins throws writes
+   away silently — so the import does not do it silently: it says how many
+   were added, how many updated, how many kept because the copy here was
+   newer, and how many a tombstone removed. */
+const MINE_GONE_KEY = 'porto-mine-gone-v1';
+const nowStamp = () => new Date().toISOString();
+
+/* Alive: no tombstone, or written after it.  A record with no `rev` at all is
+   from before 2.5.0 and counts as older than any deletion — which is the safe
+   direction: it can be re-imported, and a deletion is never undone by a file
+   that cannot say when it was written. */
+function mineAlive(p) {
+  const gone = (D.gone || {})[p.id];
+  if (!gone) return true;
+  return typeof p.rev === 'string' && p.rev > gone;
+}
+
 function loadMine() {
+  try {
+    const g = JSON.parse(localStorage.getItem(MINE_GONE_KEY) || '{}');
+    D.gone = (g && typeof g === 'object' && !Array.isArray(g)) ? g : {};
+  } catch (e) { D.gone = {}; }
   try {
     const a = JSON.parse(localStorage.getItem(MINE_KEY) || '[]');
     D.mine = Array.isArray(a) ? a.filter(p => p && Array.isArray(p.ll)) : [];
   } catch (e) { D.mine = []; }
+  D.mine = D.mine.filter(mineAlive);
 }
 function saveMine() {
-  try { localStorage.setItem(MINE_KEY, JSON.stringify(D.mine)); }
-  catch (e) { mapNote(t('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.'), true); }
+  try {
+    localStorage.setItem(MINE_KEY, JSON.stringify(D.mine));
+    localStorage.setItem(MINE_GONE_KEY, JSON.stringify(D.gone));
+  } catch (e) { mapNote(t('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.'), true); }
 }
 /* A push pin: the teardrop everyone already reads as "a place", in red, with
    its point — not its middle — on the coordinate.  The selected one grows and
@@ -3984,7 +4026,11 @@ function commitMine() {
   const name = (fld('#mineName') ?? mineEditing.name ?? '').trim() || autoName();
   const desc = (fld('#mineDesc') ?? mineEditing.desc ?? '').trim();
   const rec = { ...mineEditing, name, desc,
-    at: mineEditing.at || new Date().toISOString().slice(0, 10) };
+    at: mineEditing.at || new Date().toISOString().slice(0, 10),
+    // `at` is the DAY the place was first saved and the card shows it; `rev`
+    // is the moment of this write and only the merge reads it.  Two different
+    // questions, and one field cannot answer both.
+    rev: nowStamp() };
   const pend = minePending;
   if (pend) rec.photo = { w: pend.w, h: pend.h, bytes: pend.bytes,
                           taken: pend.taken, from: pend.from, alt: pend.alt };
@@ -4022,6 +4068,10 @@ function deleteMine(id) {
   const rec = D.mine.find(x => x.id === gone);
   ((rec && rec.photos) || []).forEach((m, i) => { if (i) delPhoto(gone + ':' + i); });
   D.mine = D.mine.filter(x => x.id !== gone);
+  // The deletion itself is a fact worth keeping, and the reason is the whole
+  // of move ט׳: without it, importing a file made before this moment brings
+  // the place back.
+  D.gone[gone] = nowStamp();
   saveMine();
   if (mineEditing && mineEditing.id === gone) {
     mineEditing = null; minePending = null; dropPhotoUrl();
@@ -4150,6 +4200,11 @@ async function exportPayload() {
     app: D.version || '',
     saved: new Date().toISOString(),
     points: D.mine,
+    /* Move ט׳: the deletions travel with the places, or the file is a
+       photograph of what existed and says nothing about what was removed —
+       and importing it on the phone that did the removing brings it all
+       back. */
+    removed: Object.keys(D.gone).sort().map(id => ({ id: id, at: D.gone[id] })),
     photos: await gatherPhotos(),
     layers: await gatherLayers(),
   };
@@ -4207,7 +4262,13 @@ async function saveFile(name, text) {
 /* The clipboard keeps doing the one job it does well. */
 function exportMine() {
   if (!D.mine.length) { mapNote(t('אין עדיין נקודות לייצוא.')); return; }
-  const text = JSON.stringify(D.mine, null, 1);
+  /* An object and not a bare array since 2.5.0, because the deletions have to
+     travel too and an array has nowhere to put them.  The import still reads
+     the bare array — files of it are in people's messages to themselves — so
+     nothing that was ever exported stops working. */
+  const text = JSON.stringify({ portoland: MINE_FILE_V, app: D.version || '',
+    saved: nowStamp(), points: D.mine,
+    removed: Object.keys(D.gone).sort().map(id => ({ id: id, at: D.gone[id] })) }, null, 1);
   const done = () => mapNote(nf(D.mine.length) + t(' נקודות הועתקו. אפשר להדביק אותן ') +
     t('בהודעה לעצמך, ולייבא בחזרה בכל מכשיר.'));
   try {
@@ -4267,27 +4328,75 @@ function commitImport(fromFile) {
   importAll(rows, bag);
 }
 
+/* THE MERGE — move ט׳.
+
+   Union less tombstones, and last-write-wins ONLY where two copies of the same
+   id disagree — with every outcome counted and printed, because the book's
+   objection to LWW is not that it picks a winner but that it throws the loser
+   away in silence.
+
+   Five things can happen to an incoming row, and the note names all five:
+
+     added    — an id this phone has never seen
+     updated  — the same id, written more recently over there
+     kept     — the same id, and the copy HERE is newer
+     removed  — deleted here after the file was written; it does not come back
+     skipped  — not a place at all (no name, no pair of finite numbers)
+
+   And a tombstone from the file cuts the other way too: a place deleted on the
+   other phone is deleted here, unless it has been edited here since. */
 async function importAll(rows, bag) {
-  const have = new Set(D.mine.map(p => p.id));
-  let added = 0, skipped = 0;
+  // Tombstones first, so a deletion in the file is known before the row that
+  // the same file may still carry for it.
+  let removed = 0;
+  const goneIn = Array.isArray(bag.removed) ? bag.removed : [];
+  goneIn.forEach(g => {
+    if (!g || typeof g.id !== 'string' || typeof g.at !== 'string') return;
+    // the union of deletions, keeping the later one when both sides deleted
+    if (!D.gone[g.id] || D.gone[g.id] < g.at) D.gone[g.id] = g.at;
+  });
+  const beforeIds = new Set(D.mine.map(p => p.id));
+  D.mine = D.mine.filter(p => {
+    if (mineAlive(p)) return true;
+    delPhoto(p.id);
+    removed++;
+    return false;
+  });
+
+  const at = new Map(D.mine.map(p => [p.id, p]));
+  let added = 0, updated = 0, held = 0, skipped = 0;
   const kept = new Set();
   rows.forEach(r => {
     const ok = r && typeof r.name === 'string' && Array.isArray(r.ll)
       && r.ll.length === 2 && r.ll.every(n => typeof n === 'number' && isFinite(n));
     if (!ok) { skipped++; return; }
     const id = typeof r.id === 'string' && r.id ? r.id : 'p' + Math.random().toString(36).slice(2);
-    if (have.has(id)) { skipped++; return; }
-    have.add(id); kept.add(id);
     const rec = { id: id, name: r.name, desc: typeof r.desc === 'string' ? r.desc : '',
-                  ll: [r.ll[0], r.ll[1]], at: typeof r.at === 'string' ? r.at : '' };
+                  ll: [r.ll[0], r.ll[1]], at: typeof r.at === 'string' ? r.at : '',
+                  rev: typeof r.rev === 'string' ? r.rev : '' };
     // a saved listing travels with what it quoted and its pictures' records
     if (r.src && typeof r.src === 'object') rec.src = r.src;
     if (Array.isArray(r.photos)) rec.photos = r.photos;
     // the photo's own record travels with the point; the bytes are restored
     // below, and a point whose bytes did not arrive loses the record too
     if (r.photo && typeof r.photo === 'object') rec.photo = r.photo;
-    D.mine.push(rec);
-    added++;
+    // A place deleted here after this file was written stays deleted. It is
+    // not "skipped": the file is not wrong, it is just older than the fact.
+    if (!mineAlive(rec)) { removed += beforeIds.has(id) ? 0 : 1; return; }
+    const mine = at.get(id);
+    if (!mine) {
+      D.mine.push(rec); at.set(id, rec); kept.add(id); added++;
+      return;
+    }
+    // Same id, two versions. The newer write wins and the older one is
+    // REPORTED, never dropped quietly.
+    const mineRev = typeof mine.rev === 'string' ? mine.rev : '';
+    if (rec.rev && rec.rev > mineRev) {
+      const i = D.mine.indexOf(mine);
+      D.mine[i] = rec; at.set(id, rec); kept.add(id); updated++;
+    } else {
+      held++;
+    }
   });
 
   /* Photos, for the points that were actually added.  A picture belonging to a
@@ -4342,11 +4451,23 @@ async function importAll(rows, bag) {
   drawMine(); redrawText();
   if (layers) { renderMenu(); }
 
+  /* Every outcome is named, and that is the point of move ט׳ as much as the
+     tombstones are.  The book's objection to last-write-wins is not that it
+     picks a winner, it is that it discards the loser in silence — so nothing
+     here is silent: a record that was updated, one that was held because the
+     copy on this phone is newer, and one a deletion removed all get a word. */
   const parts = [];
   if (added) parts.push(added === 1 ? t('מקום אחד') : nf(added) + t(' מקומות'));
+  if (updated) parts.push(updated === 1 ? t('מקום אחד עודכן') : nf(updated) + t(' מקומות עודכנו'));
   if (photos) parts.push(photos === 1 ? t('תמונה אחת') : nf(photos) + t(' תמונות'));
   if (layers) parts.push(layers === 1 ? t('שכבת מגבלות אחת') : nf(layers) + t(' שכבות מגבלות'));
   const tail = [];
+  if (held) tail.push(held === 1
+    ? t('מקום אחד נשאר כפי שהוא — העותק כאן חדש יותר')
+    : nf(held) + t(' מקומות נשארו כפי שהם — העותק כאן חדש יותר'));
+  if (removed) tail.push(removed === 1
+    ? t('מקום אחד נמחק — המחיקה מאוחרת מהקובץ')
+    : nf(removed) + t(' מקומות נמחקו — המחיקה מאוחרת מהקובץ'));
   if (skipped) tail.push(skipped === 1 ? t('אחת דולגה') : nf(skipped) + t(' דולגו'));
   if (layersBad) tail.push(layersBad === 1
     ? t('שכבה אחת נדחתה — אינה תואמת את מה שהאפליקציה מפרסמת')
@@ -5743,6 +5864,10 @@ const menuRows = () => [
   // The points the user marked, and only those — everything else in the app
   // ships with it and needs no saving.  Both were reachable only from inside
   // the נ.צ. screen before.
+  /* Move יא.1: the one row in the app that ASKS for a network on purpose.
+     It sits with the other two data rows because that is what it is — data
+     in and out — and it says what it costs before it is pressed. */
+  { k: 'quarter', he: t('רבעון חדש'), icon: 'load', kind: 'act' },
   { k: 'save', he: t('שמירת נתונים'), icon: 'save', kind: 'act' },
   { k: 'load', he: t('ייבוא נתונים'), icon: 'load', kind: 'act' },
   { grp: '' },
@@ -5917,6 +6042,7 @@ function menuPick(k) {
     case 'glass':   toggleFills(); renderMenu(); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
+    case 'quarter': openMenu(false); openQuarter(); break;
     case 'sources': openMenu(false); openInfo('sources'); break;
     case 'info':    openMenu(false); openInfo('about'); break;
     case 'dev':     openMenu(false); openInfo('dev'); break;
@@ -6613,6 +6739,229 @@ function showSource(key, exact) {
     ${f.url ? `<p><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}`);
 }
 
+/* ---------------------------------------------- the fresh quarter, move יא.1 ---
+   INE publishes a new quarter roughly every three months and it reached a
+   reader only in a new APK — half a year of waiting on a number that already
+   exists.  This fetches one file and adds it to the series already in the
+   bundle.
+
+   NOT GitHub Releases, which is what the plan chose.  A release download
+   sends no Access-Control-Allow-Origin and a WebView cannot fetch it — which
+   is exactly why the constraint layers live in the repository and come
+   through jsDelivr with raw.githubusercontent behind it.  The quarter files
+   go the same way: no new host, nothing new promised, and §7ab has nothing
+   new to check.
+
+   WHAT THE HASH PROVES AND WHAT IT DOES NOT.  index.json publishes a sha256
+   and a length per file and a file that misses either is refused and not
+   stored — that catches a truncated download, a stale cache, a proxy that
+   rewrote something.  It does NOT prove authorship: the index and the file
+   come from one place, so whoever could replace one could replace both.
+   Closing that needs a signature and a key inside the app, and nobody has
+   taken that decision — ARCHITECTURE.md §12 holds it open rather than
+   improvising it here.  What IS checked, and what no substitution can fake
+   without being visibly wrong, is the content against what the app already
+   holds: a period later than everything shipped, only units this atlas draws,
+   four known series, positive finite numbers, and NO change to any quarter
+   already in the bundle. */
+const QUARTER_KEY = 'porto-quarter-v1';
+
+const QPERIOD = /^\d{4}Q[1-4]$/;
+const QSERIES = ['sale', 'sale_new', 'sale_used', 'rent'];
+
+/* Every refusal has its own sentence.  "The file was rejected" tells a reader
+   nothing about whether to try again, tell somebody, or stop trusting the
+   source. */
+function quarterCheck(body) {
+  if (!body || body.portoland_quarter !== 1) return t('זה אינו קובץ רבעון של פורטולנד.');
+  if (!QPERIOD.test(String(body.period || ''))) return t('לקובץ אין רבעון תקין.');
+  const per = seriesPeriods();
+  if (!per.length) return t('אין באפליקציה סדרות להוסיף להן.');
+  if (per.indexOf(body.period) >= 0)
+    return t('הרבעון הזה כבר באפליקציה, והקובץ אינו יכול לשנות רבעון שכבר נארז.');
+  if (body.period <= per[per.length - 1])
+    return t('הרבעון בקובץ אינו מאוחר ממה שכבר יש: ') + body.period;
+  const units = body.units;
+  if (!units || typeof units !== 'object') return t('לקובץ אין יחידות.');
+  let n = 0;
+  for (const k of Object.keys(units)) {
+    if (!D.series.units[k]) return t('הקובץ נוקב ביחידה שאינה באפליקציה: ') + k;
+    const vals = units[k];
+    if (!vals || typeof vals !== 'object') return t('ליחידה ') + k + t(' אין ערכים.');
+    for (const s of Object.keys(vals)) {
+      if (QSERIES.indexOf(s) < 0) return t('הקובץ נוקב בסדרה שאינה מוכרת: ') + s;
+      const v = vals[s];
+      if (typeof v !== 'number' || !isFinite(v) || v <= 0)
+        return t('ערך שאינו מספר חיובי ב-') + k + ' / ' + s;
+      n++;
+    }
+  }
+  if (!n) return t('הקובץ ריק.');
+  return null;
+}
+
+/* Adding a quarter is appending, and only appending: every array grows by one
+   and a unit the file does not mention grows by a `null`, which is what the
+   line on the card already draws as a gap.  Nothing already in the bundle is
+   touched — that is the invariant, not a courtesy. */
+function quarterApply(body) {
+  const per = D.series.periods;
+  if (per.indexOf(body.period) >= 0) return 0;
+  per.push(body.period);
+  let n = 0;
+  for (const [k, u] of Object.entries(D.series.units)) {
+    const got = body.units[k] || {};
+    for (const s of QSERIES) {
+      if (!Array.isArray(u[s])) continue;
+      const v = typeof got[s] === 'number' ? got[s] : null;
+      u[s].push(v);
+      if (v !== null) n++;
+    }
+  }
+  return n;
+}
+
+/* What was fetched is kept, and re-applied on the next launch in period order
+   — the bundle is the floor and the store is what has been added to it. */
+function quarterLoad() {
+  let held = {};
+  try { held = JSON.parse(localStorage.getItem(QUARTER_KEY) || '{}') || {}; }
+  catch (e) { held = {}; }
+  D.quarters = [];
+  for (const p of Object.keys(held).sort()) {
+    const body = held[p];
+    if (quarterCheck(body)) continue;      // the bundle moved past it, or it is junk
+    quarterApply(body);
+    D.quarters.push(p);
+  }
+}
+function quarterKeep(body) {
+  let held = {};
+  try { held = JSON.parse(localStorage.getItem(QUARTER_KEY) || '{}') || {}; }
+  catch (e) { held = {}; }
+  held[body.period] = body;
+  try { localStorage.setItem(QUARTER_KEY, JSON.stringify(held)); }
+  catch (e) { mapNote(t('הרבעון נוסף אבל לא נשמר להפעלה הבאה — ייתכן שהאחסון מלא.'), true); }
+}
+
+async function quarterIndex(signal) {
+  const bases = [D.layers.base, D.layers.fallback].filter(Boolean)
+    .map(b => b.replace('/data/layers/', '/data/quarter/'));
+  let last = null;
+  for (const base of bases) {
+    try {
+      const r = await fetch(base + 'index.json', { signal, cache: 'no-store' });
+      if (r.ok) { const j = await r.json(); j.__base = base; return j; }
+      last = new Error(t('השרת השיב ') + r.status);
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e;
+      last = e;
+    }
+  }
+  throw (last || new Error(t('אין רשת')));
+}
+
+async function quarterFetch(idx, q, signal) {
+  const bases = [idx.__base, (idx.base || ''), (idx.fallback || '')].filter(Boolean);
+  let last = null, buf = null;
+  for (const base of bases) {
+    try {
+      const r = await fetch(base + q.file, { signal, cache: 'no-store' });
+      if (!r.ok) { last = new Error(t('השרת השיב ') + r.status); continue; }
+      buf = new Uint8Array(await r.arrayBuffer());
+      break;
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e;
+      last = e;
+    }
+  }
+  if (!buf) throw (last || new Error(t('ההורדה נכשלה')));
+  if (buf.length !== q.bytes)
+    throw new Error(t('ההורדה נקטעה: הגיעו ') + nf(buf.length) + t(' בתים מתוך ') + nf(q.bytes));
+  const sum = await sha256Hex(buf);
+  if (sum !== q.sha256)
+    throw new Error(t('הקובץ שהגיע אינו הקובץ שפורסם — בדיקת sha256 נכשלה. לא נשמר.'));
+  const body = JSON.parse(new TextDecoder().decode(buf));
+  const bad = quarterCheck(body);
+  if (bad) throw new Error(bad);
+  const n = quarterApply(body);
+  quarterKeep(body);
+  D.quarters = (D.quarters || []).concat([body.period]);
+  return { period: body.period, values: n };
+}
+
+/* The screen.  It opens with what the app HOLDS, because that is the answer to
+   the question even when there is no network — and offline it says so and
+   stops, rather than spinning. */
+let qBusy = null;
+function openQuarter() {
+  openPanel('quarter', t('רבעון חדש'), `<div id="qBody"><p class="note">${t('בודק…')}</p></div>`);
+  fillQuarter();
+}
+function quarterHeld() {
+  const per = seriesPeriods();
+  return per.length ? per[per.length - 1] : null;
+}
+function quarterBody(state) {
+  const last = quarterHeld();
+  const added = (D.quarters || []);
+  const head = `<p>${t('הסדרות שבאפליקציה מגיעות עד')} <b class="num">${html(last || '—')}</b>.
+      ${added.length ? t('מתוכם נוספו אחרי ההתקנה: ') + '<span class="num">' + added.join(', ') + '</span>.' : ''}</p>
+    <p class="note">${t('כל נקודה בסדרה היא החציון של שנים-עשר החודשים שמסתיימים ברבעון הנקוב. רבעון חדש הוא נתון חדש לכל דבר: הוא נשמר עם המקור, הרבעון והסיווג ')}<b>${t('מדווח')}</b>${t(', כמו כל השאר.')}</p>`;
+  if (state.err) {
+    return head + `<div class="warn">${html(state.err)}</div>
+      <div class="chips"><button class="chip" data-qact="again">${t('נסיון נוסף')}</button></div>`;
+  }
+  if (state.busy) return head + `<p class="note">${html(state.busy)}</p>`;
+  if (state.done) {
+    return head + `<div class="card"><p>${html(state.done)}</p></div>`;
+  }
+  const fresh = (state.quarters || []).filter(q => seriesPeriods().indexOf(q.period) < 0
+    && q.period > (last || ''));
+  if (!fresh.length) {
+    return head + `<p>${t('אין רבעון חדש יותר ממה שכבר יש.')}</p>`;
+  }
+  return head + fresh.map(q => `<div class="card">
+      <h3>${html(q.period)}</h3>
+      <p class="note">${t('גודל: ')}<span class="num">${nf(Math.round(q.bytes / 1024))}</span> ${t('ק״ב')} ·
+        <span class="num">${nf(q.units || 0)}</span> ${t('יחידות')}</p>
+      <div class="chips"><button class="chip" data-qget="${html(q.period)}">${t('הורדה')}</button></div>
+    </div>`).join('') +
+    `<p class="note">${t('הקובץ נבדק מול ה-sha256 שפורסם לו, ונדחה אם אינו תואם. בנוסף הוא חייב להיות רבעון מאוחר ממה שיש, על יחידות שהאפליקציה מכירה — ואינו יכול לשנות רבעון שכבר נארז.')}</p>`;
+}
+function drawQuarter(state) {
+  const box = $('#qBody');
+  if (box) box.innerHTML = quarterBody(state);
+}
+async function fillQuarter() {
+  if (!navigator.onLine) {
+    drawQuarter({ err: t('אין חיבור לרשת. כל מה שכבר באפליקציה זמין כרגיל.') });
+    return;
+  }
+  drawQuarter({ busy: t('קורא את רשימת הרבעונים…') });
+  try {
+    const idx = await quarterIndex();
+    qBusy = idx;
+    if (!panelIs('quarter')) return;
+    drawQuarter({ quarters: idx.quarters || [] });
+  } catch (e) {
+    if (panelIs('quarter')) drawQuarter({ err: t('לא הצלחתי לקרוא את הרשימה: ') + String(e.message || e) });
+  }
+}
+async function quarterGet(period) {
+  const idx = qBusy;
+  const q = idx && (idx.quarters || []).find(x => x.period === period);
+  if (!q) { drawQuarter({ err: t('הרבעון הזה אינו ברשימה.') }); return; }
+  drawQuarter({ busy: t('מוריד ') + period + '…' });
+  try {
+    const got = await quarterFetch(idx, q);
+    redrawText();
+    drawQuarter({ done: t('נוסף ') + got.period + ' · ' + nf(got.values) + t(' ערכים.') });
+  } catch (e) {
+    drawQuarter({ err: String(e.message || e) });
+  }
+}
+
 /* ---------------------------------------------------- what needs a network --- */
 /* The app is not "offline"; it is offline with these online features, and this
    is the whole set.  Every host app.js, sw.js and the layers manifest name has
@@ -6624,9 +6973,9 @@ function showSource(key, exact) {
 const ONLINE = () => [
   { host: 'tile.openstreetmap.org', he: t('מפת הרקע (רחובות)'),
     what: t('אריחי OpenStreetMap. אריח שכבר נראה נשמר במכשיר; בלי רשת המפה מוצגת כגבולות בלבד, וכל הנתונים זמינים.') },
-  { host: 'cdn.jsdelivr.net', he: t('מגבלות בנייה — הורדה חד-פעמית'),
-    what: t('שכבות REN ו-RAN לכל 18 העיריות, מ-jsDelivr; הגודל כתוב על שורת התפריט לפני הלחיצה. מכאן הן עובדות בלי רשת.') },
-  { host: 'raw.githubusercontent.com', he: t('מגבלות בנייה — מקור גיבוי'),
+  { host: 'cdn.jsdelivr.net', he: t('מגבלות בנייה, ורבעון חדש — הורדה חד-פעמית'),
+    what: t('שכבות REN ו-RAN לכל 18 העיריות, ורבעון INE שפורסם אחרי ההתקנה, מ-jsDelivr; הגודל כתוב לפני הלחיצה. מכאן הם עובדים בלי רשת.') },
+  { host: 'raw.githubusercontent.com', he: t('אותם קבצים — מקור גיבוי'),
     what: t('אותם קבצים מ-GitHub, אם jsDelivr אינו זמין.') },
   { host: 'api.idealista.com', he: t('חיפוש נכסים'),
     what: t('״חפש״ במוד נכסים פונה ל-API של idealista עם המפתח שהזנת, ותמונות המודעות נטענות מהשרתים של idealista. מה שנשמר עובד אחר כך בלי רשת.') },
@@ -6896,6 +7245,12 @@ function wire() {
       else if (e.target.closest('#expClip')) { closePanel(); exportMine(); }
       return;
     }
+    if (panelIs('quarter')) {
+      const g = e.target.closest('[data-qget]');
+      if (g) { quarterGet(g.dataset.qget); return; }
+      if (e.target.closest('[data-qact]')) { fillQuarter(); return; }
+      return;
+    }
     if (panelIs('import')) {
       if (e.target.closest('#impSave')) commitImport();
       // the input itself is in index.html and never moves; this is the button
@@ -7146,6 +7501,9 @@ function wire() {
   };
   S.cats = new Set(D.poiOrder);
 
+  // Move יא.1: the bundle is the floor, and whatever was fetched since sits
+  // on top of it — re-applied here, in period order, every launch.
+  quarterLoad();
   loadMine();
   lstLoad();
   applyView();
@@ -8916,6 +9274,96 @@ Object.assign(EN, {
     'Shares a border with',
   'יחידות שחולקות עם זו גבול — קו, לא נקודה: יחידות שנפגשות בפינה אחת אינן ברשימה. נגזר כאן מגבולות CAOP 2025, ולכן ':
     'Units that share a border with this one — a line, not a point: units that meet at a single corner are not on the list. Derived here from the CAOP 2025 boundaries, and therefore ',
+  'מקום אחד עודכן':
+    'one place updated',
+  ' מקומות עודכנו':
+    ' places updated',
+  'מקום אחד נשאר כפי שהוא — העותק כאן חדש יותר':
+    'one place left as it is — the copy here is newer',
+  ' מקומות נשארו כפי שהם — העותק כאן חדש יותר':
+    ' places left as they are — the copy here is newer',
+  'מקום אחד נמחק — המחיקה מאוחרת מהקובץ':
+    'one place removed — the deletion is later than the file',
+  ' מקומות נמחקו — המחיקה מאוחרת מהקובץ':
+    ' places removed — the deletion is later than the file',
+  ' אין ערכים.':
+    ' has no values.',
+  ' ערכים.':
+    ' values.',
+  ', כמו כל השאר.':
+    ', like everything else.',
+  'אין באפליקציה סדרות להוסיף להן.':
+    'The app has no series to add to.',
+  'אין חיבור לרשת. כל מה שכבר באפליקציה זמין כרגיל.':
+    'No network. Everything already in the app works as usual.',
+  'אין רבעון חדש יותר ממה שכבר יש.':
+    'There is no quarter newer than the ones already here.',
+  'אין רשת':
+    'No network',
+  'בודק…':
+    'Checking…',
+  'גודל: ':
+    'Size: ',
+  'ההורדה נכשלה':
+    'The download failed',
+  'הורדה':
+    'Download',
+  'הסדרות שבאפליקציה מגיעות עד':
+    'The series in the app reach',
+  'הקובץ נבדק מול ה-sha256 שפורסם לו, ונדחה אם אינו תואם. בנוסף הוא חייב להיות רבעון מאוחר ממה שיש, על יחידות שהאפליקציה מכירה — ואינו יכול לשנות רבעון שכבר נארז.':
+    'The file is checked against the sha256 published for it and refused if it does not match. It must also be a quarter later than the ones here, on units the app knows — and it cannot change a quarter that was already packed.',
+  'הקובץ נוקב ביחידה שאינה באפליקציה: ':
+    'The file names a unit the app does not have: ',
+  'הקובץ נוקב בסדרה שאינה מוכרת: ':
+    'The file names a series that is not known: ',
+  'הקובץ ריק.':
+    'The file is empty.',
+  'הרבעון בקובץ אינו מאוחר ממה שכבר יש: ':
+    'The quarter in the file is not later than the ones already here: ',
+  'הרבעון הזה אינו ברשימה.':
+    'That quarter is not on the list.',
+  'הרבעון הזה כבר באפליקציה, והקובץ אינו יכול לשנות רבעון שכבר נארז.':
+    'That quarter is already in the app, and a file cannot change a quarter that was packed.',
+  'הרבעון נוסף אבל לא נשמר להפעלה הבאה — ייתכן שהאחסון מלא.':
+    'The quarter was added but not stored for the next launch — the storage may be full.',
+  'זה אינו קובץ רבעון של פורטולנד.':
+    'This is not a Portoland quarter file.',
+  'יחידות':
+    'units',
+  'כל נקודה בסדרה היא החציון של שנים-עשר החודשים שמסתיימים ברבעון הנקוב. רבעון חדש הוא נתון חדש לכל דבר: הוא נשמר עם המקור, הרבעון והסיווג ':
+    'Every point in the series is the median of the twelve months ending in the quarter named. A new quarter is new data like any other: it is stored with its source, its quarter and the classification ',
+  'לא הצלחתי לקרוא את הרשימה: ':
+    'I could not read the list: ',
+  'ליחידה ':
+    'Unit ',
+  'לקובץ אין יחידות.':
+    'The file has no units.',
+  'לקובץ אין רבעון תקין.':
+    'The file has no valid quarter.',
+  'מוריד ':
+    'Downloading ',
+  'מתוכם נוספו אחרי ההתקנה: ':
+    'Of those, added after installation: ',
+  'נוסף ':
+    'Added ',
+  'נסיון נוסף':
+    'Try again',
+  'ערך שאינו מספר חיובי ב-':
+    'A value that is not a positive number at ',
+  'קורא את רשימת הרבעונים…':
+    'Reading the list of quarters…',
+  'ק״ב':
+    'KB',
+  'רבעון חדש':
+    'New quarter',
+  'מגבלות בנייה, ורבעון חדש — הורדה חד-פעמית':
+    'Building constraints, and a new quarter — a one-off download',
+  'שכבות REN ו-RAN לכל 18 העיריות, ורבעון INE שפורסם אחרי ההתקנה, מ-jsDelivr; הגודל כתוב לפני הלחיצה. מכאן הם עובדים בלי רשת.':
+    'The REN and RAN layers for all 18 municipalities, and an INE quarter published after installation, from jsDelivr; the size is shown before you press. From then on they work without a network.',
+  'אותם קבצים — מקור גיבוי':
+    'The same files — a fallback source',
+  'השרת השיב ':
+    'the server answered ',
   'מקורות ומה חסר':
     'Sources, and what is missing',
   'מקורות — כל שדה, ומה חסר':
