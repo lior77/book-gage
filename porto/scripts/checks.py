@@ -519,7 +519,15 @@ def main():
     # 27 reached the page), and a class in app.css that belongs to no pattern.
     # The second is a build error inside build_design.py; this is the first.
     appjs = io.open(os.path.join(ROOT, "app.js"), encoding="utf-8").read()
-    icons = re.findall(r"\n  ([a-z0-9]+):\s*'", appjs[appjs.index("const ICON = {"):])
+    # Bounded at the table's own closing brace, the way build_design.py bounds
+    # it.  Unbounded, this read every `name: '…'` line in the REST of app.js as
+    # an icon — 2.2.0 added a three-line lookup of the confidence words and the
+    # check demanded that "verified", "reported" and "approx" be drawn in the
+    # icon gallery.  A check that reads past the end of the thing it is about
+    # accuses the innocent, and gets switched off.
+    icon_blk = appjs[appjs.index("const ICON = {"):]
+    icon_blk = icon_blk[:icon_blk.index("\n};")]
+    icons = re.findall(r"\n  ([a-z0-9]+):\s*'", icon_blk)
     doc_i = io.open(os.path.join(ROOT, "docs", "DESIGN.html"), encoding="utf-8").read()
     shown = set(re.findall(r'<span dir="ltr">([a-z0-9]+)</span></div>', doc_i))
     gone = [i for i in icons if i not in shown]
@@ -2647,6 +2655,105 @@ def main():
                  % (disagreed - 3))
         print("series %d units, %d values, %d quarters — counted from the CSVs"
               % (len(units), n_points, len(periods)))
+
+    # ---- 7am. the filter never turns a missing value into a passing one ----
+    # Move ב׳, 2.2.0.  The filter is the one screen where rule 2 can be broken
+    # by a single character: `cmpValue(o, k) || 0` reads as "the value, or zero"
+    # and turns every unit the source never published into a unit whose price is
+    # zero — which passes "at most 1,200" and lands in the answer as a match.
+    # Nothing on screen would look wrong.  The whole screen would be wrong.
+    #
+    # So this is structural, like §7ad: inside the filter's own block, a value
+    # may only reach a comparison through fltTest(), and the block may not
+    # contain a defaulting operator at all.  It also checks the two sentences
+    # the screen owes the reader — the count of units that were NOT tested, and
+    # the line saying what that means — because a filter that reports only its
+    # matches is the quiet lie the move was written against.
+    flt_a = appjs_txt.find("/* ------------------------------------------------------------- the filter --- */")
+    flt_b = appjs_txt.find("function cmpClick(e) {")
+    if flt_a < 0 or flt_b < flt_a:
+        fail("7am cannot find the filter block in app.js — it moved, and this "
+             "check is now looking at nothing")
+    else:
+        blk = appjs_txt[flt_a:flt_b]
+        for bad, why in ((r"cmpValue\([^)]*\)\s*\|\|", "`|| something` after cmpValue"),
+                         (r"cmpValue\([^)]*\)\s*\?\?", "`?? something` after cmpValue"),
+                         (r"Number\(cmpValue", "Number() straight around cmpValue — null becomes 0")):
+            m = re.search(bad, blk)
+            if m:
+                fail("app.js filter block: %s (%r). A unit the source never "
+                     "published is not a unit whose value is zero — rule 2, and "
+                     "on this screen it is one character away" % (why, m.group(0)))
+        if "FLT_NONE" not in blk or blk.count("FLT_NONE") < 3:
+            fail("the filter has lost its third outcome. A condition answers "
+                 "pass, fail, or NOT TESTED — two outcomes is the bug")
+        for owed in ("לא נבדקו", "אין להם נתון באחד השדות"):
+            if owed not in blk:
+                fail("the filter screen no longer says %r. The count of units it "
+                     "could not test is half of its answer" % owed)
+        if "fltTest(" not in blk:
+            fail("the filter no longer tests through fltTest() — the one place "
+                 "that knows a missing value is not a failed one")
+
+    # ---- 7an. every number says how sure it is, in one of three words -----
+    # Move י׳, 2.2.0.  Rule 3 of the accuracy contract has three words and the
+    # data had a fourth state: nothing.  Twenty-seven of the sixty-seven records
+    # carried no `confidence` at all, nine of them numeric — population, area,
+    # density, distance, the housing block, the 2025 split.  A reader looking at
+    # forty numbers could not tell which had been checked against a second
+    # source, which came from one body's word, and which this project worked out
+    # for itself, because for nine of them nobody had said.
+    #
+    # The nine were classified from the evidence their own records carry, and
+    # the rule is now enforced: a NUMERIC field must say one of the three words.
+    # Non-numeric fields — a name, a description, a letter on the map, an
+    # outline — carry none, and that is not laziness: rule 3 is about a second
+    # source reaching the same NUMBER, and there is no number to reach.
+    CONF_WORDS = {"verified", "reported", "approx"}
+    CONF_NUMERIC = {"number", "integer", "metres", "degrees", "°C", "mm"}
+    # A category from a published typology is not a number, but rule 3 reads the
+    # same way on it: one body assigned the class, and either a second source
+    # reached the same class or none did.  `freguesia.tipau` says so in its own
+    # validation_he — 218 codes matched by name against CAOP 2025, no second
+    # source for the classification itself, therefore `reported`.  So a category
+    # MAY carry a confidence word without it being a copy-paste; prose, a point,
+    # an outline may not.
+    CONF_CLASSIFIABLE = CONF_NUMERIC | {"category"}
+    n_conf = {"verified": 0, "reported": 0, "approx": 0}
+    for key, rec in sorted(sources["fields"].items()):
+        conf, vt = rec.get("confidence"), rec.get("value_type")
+        if conf is None:
+            if vt in CONF_NUMERIC:
+                fail("data/sources.json %s is a %s and carries no confidence. "
+                     "Rule 3 has three words — verified, reported, approx — and "
+                     "a number that says none of them tells the reader nothing "
+                     "about how sure it is" % (key, vt))
+            continue
+        if conf not in CONF_WORDS:
+            fail("data/sources.json %s: confidence %r is not one of %s"
+                 % (key, conf, sorted(CONF_WORDS)))
+            continue
+        n_conf[conf] += 1
+        if vt is not None and vt not in CONF_CLASSIFIABLE:
+            # Not a failure, but worth seeing: a confidence word on a paragraph
+            # of prose, on a coordinate or on an outline is usually a
+            # copy-paste from the field above it.
+            warn("data/sources.json %s is a %s and carries confidence %r — rule 3 "
+                 "is about a second source reaching the same value, and a %s "
+                 "has none to reach" % (key, vt, conf, vt))
+    print("confidence: %d verified, %d reported, %d approx, %d fields in all"
+          % (n_conf["verified"], n_conf["reported"], n_conf["approx"],
+             len(sources["fields"])))
+    # And the screen that shows them has to exist and name all three, or the
+    # classification is a field in a file nobody reads.
+    for owed in ("CONF_HE", "renderSources", "'verified'", "'reported'", "'approx'"):
+        if owed.strip("'") not in appjs_txt:
+            fail("app.js no longer carries %s — move י׳ put the sources and the "
+                 "absences on a screen of their own, and CLAUDE.md calls that "
+                 "list part of the product" % owed)
+    if "missing" not in appjs_txt or "missing.items" not in appjs_txt:
+        fail("app.js no longer reads sources.json's missing.items — the list of "
+             "what is NOT known is half of that screen")
 
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:

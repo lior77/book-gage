@@ -1089,3 +1089,55 @@ body[data-view="text"] .map-only{display:none}
         font-size:var(--t-sm); line-height:var(--lh-sm)}
 .cmp-pn{margin-inline-start:auto; font-size:var(--t-xs); line-height:var(--lh-xs);
         color:var(--miss)}
+
+/* ------------------------------------------------------------- סינון ----- */
+/* The condition rows are a form, and a form in this app is one column of
+   full-width controls — the listings form settled that in 2.0.0.  Here the
+   three parts of a condition do belong on one line, because reading them as a
+   sentence ("price · at most · 1200") is the whole point; they wrap on a
+   narrow phone rather than shrinking below the 44px target. */
+.flt-cs{display:flex; flex-direction:column; gap:var(--s2); margin-block:var(--s3)}
+.flt-c{display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap}
+.flt-f{flex:1 1 40%; min-height:44px; padding:0 var(--s3); text-align:start;
+       border:1px solid var(--ctl-line); border-radius:var(--r-ctl);
+       background:var(--card); color:var(--ink);
+       font-size:var(--t-sm); line-height:var(--lh-sm)}
+.flt-op{flex:0 0 auto; min-height:44px; padding:0 var(--s3);
+        border:1px solid var(--ctl-line); border-radius:var(--r-ctl);
+        background:var(--bg); color:var(--ink);
+        font-size:var(--t-sm); line-height:var(--lh-sm)}
+.flt-v{flex:0 1 6em; min-height:44px; padding:0 var(--s2); text-align:end;
+       border:1px solid var(--ctl-line); border-radius:var(--r-ctl);
+       background:var(--card); color:var(--ink);
+       font-size:var(--t-md); line-height:var(--lh-md)}
+.flt-u{flex:0 0 auto; font-size:var(--t-xs); line-height:var(--lh-xs); color:var(--ink-2)}
+.flt-x{flex:0 0 44px; min-height:44px; border:1px solid var(--line);
+       border-radius:var(--r-ctl); background:var(--card); color:var(--miss)}
+/* The two lines of the answer.  The second is not a footnote: it is the same
+   size as the first, because "31 were not tested" is as much of the answer as
+   "14 matched". */
+.flt-sum{font-size:var(--t-lg); line-height:var(--lh-lg); margin-block-start:var(--s3)}
+.flt-of{font-size:var(--t-sm); color:var(--ink-2)}
+.flt-none{font-size:var(--t-md); line-height:var(--lh-md); color:var(--warn);
+          margin-block:var(--s1) var(--s3)}
+.flt-none.is-zero{color:var(--ink-2); font-size:var(--t-sm); line-height:var(--lh-sm)}
+.flt-sw{background:var(--accent); color:var(--on-fill)}
+.flt-vals{flex:0 0 auto; display:flex; gap:var(--s2)}
+.flt-val{font-size:var(--t-sm); line-height:var(--lh-sm); color:var(--ink)}
+
+/* ------------------------------------------------- מקורות ומה חסר -------- */
+/* The three words of rule 3, as three chips.  Colour carries the meaning here
+   and so does the word — the chip is never colour alone (SC 1.4.1): "מאומת"
+   reads as itself in a screenshot, in print and to a reader who cannot tell
+   the green from the amber. */
+.conf{display:inline-flex; align-items:center; gap:var(--s1);
+      padding:2px var(--s2); border-radius:var(--r-xs);
+      font-size:var(--t-xs); line-height:var(--lh-xs); font-weight:400;
+      border:1px solid var(--line); color:var(--ink-2); background:var(--bg)}
+.conf-verified{color:var(--good); border-color:var(--good)}
+.conf-reported{color:var(--ink-2); border-color:var(--ctl-line)}
+.conf-approx{color:var(--warn); border-color:var(--warn)}
+.conf-none{color:var(--bad); border-color:var(--bad)}
+.conf-miss{color:var(--miss); border-color:var(--miss)}
+.conf-sum{display:flex; flex-wrap:wrap; gap:var(--s2); margin-block:var(--s3)}
+.conf-n{font-size:var(--t-sm); color:var(--miss)}

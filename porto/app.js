@@ -156,6 +156,12 @@ const S = {
   // like the menu, so it never comes back open — and never at level 3.
   cmp: false,
   cmpScope: 'mun',     // level 1 only: 'mun' | 'fre'
+  /* סינון — move ב׳.  The same table as the comparison, asked a question
+     instead of ranked.  The conditions survive a restart because coming back
+     to the question you were asking is the point of it. */
+  flt: false,
+  fltConds: [],
+  fltPick: null,       // the index of the condition whose field picker is open
   cmpField: null,      // the field being compared; CMP_DEFAULT until chosen
   /* The quarter the four INE fields are ranked at.  null is the latest — it
      stays null rather than holding the last index, so a saved state does not
@@ -257,6 +263,12 @@ const FLOOD_COLOUR = { 20: '#3d2fb8', 100: '#6a5ae0', 1000: '#9d93ee' };
    They are neither the subject of any level nor part of the district's own
    hierarchy, and a fourth grey among three greys said nothing about that. */
 const REGION_COLOUR = '#e2761b';
+/* The filter's two fills.  Not a scale: there is nothing ordered to say here,
+   only "answers the question" and "was asked and does not".  The third state —
+   could not be asked — is the comparison screen's hatch, because it means
+   exactly what it means there. */
+const FLT_HIT = '#265b97';
+const FLT_OUT = '#cfd8e4';
 /* The dark half of the comparison line.  It is drawn inside the white one, at
    half its weight, so what the eye reads is still a single thin boundary — the
    white is a casing, not a second line. */
@@ -4640,6 +4652,7 @@ function redrawLevel() {
   if (S.regions) { drawRegions(); return; }
   if (S.climate) { drawClimate(); return; }
   if (S.cmp) { drawCmp(); return; }
+  if (S.flt) { drawFlt(); return; }
   if (S.lst) { drawListings(); return; }
   if (S.level === 'district') drawDistrict();
   else if (S.level === 'mun') drawMun(S.mun);
@@ -4674,6 +4687,11 @@ function consHe() {
             the theme's effect is visible on the menu itself */
 const ICON = {
   search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  /* סינון: a funnel.  Not a magnifier — the search finds a place you can name,
+     the filter finds the places you cannot. */
+  filter: '<path d="M4 5h16l-6.2 7.4V19l-3.6-2v-4.6L4 5z"/>',
+  /* מקורות: a page with a citation rule under its heading. */
+  src: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6M9 19h3"/>',
   pin: '<path d="M12 21.5s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0c0 4.5 6.5 10.5 6.5 10.5z"/><circle cx="12" cy="10.5" r="2.4"/>',
   /* נכסים: a house with a tag on it.  It wore the pin until 2.0.6, which is
      also המקומות שלי's — two of the five rows drawn with one glyph. */
@@ -5199,6 +5217,65 @@ function renderCmp() {
     <p class="note">${t('הצבע מייצג את החמישון ולא את גודל הערך, כדי שכל קבוצה תיקרא במבט אחד; הערך המדויק בשורה. המספרים על המפה הם קודי DICOFRE, כמו בכל מסך אחר. אין כאן צד ״טוב״ ואין צד ״רע״ — רק קטן וגדול.')}</p>`;
 }
 
+/* ------------------------------------------------------------- the filter --- */
+/* Move ב׳ of INFORMATION-PLAN.md.  The comparison ranks one field; this asks
+   several at once — "a parish under 1,200 €/m², flatter than 8 degrees, with
+   less than a fifth of it under REN".  No new data: the same table in memory,
+   read with a question instead of a colour scale.
+
+   THE WHOLE THING RESTS ON ONE DISTINCTION, and it is rule 2 in a new place:
+
+       a unit with no value is NOT a unit that failed the test.
+
+   Three outcomes per condition, never two.  A parish with no slope figure is
+   not a flat parish and not a steep one — it is a parish nobody measured, and
+   the screen says so on its own line, with its own count.  Without that line
+   the filter lies quietly: "14 parishes match" reads as "14 of everything",
+   when it may be 14 of the 92 that have a price at all.
+
+   A unit that fails a condition it WAS tested on is excluded and counted as
+   excluded, even if another condition has no value — it really is out.  Only
+   a unit that fails nothing and is missing something lands in "not tested".
+   Saying "unknown" about a unit already ruled out would overstate the doubt. */
+const FLT_PASS = 'pass', FLT_FAIL = 'fail', FLT_NONE = 'none';
+const FLT_OPS = [{ k: 'ge', he: 'לפחות', sym: '≥' }, { k: 'le', he: 'עד', sym: '≤' }];
+const fltOp = k => FLT_OPS.find(o => o.k === k) || FLT_OPS[0];
+
+/* The value a condition is tested against.  cmpValue() returns null for a unit
+   the source did not publish — and null is the ONLY thing this function is
+   allowed to turn into FLT_NONE.  No `|| 0`, no `?? 0`: checks.py §7am fails on
+   either inside this block, because that one character is how a missing figure
+   becomes a passing zero. */
+function fltTest(o, c) {
+  const v = cmpValue(o, c.k);
+  if (v === null || v === undefined) return FLT_NONE;
+  if (c.v === '' || c.v === null || isNaN(Number(c.v))) return FLT_PASS;  // an empty box asks nothing
+  return (c.op === 'le' ? v <= Number(c.v) : v >= Number(c.v)) ? FLT_PASS : FLT_FAIL;
+}
+
+/* "1 רובעים עונים" is not a sentence in Hebrew, and this screen prints a count
+   in front of a noun on every redraw.  One is its own word here — and it
+   carries the digit itself, so that the line never reads "1 רובע אחד". */
+function fltHitPhrase(r) {
+  if (r.hit.length === 1) {
+    return r.kind === 'mun' ? t('עירייה אחת עונה לתנאים') : t('רובע אחד עונה לתנאים');
+  }
+  return `<b class="num">${nf(r.hit.length)}</b> ` +
+    (r.kind === 'mun' ? t('עיריות עונות לתנאים') : t('רובעים עונים לתנאים'));
+}
+
+function fltRun() {
+  const u = cmpUnits();
+  const hit = [], out = [], none = [];
+  u.rows.forEach(o => {
+    const states = S.fltConds.map(c => fltTest(o, c));
+    if (states.includes(FLT_FAIL)) out.push(o);
+    else if (states.includes(FLT_NONE)) none.push(o);
+    else hit.push(o);
+  });
+  return { hit, out, none, total: u.rows.length, kind: u.kind };
+}
+
 /* The screen.  The street background comes off while it is open and goes back
    as it was on the way out: what is being compared is the data, and a
    photograph of roads underneath it is noise. */
@@ -5235,6 +5312,274 @@ function toggleCmp() {
 }
 let cmpTilesWere = true;
 let cmpWaterWere = false;
+
+/* The screen.  Deliberately the same shape as the comparison: the scope
+   buttons at the top, then the question, then the answer as a list — because
+   it IS the comparison screen asked differently, and two screens that read the
+   same table should not look like two different apps. */
+function renderFlt() {
+  const lvl = cmpLevelWord();
+  const atDistrict = S.level === 'district';
+  const m = atDistrict ? null : D.munByNum.get(S.mun);
+  const fields = cmpFields();
+
+  if (S.fltPick !== null && S.fltPick !== undefined) {
+    const groups = [...new Set(fields.map(f => f.g))].map(g => `
+      <div class="grp">${html(t(g))}</div>
+      <div class="cmp-fields">${fields.filter(f => f.g === g).map(f => {
+        const rows = cmpUnits().rows;
+        const n = rows.filter(o => cmpValue(o, f.k) !== null).length;
+        return `<button class="cmp-f${n < rows.length ? ' part' : ''}" data-fltf="${html(f.k)}">
+          <span class="cmp-f-t">${html(t(f.he))}</span>
+          <span class="cmp-f-u">${html(f.unit ? t(f.unit) : '—')}</span>
+          <span class="cmp-f-c num">${n}/${rows.length}</span>
+        </button>`;
+      }).join('')}</div>`).join('');
+    return `<div class="cmp-top">
+        <h1 class="cmp-h">${t('בחירת שדה')}</h1>
+        <button class="cmp-swap" data-fltpick="-1">${t('חזרה')}</button>
+      </div>
+      <p class="note cmp-note">${t('המספר על הכרטיסייה הוא כמה יחידות יש להן ערך בשדה הזה. היתר ייספרו כ׳לא נבדקו׳.')}</p>
+      ${groups}`;
+  }
+
+  const r = fltRun();
+  const conds = S.fltConds.map((c, i) => {
+    /* A condition can name a field this level does not offer — a
+       municipality-only one while the parishes are being read.  The condition
+       stays (the user asked it, and the units then count as "not tested",
+       which is true), but the label comes from the full field list, never the
+       bare key: a Latin key on a Hebrew row reads as a bug, not as a field. */
+    const f = fields.find(x => x.k === c.k) || CMP_ALL.find(x => x.k === c.k)
+      || { he: c.k, unit: '' };
+    return `<div class="flt-c">
+      <button class="flt-f" data-fltpick="${i}">${html(t(f.he))}</button>
+      <button class="flt-op" data-fltop="${i}">${html(t(fltOp(c.op).he))}</button>
+      <input class="flt-v" type="number" inputmode="decimal" data-fltv="${i}"
+        value="${html(String(c.v))}" aria-label="${html(t(f.he))}">
+      <span class="flt-u">${html(f.unit ? t(f.unit) : '')}</span>
+      <button class="flt-x" data-fltdel="${i}" aria-label="${t('מחיקת התנאי')}">✕</button>
+    </div>`;
+  }).join('');
+
+  /* TWO lines, always, and the second one is the reason this screen is honest.
+     "14 found" alone is a sentence about the data only if everything was
+     measured; it never is. */
+  const answer = S.fltConds.length ? `
+    <p class="flt-sum">${fltHitPhrase(r)}
+      <span class="flt-of">${t('מתוך')} <span class="num">${nf(r.total)}</span></span></p>
+    <p class="flt-none${r.none.length ? '' : ' is-zero'}">${r.none.length
+      ? `<b class="num">${nf(r.none.length)}</b> ${t('לא נבדקו — אין להם נתון באחד השדות')}`
+      : t('לכל היחידות יש נתון בכל השדות שנבחרו — אף אחת לא נשארה בלי בדיקה')}</p>`
+    : `<p class="note">${t('אין עדיין תנאי. כל תנאי הוא שדה, יחס וערך; יחידה שאין לה נתון באחד השדות לא תיספר כעונה ולא כנופלת — היא תיספר בנפרד.')}</p>`;
+
+  const list = r.hit.length ? `<div class="cmp-rows">${r.hit.map(o => {
+    const mun = o.mun_num === undefined;
+    return `<div class="cmp-row" data-cmpu="${html(cmpId(o))}"${
+        mun ? ` data-mun="${o.num}"` : ` data-fre="${html(D.freKey(o))}"`}>
+      <span class="cmp-sw flt-sw">${html(cmpCode(mun ? munNum(o) : freNum(o)))}</span>
+      <span class="cmp-body"><span class="cmp-n">${html(cmpName(o))}
+        <span class="lat">${html(bare(o.pt))}</span></span></span>
+      <span class="flt-vals">${S.fltConds.map(c => {
+        const f = fields.find(x => x.k === c.k) || { dec: 1 };
+        const v = cmpValue(o, c.k);
+        return `<button class="flt-val" data-src="${html(cmpSrcKey(lvl, c.k))}">${
+          v === null ? miss() : `<span class="num">${html(cmpFmt(v, f))}</span>`}</button>`;
+      }).join('')}</span>
+    </div>`;
+  }).join('')}</div>` : '';
+
+  const unknown = r.none.length ? `
+    <div class="grp">${nf(r.none.length)} ${t('לא נבדקו')}</div>
+    <div class="cmp-rows">${r.none.map(o => {
+      const mun = o.mun_num === undefined;
+      return `<div class="cmp-row no" data-cmpu="${html(cmpId(o))}"${
+          mun ? ` data-mun="${o.num}"` : ''}>
+        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munNum(o) : freNum(o)))}</span>
+        <span class="cmp-body"><span class="cmp-n">${html(cmpName(o))}
+          <span class="lat">${html(bare(o.pt))}</span></span></span>
+        <span class="flt-vals">${S.fltConds.map(c => {
+          const f = fields.find(x => x.k === c.k) || { dec: 1 };
+          const v = cmpValue(o, c.k);
+          return `<button class="flt-val" data-src="${html(cmpSrcKey(lvl, c.k))}">${
+            v === null ? miss() : `<span class="num">${html(cmpFmt(v, f))}</span>`}</button>`;
+        }).join('')}</span>
+      </div>`;
+    }).join('')}</div>
+    <p class="note">${t('היחידות האלה לא נפלו בתנאי — פשוט אין להן נתון באחד השדות שנבחרו. הן אינן נספרות כעונות ואינן נספרות כנופלות, ובמפה הן מפוספסות.')}</p>` : '';
+
+  const scope = atDistrict ? `
+    <div class="cmp-scope" role="group" aria-label="${t('מה לסנן')}">
+      <button class="cmp-sc" data-cmpscope="mun"
+        aria-pressed="${S.cmpScope !== 'fre'}">${t('עיריות')}</button>
+      <button class="cmp-sc" data-cmpscope="fre"
+        aria-pressed="${S.cmpScope === 'fre'}">${t('רובעים')}</button>
+    </div>` : '<div class="cmp-scope"></div>';
+
+  return `<div class="cmp-top">
+      ${scope}
+      <button class="cmp-swap" data-fltadd="1">${t('הוספת תנאי')}</button>
+    </div>
+    <h1 class="cmp-h">${t('סינון')}</h1>
+    <p class="cmp-what">${atDistrict
+      ? (S.cmpScope === 'fre' ? t('275 רובעי המחוז') : t('18 עיריות המחוז'))
+      : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`}</p>
+    <div class="flt-cs">${conds}</div>
+    ${answer}
+    ${list}
+    ${unknown}
+    <p class="note">${t('הסינון קורא את אותם שדות שמסך ההשוואה מדרג, ואת אותן רשומות מקור: כל ערך בשורה נלחץ ופותח את המקור שלו. תנאי בלי ערך אינו מסנן דבר.')}</p>`;
+}
+
+/* The map: what matches is filled, what was tested and failed is pale, and what
+   could not be tested is hatched — the same hatch the comparison screen uses
+   for a missing value, because it means the same thing. */
+function drawFlt() {
+  clearMap();
+  const r = fltRun();
+  const state = new Map();
+  r.hit.forEach(o => state.set(cmpId(o), 'hit'));
+  r.none.forEach(o => state.set(cmpId(o), 'none'));
+  const inMun = S.level !== 'district';
+  const base = inMun ? freFeatures(S.mun)
+             : S.cmpScope === 'fre' ? D.bF : D.bM;
+  const unitOf = ft => inMun
+    ? freOfFeature(S.mun, ft.properties)
+    : S.cmpScope === 'fre'
+      ? D.freByKey.get(ft.properties.mun_num + '|' + ft.properties.name)
+      : D.munByNum.get(ft.properties.num);
+  LG.mun = L.geoJSON(base, {
+    style: ft => {
+      const st = state.get(cmpId(unitOf(ft) || {})) || 'out';
+      if (st === 'none') return { weight: 0, fillColor: 'url(#' + CMP_PAT + ')', fillOpacity: 1 };
+      return { weight: 0, fillColor: st === 'hit' ? FLT_HIT : FLT_OUT, fillOpacity: 1 };
+    },
+    onEachFeature: (ft, l) => {
+      const o = unitOf(ft);
+      if (!o) return;
+      const st = state.get(cmpId(o)) || 'out';
+      l.on('click', () => {
+        if (inMun) { goZone(D.freKey(o)); return; }
+        if (S.cmpScope === 'fre') { cmpFocus(cmpId(o)); return; }
+        goMun(o.num);
+      });
+      l.bindTooltip(`<b>${html(cmpName(o))}</b><br>${
+        st === 'hit' ? t('עונה לתנאים')
+        : st === 'none' ? t('לא נבדק — אין נתון')
+        : t('נבדק, ואינו עונה')}`, { sticky: true, className: 'tt' });
+    },
+  }).addTo(map);
+  drawLines();
+  cmpPattern();
+  /* The same labels as the comparison screen, for the same reason: the official
+     code, and at level 1 the eighteen municipalities rather than a number on
+     each of 275 shapes. */
+  const rows = inMun ? (D.freByMun.get(S.mun) || []) : D.mun;
+  LG.labels = L.layerGroup(rows.map(o => {
+    const code = o.mun_num === undefined ? munNum(o) : freNum(o);
+    const mk = L.marker(latlng(o.center), { icon: cmpIcon(code), keyboard: false,
+      title: cmpCode(code) + ' · ' + cmpName(o), riseOnHover: true });
+    mk.on('click', () => { if (inMun) goZone(D.freKey(o)); else goMun(o.num); });
+    return mk;
+  })).addTo(map);
+  fit(LG.mun.getBounds());
+}
+
+function fltClick(e) {
+  const add = e.target.closest('[data-fltadd]');
+  if (add) {
+    const f = cmpFields()[0];
+    S.fltConds = S.fltConds.concat([{ k: (f || {}).k || CMP_DEFAULT, op: 'le', v: '' }]);
+    S.fltPick = S.fltConds.length - 1;
+    save(); redrawLevel(); redrawText(); $('#paneText').scrollTop = 0;
+    return true;
+  }
+  const pick = e.target.closest('[data-fltpick]');
+  if (pick) {
+    const i = Number(pick.dataset.fltpick);
+    S.fltPick = i < 0 ? null : i;
+    redrawText(); $('#paneText').scrollTop = 0;
+    return true;
+  }
+  const f = e.target.closest('[data-fltf]');
+  if (f) {
+    const i = S.fltPick;
+    if (i !== null && S.fltConds[i]) S.fltConds[i].k = f.dataset.fltf;
+    S.fltPick = null;
+    save(); redrawLevel(); redrawText();
+    return true;
+  }
+  const op = e.target.closest('[data-fltop]');
+  if (op) {
+    const c = S.fltConds[Number(op.dataset.fltop)];
+    if (c) c.op = c.op === 'le' ? 'ge' : 'le';
+    save(); redrawLevel(); redrawText();
+    return true;
+  }
+  const del = e.target.closest('[data-fltdel]');
+  if (del) {
+    S.fltConds = S.fltConds.filter((_, i) => i !== Number(del.dataset.fltdel));
+    S.fltPick = null;
+    save(); redrawLevel(); redrawText();
+    return true;
+  }
+  return false;
+}
+
+/* Typing redraws everything the condition touches — the two counts, the list
+   and the map — and then puts the cursor back where it was.
+
+   The first cut updated only the two count lines, to keep the keyboard from
+   closing under a full redraw.  The result was a screen that contradicted
+   itself: the summary said "1 parish matches" while the list underneath still
+   showed the 55 from before the number was typed.  A number and a list that
+   disagree are worse than a keyboard that flickers, and the focus restore
+   below is what makes the flicker unnecessary: same id, same caret, in the
+   same event. */
+function fltInput(e) {
+  const box = e.target.closest('[data-fltv]');
+  if (!box) return false;
+  const i = Number(box.dataset.fltv);
+  const c = S.fltConds[i];
+  if (!c) return false;
+  c.v = box.value;
+  const at = box.selectionStart;
+  save();
+  redrawLevel();
+  redrawText();
+  const again = $(`[data-fltv="${i}"]`);
+  if (again) {
+    again.focus();
+    try { again.setSelectionRange(at, at); } catch (err) { /* a number box may refuse */ }
+  }
+  return true;
+}
+
+function toggleFlt() {
+  if (S.adding) stopPlacing();
+  S.flt = !S.flt;
+  if (S.flt) {
+    if (S.view === 'map') { S.view = 'split'; applyView(); }
+    S.cmpScope = S.level === 'district' ? S.cmpScope || 'mun' : S.cmpScope;
+    S.fltPick = null;
+    fltTilesWere = S.tiles;
+    if (S.tiles) { S.tiles = false; map.removeLayer(tileLayer); }
+    fltWaterWere = S.water;
+    if (S.water) { S.water = false; applyNature(); }
+  } else {
+    S.fltPick = null;
+    if (fltTilesWere && !S.tiles) { S.tiles = true; tileLayer.addTo(map); }
+    if (fltWaterWere && !S.water) { S.water = true; applyNature(); }
+  }
+  applyCons();
+  closePanel();
+  applySwitches();
+  redrawLevel(); drawMine(); redrawText();
+  if (S.flt) $('#paneText').scrollTop = 0;
+  save();
+}
+let fltTilesWere = true;
+let fltWaterWere = false;
 
 function cmpClick(e) {
   const pick = e.target.closest('[data-cmppick]');
@@ -5347,6 +5692,10 @@ const menuRows = () => [
   { k: 'save', he: t('שמירת נתונים'), icon: 'save', kind: 'act' },
   { k: 'load', he: t('ייבוא נתונים'), icon: 'load', kind: 'act' },
   { grp: '' },
+  /* Move י׳: the sources and the absences, as a page of their own rather than
+     a section of the developer's page.  It sits above ״על האפליקציה״ because it
+     is the one that answers "says who?" about every number on every screen. */
+  { k: 'sources', he: t('מקורות ומה חסר'), icon: 'src', kind: 'act' },
   { k: 'info', he: t('על האפליקציה'), icon: 'info', kind: 'act' },
   { k: 'dev', he: t('מאחורי הקלעים'), icon: 'info', kind: 'act' },
   { k: 'terms', he: t('תנאים והגבלות'), icon: 'info', kind: 'act' },
@@ -5514,6 +5863,7 @@ function menuPick(k) {
     case 'glass':   toggleFills(); renderMenu(); break;
     case 'save':    openMenu(false); openExport(); break;
     case 'load':    openMenu(false); openImport(); break;
+    case 'sources': openMenu(false); openInfo('sources'); break;
     case 'info':    openMenu(false); openInfo('about'); break;
     case 'dev':     openMenu(false); openInfo('dev'); break;
     case 'terms':   openMenu(false); openInfo('terms'); break;
@@ -5567,10 +5917,15 @@ const MODES = () => [
   { k: 'overview', he: t('סקירה'), icon: 'info' },
   { k: 'cons', he: t('מגבלות') + consHe(), icon: 'cons' },
   { k: 'cmp', he: t('השוואה'), icon: 'cmp' },
+  /* Move ב׳.  A mode and not a panel inside the comparison: it takes over the
+     reading half and changes what the map draws, which is the definition the
+     other five answer to. */
+  { k: 'flt', he: t('סינון'), icon: 'filter' },
   { k: 'lst', he: t('נכסים'), icon: 'listing' },
   { k: 'mine', he: t('המקומות שלי'), icon: 'pin' },
 ];
-const modeOf = () => (S.wp ? 'mine' : S.lst ? 'lst' : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
+const modeOf = () => (S.wp ? 'mine' : S.lst ? 'lst' : S.flt ? 'flt'
+  : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
 
 /* The strip above the page: the controls that belong to the mode's own
    display, and nothing that navigates.  One element, rendered once, outside
@@ -5593,9 +5948,11 @@ function setMode(k) {
   if (S.climate) climateOff();
   if (S.wp) toggleWp();
   if (S.cmp) toggleCmp();
+  if (S.flt) toggleFlt();
   if (S.cons) consOff();
   if (S.lst) lstOff();
   if (k === 'cmp') toggleCmp();
+  else if (k === 'flt') toggleFlt();
   else if (k === 'cons') toggleCons();
   else if (k === 'lst') toggleLst();
   else if (k === 'mine') toggleWp();
@@ -5616,6 +5973,7 @@ function redrawText() {
     if (S.level === 'zone') cmpFocus('f' + S.zone);
     return;
   }
+  if (S.flt) { $('#doc').innerHTML = renderFlt(); return; }
   /* The constraints page replaces the level document rather than adding a card
      to it: it is a screen about one question, and the population and the
      housing stock are a different one. */
@@ -5820,6 +6178,11 @@ function save() {
       lang: S.lang,
       muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
       tiles: S.tiles,
+      /* Move ב׳: the conditions, not the screen.  `flt` is deliberately
+         absent — the app must not open filtered, showing a district with a
+         hole in it and no memory of the question that made the hole.  The
+         question itself is worth keeping: it took several taps to ask. */
+      fltConds: S.fltConds,
     }));
   } catch (e) { /* private mode */ }
 }
@@ -5845,6 +6208,20 @@ function restore() {
     if (typeof o.lst === 'boolean') S.lst = o.lst;
     if (typeof o.regions === 'boolean') S.regions = o.regions;
     if (typeof o.climate === 'boolean') S.climate = o.climate;
+    /* Whatever is in the store was written by SOME version of this app, not
+       necessarily this one: a field can be dropped between releases, and a
+       condition naming one would render as its bare key in Latin letters on a
+       Hebrew screen and quietly put every unit in "not tested".  So each saved
+       condition is re-checked against the field list this build actually has,
+       and one that does not survive is dropped rather than shown. */
+    if (Array.isArray(o.fltConds)) {
+      const known = new Set(CMP_ALL.map(f => f.k));
+      S.fltConds = o.fltConds.filter(c => c && typeof c === 'object'
+          && known.has(c.k) && (c.op === 'ge' || c.op === 'le')
+          && (c.v === '' || (typeof c.v !== 'object' && !isNaN(Number(c.v)))))
+        .slice(0, 12)
+        .map(c => ({ k: c.k, op: c.op, v: c.v === '' ? '' : String(c.v) }));
+    }
     if (o.consShow && typeof o.consShow === 'object')
       CONS_ORDER.forEach(k => { if (typeof o.consShow[k] === 'boolean') S.consShow[k] = o.consShow[k]; });
     if (typeof o.muncol === 'boolean') S.muncol = o.muncol;
@@ -5996,6 +6373,94 @@ function onlineDoc() {
     </div>`).join('')}`;
 }
 
+/* ------------------------------------------------- the sources screen --- */
+/* Move י׳ of INFORMATION-PLAN.md, and the shortest one to justify: CLAUDE.md
+   has said since the first commit that the list of what is MISSING "is part of
+   the product", and until 2.2.0 it was shown on the developer's page, beside
+   field keys and build notes.  A reader deciding where to buy needs to know
+   not only what is known but what is not, and on whose authority the rest
+   stands.  So: one screen, every field, its source, its reference year, its
+   coverage — and the word rule 3 turns on.
+
+   The three words are not decoration.  `verified` means a second, independent
+   source reached the same number; `reported` means one source published it and
+   nobody checked it against another; `approx` means this project computed it.
+   A reader who cannot tell those apart is reading forty numbers as if they
+   were one kind of thing. */
+const CONF_HE = { verified: 'מאומת', reported: 'מדווח', approx: 'מחושב כאן' };
+const CONF_WHY = {
+  verified: 'מקור שני ועצמאי הגיע לאותו מספר',
+  reported: 'גוף אחד פרסם; אין מקור שני שהושווה אליו',
+  approx: 'חושב בפרויקט הזה מתוך נתונים אחרים',
+};
+/* Rule 3 is about NUMBERS.  A name, a description, a letter on the map or an
+   outline is not a measurement a second source can "reach the same value" for,
+   and demanding a confidence word for it would produce a label that means
+   nothing.  The type decides, not the taste — and §7an enforces exactly this
+   list, so a new numeric field cannot arrive without one. */
+const CONF_NUMERIC = new Set(['number', 'integer', 'metres', 'degrees', '°C', 'mm']);
+
+function confBadge(f) {
+  const c = f.confidence;
+  if (!c) {
+    return CONF_NUMERIC.has(f.value_type)
+      ? `<span class="conf conf-none">${t('בלי סיווג')}</span>` : '';
+  }
+  return `<span class="conf conf-${html(c)}" title="${html(t(CONF_WHY[c] || ''))}">${
+    html(t(CONF_HE[c] || c))}</span>`;
+}
+
+function renderSources() {
+  const s = D.sources;
+  const all = Object.entries(s.fields);
+  const n = c => all.filter(([, f]) => f.confidence === c).length;
+  const GROUPS = [
+    ['municipio.', 'עירייה'], ['freguesia.', 'רובע'], ['porto_city.', 'העיר פורטו'],
+    ['map.', 'שכבות המפה'], ['station.', 'תחנות אקלים'], ['district.', 'המחוז'],
+    ['i18n.', 'שפה'],
+  ];
+  const card = ([k, f]) => `<div class="card">
+      <h3>${html(t(f.label_he || k))} ${confBadge(f)}</h3>
+      <p>${t('מקור:')} ${prose(f.source || (f.derived_from || []).join(' / '))}</p>
+      ${f.reference_year || f.reference_period ? `<p class="note">${t('שנת ייחוס:')}
+        <b class="num">${prose(String(f.reference_period || f.reference_year))}</b></p>` : ''}
+      ${f.coverage ? `<p class="note">${t('כיסוי:')} <span class="num">${prose(f.coverage)}</span>${
+        f.coverage_he ? ' — ' + prose(f.coverage_he) : ''}</p>` : ''}
+      ${f.confidence_he ? `<p class="note">${prose(f.confidence_he)}</p>` : ''}
+      ${f.method_he ? `<p class="note">${t('איך חושב:')} ${prose(f.method_he)}</p>` : ''}
+      ${f.caveat_he ? `<div class="warn">${prose(f.caveat_he)}</div>` : ''}
+      ${f.url ? `<p class="note"><a href="${html(f.url)}" target="_blank" rel="noopener">${html(f.url)}</a></p>` : ''}
+    </div>`;
+  const used = new Set();
+  const groups = GROUPS.map(([pre, he]) => {
+    const rows = all.filter(([k]) => k.startsWith(pre));
+    rows.forEach(([k]) => used.add(k));
+    return rows.length ? `<h2>${html(t(he))} <span class="conf-n num">${rows.length}</span></h2>
+      ${rows.map(card).join('')}` : '';
+  }).join('');
+  const rest = all.filter(([k]) => !used.has(k));
+
+  return { title: t('מקורות — כל שדה, ומה חסר'), body: `
+    <p>${t('כל מספר באפליקציה בא משדה אחד ברשימה הזאת, ולכל שדה יש מקור, שנת ייחוס, וסיווג אחד משלושה. הרשימה הזאת — ומה שחסר בסופה — היא חלק מהמוצר ולא נספח לו.')}</p>
+    <div class="conf-sum">
+      <span class="conf conf-verified">${t('מאומת')} <b class="num">${n('verified')}</b></span>
+      <span class="conf conf-reported">${t('מדווח')} <b class="num">${n('reported')}</b></span>
+      <span class="conf conf-approx">${t('מחושב כאן')} <b class="num">${n('approx')}</b></span>
+      <span class="conf conf-plain">${t('סך השדות')} <b class="num">${all.length}</b></span>
+    </div>
+    <p class="note">${t('מאומת = מקור שני ועצמאי הגיע לאותו מספר. מדווח = גוף אחד פרסם, ואין מקור שני שהושווה אליו. מחושב כאן = נגזר בפרויקט הזה. שדות שאינם מספריים — שם, תיאור, אות על המפה, מתאר — אינם נושאים סיווג: אין מה לאמת מול מספר.')}</p>
+    ${groups}
+    ${rest.length ? `<h2>${t('אחר')} <span class="conf-n num">${rest.length}</span></h2>${rest.map(card).join('')}` : ''}
+    <h2>${t('מה חסר, ולמה')} <span class="conf-n num">${s.missing.items.length}</span></h2>
+    <p>${prose(s.missing.note_he)}</p>
+    ${s.missing.items.map(m => `<div class="card">
+      <h3>${html(t(m.label_he))} <span class="conf conf-miss">${t('אין נתון')}</span></h3>
+      <p>${prose(m.why_he)}</p>
+      ${m.important_he ? `<div class="warn">${prose(m.important_he)}</div>` : ''}
+      ${m.decision_he ? `<p class="note">${prose(m.decision_he)}</p>` : ''}
+    </div>`).join('')}` };
+}
+
 function renderInfo(kind) {
   const s = D.sources;
   const fields = Object.entries(s.fields).map(([k, f]) => `<div class="card">
@@ -6032,7 +6497,8 @@ function renderInfo(kind) {
      behind the numbers and what is missing; the developer's page carries the
      field keys, the validation notes and the build; the terms page carries
      every licence and the limits of what this app is. */
-  const page = kind === 'dev' ? { title: t('מאחורי הקלעים'), body: `    <h2>${t('גרסה')}</h2>
+  const page = kind === 'sources' ? renderSources()
+    : kind === 'dev' ? { title: t('מאחורי הקלעים'), body: `    <h2>${t('גרסה')}</h2>
     <p>${t('פורטולנד')} <span class="lat num">${html(D.version)}</span> ${t('· הנתונים נבנו ב-')}<span class="lat">${html(D.generated)}</span></p>
 
     <p>${t('הנתונים נבנים ב-scripts/build.py מתוך data/raw, ועוברים את scripts/checks.py — עשרות חטיבות בדיקה שכל אחת נוספה אחרי שמשהו נשבר באמת — ואת crosscheck_baseline.py, ואז נארזים לקובץ העצמאי ולאפליקציית האנדרואיד. הדף הזה נועד למי שמפתח את האפליקציה; מה שהמשתמש צריך נמצא ב״על האפליקציה״.')}</p>
@@ -6195,7 +6661,7 @@ function wire() {
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
     drawMine(); renderMenu(); applyHi(); applySwitches();
   });
-  $('#doc').addEventListener('input', e => { if (S.lst) lstInput(e); });
+  $('#doc').addEventListener('input', e => { if (S.lst) lstInput(e); if (S.flt) fltInput(e); });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
@@ -6278,6 +6744,7 @@ function wire() {
     const src = e.target.closest('[data-src]');
     if (src) { showSource(src.dataset.src, src.dataset.exact); return; }
     if (S.cmp && cmpClick(e)) return;
+    if (S.flt && (fltClick(e) || cmpClick(e))) return;
     const cat = e.target.closest('[data-cat]');
     if (cat) {
       const c = cat.dataset.cat;
@@ -8141,6 +8608,78 @@ Object.assign(EN, {
     'Area',
   'טופוגרפיה':
     'Topography',
+  'מקורות ומה חסר':
+    'Sources, and what is missing',
+  'מקורות — כל שדה, ומה חסר':
+    'Sources — every field, and what is missing',
+  'מאומת':
+    'verified',
+  'מדווח':
+    'reported',
+  'מחושב כאן':
+    'computed here',
+  'בלי סיווג':
+    'unclassified',
+  'סך השדות':
+    'fields in all',
+  'אחר':
+    'Other',
+  'מה חסר, ולמה':
+    'What is missing, and why',
+  'מקור שני ועצמאי הגיע לאותו מספר':
+    'a second, independent source reached the same number',
+  'גוף אחד פרסם; אין מקור שני שהושווה אליו':
+    'one body published it; no second source has been compared against it',
+  'חושב בפרויקט הזה מתוך נתונים אחרים':
+    'computed in this project from other data',
+  'כל מספר באפליקציה בא משדה אחד ברשימה הזאת, ולכל שדה יש מקור, שנת ייחוס, וסיווג אחד משלושה. הרשימה הזאת — ומה שחסר בסופה — היא חלק מהמוצר ולא נספח לו.':
+    'Every number in this app comes from one field in this list, and each field has a source, a reference year and one of three classifications. This list — and what is missing at the end of it — is part of the product, not an appendix to it.',
+  'מאומת = מקור שני ועצמאי הגיע לאותו מספר. מדווח = גוף אחד פרסם, ואין מקור שני שהושווה אליו. מחושב כאן = נגזר בפרויקט הזה. שדות שאינם מספריים — שם, תיאור, אות על המפה, מתאר — אינם נושאים סיווג: אין מה לאמת מול מספר.':
+    'Verified = a second, independent source reached the same number. Reported = one body published it, and no second source has been compared against it. Computed here = derived in this project. Fields that are not numeric — a name, a description, a letter on the map, an outline — carry no classification: there is no number to verify.',
+  'סינון':
+    'Filter',
+  'מה לסנן':
+    'What to filter',
+  'הוספת תנאי':
+    'Add a condition',
+  'בחירת שדה':
+    'Choose a field',
+  'מחיקת התנאי':
+    'Delete this condition',
+  'לפחות':
+    'at least',
+  'עד':
+    'at most',
+  'מתוך':
+    'of',
+  'עיריות עונות לתנאים':
+    'municipalities meet the conditions',
+  'עירייה אחת עונה לתנאים':
+    'municipality meets the conditions',
+  'רובע אחד עונה לתנאים':
+    'parish meets the conditions',
+  'רובעים עונים לתנאים':
+    'parishes meet the conditions',
+  'לא נבדקו — אין להם נתון באחד השדות':
+    'were not tested — they have no value in one of the fields',
+  'לכל היחידות יש נתון בכל השדות שנבחרו — אף אחת לא נשארה בלי בדיקה':
+    'every unit has a value in every field chosen — none was left untested',
+  'לא נבדקו':
+    'not tested',
+  'לא נבדק — אין נתון':
+    'not tested — no data',
+  'עונה לתנאים':
+    'meets the conditions',
+  'נבדק, ואינו עונה':
+    'tested, and does not meet them',
+  'אין עדיין תנאי. כל תנאי הוא שדה, יחס וערך; יחידה שאין לה נתון באחד השדות לא תיספר כעונה ולא כנופלת — היא תיספר בנפרד.':
+    'No condition yet. Each one is a field, a relation and a value; a unit with no value in one of the fields counts neither as meeting them nor as failing them — it is counted separately.',
+  'המספר על הכרטיסייה הוא כמה יחידות יש להן ערך בשדה הזה. היתר ייספרו כ׳לא נבדקו׳.':
+    'The number on the card is how many units have a value in that field. The rest will be counted as “not tested”.',
+  'היחידות האלה לא נפלו בתנאי — פשוט אין להן נתון באחד השדות שנבחרו. הן אינן נספרות כעונות ואינן נספרות כנופלות, ובמפה הן מפוספסות.':
+    'These units did not fail a condition — they simply have no value in one of the chosen fields. They count neither as meeting them nor as failing them, and on the map they are hatched.',
+  'הסינון קורא את אותם שדות שמסך ההשוואה מדרג, ואת אותן רשומות מקור: כל ערך בשורה נלחץ ופותח את המקור שלו. תנאי בלי ערך אינו מסנן דבר.':
+    'The filter reads the same fields the comparison ranks, and the same source records: every value in a row opens the record it came from. A condition with no value filters nothing.',
   'רבעון':
     'Quarter',
   'רבעון קודם':

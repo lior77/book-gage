@@ -16,6 +16,8 @@
   "municipio.pop2021": {
    "label_he": "מספר תושבים (עירייה)",
    "value_type": "integer",
+      "confidence": "reported",
+      "confidence_he": "‏INE מפרסם; העובדה שסכום הרובעים שווה לעירייה היא עקביות **של אותו קובץ**, ולא מקור שני. ברמת הרובע יש מקור שני, ולכן שם `verified`.",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -26,6 +28,8 @@
   "municipio.area_km2": {
    "label_he": "שטח (קמ״ר)",
    "value_type": "number",
+      "confidence": "verified",
+      "confidence_he": "השטח מחושב כאן מהפוליגון, ו-validation_he מתעד שהוא תואם את השטחים הרשמיים ש-DGT מפרסמת עד הספרה האחרונה המודפסת — מקור שני שמגיע לאותו מספר.",
    "reference_year": 2025,
    "source": "מחושב מפוליגוני CAOP 2025 (DGT) בשטח גיאודזי על אליפסואיד WGS84 (geographiclib)",
    "url": "https://www.dgterritorio.gov.pt/dados-abertos",
@@ -36,6 +40,7 @@
   "municipio.density": {
    "label_he": "צפיפות אוכלוסין (נפש/קמ״ר)",
    "value_type": "number",
+      "confidence": "approx",
    "reference_year": 2021,
    "source": "נגזר: pop2021 / area_km2",
    "coverage": "18/18",
@@ -47,6 +52,7 @@
   "municipio.dist_porto_km": {
    "label_he": "מרחק אווירי ממרכז פורטו (ק״מ)",
    "value_type": "number",
+      "confidence": "reported",
    "source": "porto_map.py (DIST) — מהמסמך המקורי",
    "coverage": "18/18"
   },
@@ -78,6 +84,8 @@
   "freguesia.pop2021": {
    "label_he": "מספר תושבים (רובע)",
    "value_type": "integer",
+      "confidence": "verified",
+      "confidence_he": "‏crosscheck_baseline.py משווה מול Portugal_Property_Baseline_v2.csv — קובץ שנגזר מתת-מקטעי המפקד בדרך אחרת — והאוכלוסייה **זהה ב-275 מתוך 275**.",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -88,6 +96,8 @@
   "freguesia.area_km2": {
    "label_he": "שטח רובע (קמ״ר)",
    "value_type": "number",
+      "confidence": "approx",
+      "confidence_he": "שטח גיאודזי שמחושב כאן מהפוליגון. ברמת העירייה יש השוואה לשטחים ש-DGT מפרסמת ולכן שם `verified`; ברמת הרובע אין פרסום להשוות אליו.",
    "reference_year": 2025,
    "source": "מחושב מפוליגוני CAOP 2025 (DGT), שטח גיאודזי WGS84",
    "coverage": "275/275"
@@ -95,6 +105,7 @@
   "freguesia.density": {
    "label_he": "צפיפות רובע",
    "value_type": "number",
+      "confidence": "approx",
    "reference_year": 2021,
    "source": "נגזר: pop2021 / area_km2",
    "coverage": "275/275"
@@ -198,6 +209,7 @@
   "municipio.housing": {
    "label_he": "דיור ובניינים",
    "value_type": "number",
+      "confidence": "reported",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -222,6 +234,7 @@
   "freguesia.housing": {
    "label_he": "דיור ובניינים",
    "value_type": "number",
+      "confidence": "reported",
    "reference_year": 2021,
    "source": "INE, Censos 2021 — Ficheiro Síntese por Secção (FS2021_SeccaoTot.xlsx), שורת היחידה לפי קוד DICOFRE",
    "url": "https://mapas.ine.pt/download/index2021.phtml",
@@ -410,6 +423,7 @@
   "freguesia.split2025": {
    "label_he": "פילוח אוכלוסייה בין הרובעים שהחליפו יחידה שפורקה",
    "value_type": "integer",
+      "confidence": "reported",
    "reference_year": 2021,
    "source": "INE — טבלת המרה בין תת-המקטעים של מפקד 2021 לגבולות CAOP 2025 (BGRI2021_to_CAOP2025_reassignment.csv)",
    "url": "https://mapas.ine.pt/download/index2021.phtml",

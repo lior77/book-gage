@@ -298,12 +298,19 @@ const css = (page, sel, prop) =>
      from 2.0.6 — the four switches only that panel carried (אזורי הצפה,
      נהרות, הנקודות השמורות, אותיות היישובים) are rows here now. */
   const WANT = ['search',
-    'mode:overview', 'mode:cons', 'mode:cmp', 'mode:lst', 'mode:mine',
+    /* Six modes since 2.2.0: סינון joined them, and it is a mode rather than a
+       panel because it takes over the reading half and changes what the map
+       draws — the same test the other five answer to. */
+    'mode:overview', 'mode:cons', 'mode:cmp', 'mode:flt', 'mode:lst', 'mode:mine',
     'tiles', 'glass', 'regions', 'climate',
     'cons-src', 'floods', 'water', 'mine', 'letters', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark',
-    'save', 'load', 'info', 'dev', 'terms'];
+    'save', 'load',
+    /* 'sources' joined in 2.2.0, above 'info': it is the row that answers
+       "says who?" about every number on every other screen, and CLAUDE.md
+       calls the list of what is NOT known part of the product. */
+    'sources', 'info', 'dev', 'terms'];
   /* Three theme rows, not two.  With only light and dark on the list the first
      choice was permanent — nothing offered the way back to following the phone.
      And all three stay named: a control whose label changes with its state
@@ -1857,6 +1864,149 @@ const css = (page, sel, prop) =>
      (await page.$eval('#doc .cmp-pv', e => e.textContent.trim())) === per[per.length - 1]
        && await page.evaluate(() => S.cmpPeriod) === null);
   await page.evaluate(() => { if (S.cmp) toggleCmp(); goDistrict(); });
+  await page.waitForTimeout(600);
+
+  /* Move ב׳ — the filter.  The screen exists to answer a question over several
+     fields at once, and the single thing that decides whether it is honest is
+     the distinction rule 2 is about: a unit with no value is NOT a unit that
+     failed the test.  The assertions below are that distinction, counted.
+
+     The case is chosen because the numbers are known independently: INE
+     publishes a sale price for 55 of the district's 275 parishes, so a filter
+     on that field must report exactly 220 as untested — not as "does not
+     match", and not silently at all. */
+  await page.evaluate(() => { if (S.cmp) toggleCmp(); goDistrict(); setMode('flt'); });
+  await page.waitForTimeout(700);
+  ok('סינון is a mode of its own, and the menu offers it',
+     await page.evaluate(() => modeOf()) === 'flt'
+       && await page.evaluate(() => MODES().some(m => m.k === 'flt')));
+  ok('it opens with no condition, and says what a condition will do',
+     await page.evaluate(() => S.fltConds.length) === 0
+       && (await page.$eval('#doc', e => e.textContent)).includes('לא תיספר כעונה ולא כנופלת'));
+
+  await page.click('[data-fltadd]');
+  await page.waitForTimeout(400);
+  ok('הוספת תנאי opens the field picker on the new condition',
+     await page.evaluate(() => S.fltConds.length) === 1
+       && await page.$('[data-fltf]') !== null);
+  await page.click('[data-fltf="price_eur_m2"]');
+  await page.waitForTimeout(500);
+  await page.click('[data-cmpscope="fre"]');
+  await page.waitForTimeout(800);
+  const fltWant = await page.evaluate(() => ({
+    have: D.fre.filter(f => cmpValue(f, 'price_eur_m2') !== null).length,
+    none: D.fre.filter(f => cmpValue(f, 'price_eur_m2') === null).length,
+  }));
+  ok('with no value typed the condition asks nothing, so everything measured matches',
+     (await page.$eval('.flt-sum', e => e.textContent)).includes(String(fltWant.have)),
+     await page.$eval('.flt-sum', e => e.textContent.trim()));
+  ok('and the parishes INE never published are reported as NOT TESTED, by count',
+     (await page.$eval('.flt-none', e => e.textContent)).includes(String(fltWant.none))
+       && (await page.$eval('.flt-none', e => e.textContent)).includes('אין להם נתון'),
+     await page.$eval('.flt-none', e => e.textContent.trim()));
+
+  await page.fill('[data-fltv="0"]', '1200');
+  await page.waitForTimeout(600);
+  const fltReal = await page.evaluate(() =>
+    D.fre.filter(f => { const v = cmpValue(f, 'price_eur_m2'); return v !== null && v <= 1200; }).length);
+  ok('typing a value filters on it — and the list and the count agree',
+     await page.$$eval('#doc .cmp-row:not(.no)', els => els.length) === fltReal,
+     `${await page.$$eval('#doc .cmp-row:not(.no)', els => els.length)} rows vs ${fltReal} expected`);
+  ok('and the untested count does not move when the threshold does',
+     (await page.$eval('.flt-none', e => e.textContent)).includes(String(fltWant.none)),
+     await page.$eval('.flt-none', e => e.textContent.trim()));
+  ok('a unit with no value is never counted as matching',
+     await page.evaluate(() => {
+       const r = fltRun();
+       return r.hit.every(o => S.fltConds.every(c => cmpValue(o, c.k) !== null));
+     }));
+  ok('the three buckets account for every unit, with none counted twice',
+     await page.evaluate(() => {
+       const r = fltRun();
+       const ids = new Set([...r.hit, ...r.out, ...r.none].map(cmpId));
+       return r.hit.length + r.out.length + r.none.length === r.total
+         && ids.size === r.total;
+     }));
+  ok('the map hatches what could not be tested, as the comparison does',
+     await page.$$eval('#map .leaflet-overlay-pane path',
+       els => els.filter(e => (e.getAttribute('fill') || '').includes('cmp-nodata')).length) === fltWant.none,
+     await page.$$eval('#map .leaflet-overlay-pane path',
+       els => els.filter(e => (e.getAttribute('fill') || '').includes('cmp-nodata')).length + ' hatched'));
+  ok('every value in a matching row still opens the record it came from',
+     await page.$$eval('#doc .cmp-row:not(.no) .flt-val',
+       els => els.length > 0 && els.every(e => e.dataset.src === 'freguesia.price_eur_m2')));
+
+  /* A second condition on a field that covers everything must not change what
+     is untested — the untested set is about the data, not about the question. */
+  await page.click('[data-fltadd]');
+  await page.waitForTimeout(400);
+  await page.click('[data-fltf="ele.mean"]');
+  await page.waitForTimeout(600);
+  ok('a second condition on a fully covered field leaves the untested count alone',
+     (await page.$eval('.flt-none', e => e.textContent)).includes(String(fltWant.none)),
+     await page.$eval('.flt-none', e => e.textContent.trim()));
+  await page.click('[data-fltdel="1"]');
+  await page.waitForTimeout(400);
+  await page.click('[data-fltdel="0"]');
+  await page.waitForTimeout(400);
+  ok('deleting the conditions empties the question and says so again',
+     await page.evaluate(() => S.fltConds.length) === 0);
+
+  /* The question survives a restart; the screen does not.  The plan asked for
+     the filter to be "saved in the URL so it can be returned to" — this app has
+     no URL to save it in (it is one file opened from an APK, with no router and
+     no hash), so the store takes the URL's place.  What is deliberately NOT
+     saved is `flt` itself: an app that opens filtered shows a district with a
+     hole in it and no memory of the question that made the hole. */
+  await page.evaluate(() => {
+    S.fltConds = [{ k: 'price_eur_m2', op: 'le', v: '1500' },
+                  { k: 'ele.mean', op: 'ge', v: '100' }];
+    save();
+  });
+  const fltStore = await page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; }
+  });
+  ok('filter: the conditions are written to the store, the open screen is not',
+     Array.isArray(fltStore.fltConds) && fltStore.fltConds.length === 2 && !('flt' in fltStore),
+     JSON.stringify(fltStore.fltConds));
+  const fltBack = await page.evaluate(() => {
+    S.fltConds = []; restore();
+    return { conds: JSON.parse(JSON.stringify(S.fltConds)) };
+  });
+  ok('filter: a restart brings the question back, field, relation and value alike',
+     JSON.stringify(fltBack.conds) === JSON.stringify(
+       [{ k: 'price_eur_m2', op: 'le', v: '1500' }, { k: 'ele.mean', op: 'ge', v: '100' }]),
+     JSON.stringify(fltBack.conds));
+  /* A store written by an older build can name a field this one dropped.  Left
+     alone it would render as a bare Latin key on a Hebrew row and put every
+     unit in "not tested" with no reason given. */
+  const fltJunk = await page.evaluate(() => {
+    const o = JSON.parse(localStorage.getItem(KEY) || '{}');
+    o.fltConds = [{ k: 'a_field_that_was_dropped', op: 'le', v: '3' },
+                  { k: 'density', op: 'sideways', v: '3' },
+                  { k: 'density', op: 'ge', v: 'not a number' },
+                  { k: 'density', op: 'ge', v: '500' }];
+    localStorage.setItem(KEY, JSON.stringify(o));
+    S.fltConds = []; restore();
+    return JSON.parse(JSON.stringify(S.fltConds));
+  });
+  ok('filter: a condition the store carries but this build cannot honour is dropped, not shown',
+     JSON.stringify(fltJunk) === JSON.stringify([{ k: 'density', op: 'ge', v: '500' }]),
+     JSON.stringify(fltJunk));
+  /* And a condition on a field the CURRENT level does not offer keeps its
+     Hebrew name: it is a field that does not apply here, not a bug. */
+  await page.evaluate(() => {
+    S.fltConds = [{ k: 'dist_porto_km', op: 'le', v: '20' }];
+    S.cmpScope = 'fre'; redrawLevel(); redrawText();
+  });
+  await page.waitForTimeout(500);
+  const naLabel = await page.$eval('#doc .flt-f', e => e.textContent.trim()).catch(() => '');
+  ok('filter: a field the level does not offer still reads in Hebrew, never as its key',
+     naLabel.length > 0 && !/[a-z_]{4,}/.test(naLabel), naLabel);
+  await page.evaluate(() => { S.fltConds = []; S.cmpScope = 'mun'; save(); redrawLevel(); redrawText(); });
+  await page.waitForTimeout(400);
+
+  await page.evaluate(() => { setMode('overview'); goDistrict(); });
   await page.waitForTimeout(600);
 
   /* Home is the level axis: it goes to the district and leaves the mode alone.
@@ -3425,12 +3575,12 @@ const css = (page, sel, prop) =>
       await page.waitForTimeout(600);
     };
     await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); });
-    ok('the menu offers the five modes, ״המקומות שלי״ among them',
-       (await cell()).tabs === 5, JSON.stringify(await cell()));
+    ok('the menu offers the six modes, ״המקומות שלי״ and ״סינון״ among them',
+       (await cell()).tabs === 6, JSON.stringify(await cell()));
     ok('and they sit at the top of the menu, right under חיפוש',
        await page.evaluate(() => {
          const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
-         return rows[0] === 'search' && rows.slice(1, 6).every(r => r.startsWith('mode:'));
+         return rows[0] === 'search' && rows.slice(1, 7).every(r => r.startsWith('mode:'));
        }));
     ok('and no mode bar takes a strip off the reading half any more',
        await page.evaluate(() => !document.getElementById('modeBar')));
@@ -3733,10 +3883,118 @@ const css = (page, sel, prop) =>
     const l3 = await tally();
     ok('level 3: 18 grey municipalities, the 16 sibling parishes with exactly one black',
        l3.mun.n === 18 && l3.mun.black === 0 && l3.fre.n === 16 && l3.fre.black === 1 && !l3.rg, JSON.stringify(l3));
+    /* The key is read from the app, not typed: 'porto' was typed here once and
+       the assertion passed on an empty object for three releases, proving
+       nothing at all.  Reading KEY means an empty store now fails the `saved`
+       guard below instead of passing quietly. */
     ok('and nothing about boundaries is saved', await page.evaluate(() => {
-      try { const o = JSON.parse(localStorage.getItem('porto') || '{}'); return !('lnMun' in o) && !('lnRegion' in o); } catch (e) { return true; } }));
+      try {
+        const o = JSON.parse(localStorage.getItem(KEY) || '{}');
+        const saved = Object.keys(o).length > 3;
+        return saved && !('lnMun' in o) && !('lnRegion' in o);
+      } catch (e) { return false; } }));
     await page.evaluate(() => goDistrict()); await page.waitForTimeout(500);
   }
+  /* ---- the sources screen: every field, its confidence, and what is missing
+     Move י׳, 2.2.0.  CLAUDE.md calls the list of what is NOT known part of the
+     product, and rule 3 has three words.  Until this release the words lived
+     in sources.json and the reader never saw them; twenty-seven fields carried
+     none at all.  What is asserted here is that the screen and the file say the
+     same thing — the counts on screen are counted FROM D.sources, not typed —
+     and that the distinction rule 3 draws survives onto the glass: every
+     numeric field wears one of the three chips, a field that is not a number
+     wears none, and nothing wears "בלי סיווג". */
+  {
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
+    await page.evaluate(() => openInfo('sources')); await page.waitForTimeout(400);
+    const title = await page.$eval('#infoDrawer h2, #infoTitle', e => e.textContent).catch(() => '');
+    const body = await page.$eval('#infoBody', e => e.textContent);
+    ok('sources screen: it opens, and its own title says it is sources and absences',
+       /מקורות/.test(title + body) && /מה חסר/.test(title + body), (title || body.slice(0, 60)).trim());
+
+    /* The counts are read off the file in the page and compared to the
+       rendered <b> beside each word.  A screen that prints its own constant
+       would pass a test that only checked it was a number. */
+    const want = await page.evaluate(() => {
+      const all = Object.values(D.sources.fields);
+      const n = c => all.filter(f => f.confidence === c).length;
+      return { verified: n('verified'), reported: n('reported'), approx: n('approx'),
+               total: all.length, missing: D.sources.missing.items.length };
+    });
+    const got = await page.evaluate(() => {
+      const num = sel => { const e = document.querySelector(sel); return e ? Number(e.textContent.trim()) : NaN; };
+      return { verified: num('#infoBody .conf-sum .conf-verified b'),
+               reported: num('#infoBody .conf-sum .conf-reported b'),
+               approx: num('#infoBody .conf-sum .conf-approx b'),
+               total: num('#infoBody .conf-sum .conf-plain b') };
+    });
+    ok('sources screen: the four counts on the glass are the counts in the file',
+       got.verified === want.verified && got.reported === want.reported
+         && got.approx === want.approx && got.total === want.total,
+       `screen ${JSON.stringify(got)} vs file ${JSON.stringify(want)}`);
+    ok('sources screen: the three classes add up to fewer than the fields — the rest are not numbers',
+       want.verified + want.reported + want.approx > 30
+         && want.verified + want.reported + want.approx < want.total,
+       `${want.verified + want.reported + want.approx} classified of ${want.total}`);
+
+    /* One chip per classified field, and the chip says the same word the file
+       does — in Hebrew, the same three words the legend explains. */
+    const chips = await page.evaluate(() => {
+      const HE = { verified: 'מאומת', reported: 'מדווח', approx: 'מחושב כאן' };
+      const all = Object.entries(D.sources.fields);
+      const heads = [...document.querySelectorAll('#infoBody h3')];
+      const seen = heads.map(h => (h.querySelector('.conf') || {}).textContent || '').map(s => s.trim());
+      const byWord = w => seen.filter(s => s === w).length;
+      return { none: document.querySelectorAll('#infoBody .conf-none').length,
+               miss: document.querySelectorAll('#infoBody .conf-miss').length,
+               heads: heads.length,
+               verified: byWord(HE.verified), reported: byWord(HE.reported), approx: byWord(HE.approx),
+               bare: seen.filter(s => !s).length,
+               unclassified: all.filter(([, f]) => !f.confidence).length };
+    });
+    ok('sources screen: one card per field plus one per absence, no more',
+       chips.heads === want.total + want.missing, `${chips.heads} cards, ${want.total}+${want.missing} expected`);
+    ok('sources screen: every classified field wears its own word, and the words match the file',
+       chips.verified === want.verified && chips.reported === want.reported && chips.approx === want.approx,
+       JSON.stringify(chips));
+    ok('sources screen: no field is left saying "בלי סיווג" — §7an will not allow a number without one',
+       chips.none === 0, `${chips.none} unclassified chips`);
+    ok('sources screen: the fields that wear no chip are exactly the ones that carry none',
+       chips.bare === chips.unclassified, `${chips.bare} bare of ${chips.unclassified} unclassified`);
+    ok('sources screen: every absence wears "אין נתון", never a number and never a class',
+       chips.miss === want.missing && want.missing > 0, `${chips.miss} of ${want.missing}`);
+
+    /* The legend, and the sentence that says why a name carries no class.
+       Without it the reader reads "no chip" as "nobody bothered". */
+    ok('sources screen: the legend explains all three words and says why a name has none',
+       body.includes('מקור שני ועצמאי') && body.includes('גוף אחד פרסם')
+         && body.includes('נגזר בפרויקט הזה') && body.includes('אינם נושאים סיווג'));
+
+    /* And the absences themselves — the labels, not a count. */
+    const miss = await page.evaluate(() => ({
+      labels: D.sources.missing.items.map(m => m.label_he),
+      note: D.sources.missing.note_he }));
+    ok('sources screen: every missing record appears by name, with its reason',
+       miss.labels.every(l => body.includes(l)) && body.includes(miss.note.slice(0, 24)),
+       miss.labels.join(' | ').slice(0, 90));
+
+    /* It is reachable without typing openInfo(): the drawer has a row. */
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; });
+    await page.click('#menuBtn'); await page.waitForTimeout(300);
+    const row = await page.$('#menuIn [data-m="sources"]');
+    ok('sources screen: the drawer carries a row that opens it', row !== null);
+    if (row) {
+      await row.click(); await page.waitForTimeout(400);
+      /* The word "מקורות" is the TITLE's; the body carries the field groups and
+         the absences.  Reading both is what tells this page apart from the
+         developer's, which also lists fields but has no absences section. */
+      ok('sources screen: and the row opens this screen, not the developer page',
+         /מקורות/.test(await page.$eval('#infoTitle', e => e.textContent))
+           && /מה חסר, ולמה/.test(await page.$eval('#infoBody', e => e.textContent)));
+    }
+    await page.evaluate(() => { document.getElementById('infoDrawer').hidden = true; openMenu(false); });
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);
