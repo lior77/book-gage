@@ -1612,6 +1612,9 @@ def main():
         # LIVE — says what is true now.  Every count and edition is bound.
         "README.md": "live",
         "docs/ARCHITECTURE.md": "live",
+        # How a harvest is actually run. Live: the slice axes, the refusals and
+        # the measured counts all change the moment the connector does.
+        "docs/HARVEST.md": "live",
         "docs/HANDOFF.md": "live",
         "docs/NETWORK-ALLOWLIST.md": "live",
         # RECORD — a dated snapshot, read as history.  Each says so in its own
@@ -2767,6 +2770,79 @@ def main():
     if "missing" not in appjs_txt or "missing.items" not in appjs_txt:
         fail("app.js no longer reads sources.json's missing.items — the list of "
              "what is NOT known is half of that screen")
+
+    # ---- 7at. a sliced search says what it did not see -----------------------
+    # Route 2, 2026-09-18.  idealista's official connector is the sanctioned
+    # channel — their own product, and every URL it returns carries
+    # utm_project=leadGeneration, which is the exchange their terms exist to
+    # protect.  What it is not is unlimited: 50 properties per call, no page
+    # parameter, and Lousada alone has 255 for sale.
+    #
+    # So a real search is several calls over disjoint slices, and that is the
+    # whole reason this check exists.  Sixty-seven listings on a screen look
+    # exactly the same whether they are all of them or the first fifty of two
+    # hundred and fifty-five, and the screen cannot tell the difference on its
+    # own — only the connector's `total`, carried in the file, can.  A count
+    # that is silently a floor, printed where a reader takes it for a total,
+    # is the failure rule 2 is written against; §7am is the same rule on the
+    # filter screen.
+    conv = os.path.join(ROOT, "scripts", "connector_listings.py")
+    if not os.path.exists(conv):
+        fail("scripts/connector_listings.py is gone. It is the only thing "
+             "between idealista's connector and the app that counts what was "
+             "asked for against what arrived")
+    else:
+        cv = io.open(conv, encoding="utf-8").read()
+        for owed, why in (
+                ("--allow-partial",
+                 "a short slice must be refused by default, not written as if whole"),
+                ("refusing to write a file that looks complete and is not",
+                 "the refusal has to say what it is refusing and why"),
+                ("def aimed_where",
+                 "a slice that resolved somewhere else returns a confident zero"),
+                ("--with-contact",
+                 "an agent's name and telephone leave only on purpose")):
+            if owed not in cv:
+                fail("scripts/connector_listings.py no longer carries %r — %s"
+                     % (owed, why))
+        # Contact off unless asked: the default decides what ends up in a file
+        # that may be committed, and a default nobody chose is the one that
+        # ships.
+        if "keep_contact" in cv and "args.with_contact" not in cv:
+            fail("connector_listings.py no longer ties the contact block to "
+                 "--with-contact. Personal use is outside GDPR's scope; a file "
+                 "in a public repository is not personal use")
+        print("connector converter: refuses short slices, wrong places, and "
+              "keeps contact details out unless asked")
+    # And the app side: the audit has to survive the import and reach the glass.
+    i = appjs_txt.find("function importListings")
+    body = appjs_txt[i:i + 1400] if i >= 0 else ""
+    if "data.coverage" not in body:
+        fail("importListings() no longer carries the file's coverage block. The "
+             "screen cannot recompute it — only the file knows what idealista "
+             "said the total was")
+    if "function lstCoverageHtml" not in appjs_txt:
+        fail("app.js no longer carries lstCoverageHtml — a partial harvest then "
+             "draws exactly like a complete one")
+    i = appjs_txt.find("function lstCoverageHtml")
+    cov = appjs_txt[i:i + 1800] if i >= 0 else ""
+    for owed, why in ((u"\u05db\u05d9\u05e1\u05d5\u05d9 \u05d7\u05dc\u05e7\u05d9",
+                       "the partial case has to be named on screen"),
+                      # The PRINTING form, not the name: the first version of
+                      # this check looked for `c.reported`, which also appears
+                      # in the complete branch — so replacing the printed
+                      # number with a constant passed it. A check that a
+                      # deliberate break walks through is not a check.
+                      ("nf(c.reported", "and it has to print what idealista said existed"),
+                      ("nf(c.unique", "beside what actually arrived")):
+        if owed not in cov:
+            fail("lstCoverageHtml() no longer uses %r — %s. One number is a "
+                 "claim; two numbers beside each other are a measurement"
+                 % (owed, why))
+    if "lstCoverageHtml(D.lst.coverage)" not in appjs_txt:
+        fail("renderListings no longer draws the coverage line. A file that "
+             "knows it is partial and a screen that does not say so is worse "
+             "than not knowing")
 
     # ---- 7as. a fetched quarter is checked before it is believed ------------
     # Move יא.1, 2.5.0.  A number that arrives over the network after the app

@@ -4425,6 +4425,77 @@ const css = (page, sel, prop) =>
     await page.evaluate(() => { localStorage.removeItem('porto-quarter-v1'); closePanel(); });
   }
 
+  /* ---- a sliced search says what it did not see --------------------------
+     Route 2, 2026-09-18.  idealista's connector returns at most 50 per call
+     and has no page parameter — Lousada alone has 255 for sale — so a real
+     search is several calls over disjoint slices, and "did I see everything?"
+     stops being obvious the moment that is true.
+
+     Both fixtures are the SAME 67-listing harvest, read through the official
+     connector on 2026-09-18 in two complete slices (25 up to 150,000 € and
+     42 between 150 and 250). One carries its real audit; the other carries
+     the audit it would have had if a slice had been cut short. The screen has
+     to tell them apart, because nothing else can: the listings look
+     identical. */
+  {
+    const fs = require('fs'), path = require('path');
+    const readFix = n => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8'));
+    const full = readFix('listings_cov_full.json');
+    const part = readFix('listings_cov_partial.json');
+    await page.route('**img4.idealista.pt/**', r => r.abort());
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.flt) toggleFlt(); if (S.lst) lstOff(); goDistrict(); });
+
+    ok('coverage: the harvest was taken in slices, and every slice says how many exist',
+       full.coverage.slices.length === 2 && full.coverage.slices.every(s => s.total > 0 && s.complete)
+         && full.coverage.reported === 67 && full.coverage.unique === 67,
+       JSON.stringify({ r: full.coverage.reported, u: full.coverage.unique }));
+    /* The arithmetic IS the proof: two disjoint slices, 25 + 42, and 67
+       distinct properties. A gap would show here and nowhere else. */
+    ok('coverage: the slices add up to the properties written — disjoint and whole',
+       full.coverage.slices.reduce((n, s) => n + s.total, 0) === full.coverage.unique);
+    ok('coverage: no agent telephone travelled with either file',
+       !JSON.stringify(full).includes('phoneNumber') && !JSON.stringify(part).includes('phoneNumber')
+         && full.items.every(i => !i.contact));
+
+    await page.evaluate(d => importListings(d), full);
+    await page.waitForTimeout(600);
+    const okLine = await page.evaluate(() => {
+      const e = document.querySelector('#doc .lst-cov');
+      return { there: !!e, warn: e ? e.classList.contains('warn') : null,
+               text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '' };
+    });
+    ok('coverage: a complete harvest says so on the glass, and not as a warning',
+       okLine.there && okLine.warn === false && /כיסוי מלא/.test(okLine.text), okLine.text.slice(0, 80));
+
+    await page.evaluate(d => importListings(d), part);
+    await page.waitForTimeout(600);
+    const badLine = await page.evaluate(() => {
+      const e = document.querySelector('#doc .lst-cov');
+      return { there: !!e, warn: e ? e.classList.contains('warn') : null,
+               text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '' };
+    });
+    ok('coverage: a partial harvest is a warning, not a footnote',
+       badLine.there && badLine.warn === true && /כיסוי חלקי/.test(badLine.text), badLine.text.slice(0, 80));
+    /* Two numbers beside each other, not one. "75 listings" is a claim;
+       "idealista reports 297 and 75 arrived" is a measurement. */
+    ok('coverage: and it prints what idealista said existed beside what arrived',
+       /297/.test(badLine.text) && /75/.test(badLine.text), badLine.text.slice(0, 110));
+    ok('coverage: the listings themselves are identical in both — only the audit differs',
+       JSON.stringify(full.items) === JSON.stringify(part.items));
+
+    /* And a file with no audit at all — every listings file written before
+       today — still imports, and simply says nothing rather than claiming
+       a coverage it cannot know. */
+    await page.evaluate(d => { const x = JSON.parse(JSON.stringify(d)); delete x.coverage; importListings(x); }, full);
+    await page.waitForTimeout(600);
+    ok('coverage: an older file with no audit imports and claims nothing',
+       await page.evaluate(() => document.querySelectorAll('#doc .lst-cov').length) === 0
+         && await page.evaluate(() => (D.lst.items || []).length) === full.items.length);
+    await page.evaluate(() => { if (S.lst) lstOff(); });
+    await page.unroute('**img4.idealista.pt/**');
+    await page.waitForTimeout(300);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);

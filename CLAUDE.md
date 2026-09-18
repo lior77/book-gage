@@ -24,6 +24,7 @@ the documents it makes untrue:
 | `porto/docs/HANDOFF.md` | current state, open work, environment traps | a release, an open item, a trap |
 | `porto/docs/NETWORK-ALLOWLIST.md` | which hosts the project needs | a source is added or dropped |
 | `porto/docs/DATA-ACQUIRED.md` | what was actually obtained | data arrives or is proven unobtainable |
+| `porto/docs/HARVEST.md` | how a listings harvest is run, and what it refuses | the connector, the slice axes or the refusals change |
 
 The dated documents — `UX-2.0.0.md`, `UI-2.0.0.md`, `REVISION-2.0.0.md`,
 `WORKPLAN.md`, `DATA-REQUEST.md`, `DELIVERY.md` — are **records of a moment**

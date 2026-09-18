@@ -7866,6 +7866,42 @@ function lstCard(it, open) {
   </article>`;
 }
 
+/* WHAT THE SEARCH DID NOT SEE — and why this line is not decoration.
+
+   idealista's connector returns at most 50 properties per call and has no
+   page parameter, so a real search is several calls over disjoint slices.
+   The moment that is true, "did I see everything?" stops being obvious.  And
+   the screen cannot answer it: sixty-seven listings look identical whether
+   they are all of them or the first fifty of two hundred and fifty-five.
+
+   What makes the answer possible is that the connector returns `total`
+   beside the properties.  A slice is complete when what came back is at
+   least what it said existed — and scripts/connector_listings.py refuses to
+   write a file with a short slice in it unless somebody passes
+   --allow-partial on purpose.  When they do, it is marked, and this is where
+   the mark is shown.
+
+   It is the same rule as the filter's second line (§7am): a count that is
+   silently a floor, printed where a reader takes it for a total, is the
+   failure rule 2 exists to prevent. */
+function lstCoverageHtml(c) {
+  if (!c || typeof c !== 'object' || !Array.isArray(c.slices)) return '';
+  const n = c.slices.length;
+  const short = c.slices.filter(s => !s.complete).length;
+  const slice = n === 1 ? t('חתך אחד') : `<b class="num">${nf(n)}</b> ${t('חתכים')}`;
+  if (!short) {
+    return `<p class="note lst-cov">${t('כיסוי מלא:')} ${slice} ${
+      t('— ובכל אחד הגיע כל מה ש-idealista מדווחת עליו')}${
+      c.reported > c.unique ? ' · ' + t('חפיפה בין חתכים:') + ' <span class="num">'
+        + nf(c.reported - c.unique) + '</span>' : ''}</p>`;
+  }
+  return `<div class="warn lst-cov">${t('כיסוי חלקי.')} ${
+    t('idealista מדווחת על')} <b class="num">${nf(c.reported || 0)}</b> ${
+    t('מודעות והגיעו')} <b class="num">${nf(c.unique || 0)}</b>${'. '}${
+    short === 1 ? t('חתך אחד נקטע') : '<b class="num">' + nf(short) + '</b> ' + t('חתכים נקטעו')}${
+    t('. המחבר מחזיר 50 לכל היותר לקריאה ואין לו עמוד הבא — צריך לפצל את החתכים האלה למדרגות מחיר או לסוגי נכס עד שכל אחד חוזר שלם.')}</div>`;
+}
+
 function renderListings() {
   const q = S.lstQ || lstDefaultQ();
   const items = lstLive();
@@ -7875,6 +7911,7 @@ function renderListings() {
     <h1>${t('נכסים')}</h1>
     <p class="sub">${html(lstQuerySummary(D.lst.query || q))}</p>
     <p class="note">${t('מקור:')} ${html(D.lst.provider || '')} · ${t(D.lst.source === 'file' ? 'מקובץ' : 'מה-API')} · ${t('נקרא ב-')}${html(lstDate(D.lst.readAt))} · ${items.length} ${t('מודעות')}</p>
+    ${lstCoverageHtml(D.lst.coverage)}
     <div class="chips"><button class="chip" data-lstform="open">${t('שינוי החיפוש')}</button>
       <button class="chip" data-lstform="query">${t('השאילתה לסקריפט')}</button></div>
     ${S.lstQueryOpen ? `<textarea class="lf-in" rows="5" dir="ltr" readonly>${html(JSON.stringify(lstQueryForScript(D.lst.query || q)))}</textarea>
@@ -8034,6 +8071,11 @@ function importListings(data) {
   const q = Object.assign(lstDefaultQ(), data.query || {});
   S.lstQ = q;
   lstTake(items, q, data.provider || 'file', 'file');
+  /* The audit travels with the file, because the screen cannot work it out
+     for itself: 67 listings on screen look exactly the same whether that is
+     all of them or the first fifty of two hundred and fifty-five.  The file
+     is the only thing that knows what idealista said the total was. */
+  if (data.coverage && typeof data.coverage === 'object') D.lst.coverage = data.coverage;
   if (data.read_at) { D.lst.readAt = data.read_at; lstSave(); redrawText(); }
   lstMsg(`${items.length} ${t('מודעות נקראו מקובץ')}${data.read_at ? ' · ' + t('נקרא ב-') + lstDate(data.read_at) : ''}`);
 }
@@ -9364,6 +9406,28 @@ Object.assign(EN, {
     'The same files — a fallback source',
   'השרת השיב ':
     'the server answered ',
+  'כיסוי מלא:':
+    'Full coverage:',
+  'חתך אחד':
+    'one slice',
+  'חתכים':
+    'slices',
+  '— ובכל אחד הגיע כל מה ש-idealista מדווחת עליו':
+    '— and each one returned everything idealista says exists',
+  'חפיפה בין חתכים:':
+    'Overlap between slices:',
+  'כיסוי חלקי.':
+    'Partial coverage.',
+  'idealista מדווחת על':
+    'idealista reports',
+  'מודעות והגיעו':
+    'listings and what arrived is',
+  'חתך אחד נקטע':
+    'one slice was cut short',
+  'חתכים נקטעו':
+    'slices were cut short',
+  '. המחבר מחזיר 50 לכל היותר לקריאה ואין לו עמוד הבא — צריך לפצל את החתכים האלה למדרגות מחיר או לסוגי נכס עד שכל אחד חוזר שלם.':
+    '. The connector returns at most 50 per call and has no next page — those slices have to be split by price band or property type until each one comes back whole.',
   'מקורות ומה חסר':
     'Sources, and what is missing',
   'מקורות — כל שדה, ומה חסר':

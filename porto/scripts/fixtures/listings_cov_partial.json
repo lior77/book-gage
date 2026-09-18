@@ -1,0 +1,219 @@
+{
+ "kind": "listings",
+ "provider": "idealista",
+ "source": "connector",
+ "note": "The same file as it would be with one slice cut short — what a partial harvest looks like. Used by scripts/test_ui_menu.js.",
+ "read_at": "2026-09-18T11:01:00Z",
+ "query": {
+  "op": "sale",
+  "type": "house",
+  "where": "district",
+  "cap": 42
+ },
+ "coverage": {
+  "slices": [
+   {
+    "label": "Comprar casas e apartamentos em Lousada, Porto · 150.000 a 250.000eur · Todos os tamanhos",
+    "asked": "casas e apartamentos à venda em Lousada entre 150.000 e 250.000 euros",
+    "where": "Lousada, Porto",
+    "url": "https://www.idealista.pt/comprar-casas/lousada/com-preco-max_250000,preco-min_150000/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_list",
+    "operation": "sale",
+    "total": 42,
+    "returned": 42,
+    "complete": true
+   },
+   {
+    "label": "Comprar casas em Lousada, Porto · Todos os preços",
+    "asked": "casas à venda em Lousada",
+    "where": "Lousada, Porto",
+    "url": "",
+    "operation": "sale",
+    "total": 255,
+    "returned": 50,
+    "complete": false
+   }
+  ],
+  "reported": 297,
+  "unique": 75,
+  "complete": false,
+  "short": 1
+ },
+ "items": [
+  {
+   "code": "34813296",
+   "url": "https://www.idealista.pt/empreendimento/34813296/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_detail",
+   "price": 224000,
+   "currency": "€",
+   "size": 108,
+   "rooms": 2,
+   "bathrooms": 3,
+   "floor": "1",
+   "type": "flat",
+   "operation": "sale",
+   "status": "newdevelopment",
+   "newDevelopment": true,
+   "ll": [
+    41.3377425,
+    -8.3195557
+   ],
+   "title": "Apartamento T2 na Estrada Nacional, 106, Lustosa",
+   "subtitle": "Lousada, Porto",
+   "features": {
+    "hasAirConditioning": false,
+    "hasTerrace": false,
+    "hasSwimmingPool": false,
+    "hasLift": true,
+    "hasParking": true,
+    "hasBoxRoom": false
+   },
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/0e/5d/71/318960204.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/0e/5d/71/318960204.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 2074,
+   "contact": null,
+   "description": "LUST - Novo Empreendimento em Lustosa, Lousada Nasce em Lustosa um novo empreendimento que alia habitação contemporânea e espaços comerciais, criando um ambient"
+  },
+  {
+   "code": "35331249",
+   "url": "https://www.idealista.pt/imovel/35331249/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_detail",
+   "price": 200000,
+   "currency": "€",
+   "size": 137,
+   "rooms": 3,
+   "bathrooms": 2,
+   "floor": "2",
+   "type": "flat",
+   "operation": "sale",
+   "status": "good",
+   "newDevelopment": false,
+   "ll": [
+    41.3311404,
+    -8.2678636
+   ],
+   "title": "Apartamento T3 em Barrosas Santo Estêvão",
+   "subtitle": "Lousada, Porto",
+   "features": {
+    "hasLift": true,
+    "hasParking": true
+   },
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/ee/21/68/328760127.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/ee/21/68/328760127.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 1460,
+   "contact": null,
+   "description": "Apartamento T3 com áreas generosas | Com Varandas com vistas desafogadas, Garagem, Arrumos |   uma zona tranquila e de fácil acesso ao centro de Lousada, em Bar"
+  },
+  {
+   "code": "35271476",
+   "url": "https://www.idealista.pt/imovel/35271476/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_detail",
+   "price": 245000,
+   "currency": "€",
+   "size": 99,
+   "rooms": 2,
+   "bathrooms": 2,
+   "floor": "bj",
+   "type": "flat",
+   "operation": "sale",
+   "status": "good",
+   "newDevelopment": false,
+   "ll": [
+    41.2915877,
+    -8.2082767
+   ],
+   "title": "Apartamento T2 na Rua Cimo de Vila, Torno",
+   "subtitle": "Lousada, Porto",
+   "features": {
+    "hasAirConditioning": false,
+    "hasTerrace": false,
+    "hasSwimmingPool": false,
+    "hasLift": true,
+    "hasParking": true,
+    "hasBoxRoom": false
+   },
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/cb/61/7d/326688712.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/cb/61/7d/326688712.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 2475,
+   "contact": null,
+   "description": "T2, totalmente equipado e mobilado em excelente estado de conservação, com vistas completamente desafogadas e panorâmicas, duas frentes e varanda em todas as di"
+  },
+  {
+   "code": "35104641",
+   "url": "https://www.idealista.pt/empreendimento/35104641/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_detail",
+   "price": 235000,
+   "currency": "€",
+   "size": 75,
+   "rooms": 1,
+   "bathrooms": 1,
+   "floor": null,
+   "type": "flat",
+   "operation": "sale",
+   "status": "newdevelopment",
+   "newDevelopment": true,
+   "ll": [
+    41.2785194,
+    -8.2824212
+   ],
+   "title": "Apartamento T1 em Silvares - Pias - Nogueira - Alvarenga",
+   "subtitle": "Lousada, Porto",
+   "features": {
+    "hasAirConditioning": true,
+    "hasTerrace": false,
+    "hasSwimmingPool": false,
+    "hasLift": true,
+    "hasParking": true,
+    "hasBoxRoom": false
+   },
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/09/c0/f6/320449258.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/09/c0/f6/320449258.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 3133,
+   "contact": null,
+   "description": "Edifício Prime Building II Apresentamos o novo empreendimento no centro de Lousada! Com tipologias do T1 ao T3 e piso comercial, este novo edifício será constru"
+  },
+  {
+   "code": "35184951",
+   "url": "https://www.idealista.pt/empreendimento/35184951/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_detail",
+   "price": 155000,
+   "currency": "€",
+   "size": 50,
+   "rooms": 0,
+   "bathrooms": 1,
+   "floor": "bj",
+   "type": "flat/studio",
+   "operation": "sale",
+   "status": "newdevelopment",
+   "newDevelopment": true,
+   "ll": [
+    41.2679757,
+    -8.2879112
+   ],
+   "title": "Apartamento T0 na Rua do Comércio, 530, Cristelos - Boim - Ordem",
+   "subtitle": "Lousada, Porto",
+   "features": {
+    "hasAirConditioning": false,
+    "hasTerrace": false,
+    "hasSwimmingPool": false,
+    "hasLift": true,
+    "hasParking": true,
+    "hasBoxRoom": false
+   },
+   "thumbnail": "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/d1/54/91/323503546.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/480_360_mq/0/id.pro.pt.image.master/d1/54/91/323503546.webp"
+   ],
+   "numPhotos": 1,
+   "priceByArea": 3100,
+   "contact": null,
+   "description": "Apartamento T0 em construção no Edifício Live Urban — Centro de Lousada (CEDÊNCIA DE POSIÇÃO CONTRATUAL) Apartamento T0 em construção, localizado no Edifício Li"
+  }
+ ]
+}
