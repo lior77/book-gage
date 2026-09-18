@@ -2483,6 +2483,161 @@ def main():
         if key not in sources["fields"]:
             fail("checks.py §7ak exempts %s (%s) and there is no such record" % (key, why))
 
+    # ---- 7al. the quarterly series: counted from the source, not trusted ---
+    # Move א׳, 2.0.9.  The plan set the test itself: "the number of points in
+    # the payload equals exactly the number of rows the filter keeps from the
+    # CSV — a check in checks.py, not an eyeball".  So this re-reads the two
+    # raw CSVs and counts, which is the only way to know that nothing was
+    # dropped on the way and nothing was invented.
+    #
+    # The second half is the one that matters more.  The app now has TWO paths
+    # to the same number: data/processed carries the latest quarter as a field
+    # on the unit, and series.json carries every quarter including that one.
+    # Two paths to one number is how a screen ends up contradicting itself, so
+    # they are compared here, unit by unit, and must agree exactly.
+    ser_path = os.path.join(PROC, "series.json")
+    if not os.path.exists(ser_path):
+        warn("data/processed/series.json is missing — the quarterly series are "
+             "not in this build. The unit cards will say so; run build.py with "
+             "data/raw/ine/ present")
+    else:
+        ser = json.load(io.open(ser_path, encoding="utf-8"))
+        periods = ser.get("periods") or []
+        if not periods:
+            fail("series.json has no periods")
+        for q in periods:
+            if not re.match(r"^\d{4}Q[1-4]$", str(q)):
+                fail("series.json: %r is not a quarter" % q)
+        if periods != sorted(periods):
+            fail("series.json: the periods are not in order — an aligned array "
+                 "whose axis is unsorted draws the line backwards in places")
+        if len(set(periods)) != len(periods):
+            fail("series.json: a period appears twice")
+        SER_KEYS = ("sale", "sale_new", "sale_used", "rent")
+        units = ser.get("units") or {}
+        # Whether this app can NAME the unit, which is the only reason the file
+        # carries a name at all.  Not "does its code start with 13": INE
+        # publishes at parish level on the 2013 division, so a union this
+        # district dissolved in 2025 has a 13xxxx code and no unit here to be
+        # named by, and it needs its Portuguese name like any other stranger.
+        named_here = ({"m" + m["dicofre"] for m in mun if m.get("dicofre")} |
+                      {"f" + f["dicofre"] for f in fre if f.get("dicofre")})
+        n_points = 0
+        for key, u in sorted(units.items()):
+            # Letters are legitimate here: eight parishes of Barcelos carry
+            # codes like 0302FG, which is INE's own code for a union created in
+            # 2013 after the numeric space under that municipality ran out.  The
+            # first cut of this check demanded digits and failed all eight.
+            if not re.match(r"^[mf][0-9A-Z]+$", key):
+                fail("series.json: %r is not a unit key" % key)
+                continue
+            lv, code = key[0], key[1:]
+            if u.get("lv") != lv:
+                fail("series.json %s: lv is %r" % (key, u.get("lv")))
+            if len(code) != (4 if lv == "m" else 6):
+                fail("series.json %s: a municipality code is four characters and "
+                     "a parish code six" % key)
+            inside = key in named_here
+            if inside and "pt" in u:
+                fail("series.json %s: a unit of this district carries a name here "
+                     "too. The app already holds its name, and a second copy is a "
+                     "second thing to drift" % key)
+            if not inside and not u.get("pt"):
+                fail("series.json %s: this app has no unit by that code, and the "
+                     "file gives no name either — nothing could say what it is" % key)
+            have_any = False
+            for f in SER_KEYS:
+                if f not in u:
+                    continue
+                arr = u[f]
+                if not isinstance(arr, list) or len(arr) != len(periods):
+                    fail("series.json %s.%s: %d values for %d periods — the array "
+                         "is aligned to the periods, and a hole is a null in it"
+                         % (key, f, len(arr) if isinstance(arr, list) else -1, len(periods)))
+                    continue
+                for v in arr:
+                    if v is None:
+                        continue
+                    if not isinstance(v, (int, float)) or isinstance(v, bool) or v <= 0:
+                        fail("series.json %s.%s carries %r" % (key, f, v))
+                    else:
+                        n_points += 1
+                        have_any = True
+            if not have_any:
+                fail("series.json %s has no value at all — a unit with nothing "
+                     "published does not belong in the file" % key)
+        if ser.get("meta", {}).get("values") != n_points:
+            fail("series.json meta.values is %r and the arrays hold %d"
+                 % (ser.get("meta", {}).get("values"), n_points))
+        if ser.get("meta", {}).get("units") != len(units):
+            fail("series.json meta.units is %r and there are %d"
+                 % (ser.get("meta", {}).get("units"), len(units)))
+
+        # ---- counted from the raw CSVs, which is the test the plan asked for
+        import csv as _csv
+        FIELD_OF = {"Total": "sale", "Novos": "sale_new", "Existentes": "sale_used"}
+        raw_n, raw_units = 0, set()
+        latest = {}
+        for name, is_rent in (("ine_precos_venda.csv", False), ("ine_rendas.csv", True)):
+            path_ = os.path.join(ROOT, "data", "raw", "ine", name)
+            if not os.path.exists(path_):
+                warn("%s is not in this checkout — §7al counted what it could" % name)
+                raw_n = None
+                break
+            with io.open(path_, encoding="utf-8") as fh:
+                for r in _csv.DictReader(fh):
+                    if r["geo_level"] not in ("municipio", "freguesia"):
+                        continue
+                    if r["flag"] == "-" or r["value_eur_m2"] == "":
+                        continue
+                    raw_n += 1
+                    k = ("m" if r["geo_level"] == "municipio" else "f") + r["dicofre"]
+                    raw_units.add(k)
+                    f = "rent" if is_rent else FIELD_OF[r["dwelling_type"]]
+                    if r["period"] == periods[-1]:
+                        latest[(k, f)] = float(r["value_eur_m2"])
+        if raw_n is not None:
+            if raw_n != n_points:
+                fail("the CSVs hold %d published values and series.json holds %d. "
+                     "Every value INE published is in the file or the difference is "
+                     "a bug, not a decision" % (raw_n, n_points))
+            if raw_units != set(units):
+                only_raw = sorted(raw_units - set(units))[:3]
+                only_ser = sorted(set(units) - raw_units)[:3]
+                fail("the units in the CSVs and in series.json differ: %d only in "
+                     "the CSVs (%s), %d only in the file (%s)"
+                     % (len(raw_units - set(units)), only_raw,
+                        len(set(units) - raw_units), only_ser))
+
+        # ---- the two paths to the latest quarter must not disagree
+        FIELD_TO_SER = {"price_eur_m2": "sale", "price_new_eur_m2": "sale_new",
+                        "price_used_eur_m2": "sale_used", "rent_eur_m2": "rent"}
+        disagreed = 0
+        for lvl, items in (("m", mun), ("f", fre)):
+            for o in items:
+                code = o.get("dicofre")
+                if not code:
+                    continue
+                u = units.get(lvl + code) or {}
+                for field, sk in FIELD_TO_SER.items():
+                    on_unit = o.get(field)
+                    arr = u.get(sk)
+                    in_series = arr[-1] if arr else None
+                    if on_unit is None and in_series is None:
+                        continue
+                    if on_unit is None or in_series is None or abs(on_unit - in_series) > 1e-9:
+                        disagreed += 1
+                        if disagreed <= 3:
+                            fail("%s %s: data/processed says %r for %s and the "
+                                 "series says %r. The app reads the series now, so "
+                                 "the two must be the same number"
+                                 % (lvl + code, field, on_unit, periods[-1], in_series))
+        if disagreed > 3:
+            fail("...and %d more fields where the unit and its series disagree"
+                 % (disagreed - 3))
+        print("series %d units, %d values, %d quarters — counted from the CSVs"
+              % (len(units), n_points, len(periods)))
+
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:
     # 7v was the Android manifest check and ALSO the CRUS check, and both were

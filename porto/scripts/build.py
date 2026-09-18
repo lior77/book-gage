@@ -344,6 +344,101 @@ def read_dem():
     return by_code(doc.get("municipios", [])), by_code(doc.get("freguesias", []))
 
 
+def read_ine_series(district_codes):
+    """Every quarter INE published, for every unit in Portugal that has one.
+
+    Move א׳ of docs/INFORMATION-PLAN.md.  Until 2.0.9 the app showed ONE
+    quarter of these two indicators — the latest — and the other twenty-five
+    were read, parsed and thrown away on every build.  Measured before the
+    change: 49,897 published values across 706 units, of which the app showed
+    the last quarter of four fields for 18 municipalities and 55 parishes.
+
+    Four decisions, and each of them is a rule of the accuracy contract:
+
+    1.  **A quarter with no value is a HOLE, not a continuation.**  INE marks
+        it `-`, which its own metadata defines as `Dado nulo ou não aplicável`.
+        The arrays here are aligned to `periods` and carry `null` there, so a
+        gap in the line is a gap on the screen.  No interpolation, no last
+        known value, no smoothing (rule 2).
+    2.  **No quarter-over-quarter change is derived, here or anywhere.**  Every
+        point is the median of the TWELVE MONTHS ending in that quarter, so two
+        neighbouring points share nine months of the same sales and their
+        difference is not a quarterly change.  ARCHITECTURE.md §11 has carried
+        that trap since 1.25.0; the only non-overlapping comparison is four
+        quarters apart.
+    3.  **The wording is INE's own**, taken from data/raw/ine/fetch_report.json
+        rather than retyped: `Valor mediano das vendas… (€/ m²)` is a median
+        VALUE of sales, not a market price and not a valuation (rule 4).
+    4.  **No Hebrew name is invented for the 605 units outside the district.**
+        Rule 6: transliteration follows Portuguese pronunciation and is never
+        generated automatically.  They carry `pt` only, and the screen shows
+        the Portuguese name — which is also what a reader would type into a
+        search box or read on a sign.  District units carry no name here at
+        all: the app already holds theirs, and a second copy of a name is a
+        second thing to drift.
+    """
+    files = [("ine_precos_venda.csv", {"Total": "sale", "Novos": "sale_new",
+                                       "Existentes": "sale_used"}),
+             ("ine_rendas.csv", {"": "rent"})]
+    report = {}
+    rpath = os.path.join(RAW, "ine", "fetch_report.json")
+    if os.path.exists(rpath):
+        for rec in json.load(open(rpath, encoding="utf-8")):
+            report[rec["file"]] = rec
+
+    periods, rows = set(), []
+    for name, series_of in files:
+        path = os.path.join(RAW, "ine", name)
+        if not os.path.exists(path):
+            warnings.append("no %s — the quarterly series are not in this build" % name)
+            return None
+        with open(path, encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                if r["geo_level"] not in ("municipio", "freguesia"):
+                    continue          # nuts2, nuts3, continente and país are not units here
+                periods.add(r["period"])
+                if r["flag"] == "-" or r["value_eur_m2"] == "":
+                    continue          # the marker is the absence; it is not a value
+                rows.append((r, series_of[r["dwelling_type"]]))
+    periods = sorted(periods)
+    at = {p: i for i, p in enumerate(periods)}
+
+    units, n_values = {}, 0
+    for r, field in rows:
+        key = ("m" if r["geo_level"] == "municipio" else "f") + r["dicofre"]
+        u = units.setdefault(key, {"lv": key[0]})
+        if r["dicofre"] not in district_codes and "pt" not in u:
+            u["pt"] = r["geo_name"]
+        arr = u.setdefault(field, [None] * len(periods))
+        v = float(r["value_eur_m2"])
+        arr[at[r["period"]]] = int(v) if v.is_integer() else round(v, 2)
+        n_values += 1
+
+    return {
+        "meta": {
+            "source_he": "‏INE — שני אינדיקטורים רבעוניים, בניסוח של INE עצמה",
+            "datasets": {k: v.get("dataset") for k, v in sorted(report.items())},
+            "indicator_codes": {k: v.get("indicator_code") for k, v in sorted(report.items())},
+            "publication_date": {k: v.get("publication_date") for k, v in sorted(report.items())},
+            "retrieved": min([v.get("extracted", "")[:10] for v in report.values()] or [""]),
+            "confidence": "reported",
+            "window_he": "כל נקודה היא החציון של שנים-עשר החודשים שמסתיימים ברבעון "
+                         "הנקוב, ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים "
+                         "תשעה חודשים, ולכן אין ולא יוצג שינוי רבעוני.",
+            "missing_he": "רבעון שאין בו ערך הוא חור בקו. ‏INE מסמנת אותו `-`, "
+                          "שמשמעותו במטא-נתונים שלה ״נתון ריק או לא ישים״, וזה כל "
+                          "מה שהמקור אומר.",
+            "levels": ["municipio", "freguesia"],
+            "district": "13",   # every Porto-district DICOFRE starts here
+            "units": len(units),
+            "values": n_values,
+            "series": ["sale", "sale_new", "sale_used", "rent"],
+        },
+        "periods": periods,
+        "units": {k: units[k] for k in sorted(units)},
+    }
+
+
 def read_tipau():
     """INE's urban-area typology, one class per parish: APU, AMU or APR.
 
@@ -1570,6 +1665,15 @@ def main():
     dump("freguesias.json", {"items": freguesias})
     dump("porto_city.json", {"quarters": city, "places": places})
     dump("zones.json", {"zones": zones})
+    # The quarterly series, all of Portugal.  A file of its own rather than
+    # fields on the units: it is 110 KB gzipped against the 2 KB the four
+    # latest-quarter numbers cost, most of it about units this atlas does not
+    # draw, and the app loads it for the one screen that reads it.
+    district_codes = ({m["dicofre"] for m in municipios if m.get("dicofre")}
+                      | {f["dicofre"] for f in freguesias if f.get("dicofre")})
+    series = read_ine_series(district_codes)
+    if series:
+        dump("series.json", series)
     # The climate normals pass through untouched: there is nothing to compute.
     # They are per STATION, and this build has no station-to-unit step because
     # two stations cannot give 275 parishes a temperature — see

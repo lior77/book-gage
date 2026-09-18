@@ -36,6 +36,12 @@
   /* the two on the map are darker than the menu they open */
   --btn-solid:#9fb0c8; --btn-solid-2:#8b9eb9; --btn-line:#6b7f9c;
   --hi:#fff3d6; --hi-line:#b7791f;
+  /* The four lines of the quarterly series.  Four hues rather than four tints
+     of one: three of them sit on the same chart and a reader has to tell them
+     apart without a legend lookup, and colour is the only channel a 96px-tall
+     line has.  Measured against --card in both themes, all four are over 3:1
+     (SC 1.4.11 — a line is a non-text element that carries meaning). */
+  --ser-total:#15568f; --ser-new:#8a5000; --ser-used:#1c6b63; --ser-rent:#6b3f8c;
   --dot:#101010; --dot-ring:#ffffff;
   /* white on a saturated fill — a red button, a chosen chip — in both themes */
   --on-solid:#ffffff;
@@ -102,6 +108,7 @@
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
     --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#576c90;
     --hi:#3a3312; --hi-line:#e0b040;
+    --ser-total:#6ea8dd; --ser-new:#e0a34a; --ser-used:#5fbfb2; --ser-rent:#c49ad6;
     --shadow-raised:none; --shadow-overlay:none;
     --crumb-halo-dark:rgba(10,16,26,.92);
   }
@@ -115,6 +122,7 @@
     --tool-line:#3a4a63; --ring-off:#9aa6b8;
     --btn-solid:#141d2b; --btn-solid-2:#1d2838; --btn-line:#576c90;
     --hi:#3a3312; --hi-line:#e0b040;
+    --ser-total:#6ea8dd; --ser-new:#e0a34a; --ser-used:#5fbfb2; --ser-rent:#c49ad6;
     --shadow-raised:none; --shadow-overlay:none;
     --crumb-halo-dark:rgba(10,16,26,.92);
 }
@@ -1019,3 +1027,66 @@ body[data-view="text"] .map-only{display:none}
    the switch. */
 .mrow-n{margin-inline-start:auto; padding-inline-end:var(--s2);
   font-size:var(--t-xs); line-height:var(--lh-xs); color:var(--ink-2)}
+
+/* ---------------------------------------------- the quarterly series ------ */
+/* The chart is 300×96 in its own coordinates and stretches to the card's width
+   (preserveAspectRatio="none"): the shape of the line is what is read here, and
+   stretching it horizontally does not change which way it goes.  The line
+   widths are given in the viewBox's units and therefore scale with it —
+   vector-effect keeps them honest when the card is narrow. */
+.ser-wrap{margin-block-start:var(--s3)}
+.ser-chart{display:block; width:100%; height:auto}
+.ser-l{fill:none; stroke-width:3; stroke-linejoin:round; stroke-linecap:round}
+.ser-d{stroke:none}
+/* The two scale labels live inside the chart, so they scale with it; at the
+   600-unit width 13 units is the same optical size as --t-xs beside it.
+   direction:ltr because text-anchor is direction-AWARE: on this RTL page
+   `end` anchored the number to the left of its own start point and the label
+   was laid out past the right edge of the box, where it was clipped away
+   entirely.  A number is LTR in any case. */
+.ser-ax{fill:var(--miss); direction:ltr; unicode-bidi:isolate}
+/* Two classes, not one: `.ser-total{fill:…}` on its own is a single-class
+   selector like `.ser-l{fill:none}`, sits later in the file, and therefore WINS
+   — every line came out as a filled wedge instead of a stroke.  Same family as
+   the .menu-btn/.mt collision in ARCHITECTURE.md §11: with equal specificity
+   the last rule decides, and "the last rule" is not a thing anyone reads for.
+   `.ser-l.ser-total` is two classes and cannot be overruled by file order. */
+.ser-l.ser-total{stroke:var(--ser-total)}
+.ser-l.ser-new{stroke:var(--ser-new)}
+.ser-l.ser-used{stroke:var(--ser-used)}
+.ser-l.ser-rent{stroke:var(--ser-rent)}
+.ser-d.ser-total{fill:var(--ser-total)}
+.ser-d.ser-new{fill:var(--ser-new)}
+.ser-d.ser-used{fill:var(--ser-used)}
+.ser-d.ser-rent{fill:var(--ser-rent)}
+.ser-leg{display:flex; flex-wrap:wrap; gap:var(--s3); margin-block-start:var(--s2);
+         font-size:var(--t-xs); line-height:var(--lh-xs); color:var(--ink-2)}
+.ser-lg{display:inline-flex; align-items:center; gap:var(--s1)}
+.ser-lg i{width:14px; height:3px; border-radius:var(--r-xs)}
+.ser-lg i.ser-total{background:var(--ser-total)}
+.ser-lg i.ser-new{background:var(--ser-new)}
+.ser-lg i.ser-used{background:var(--ser-used)}
+.ser-lg i.ser-rent{background:var(--ser-rent)}
+.ser-ends{display:flex; flex-direction:column; margin-block-start:var(--s2);
+          border-block-start:1px solid var(--line)}
+.ser-end{display:flex; align-items:baseline; gap:var(--s2); width:100%;
+         padding:var(--s2) 0; border-block-end:1px solid var(--line); text-align:start}
+.ser-end:active{background:var(--bg)}
+.ser-end-l{flex:0 0 auto; font-size:var(--t-sm); color:var(--ink-2)}
+.ser-end-v{flex:1 1 auto; font-size:var(--t-sm)}
+.ser-end-n{flex:0 0 auto; font-size:var(--t-xs); color:var(--miss)}
+
+/* the quarter stepper on the comparison screen */
+.cmp-per{display:flex; align-items:center; gap:var(--s2); margin-block:var(--s2)}
+.cmp-pb{min-width:44px; min-height:44px; border:1px solid var(--ctl-line);
+        border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
+        font-size:var(--t-lg); line-height:var(--lh-lg)}
+.cmp-pb:disabled{color:var(--miss); border-color:var(--line)}
+.cmp-pb:active:not(:disabled){background:var(--bg)}
+.cmp-pv{font-size:var(--t-md); line-height:var(--lh-md); font-weight:700}
+.cmp-pl{min-height:44px; padding:0 var(--s3); border:1px solid var(--ctl-line);
+        border-radius:var(--r-ctl); background:var(--card); color:var(--ink);
+        font-size:var(--t-sm); line-height:var(--lh-sm)}
+.cmp-pn{margin-inline-start:auto; font-size:var(--t-xs); line-height:var(--lh-xs);
+        color:var(--miss)}
+.cmp-nat{margin-block:var(--s2)}

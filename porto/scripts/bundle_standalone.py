@@ -20,6 +20,7 @@ ROOT = os.path.dirname(HERE)
 
 DATA_FILES = [
     "data/processed/manifest.json",
+    "data/processed/series.json",
     "data/processed/indicators.json",
     "data/processed/municipios.json",
     "data/processed/freguesias.json",

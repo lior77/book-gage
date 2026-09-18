@@ -1722,6 +1722,162 @@ const css = (page, sel, prop) =>
      }, eleRows),
      eleRows.slice(0, 3).map(r => `${r.name}=${r.val}`).join(' '));
 
+  /* Move א׳ — the quarterly series.  Twenty-six quarters of two INE
+     indicators have been read on every build since 1.25.0 and ONE of them
+     reached the screen.  What is checked here is not that a chart appeared: it
+     is that the chart cannot lie.  A quarter INE did not publish stays a hole,
+     the value chips open the record the number came from, no difference
+     between quarters is shown anywhere, and the national level says out loud
+     that it holds price and rent and nothing else. */
+  await page.evaluate(() => { if (S.cmp) toggleCmp(); goDistrict(); });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => goMun(1));
+  await page.waitForTimeout(700);
+  const serCard = () => page.evaluate(() => {
+    const h = [...document.querySelectorAll('#doc .card h2')]
+      .find(x => x.textContent.includes('לאורך זמן'));
+    return h ? h.parentElement : null;
+  });
+  ok('a municipality card carries the quarterly chart',
+     await page.$('#doc .ser-chart') !== null);
+  ok('and one line per series INE published for it',
+     await page.$$eval('#doc .ser-chart path.ser-l',
+       els => new Set(els.map(e => e.getAttribute('class').split(' ')[1])).size) >= 3,
+     await page.$$eval('#doc .ser-chart path.ser-l', els => els.length + ' paths'));
+  const ends = await page.$$eval('#doc .ser-end', els => els.map(e => e.dataset.src));
+  ok('every endpoint chip opens the record its number came from',
+     ends.length >= 3 && ends.every(x => /^municipio\.(price|price_new|price_used|rent)_eur_m2$/.test(x)),
+     ends.join(', '));
+  const serNote = await page.evaluate(() => {
+    const h = [...document.querySelectorAll('#doc .card h2')]
+      .find(x => x.textContent.includes('לאורך זמן'));
+    return h ? h.parentElement.querySelector('.note').textContent : '';
+  });
+  ok('the card says the window is twelve months and that no quarterly change is shown',
+     serNote.includes('שנים עשר החודשים') && serNote.includes('אין כאן שינוי רבעוני'),
+     serNote.slice(0, 80));
+  ok('and it says a gap is a quarter INE did not publish',
+     serNote.includes('לא פרסם') && serNote.includes('הקו נקטע'),
+     serNote.slice(-80));
+
+  /* A hole is a break in the line, not a straight line across it.  f130414 is a
+     parish of Gondomar whose sale series has five quarters missing inside it —
+     so the line for that one series must come in more than one piece. */
+  const holed = await page.evaluate(() => {
+    const f = D.fre.find(x => x.dicofre === '130414');
+    if (!f) return null;
+    goZone(D.freKey(f));
+    return D.freKey(f);
+  });
+  await page.waitForTimeout(700);
+  ok('a parish whose series has gaps draws its line in pieces, not across them',
+     holed !== null && await page.$$eval('#doc .ser-chart path.ser-l.ser-total',
+       els => els.length) > 1,
+     holed === null ? 'no such parish' : await page.$$eval(
+       '#doc .ser-chart path.ser-l.ser-total', els => els.length + ' pieces'));
+
+  /* A parish INE never published: the sentence has to be about INE, not about
+     the place.  "No price here" would be a claim about the market. */
+  const silent = await page.evaluate(() => {
+    const has = k => D.series && D.series.units[k];
+    const f = D.fre.find(x => x.dicofre && !has('f' + x.dicofre));
+    if (!f) return null;
+    goZone(D.freKey(f));
+    return D.freKey(f);
+  });
+  await page.waitForTimeout(700);
+  const silentNote = await page.evaluate(() => {
+    const h = [...document.querySelectorAll('#doc .card h2')]
+      .find(x => x.textContent.includes('לאורך זמן'));
+    return h ? h.parentElement.textContent : '';
+  });
+  ok('a parish INE never published says so, and names INE rather than the market',
+     silent !== null && silentNote.includes('INE לא פרסם')
+       && silentNote.includes('לא על השוק כאן')
+       && await page.$('#doc .ser-chart') === null,
+     silentNote.slice(0, 90));
+
+  /* Level 0 — Portugal. */
+  await page.evaluate(() => { goDistrict(); toggleCmp(); S.cmpField = 'price_eur_m2'; redrawLevel(); redrawText(); });
+  await page.waitForTimeout(700);
+  const haveNat = await page.$('[data-cmpscope="pt"]') !== null;
+  ok('the comparison screen offers a third scope, all of Portugal', haveNat);
+  /* Guarded for the same reason as the topography clicks above: against an app
+     that cannot load the series this button does not exist, page.click() times
+     out, and one missing element would take the remaining three hundred checks
+     with it.  Proved on a copy whose loader is handed null instead of the
+     file: these twenty-four go red and the rest of the suite still runs. */
+  if (haveNat) {
+    await page.click('[data-cmpscope="pt"]');
+    await page.waitForTimeout(900);
+  }
+  const natRowsN = await page.$$eval('#doc .cmp-row', els => els.length);
+  ok('and it ranks every municipality INE published, not only the district\'s',
+     natRowsN === await page.evaluate(() =>
+       Object.values(D.series.units).filter(u => u.lv === 'm').length),
+     String(natRowsN));
+  ok('only the four fields that exist outside the district are offered there',
+     await page.evaluate(() => cmpFields().map(f => f.k).join(',')) ===
+       'price_eur_m2,price_new_eur_m2,price_used_eur_m2,rent_eur_m2',
+     await page.evaluate(() => cmpFields().map(f => f.k).join(',')));
+  const natNote = await page.$eval('#doc .cmp-nat', e => e.textContent).catch(() => '');
+  ok('and the screen says on its face what it does NOT hold out there',
+     natNote.includes('רמת השוואה בלבד') && natNote.includes('אין אוכלוסייה')
+       && natNote.includes('אין גבולות במפה'),
+     natNote.slice(0, 80));
+  ok('a municipality outside the district is not a link to anywhere',
+     await page.$$eval('#doc .cmp-row', els =>
+       els.filter(e => !e.dataset.mun).length) > 200,
+     await page.$$eval('#doc .cmp-row', els => els.filter(e => !e.dataset.mun).length + ' of ' + els.length));
+
+  /* The quarter, and the one thing the app must never do with it. */
+  const per = await page.evaluate(() => D.series.periods);
+  ok('it opens on the latest quarter',
+     (await page.$eval('#doc .cmp-pv', e => e.textContent.trim())) === per[per.length - 1],
+     await page.$eval('#doc .cmp-pv', e => e.textContent.trim()));
+  if (await page.$('[data-cmpper="-1"]')) {
+    await page.click('[data-cmpper="-1"]');
+    await page.waitForTimeout(700);
+  }
+  ok('stepping back names the quarter before it',
+     (await page.$eval('#doc .cmp-pv', e => e.textContent.trim())) === per[per.length - 2],
+     await page.$eval('#doc .cmp-pv', e => e.textContent.trim()));
+  ok('and the ranking is that quarter\'s, read from the series and not from the unit',
+     await page.evaluate(() => {
+       const i = D.series.periods.length - 2;
+       const rows = [...document.querySelectorAll('#doc .cmp-row:not(.no)')];
+       return rows.every(r => {
+         const id = r.dataset.cmpu;
+         const key = id[0] === 'n' ? 'm' + id.slice(1)
+           : id[0] === 'm' ? 'm' + (D.munByNum.get(Number(id.slice(1))) || {}).dicofre : null;
+         if (!key || !D.series.units[key]) return true;
+         const want = D.series.units[key].sale[i];
+         const got = Number(r.querySelector('.cmp-v .num').textContent.replace(/[^\d.]/g, ''));
+         return want === null ? true : Math.abs(got - Math.round(want)) < 1;
+       });
+     }));
+  ok('a unit with no value in the chosen quarter reads אין נתון, and is not ranked',
+     await page.evaluate(() => {
+       const i = D.series.periods.length - 2;
+       const rows = [...document.querySelectorAll('#doc .cmp-row.no')];
+       return rows.every(r => r.textContent.includes('אין נתון'));
+     }));
+  ok('no percentage change is printed anywhere on this screen — the windows overlap',
+     !(await page.$eval('#doc', e => e.textContent)).match(/[+\u2212-]\d+(\.\d+)?%/));
+  if (await page.$('[data-cmpper="last"]')) {
+    await page.click('[data-cmpper="last"]');
+    await page.waitForTimeout(600);
+  }
+  ok('and לאחרון comes back to the latest quarter',
+     (await page.$eval('#doc .cmp-pv', e => e.textContent.trim())) === per[per.length - 1]
+       && await page.evaluate(() => S.cmpPeriod) === null);
+  await page.click('[data-cmpscope="mun"]').catch(() => {});
+  await page.waitForTimeout(700);
+  ok('leaving the national scope keeps a field that exists here',
+     await page.evaluate(() => cmpFields().some(f => f.k === S.cmpField)));
+  await page.evaluate(() => { if (S.cmp) toggleCmp(); goDistrict(); });
+  await page.waitForTimeout(600);
+
   /* Home is the level axis: it goes to the district and leaves the mode alone.
      The mode switcher is the way out, and that is what puts the background
      back as it was. */

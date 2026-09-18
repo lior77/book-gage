@@ -155,8 +155,12 @@ const S = {
   // השוואת נתונים: one field ranked across the units of the level.  A screen,
   // like the menu, so it never comes back open — and never at level 3.
   cmp: false,
-  cmpScope: 'mun',     // level 1 only: 'mun' | 'fre'
+  cmpScope: 'mun',     // level 1 only: 'mun' | 'fre' | 'pt' (all of Portugal)
   cmpField: null,      // the field being compared; CMP_DEFAULT until chosen
+  /* The quarter the four INE fields are ranked at.  null is the latest — it
+     stays null rather than holding the last index, so a saved state does not
+     silently mean a different quarter once a newer one is fetched. */
+  cmpPeriod: null,
   cmpPick: false,      // the field picker is open in place of the key and list
   /* The two NUTS III regions.  A layer you switch on from the menu, not a line
      that is always there: until 2.0.0 it was a switch, 2.0.0 made it permanent
@@ -577,6 +581,161 @@ function marketStats(o, lvl) {
   </div>`;
 }
 
+/* ---------------------------------------------- the quarterly series --- */
+/* Move א׳ of INFORMATION-PLAN.md.  The two INE indicators have been read on
+   every build since 1.25.0 and ONE quarter of them reached the screen — the
+   latest — while the other twenty-five were parsed and dropped.  Measured:
+   49,897 published values on disk, of which the app showed four numbers per
+   unit.  This card is the rest of them.
+
+   Three rules of the accuracy contract decide how it draws:
+
+   1.  A quarter INE did not publish is a GAP in the line.  The path breaks and
+       starts again; nothing is interpolated, carried forward or smoothed, and
+       a point that stands alone between two gaps gets a dot of its own so that
+       it is visible at all (rule 2).
+   2.  No difference between quarters is shown, ever.  Each point is the median
+       of the twelve months ENDING in its quarter, so two neighbours share nine
+       months of the same sales — ARCHITECTURE.md §11 has carried that trap
+       since 1.25.0.  The card offers the line and the endpoints, and no delta.
+   3.  The value chips open the same source records the card above them opens.
+       Every number on this screen is one tap from what published it (rule 1). */
+const SERIES_SALE = [
+  { k: 'sale', he: 'מכירות', cls: 'ser-total', src: 'price_eur_m2', dec: 0 },
+  { k: 'sale_new', he: 'דירות חדשות', cls: 'ser-new', src: 'price_new_eur_m2', dec: 0 },
+  { k: 'sale_used', he: 'דירות קיימות', cls: 'ser-used', src: 'price_used_eur_m2', dec: 0 },
+];
+const SERIES_RENT = { k: 'rent', he: 'שכירות', cls: 'ser-rent', src: 'rent_eur_m2', dec: 2 };
+
+/* 'm' + the four-digit code for a municipality, 'f' + the six-digit one for a
+   parish — the same key build.py writes.  A unit with no official code (none
+   today; §7b enforces it) simply has no series. */
+function seriesKey(o) {
+  return o && o.dicofre ? (o.mun_num === undefined ? 'm' : 'f') + o.dicofre : null;
+}
+function seriesOf(o) {
+  const k = seriesKey(o);
+  return (D.series && k && D.series.units[k]) || null;
+}
+const seriesLast = arr => {
+  for (let i = arr.length - 1; i >= 0; i -= 1) if (arr[i] !== null) return { i, v: arr[i] };
+  return null;
+};
+const seriesFirst = arr => {
+  for (let i = 0; i < arr.length; i += 1) if (arr[i] !== null) return { i, v: arr[i] };
+  return null;
+};
+
+/* The path, in segments.  A segment ends wherever a quarter is missing, which
+   is what makes the hole visible as a hole. */
+const SER_PAD = 14;      // room for the stroke and for the two scale labels
+function sparkSegments(values, lo, hi, w, h) {
+  const n = values.length;
+  const X = i => (n > 1 ? (i * w) / (n - 1) : w / 2);
+  /* Inset top and bottom: a line that touches y=0 is half a stroke outside the
+     box, and the highest point of the series would be clipped by the card. */
+  const Y = v => (hi === lo ? h / 2
+    : (h - SER_PAD) - ((v - lo) / (hi - lo)) * (h - 2 * SER_PAD));
+  const segs = [];
+  let cur = [];
+  values.forEach((v, i) => {
+    if (v === null || v === undefined) { if (cur.length) segs.push(cur); cur = []; return; }
+    cur.push([X(i), Y(v)]);
+  });
+  if (cur.length) segs.push(cur);
+  return { segs, X, Y };
+}
+
+function seriesSvg(rows, values, lvl) {
+  /* 600×140 in the viewBox and width:100% with the aspect ratio KEPT.  The
+     first cut stretched the box to the card's width (preserveAspectRatio
+     "none"), which scales x and y by different factors — the lines came out as
+     thick wedges, and a line whose width means nothing is a line that says
+     something it does not mean.  At 600 units across a ~380px card a 3-unit
+     stroke lands near 1.9px, which is the hairline the rest of the app uses. */
+  const W = 600, H = 140;
+  const flat = [].concat(...rows.map(r => values[r.k] || []))
+    .filter(v => v !== null && v !== undefined);
+  if (!flat.length) return '';
+  const lo = Math.min(...flat), hi = Math.max(...flat);
+  const lines = rows.map(r => {
+    const arr = values[r.k];
+    if (!arr) return '';
+    const { segs } = sparkSegments(arr, lo, hi, W, H);
+    const paths = segs.filter(sg => sg.length > 1).map(sg =>
+      `<path class="ser-l ${r.cls}" d="${sg.map((p, i) =>
+        `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')}"/>`).join('');
+    /* A quarter with a value between two quarters without one draws a segment
+       of length zero — invisible.  It is still a published number, so it gets
+       a dot.  Without this, a unit INE published once would look like a unit
+       INE never published, which is exactly the confusion rule 2 forbids. */
+    const dots = segs.filter(sg => sg.length === 1).map(sg =>
+      `<circle class="ser-d ${r.cls}" cx="${sg[0][0].toFixed(1)}" cy="${sg[0][1].toFixed(1)}" r="2.5"/>`).join('');
+    return paths + dots;
+  }).join('');
+  /* The scale, read off the data rather than assumed: the highest and the
+     lowest value any of these lines actually reaches.  Without them the chart
+     would be a shape with no magnitude — and the shape alone can be read as
+     "doubled" when the range is 4%. */
+  const dec = rows[0].dec;
+  /* The size is an attribute and not a CSS rule, because it is not a CSS size:
+     it is 13 units of a 600-unit-wide viewBox, which lands near --t-xs once the
+     box is scaled to the card.  A --t-* token here would be 13 PIXELS before
+     scaling, and would come out tiny. */
+  const scale = `<text class="ser-ax" font-size="13" x="${W}" y="11" text-anchor="end">${shown(hi, dec)}</text>
+    <text class="ser-ax" font-size="13" x="${W}" y="${H - 1}" text-anchor="end">${shown(lo, dec)}</text>`;
+  return `<svg class="ser-chart" viewBox="0 0 ${W} ${H}"
+    role="img" aria-label="${html(t('קו לאורך הרבעונים'))}">${lines}${scale}</svg>`;
+}
+
+/* One block: the chart, a legend where a legend is needed, and the endpoints as
+   value chips that open the source record. */
+function seriesBlock(rows, u, lvl, unitLabel) {
+  const svg = seriesSvg(rows, u, lvl);
+  if (!svg) return '';
+  const per = D.series.periods;
+  const legend = rows.length > 1 ? `<div class="ser-leg">${rows.filter(r => u[r.k]).map(r =>
+    `<span class="ser-lg"><i class="${r.cls}"></i>${html(t(r.he))}</span>`).join('')}</div>` : '';
+  const ends = rows.filter(r => u[r.k]).map(r => {
+    const a = seriesFirst(u[r.k]), b = seriesLast(u[r.k]);
+    if (!a || !b) return '';
+    const n = u[r.k].filter(v => v !== null).length;
+    return `<button class="ser-end" data-src="${html(lvl + '.' + r.src)}">
+      <span class="ser-end-l">${html(t(r.he))}</span>
+      <span class="ser-end-v"><bdi class="lat num">${html(per[a.i])}</bdi>
+        <span class="num">${shown(a.v, r.dec)}</span> ·
+        <bdi class="lat num">${html(per[b.i])}</bdi>
+        <span class="num">${shown(b.v, r.dec)}</span> ${html(unitLabel)}</span>
+      <span class="ser-end-n">${n}/${per.length} ${t('רבעונים')}</span>
+    </button>`;
+  }).join('');
+  return `<div class="ser-wrap">${svg}${legend}<div class="ser-ends">${ends}</div></div>`;
+}
+
+function seriesCard(o, lvl) {
+  if (!D.series) return '';
+  const per = D.series.periods;
+  const head = `<h2>${t('לאורך זמן — INE')} <bdi class="lat num">${
+    html(per[0])}–${html(per[per.length - 1])}</bdi></h2>`;
+  const u = seriesOf(o);
+  if (!u) {
+    /* Who did not publish, not what the market did.  "No price here" would be a
+       claim about the place; the true sentence is about INE (rule 4). */
+    return `<div class="card">${head}
+      <p class="note">${lvl === 'freguesia'
+        ? t('‏INE לא פרסם לרובע הזה אף רבעון, לא במכירות ולא בשכירות. זו אמירה על מה שפורסם, לא על השוק כאן.')
+        : t('‏INE לא פרסם לעירייה הזאת אף רבעון, לא במכירות ולא בשכירות. זו אמירה על מה שפורסם, לא על השוק כאן.')}</p>
+    </div>`;
+  }
+  const sale = seriesBlock(SERIES_SALE, u, lvl, t('€/מ״ר'));
+  const rent = seriesBlock([SERIES_RENT], u, lvl, t('€/מ״ר לחודש'));
+  return `<div class="card">${head}
+    ${sale || ''}
+    ${rent || ''}
+    <p class="note">${t('כל נקודה היא החציון של שנים עשר החודשים שמסתיימים ברבעון שלה — ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשים, ולכן')} <b>${t('אין כאן שינוי רבעוני ולא יוצג כזה')}</b>${t('. קטע חסר בקו הוא רבעון ש-INE לא פרסם: הקו נקטע ואינו מושלם.')}</p>
+  </div>`;
+}
+
 /* Its own card, and only at the municipality level: DGPJ publishes the rate by
    municipality and nothing finer.  The card carries the source's own warning
    rather than a summary of it — "registered offences" is what INE counts, and
@@ -722,7 +881,7 @@ async function j(path) {
 
 async function load() {
   const [ind, mun, fre, city, zones, climate, bW, bFl, sources, bM, bB, bF, bC, proseEn,
-         layersManifest, manifest] = await Promise.all([
+         layersManifest, manifest, series] = await Promise.all([
     j('data/processed/indicators.json'),
     j('data/processed/municipios.json'),
     j('data/processed/freguesias.json'),
@@ -754,6 +913,12 @@ async function load() {
        look like a data change to any diff.  Moved out in 2.0.8 — see
        ARCHITECTURE.md §8 and scripts/build_diff.py. */
     j('data/processed/manifest.json'),
+    /* Every quarter INE published, for every unit in Portugal that has one:
+       706 units, 49,897 values, 26 quarters.  115 KB gzipped, and the reason
+       it is a file of its own is that most of it is about units this atlas
+       does not draw — see ARCHITECTURE.md §5.6.7.  Absent in a build whose raw
+       CSVs were not fetched, and the card then says so rather than throwing. */
+    j('data/processed/series.json').catch(() => null),
   ]);
   Object.assign(EN, proseEn.text || {});
   D.layers = layersManifest;
@@ -768,6 +933,7 @@ async function load() {
   D.sources = sources;
   D.generated = manifest.generated;
   D.version = manifest.app_version || '';
+  D.series = series;
   D.bM = bM; D.bB = bB; D.bF = bF; D.bC = bC; D.bW = bW; D.bFl = bFl;
   // an undefined layer renders as nothing at all, in silence; say so instead
   for (const [k, v] of Object.entries({ bM, bB, bF, bC, bW, bFl })) {
@@ -1646,6 +1812,7 @@ function renderMun(num) {
     ${peopleStats(m, 'municipio')}
     ${housingStats(m, 'municipio')}
     ${marketStats(m, 'municipio')}
+    ${seriesCard(m, 'municipio')}
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
     ${terrainCard(m, 'municipio')}
@@ -4380,6 +4547,7 @@ function renderZone(key) {
     ${peopleStats(f, 'freguesia')}
     ${housingStats(f, 'freguesia')}
     ${marketStats(f, 'freguesia')}
+    ${seriesCard(f, 'freguesia')}
     ${terrainCard(f, 'freguesia')}
 
     ${z.bairros.length ? `
@@ -4679,10 +4847,34 @@ const CMP_CONS = new Set(['ran_pct', 'ren_pct', 'both_pct', 'either_pct']);
    because that is how fetch_dem.py writes it — has a record of its own. */
 const CMP_NESTED = { 'ele.min': 'ele', 'ele.mean': 'ele', 'ele.max': 'ele',
                      'ele.slope': 'slope' };
+/* The four fields that have a quarterly series behind them, and the series each
+   one reads.  When series.json is present these four come from it at whichever
+   quarter is chosen — the latest by default, which is the same number
+   data/processed carries for that unit; §7al enforces that they agree.  One
+   path rather than two: a screen that read the unit for one quarter and the
+   series for another would have two truths to keep in step. */
+const CMP_SERIES = { price_eur_m2: 'sale', price_new_eur_m2: 'sale_new',
+                     price_used_eur_m2: 'sale_used', rent_eur_m2: 'rent' };
+const seriesPeriods = () => (D.series ? D.series.periods : []);
+/* null means "the latest", which is what the screen opens on and what every
+   other card in the app shows. */
+const cmpPeriodIndex = () => {
+  const n = seriesPeriods().length;
+  if (!n) return -1;
+  return S.cmpPeriod === null || S.cmpPeriod === undefined
+    ? n - 1 : Math.max(0, Math.min(n - 1, S.cmpPeriod));
+};
 const cmpSrcKey = (lvl, k) => lvl + '.' +
   (CMP_NESTED[k] ? CMP_NESTED[k]
    : CMP_HOUSING.has(k) ? 'housing' : CMP_CONS.has(k) ? 'cons_pct' : k);
 const cmpValue = (o, k) => {
+  if (CMP_SERIES[k] && D.series) {
+    const u = seriesOf(o);
+    const arr = u && u[CMP_SERIES[k]];
+    const i = cmpPeriodIndex();
+    const v0 = arr && i >= 0 ? arr[i] : undefined;
+    return v0 === undefined || v0 === null ? null : v0;
+  }
   /* A dotted key reads down: 'ele.mean' -> o.ele.mean, and a missing step on
      the way is a missing value rather than a throw — a unit outside the DEM's
      coverage has no `ele` at all. */
@@ -4699,13 +4891,52 @@ function cmpLevelWord() { return cmpUnits().kind === 'mun' ? 'municipio' : 'freg
 
 function cmpFields() {
   const lvl = cmpLevelWord();
-  return CMP_ALL.filter(f => (!f.only || f.only === lvl)
+  const all = CMP_ALL.filter(f => (!f.only || f.only === lvl)
     && D.sources.fields[cmpSrcKey(lvl, f.k)]);
+  /* Outside the district the app holds price and rent and NOTHING else — no
+     census, no topography, no constraints.  Offering the other forty fields
+     there would produce forty screens of "אין נתון" for 288 municipalities,
+     which reads as absence of the thing rather than absence of the data. */
+  return cmpIsNat() ? all.filter(f => CMP_SERIES[f.k]) : all;
 }
 function cmpField() {
   const f = cmpFields();
   return f.find(x => x.k === S.cmpField) || f.find(x => x.k === CMP_DEFAULT) || f[0] || null;
 }
+
+/* Level 0 — Portugal.  The 306 municipalities INE published a figure for,
+   anywhere in the country.  The eighteen of the district are the app's OWN
+   objects, so their Hebrew name, their colour and their shape on the map all
+   still work; the rest are rows built from the series and carry the Portuguese
+   name INE published and nothing else.  No Hebrew is invented for them —
+   rule 6 — and no other field is offered at this level, because no other field
+   exists outside the district (see cmpFields).
+
+   It is a comparison level and not a navigation level: there are no boundaries
+   for the other 288, and the screen says so rather than letting a reader think
+   the atlas covers them. */
+function natRows() {
+  if (!D.series) return [];
+  if (D._nat) return D._nat;
+  const mine = new Map(D.mun.map(m => ['m' + m.dicofre, m]));
+  const out = [];
+  for (const key of Object.keys(D.series.units)) {
+    const u = D.series.units[key];
+    if (u.lv !== 'm') continue;
+    out.push(mine.get(key) || { nat: true, dicofre: key.slice(1), pt: u.pt || key.slice(1) });
+  }
+  /* The district's own eighteen are in the list whether or not INE published
+     for them.  All eighteen are published today, so this adds nothing — but a
+     national ranking that silently dropped one of the municipalities this atlas
+     is ABOUT, because a source stopped publishing it, is the failure mode
+     worth spending three lines on. Unranked and marked "אין נתון", like
+     anywhere else. */
+  const have = new Set(out);
+  D.mun.forEach(m => { if (!have.has(m)) out.push(m); });
+  D._nat = out;
+  return out;
+}
+const cmpIsNat = () => S.cmpScope === 'pt' && S.level === 'district' && !!D.series;
 
 /* Which units this screen is comparing.  Level 1 offers the choice between the
    eighteen municipalities and the parishes; level 2 has none to offer — there
@@ -4717,12 +4948,23 @@ function cmpUnits() {
   if (S.level !== 'district') {
     return { kind: 'fre', all: false, rows: (D.freByMun.get(S.mun) || []).slice() };
   }
+  if (cmpIsNat()) return { kind: 'mun', all: false, nat: true, rows: natRows().slice() };
   if (S.cmpScope === 'fre') return { kind: 'fre', all: true, rows: D.fre.slice() };
   return { kind: 'mun', all: false, rows: D.mun.slice() };
 }
 
 const cmpName = o => nm(o);
-const cmpId = o => (o.mun_num === undefined ? 'm' + o.num : 'f' + D.freKey(o));
+/* The Latin original beside the name — unless it IS the name.  A municipality
+   outside the district has no Hebrew one (rule 6: no transliteration is
+   generated), so nm() already returns the Portuguese, and printing it again
+   read as "Barrancos Barrancos". */
+const cmpLatin = o => {
+  const latin = bare(o.pt || '');
+  return !latin || cmpName(o) === latin ? ''
+    : ` <span class="lat">${html(latin)}</span>`;
+};
+const cmpId = o => (o.nat ? 'n' + o.dicofre
+  : o.mun_num === undefined ? 'm' + o.num : 'f' + D.freKey(o));
 
 /* Smallest first, so the ranking and the list run the same way and one number
    means one thing.  The five classes hold an equal count each; a class is the
@@ -4880,19 +5122,21 @@ const cmpFmt = (v, f) => v === null || v === undefined ? miss() : nf(v, f.dec);
 function cmpRowHtml(r, field, lvl, rk) {
   const ink = inkOn(r.c);
   const mun = r.o.mun_num === undefined;
-  const code = mun ? munNum(r.o) : freNum(r.o);
+  /* A municipality outside the district has no running number of this app's —
+     the numbers 1..18 are the district's own — so it wears its DICOFRE, which
+     is what the map labels everywhere else anyway. */
+  const code = r.o.nat ? r.o.dicofre : mun ? munNum(r.o) : freNum(r.o);
   const here = !mun && S.level === 'zone' && D.freKey(r.o) === S.zone;
   return `<div class="cmp-row${here ? ' is-hi' : ''}" data-cmpu="${html(cmpId(r.o))}"${
-      mun ? ` data-mun="${r.o.num}"` : ` data-fre="${html(D.freKey(r.o))}"`}>
+      r.o.nat ? '' : mun ? ` data-mun="${r.o.num}"` : ` data-fre="${html(D.freKey(r.o))}"`}>
     <span class="cmp-sw" style="background:${r.c};color:${ink}">${html(cmpCode(code))}</span>
     <span class="cmp-body">
-      <span class="cmp-n">${html(cmpName(r.o))}
-        <span class="lat">${html(bare(r.o.pt))}</span></span>
+      <span class="cmp-n">${html(cmpName(r.o))}${cmpLatin(r.o)}</span>
     </span>
     <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">
       <span class="num">${html(cmpFmt(r.v, field))}</span>${
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}
-    </button>${mun || S.level !== 'district' ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
+    </button>${!r.o.nat && (mun || S.level !== 'district') ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
   </div>`;
 }
 
@@ -4932,10 +5176,29 @@ function renderCmp() {
   const scope = atDistrict ? `
     <div class="cmp-scope" role="group" aria-label="${t('מה להשוות')}">
       <button class="cmp-sc" data-cmpscope="mun"
-        aria-pressed="${S.cmpScope !== 'fre'}">${t('עיריות')}</button>
+        aria-pressed="${S.cmpScope === 'mun'}">${t('עיריות')}</button>
       <button class="cmp-sc" data-cmpscope="fre"
-        aria-pressed="${S.cmpScope === 'fre'}">${t('רובעים')}</button>
+        aria-pressed="${S.cmpScope === 'fre'}">${t('רובעים')}</button>${D.series ? `
+      <button class="cmp-sc" data-cmpscope="pt"
+        aria-pressed="${S.cmpScope === 'pt'}">${t('פורטוגל')}</button>` : ''}
     </div>` : '<div class="cmp-scope"></div>';
+
+  /* The quarter, for the four fields that have one.  Two arrows and the period
+     between them — and deliberately NO difference between quarters shown
+     anywhere on this screen: every point is a twelve-month median, so
+     neighbouring quarters overlap by nine months (ARCHITECTURE.md §11). */
+  const per = seriesPeriods();
+  const pi = cmpPeriodIndex();
+  const periodBar = (CMP_SERIES[field.k] && per.length) ? `
+    <div class="cmp-per" role="group" aria-label="${t('רבעון')}">
+      <button class="cmp-pb" data-cmpper="-1" ${pi <= 0 ? 'disabled' : ''}
+        aria-label="${t('רבעון קודם')}">‹</button>
+      <span class="cmp-pv"><bdi class="lat num">${html(per[pi])}</bdi></span>
+      <button class="cmp-pb" data-cmpper="1" ${pi >= per.length - 1 ? 'disabled' : ''}
+        aria-label="${t('רבעון הבא')}">›</button>
+      ${pi < per.length - 1 ? `<button class="cmp-pl" data-cmpper="last">${t('לאחרון')}</button>` : ''}
+      <span class="cmp-pn">${pi + 1}/${per.length}</span>
+    </div>` : '';
 
   /* The key: five colours, and the range of the field each of them covers.
      The ranges are read off the units themselves, so the key can never claim
@@ -4962,10 +5225,11 @@ function renderCmp() {
     <div class="cmp-rows">${rk.none.map(r => {
       const mun = r.o.mun_num === undefined;
       return `<div class="cmp-row no" data-cmpu="${html(cmpId(r.o))}"${
-          mun ? ` data-mun="${r.o.num}"` : ''}>
-        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munNum(r.o) : freNum(r.o)))}</span>
-        <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}
-          <span class="lat">${html(bare(r.o.pt))}</span></span></span>
+          !r.o.nat && mun ? ` data-mun="${r.o.num}"` : ''}>
+        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(
+          r.o.nat ? r.o.dicofre : mun ? munNum(r.o) : freNum(r.o)))}</span>
+        <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}${
+          cmpLatin(r.o)}</span></span>
         <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${miss()}</button>
       </div>`;
     }).join('')}</div>
@@ -4978,11 +5242,15 @@ function renderCmp() {
     <h1 class="cmp-h">${html(t(field.he))}${
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}</h1>
     <p class="cmp-what">${atDistrict
-      ? (S.cmpScope === 'fre'
+      ? (cmpIsNat()
+         ? `${html(nf(cmpUnits().rows.length))} ${t('עיריות בכל פורטוגל')}`
+         : S.cmpScope === 'fre'
          ? t('275 רובעי המחוז')
          : t('18 עיריות המחוז'))
       : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`}
       ${S.sortDesc ? t('· מהגדול לקטן') : t('· מהקטן לגדול')}</p>
+    ${periodBar}
+    ${cmpIsNat() ? `<p class="note cmp-nat">${t('רמת השוואה בלבד. מחוץ למחוז פורטו האפליקציה מחזיקה מה ש-INE מפרסם — מחיר ושכירות לאורך זמן — ותו לא: אין אוכלוסייה, אין טופוגרפיה, אין מגבלות בנייה ואין גבולות במפה. שמות היחידות שמחוץ למחוז בפורטוגזית, כי תעתיק עברי אינו נוצר אוטומטית.')}</p>` : ''}
     ${key}
     ${list}
     ${none}
@@ -4999,6 +5267,7 @@ function toggleCmp() {
   if (S.cmp) {
     if (S.view === 'map') { S.view = 'split'; applyView(); }
     S.cmpScope = 'mun';
+    S.cmpPeriod = null;          // the latest quarter, like every other card
     S.cmpField = S.cmpField || CMP_DEFAULT;
     S.cmpPick = false;
     cmpTilesWere = S.tiles;
@@ -5040,9 +5309,28 @@ function cmpClick(e) {
     $('#paneText').scrollTop = 0;
     return true;
   }
+  const pb = e.target.closest('[data-cmpper]');
+  if (pb) {
+    const per = seriesPeriods();
+    const i = cmpPeriodIndex();
+    S.cmpPeriod = pb.dataset.cmpper === 'last' ? null
+      : Math.max(0, Math.min(per.length - 1, i + Number(pb.dataset.cmpper)));
+    /* Back to null when the step lands on the latest: the screen then reads the
+       same way it opened, and the state the app saves says "the latest" rather
+       than a number that will mean a different quarter after the next fetch. */
+    if (S.cmpPeriod === per.length - 1) S.cmpPeriod = null;
+    redrawLevel(); redrawText();
+    return true;
+  }
   const sc = e.target.closest('[data-cmpscope]');
   if (sc) {
     S.cmpScope = sc.dataset.cmpscope;
+    /* Leaving level 0 with a field that only exists there would leave the
+       screen on a field the next scope cannot show; and arriving at level 0
+       with, say, elevation chosen has the same problem in reverse. */
+    if (!cmpFields().some(f => f.k === S.cmpField)) {
+      S.cmpField = (cmpFields()[0] || { k: CMP_DEFAULT }).k;
+    }
     redrawLevel(); redrawText();
     return true;
   }
@@ -7917,6 +8205,36 @@ Object.assign(EN, {
     'Area',
   'טופוגרפיה':
     'Topography',
+  'פורטוגל':
+    'Portugal',
+  'עיריות בכל פורטוגל':
+    'municipalities across Portugal',
+  'רבעון':
+    'Quarter',
+  'רבעון קודם':
+    'Previous quarter',
+  'רבעון הבא':
+    'Next quarter',
+  'לאחרון':
+    'Latest',
+  'רמת השוואה בלבד. מחוץ למחוז פורטו האפליקציה מחזיקה מה ש-INE מפרסם — מחיר ושכירות לאורך זמן — ותו לא: אין אוכלוסייה, אין טופוגרפיה, אין מגבלות בנייה ואין גבולות במפה. שמות היחידות שמחוץ למחוז בפורטוגזית, כי תעתיק עברי אינו נוצר אוטומטית.':
+    'A comparison level only. Outside the Porto district this app holds what INE publishes — price and rent over time — and nothing else: no population, no topography, no building constraints and no boundaries on the map. Units outside the district carry their Portuguese names, because a Hebrew transliteration is never generated automatically.',
+  'לאורך זמן — INE':
+    'Over time — INE',
+  'קו לאורך הרבעונים':
+    'A line across the quarters',
+  'רבעונים':
+    'quarters',
+  '‏INE לא פרסם לעירייה הזאת אף רבעון, לא במכירות ולא בשכירות. זו אמירה על מה שפורסם, לא על השוק כאן.':
+    'INE published no quarter for this municipality, neither sales nor rents. That is a statement about what was published, not about the market here.',
+  '‏INE לא פרסם לרובע הזה אף רבעון, לא במכירות ולא בשכירות. זו אמירה על מה שפורסם, לא על השוק כאן.':
+    'INE published no quarter for this parish, neither sales nor rents. That is a statement about what was published, not about the market here.',
+  'כל נקודה היא החציון של שנים עשר החודשים שמסתיימים ברבעון שלה — ולא של הרבעון עצמו. שני רבעונים סמוכים חולקים תשעה חודשים, ולכן':
+    'Every point is the median of the twelve months ending in its quarter — not of the quarter itself. Two neighbouring quarters share nine months, so',
+  'אין כאן שינוי רבעוני ולא יוצג כזה':
+    'no quarter-on-quarter change is shown here, and none will be',
+  '. קטע חסר בקו הוא רבעון ש-INE לא פרסם: הקו נקטע ואינו מושלם.':
+    '. A missing stretch of the line is a quarter INE did not publish: the line breaks rather than being filled in.',
   'הנקודה הגבוהה':
     'Highest point',
   'הנקודה הנמוכה':
