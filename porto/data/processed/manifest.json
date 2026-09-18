@@ -1,5 +1,5 @@
 {
- "app_version": "2.0.9",
+ "app_version": "2.1.0",
  "files": {
   "boundaries_belts.geojson": {
    "bytes": 125797,
@@ -46,8 +46,8 @@
    "sha256": "892ad6f194e4d6535d0a16b920b3f9e8fd261754a42b830639a990e0c096eb7b"
   },
   "series.json": {
-   "bytes": 338958,
-   "sha256": "b6ed392e03cf69ac9930779508845a01cf546264347992bb87ede6e1fc16a942"
+   "bytes": 42168,
+   "sha256": "9438edfa40d4529f5dee24ad6994d51d7e8147abfb57616b9dcc24db0b5c79a1"
   },
   "zones.json": {
    "bytes": 604449,

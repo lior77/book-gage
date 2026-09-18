@@ -344,14 +344,24 @@ def read_dem():
     return by_code(doc.get("municipios", [])), by_code(doc.get("freguesias", []))
 
 
-def read_ine_series(district_codes):
-    """Every quarter INE published, for every unit in Portugal that has one.
+def read_ine_series(named_here):
+    """Every quarter INE published, for every unit THIS ATLAS holds.
 
     Move א׳ of docs/INFORMATION-PLAN.md.  Until 2.0.9 the app showed ONE
     quarter of these two indicators — the latest — and the other twenty-five
     were read, parsed and thrown away on every build.  Measured before the
-    change: 49,897 published values across 706 units, of which the app showed
-    the last quarter of four fields for 18 municipalities and 55 parishes.
+    change: 6,058 published values across the 84 units of this district that
+    INE publishes for (18 municipalities and 66 parishes), of which the app
+    showed the last quarter of four fields.
+
+    2.0.9 packed all of Portugal here — 706 units, 49,897 values, 115 KB
+    gzipped — to feed a national comparison level.  **2.1.0 took that out at
+    the user's decision**: a level that can hold price and rent and nothing
+    else was not worth its screen, and 100 KB of the 115 were about units this
+    atlas does not draw.  The withdrawal is recorded in INFORMATION-PLAN.md
+    under move א׳ and in ARCHITECTURE.md §5.6.7 rather than erased, because
+    what was built and why it was dropped is worth more than a tidy history.
+    The district's own twenty-six quarters — the thing the move was for — stay.
 
     Four decisions, and each of them is a rule of the accuracy contract:
 
@@ -369,13 +379,12 @@ def read_ine_series(district_codes):
     3.  **The wording is INE's own**, taken from data/raw/ine/fetch_report.json
         rather than retyped: `Valor mediano das vendas… (€/ m²)` is a median
         VALUE of sales, not a market price and not a valuation (rule 4).
-    4.  **No Hebrew name is invented for the 605 units outside the district.**
-        Rule 6: transliteration follows Portuguese pronunciation and is never
-        generated automatically.  They carry `pt` only, and the screen shows
-        the Portuguese name — which is also what a reader would type into a
-        search box or read on a sign.  District units carry no name here at
-        all: the app already holds theirs, and a second copy of a name is a
-        second thing to drift.
+    4.  **No name is carried here at all.**  Every unit in this file is one
+        the app already holds a Hebrew and a Portuguese name for, and a second
+        copy of a name is a second thing that can drift.  A unit INE publishes
+        for that this atlas does not draw — every parish outside the district,
+        and the unions of 2013 that the 2025 reform dissolved — is simply not
+        in the file: it has no screen to appear on.
     """
     files = [("ine_precos_venda.csv", {"Total": "sale", "Novos": "sale_new",
                                        "Existentes": "sale_used"}),
@@ -396,9 +405,16 @@ def read_ine_series(district_codes):
             for r in csv.DictReader(fh):
                 if r["geo_level"] not in ("municipio", "freguesia"):
                     continue          # nuts2, nuts3, continente and país are not units here
+                # The periods come from the whole file on purpose: the axis is
+                # INE's publication calendar, not this district's coverage, so a
+                # quarter in which nothing local was published is still a
+                # quarter — and it shows as a hole rather than closing the gap.
                 periods.add(r["period"])
                 if r["flag"] == "-" or r["value_eur_m2"] == "":
                     continue          # the marker is the absence; it is not a value
+                key = ("m" if r["geo_level"] == "municipio" else "f") + r["dicofre"]
+                if key not in named_here:
+                    continue          # not a unit this atlas draws
                 rows.append((r, series_of[r["dwelling_type"]]))
     periods = sorted(periods)
     at = {p: i for i, p in enumerate(periods)}
@@ -407,8 +423,6 @@ def read_ine_series(district_codes):
     for r, field in rows:
         key = ("m" if r["geo_level"] == "municipio" else "f") + r["dicofre"]
         u = units.setdefault(key, {"lv": key[0]})
-        if r["dicofre"] not in district_codes and "pt" not in u:
-            u["pt"] = r["geo_name"]
         arr = u.setdefault(field, [None] * len(periods))
         v = float(r["value_eur_m2"])
         arr[at[r["period"]]] = int(v) if v.is_integer() else round(v, 2)
@@ -430,6 +444,9 @@ def read_ine_series(district_codes):
                           "מה שהמקור אומר.",
             "levels": ["municipio", "freguesia"],
             "district": "13",   # every Porto-district DICOFRE starts here
+            "scope_he": "יחידות מחוז פורטו בלבד — אלה שהאפליקציה מציירת. "
+                        "‏INE מפרסם את שתי הסדרות לכל המדינה, וגרסה 2.0.9 ארזה "
+                        "את כולן כדי להזין רמת השוואה ארצית; היא בוטלה ב-2.1.0.",
             "units": len(units),
             "values": n_values,
             "series": ["sale", "sale_new", "sale_used", "rent"],
@@ -1665,13 +1682,12 @@ def main():
     dump("freguesias.json", {"items": freguesias})
     dump("porto_city.json", {"quarters": city, "places": places})
     dump("zones.json", {"zones": zones})
-    # The quarterly series, all of Portugal.  A file of its own rather than
-    # fields on the units: it is 110 KB gzipped against the 2 KB the four
-    # latest-quarter numbers cost, most of it about units this atlas does not
-    # draw, and the app loads it for the one screen that reads it.
-    district_codes = ({m["dicofre"] for m in municipios if m.get("dicofre")}
-                      | {f["dicofre"] for f in freguesias if f.get("dicofre")})
-    series = read_ine_series(district_codes)
+    # The quarterly series.  A file of its own rather than fields on the units:
+    # twenty-six quarters × four series is a shape the unit records have no room
+    # for, and one screen reads it.  15 KB gzipped for the district's 84 units.
+    named_here = ({"m" + m["dicofre"] for m in municipios if m.get("dicofre")}
+                  | {"f" + f["dicofre"] for f in freguesias if f.get("dicofre")})
+    series = read_ine_series(named_here)
     if series:
         dump("series.json", series)
     # The climate normals pass through untouched: there is nothing to compute.

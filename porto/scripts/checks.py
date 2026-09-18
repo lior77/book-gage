@@ -2537,14 +2537,19 @@ def main():
             if len(code) != (4 if lv == "m" else 6):
                 fail("series.json %s: a municipality code is four characters and "
                      "a parish code six" % key)
-            inside = key in named_here
-            if inside and "pt" in u:
-                fail("series.json %s: a unit of this district carries a name here "
-                     "too. The app already holds its name, and a second copy is a "
-                     "second thing to drift" % key)
-            if not inside and not u.get("pt"):
-                fail("series.json %s: this app has no unit by that code, and the "
-                     "file gives no name either — nothing could say what it is" % key)
+            # 2.0.9 packed all of Portugal here to feed a national comparison
+            # level; 2.1.0 withdrew that level, so the file holds only units the
+            # app draws.  Both halves of the rule matter: a foreign unit has no
+            # screen to appear on, and a name here would be a second copy of one
+            # the app already holds.
+            if key not in named_here:
+                fail("series.json %s is not a unit this atlas draws. Since 2.1.0 "
+                     "the file is the district's own; INE publishes for the whole "
+                     "country and the rest has no screen to appear on" % key)
+            if "pt" in u or "he" in u:
+                fail("series.json %s carries a name. Every unit here is one the "
+                     "app already names, and a second copy is a second thing to "
+                     "drift" % key)
             have_any = False
             for f in SER_KEYS:
                 if f not in u:
@@ -2578,6 +2583,9 @@ def main():
         FIELD_OF = {"Total": "sale", "Novos": "sale_new", "Existentes": "sale_used"}
         raw_n, raw_units = 0, set()
         latest = {}
+        # Counted over the SAME filter the build uses — the district's own units.
+        # The first cut of this counted the whole country and reported a 43,839
+        # value difference as a bug, which it was not: it was the scope.
         for name, is_rent in (("ine_precos_venda.csv", False), ("ine_rendas.csv", True)):
             path_ = os.path.join(ROOT, "data", "raw", "ine", name)
             if not os.path.exists(path_):
@@ -2590,8 +2598,10 @@ def main():
                         continue
                     if r["flag"] == "-" or r["value_eur_m2"] == "":
                         continue
-                    raw_n += 1
                     k = ("m" if r["geo_level"] == "municipio" else "f") + r["dicofre"]
+                    if k not in named_here:
+                        continue
+                    raw_n += 1
                     raw_units.add(k)
                     f = "rent" if is_rent else FIELD_OF[r["dwelling_type"]]
                     if r["period"] == periods[-1]:

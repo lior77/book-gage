@@ -155,7 +155,7 @@ const S = {
   // השוואת נתונים: one field ranked across the units of the level.  A screen,
   // like the menu, so it never comes back open — and never at level 3.
   cmp: false,
-  cmpScope: 'mun',     // level 1 only: 'mun' | 'fre' | 'pt' (all of Portugal)
+  cmpScope: 'mun',     // level 1 only: 'mun' | 'fre'
   cmpField: null,      // the field being compared; CMP_DEFAULT until chosen
   /* The quarter the four INE fields are ranked at.  null is the latest — it
      stays null rather than holding the last index, so a saved state does not
@@ -4891,52 +4891,13 @@ function cmpLevelWord() { return cmpUnits().kind === 'mun' ? 'municipio' : 'freg
 
 function cmpFields() {
   const lvl = cmpLevelWord();
-  const all = CMP_ALL.filter(f => (!f.only || f.only === lvl)
+  return CMP_ALL.filter(f => (!f.only || f.only === lvl)
     && D.sources.fields[cmpSrcKey(lvl, f.k)]);
-  /* Outside the district the app holds price and rent and NOTHING else — no
-     census, no topography, no constraints.  Offering the other forty fields
-     there would produce forty screens of "אין נתון" for 288 municipalities,
-     which reads as absence of the thing rather than absence of the data. */
-  return cmpIsNat() ? all.filter(f => CMP_SERIES[f.k]) : all;
 }
 function cmpField() {
   const f = cmpFields();
   return f.find(x => x.k === S.cmpField) || f.find(x => x.k === CMP_DEFAULT) || f[0] || null;
 }
-
-/* Level 0 — Portugal.  The 306 municipalities INE published a figure for,
-   anywhere in the country.  The eighteen of the district are the app's OWN
-   objects, so their Hebrew name, their colour and their shape on the map all
-   still work; the rest are rows built from the series and carry the Portuguese
-   name INE published and nothing else.  No Hebrew is invented for them —
-   rule 6 — and no other field is offered at this level, because no other field
-   exists outside the district (see cmpFields).
-
-   It is a comparison level and not a navigation level: there are no boundaries
-   for the other 288, and the screen says so rather than letting a reader think
-   the atlas covers them. */
-function natRows() {
-  if (!D.series) return [];
-  if (D._nat) return D._nat;
-  const mine = new Map(D.mun.map(m => ['m' + m.dicofre, m]));
-  const out = [];
-  for (const key of Object.keys(D.series.units)) {
-    const u = D.series.units[key];
-    if (u.lv !== 'm') continue;
-    out.push(mine.get(key) || { nat: true, dicofre: key.slice(1), pt: u.pt || key.slice(1) });
-  }
-  /* The district's own eighteen are in the list whether or not INE published
-     for them.  All eighteen are published today, so this adds nothing — but a
-     national ranking that silently dropped one of the municipalities this atlas
-     is ABOUT, because a source stopped publishing it, is the failure mode
-     worth spending three lines on. Unranked and marked "אין נתון", like
-     anywhere else. */
-  const have = new Set(out);
-  D.mun.forEach(m => { if (!have.has(m)) out.push(m); });
-  D._nat = out;
-  return out;
-}
-const cmpIsNat = () => S.cmpScope === 'pt' && S.level === 'district' && !!D.series;
 
 /* Which units this screen is comparing.  Level 1 offers the choice between the
    eighteen municipalities and the parishes; level 2 has none to offer — there
@@ -4948,23 +4909,12 @@ function cmpUnits() {
   if (S.level !== 'district') {
     return { kind: 'fre', all: false, rows: (D.freByMun.get(S.mun) || []).slice() };
   }
-  if (cmpIsNat()) return { kind: 'mun', all: false, nat: true, rows: natRows().slice() };
   if (S.cmpScope === 'fre') return { kind: 'fre', all: true, rows: D.fre.slice() };
   return { kind: 'mun', all: false, rows: D.mun.slice() };
 }
 
 const cmpName = o => nm(o);
-/* The Latin original beside the name — unless it IS the name.  A municipality
-   outside the district has no Hebrew one (rule 6: no transliteration is
-   generated), so nm() already returns the Portuguese, and printing it again
-   read as "Barrancos Barrancos". */
-const cmpLatin = o => {
-  const latin = bare(o.pt || '');
-  return !latin || cmpName(o) === latin ? ''
-    : ` <span class="lat">${html(latin)}</span>`;
-};
-const cmpId = o => (o.nat ? 'n' + o.dicofre
-  : o.mun_num === undefined ? 'm' + o.num : 'f' + D.freKey(o));
+const cmpId = o => (o.mun_num === undefined ? 'm' + o.num : 'f' + D.freKey(o));
 
 /* Smallest first, so the ranking and the list run the same way and one number
    means one thing.  The five classes hold an equal count each; a class is the
@@ -5122,21 +5072,19 @@ const cmpFmt = (v, f) => v === null || v === undefined ? miss() : nf(v, f.dec);
 function cmpRowHtml(r, field, lvl, rk) {
   const ink = inkOn(r.c);
   const mun = r.o.mun_num === undefined;
-  /* A municipality outside the district has no running number of this app's —
-     the numbers 1..18 are the district's own — so it wears its DICOFRE, which
-     is what the map labels everywhere else anyway. */
-  const code = r.o.nat ? r.o.dicofre : mun ? munNum(r.o) : freNum(r.o);
+  const code = mun ? munNum(r.o) : freNum(r.o);
   const here = !mun && S.level === 'zone' && D.freKey(r.o) === S.zone;
   return `<div class="cmp-row${here ? ' is-hi' : ''}" data-cmpu="${html(cmpId(r.o))}"${
-      r.o.nat ? '' : mun ? ` data-mun="${r.o.num}"` : ` data-fre="${html(D.freKey(r.o))}"`}>
+      mun ? ` data-mun="${r.o.num}"` : ` data-fre="${html(D.freKey(r.o))}"`}>
     <span class="cmp-sw" style="background:${r.c};color:${ink}">${html(cmpCode(code))}</span>
     <span class="cmp-body">
-      <span class="cmp-n">${html(cmpName(r.o))}${cmpLatin(r.o)}</span>
+      <span class="cmp-n">${html(cmpName(r.o))}
+        <span class="lat">${html(bare(r.o.pt))}</span></span>
     </span>
     <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">
       <span class="num">${html(cmpFmt(r.v, field))}</span>${
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}
-    </button>${!r.o.nat && (mun || S.level !== 'district') ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
+    </button>${mun || S.level !== 'district' ? '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>' : ''}
   </div>`;
 }
 
@@ -5176,11 +5124,9 @@ function renderCmp() {
   const scope = atDistrict ? `
     <div class="cmp-scope" role="group" aria-label="${t('מה להשוות')}">
       <button class="cmp-sc" data-cmpscope="mun"
-        aria-pressed="${S.cmpScope === 'mun'}">${t('עיריות')}</button>
+        aria-pressed="${S.cmpScope !== 'fre'}">${t('עיריות')}</button>
       <button class="cmp-sc" data-cmpscope="fre"
-        aria-pressed="${S.cmpScope === 'fre'}">${t('רובעים')}</button>${D.series ? `
-      <button class="cmp-sc" data-cmpscope="pt"
-        aria-pressed="${S.cmpScope === 'pt'}">${t('פורטוגל')}</button>` : ''}
+        aria-pressed="${S.cmpScope === 'fre'}">${t('רובעים')}</button>
     </div>` : '<div class="cmp-scope"></div>';
 
   /* The quarter, for the four fields that have one.  Two arrows and the period
@@ -5225,11 +5171,10 @@ function renderCmp() {
     <div class="cmp-rows">${rk.none.map(r => {
       const mun = r.o.mun_num === undefined;
       return `<div class="cmp-row no" data-cmpu="${html(cmpId(r.o))}"${
-          !r.o.nat && mun ? ` data-mun="${r.o.num}"` : ''}>
-        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(
-          r.o.nat ? r.o.dicofre : mun ? munNum(r.o) : freNum(r.o)))}</span>
-        <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}${
-          cmpLatin(r.o)}</span></span>
+          mun ? ` data-mun="${r.o.num}"` : ''}>
+        <span class="cmp-sw cmp-sw-nd">${html(cmpCode(mun ? munNum(r.o) : freNum(r.o)))}</span>
+        <span class="cmp-body"><span class="cmp-n">${html(cmpName(r.o))}
+          <span class="lat">${html(bare(r.o.pt))}</span></span></span>
         <button class="cmp-v" data-src="${html(cmpSrcKey(lvl, field.k))}">${miss()}</button>
       </div>`;
     }).join('')}</div>
@@ -5242,15 +5187,12 @@ function renderCmp() {
     <h1 class="cmp-h">${html(t(field.he))}${
       field.unit ? ' <span class="cmp-u">' + html(t(field.unit)) + '</span>' : ''}</h1>
     <p class="cmp-what">${atDistrict
-      ? (cmpIsNat()
-         ? `${html(nf(cmpUnits().rows.length))} ${t('עיריות בכל פורטוגל')}`
-         : S.cmpScope === 'fre'
+      ? (S.cmpScope === 'fre'
          ? t('275 רובעי המחוז')
          : t('18 עיריות המחוז'))
       : `${html((D.freByMun.get(S.mun) || []).length)} ${t('הרובעים של')} ${html(nm(m))}`}
       ${S.sortDesc ? t('· מהגדול לקטן') : t('· מהקטן לגדול')}</p>
     ${periodBar}
-    ${cmpIsNat() ? `<p class="note cmp-nat">${t('רמת השוואה בלבד. מחוץ למחוז פורטו האפליקציה מחזיקה מה ש-INE מפרסם — מחיר ושכירות לאורך זמן — ותו לא: אין אוכלוסייה, אין טופוגרפיה, אין מגבלות בנייה ואין גבולות במפה. שמות היחידות שמחוץ למחוז בפורטוגזית, כי תעתיק עברי אינו נוצר אוטומטית.')}</p>` : ''}
     ${key}
     ${list}
     ${none}
@@ -5325,12 +5267,6 @@ function cmpClick(e) {
   const sc = e.target.closest('[data-cmpscope]');
   if (sc) {
     S.cmpScope = sc.dataset.cmpscope;
-    /* Leaving level 0 with a field that only exists there would leave the
-       screen on a field the next scope cannot show; and arriving at level 0
-       with, say, elevation chosen has the same problem in reverse. */
-    if (!cmpFields().some(f => f.k === S.cmpField)) {
-      S.cmpField = (cmpFields()[0] || { k: CMP_DEFAULT }).k;
-    }
     redrawLevel(); redrawText();
     return true;
   }
@@ -8205,10 +8141,6 @@ Object.assign(EN, {
     'Area',
   'טופוגרפיה':
     'Topography',
-  'פורטוגל':
-    'Portugal',
-  'עיריות בכל פורטוגל':
-    'municipalities across Portugal',
   'רבעון':
     'Quarter',
   'רבעון קודם':
@@ -8217,8 +8149,6 @@ Object.assign(EN, {
     'Next quarter',
   'לאחרון':
     'Latest',
-  'רמת השוואה בלבד. מחוץ למחוז פורטו האפליקציה מחזיקה מה ש-INE מפרסם — מחיר ושכירות לאורך זמן — ותו לא: אין אוכלוסייה, אין טופוגרפיה, אין מגבלות בנייה ואין גבולות במפה. שמות היחידות שמחוץ למחוז בפורטוגזית, כי תעתיק עברי אינו נוצר אוטומטית.':
-    'A comparison level only. Outside the Porto district this app holds what INE publishes — price and rent over time — and nothing else: no population, no topography, no building constraints and no boundaries on the map. Units outside the district carry their Portuguese names, because a Hebrew transliteration is never generated automatically.',
   'לאורך זמן — INE':
     'Over time — INE',
   'קו לאורך הרבעונים':

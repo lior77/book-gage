@@ -1797,40 +1797,25 @@ const css = (page, sel, prop) =>
        && await page.$('#doc .ser-chart') === null,
      silentNote.slice(0, 90));
 
-  /* Level 0 — Portugal. */
+  /* The quarter, and the one thing the app must never do with it.
+
+     2.0.9 had a third scope here — all 306 municipalities INE publishes for —
+     and 2.1.0 took it out at the user's decision: a level that can hold price
+     and rent and nothing else was not worth its screen.  Two assertions below
+     are what is left of it, and they are the ones worth keeping: the district
+     is what this screen compares, and the file holds nothing else. */
   await page.evaluate(() => { goDistrict(); toggleCmp(); S.cmpField = 'price_eur_m2'; redrawLevel(); redrawText(); });
   await page.waitForTimeout(700);
-  const haveNat = await page.$('[data-cmpscope="pt"]') !== null;
-  ok('the comparison screen offers a third scope, all of Portugal', haveNat);
-  /* Guarded for the same reason as the topography clicks above: against an app
-     that cannot load the series this button does not exist, page.click() times
-     out, and one missing element would take the remaining three hundred checks
-     with it.  Proved on a copy whose loader is handed null instead of the
-     file: these twenty-four go red and the rest of the suite still runs. */
-  if (haveNat) {
-    await page.click('[data-cmpscope="pt"]');
-    await page.waitForTimeout(900);
-  }
-  const natRowsN = await page.$$eval('#doc .cmp-row', els => els.length);
-  ok('and it ranks every municipality INE published, not only the district\'s',
-     natRowsN === await page.evaluate(() =>
-       Object.values(D.series.units).filter(u => u.lv === 'm').length),
-     String(natRowsN));
-  ok('only the four fields that exist outside the district are offered there',
-     await page.evaluate(() => cmpFields().map(f => f.k).join(',')) ===
-       'price_eur_m2,price_new_eur_m2,price_used_eur_m2,rent_eur_m2',
-     await page.evaluate(() => cmpFields().map(f => f.k).join(',')));
-  const natNote = await page.$eval('#doc .cmp-nat', e => e.textContent).catch(() => '');
-  ok('and the screen says on its face what it does NOT hold out there',
-     natNote.includes('רמת השוואה בלבד') && natNote.includes('אין אוכלוסייה')
-       && natNote.includes('אין גבולות במפה'),
-     natNote.slice(0, 80));
-  ok('a municipality outside the district is not a link to anywhere',
-     await page.$$eval('#doc .cmp-row', els =>
-       els.filter(e => !e.dataset.mun).length) > 200,
-     await page.$$eval('#doc .cmp-row', els => els.filter(e => !e.dataset.mun).length + ' of ' + els.length));
-
-  /* The quarter, and the one thing the app must never do with it. */
+  ok('the comparison screen offers two scopes, and no national one',
+     await page.$$eval('#doc [data-cmpscope]', els =>
+       els.map(e => e.dataset.cmpscope).join(',')) === 'mun,fre',
+     await page.$$eval('#doc [data-cmpscope]', els => els.map(e => e.dataset.cmpscope).join(',')));
+  ok('and the series file carries the district\'s units and nothing else',
+     await page.evaluate(() => {
+       const named = new Set([...D.mun.map(m => 'm' + m.dicofre),
+                              ...D.fre.filter(f => f.dicofre).map(f => 'f' + f.dicofre)]);
+       return Object.keys(D.series.units).every(k => named.has(k));
+     }));
   const per = await page.evaluate(() => D.series.periods);
   ok('it opens on the latest quarter',
      (await page.$eval('#doc .cmp-pv', e => e.textContent.trim())) === per[per.length - 1],
@@ -1871,10 +1856,6 @@ const css = (page, sel, prop) =>
   ok('and לאחרון comes back to the latest quarter',
      (await page.$eval('#doc .cmp-pv', e => e.textContent.trim())) === per[per.length - 1]
        && await page.evaluate(() => S.cmpPeriod) === null);
-  await page.click('[data-cmpscope="mun"]').catch(() => {});
-  await page.waitForTimeout(700);
-  ok('leaving the national scope keeps a field that exists here',
-     await page.evaluate(() => cmpFields().some(f => f.k === S.cmpField)));
   await page.evaluate(() => { if (S.cmp) toggleCmp(); goDistrict(); });
   await page.waitForTimeout(600);
 
