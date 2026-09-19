@@ -1,0 +1,96 @@
+{
+ "kind": "listings",
+ "mine": true,
+ "provider": "idealista",
+ "source": "connector-detail",
+ "note": "Read one by one, by link, through idealista's official connector. The Portuguese travels verbatim; a Hebrew translation, where there is one, travels beside it and never in its place.",
+ "read_at": "2026-09-19T09:00:00Z",
+ "items": [
+  {
+   "code": "34741096",
+   "url": "https://www.idealista.pt/imovel/34741096/?utm_medium=generativeAI&utm_campaign=appChatgpt&utm_creation=link&utm_source=idGpt&utm_project=leadGeneration&utm_link=inChat_detail",
+   "price": 299900,
+   "currency": "€",
+   "size": 373,
+   "rooms": 3,
+   "bathrooms": 1,
+   "floor": null,
+   "type": "chalet/independantHouse",
+   "operation": "sale",
+   "status": "renew",
+   "newDevelopment": false,
+   "ll": [
+    41.180702,
+    -8.5292814
+   ],
+   "title": "Moradia independente à venda na Rua Merouços",
+   "subtitle": "Fânzeres e São Pedro da Cova, Gondomar, Porto",
+   "description": "Moradia Térrea T3 para Renovação com Terreno urbano de 3.000 m²",
+   "features": {
+    "hasAirConditioning": false,
+    "hasTerrace": false,
+    "hasSwimmingPool": false,
+    "hasParking": false,
+    "hasWardrobe": false
+   },
+   "thumbnail": "https://img4.idealista.pt/blur/WEB_DETAIL-L-L/0/id.pro.pt.image.master/a6/51/cb/305705932.webp",
+   "photos": [
+    "https://img4.idealista.pt/blur/WEB_DETAIL-L-L/0/id.pro.pt.image.master/a6/51/cb/305705932.webp",
+    "https://img4.idealista.pt/blur/WEB_DETAIL-L-L/0/id.pro.pt.image.master/34/89/e2/305705931.webp"
+   ],
+   "numPhotos": 2,
+   "priceByArea": 804,
+   "contact": null,
+   "pt": {
+    "title": "Moradia independente à venda na Rua Merouços",
+    "subtitle": "Fânzeres e São Pedro da Cova, Gondomar, Porto",
+    "description": "Moradia Térrea T3 para Renovação com Terreno urbano de 3.000 m²",
+    "phrases": {
+     "features": [
+      "Moradia independente",
+      "373 m² construídos, 160 m² úteis",
+      "T3",
+      "1 casa de banho",
+      "Lote de 3000 m²",
+      "Segunda mão/para recuperar",
+      "Orientação Sul, Este, Oeste"
+     ],
+     "costs": [
+      "Preço do imóvel: 299.900 €",
+      "Preço por m²: 804 €/m²"
+     ]
+    }
+   },
+   "he": {
+    "title": "בית פרטי נפרד למכירה ב-Rua Merouços",
+    "description": "בית חד־קומתי T3 לשיפוץ, עם מגרש עירוני של 3,000 מ״ר",
+    "phrases": {
+     "features": [
+      "בית פרטי נפרד",
+      "‏373 מ״ר בנויים, 160 מ״ר שימושיים",
+      "T3",
+      "חדר רחצה אחד",
+      "מגרש של 3,000 מ״ר",
+      "יד שנייה / לשיקום",
+      "כיווני אוויר: דרום, מזרח, מערב"
+     ],
+     "costs": [
+      "מחיר הנכס: 299,900 €",
+      "מחיר למ״ר: 804 €/מ״ר"
+     ]
+    }
+   },
+   "he_by": "תרגום בצ׳אט, מהפורטוגזית",
+   "operation_from": "phrase",
+   "outcome": "active",
+   "areas": {
+    "usableArea": 160
+   },
+   "energy": {
+    "type": "e",
+    "prefix": "Classificação energética:"
+   },
+   "updated_text": "Anúncio atualizado há mais de 3 meses"
+  }
+ ]
+}

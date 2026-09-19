@@ -975,6 +975,21 @@ body[data-view="text"] .map-only{display:none}
 .lst-quote{background:var(--bg); border-inline-start:3px solid var(--ctl-line); border-radius:var(--r-ctl);
   padding:var(--s2) var(--s3); font-size:var(--t-sm); line-height:var(--lh-sm); color:var(--ink)}
 .lst-quote p{margin:0; white-space:pre-line}
+/* The bullet list idealista prints under an advertisement, in whichever
+   language the card is showing.  Two columns would put a price and an area on
+   one line and invite reading them as a pair; they are not one. */
+.lst-ph{margin:var(--s2) 0 0; padding-inline-start:var(--s3); font-size:var(--t-sm);
+  line-height:var(--lh-sm); color:var(--ink-2)}
+.lst-ph li{margin:0}
+/* A property that is waiting for its details: a code, a way to the source, and
+   the sentence to paste into the chat.  The sentence is ON the screen and
+   selectable, because a copy button that silently fails is worse than none. */
+.wp-link .wp-find{margin-block-start:var(--s1)}
+.lnk-row{margin-block-start:var(--s3); padding-block-start:var(--s2); border-block-start:1px solid var(--line)}
+.lnk-h{display:flex; gap:var(--s2); align-items:baseline; justify-content:space-between}
+.lnk-ask{margin:var(--s1) 0 var(--s2); padding:var(--s2); background:var(--bg);
+  border-radius:var(--r-ctl); font-size:var(--t-sm); line-height:var(--lh-sm);
+  color:var(--ink); user-select:text; -webkit-user-select:text}
 .lst-photos{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:var(--s2)}
 .lst-photos img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:var(--r-ctl); background:var(--bg)}
 .lst-savedph{position:relative}

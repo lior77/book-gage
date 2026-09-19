@@ -4496,6 +4496,147 @@ const css = (page, sel, prop) =>
     await page.waitForTimeout(300);
   }
 
+  /* ---- a property that arrives as a pasted link ---------------------------
+     2.7.0, and the user's own sentence: "I find something interesting on
+     idealista, I copy the link, I paste it into My Places, and the property
+     joins them with all its details, a button to the source, and the text in
+     Hebrew."
+
+     Three of those four are here. The fourth — the app reading that page
+     itself — cannot be, and the screen says so instead of spinning: idealista
+     answers this app with DataDome and no Access-Control-Allow-Origin. So a
+     pasted link is a BOOKMARK THAT KNOWS IT IS ONE until its file arrives,
+     and the assertions below are mostly about that honesty: nothing invented
+     while waiting, and nothing restated once it lands.
+
+     The fixture is the property the user actually sent — 34741096, a
+     single-storey house at Fânzeres — read through the connector, trimmed to
+     two photos and one paragraph, with its Portuguese and its Hebrew kept
+     PARALLEL, because the pair is the thing being tested. */
+  {
+    const fs = require('fs'), path = require('path');
+    const prop = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'property_link.json'), 'utf8'));
+    const it = prop.items[0];
+    await page.route('**idealista.pt/**', r => r.abort());
+    await page.evaluate(() => { if (S.lst) lstOff(); if (!S.wp) toggleWp(); });
+    await page.evaluate(() => { D.links = []; saveLinks(); renderWaypoints(); });
+
+    /* The link the user pasted, verbatim, with /en/ and their own utm tail. */
+    const LINK = 'https://www.idealista.pt/en/imovel/34741096/?utm_medium=socialmedia&utm_campaign=private_sendadtofriend&utm_source=copiedLink';
+    const read = await page.evaluate(l => ({
+      mine: idealistaCode(l),
+      search: idealistaCode('https://www.idealista.pt/arrendar-casas/porto/com-preco-max_1300,apartamentos,t3,t4-t5/'),
+      pro: idealistaCode('https://www.idealista.pt/pro/hmendesrealestate/'),
+      other: idealistaCode('https://www.imovirtual.com/anuncio/abc'),
+      empty: idealistaCode('   '),
+    }), LINK);
+    ok('link: the code is read out of the address the user actually copies',
+       read.mine.code === '34741096' && !read.mine.err, JSON.stringify(read.mine));
+    /* Three refusals that each say WHICH wrong thing was pasted. "Bad link"
+       sends the reader back to the clipboard with nothing to fix. */
+    ok('link: a search link is refused, and named as a search',
+       !read.search.code && /חיפוש/.test(read.search.err || ''), read.search.err);
+    ok('link: an agency page is refused, and named as one',
+       !read.pro.code && /סוכנות/.test(read.pro.err || ''), read.pro.err);
+    ok('link: another portal is refused without pretending to know it',
+       !read.other.code && /idealista\.pt/.test(read.other.err || ''), read.other.err);
+    ok('link: an empty box is not an error', !read.empty.code && !read.empty.err);
+
+    const before = await page.evaluate(() => D.mine.length);
+    await page.evaluate(l => { const e = document.querySelector('#wpLink'); e.value = l; }, LINK);
+    await page.click('[data-wpact="link"]');
+    await page.waitForTimeout(200);
+    const waiting = await page.evaluate(() => ({
+      rows: document.querySelectorAll('#doc .lnk-row').length,
+      ask: (document.querySelector('#doc .lnk-ask') || {}).textContent || '',
+      href: (document.querySelector('#doc .lnk-row a') || {}).getAttribute('href'),
+      mine: D.mine.length,
+      priced: /299|373|€/.test((document.querySelector('#doc .wp-link') || {}).textContent || ''),
+    }));
+    ok('link: a pasted link waits as a property with nothing invented about it',
+       waiting.rows === 1 && waiting.mine === before && !waiting.priced,
+       JSON.stringify(waiting));
+    /* The sentence to paste into the chat is ON the screen, not only in the
+       clipboard: navigator.clipboard is absent over file:// in some WebViews
+       and rejects without a gesture in others, and a copy button that fails
+       silently is worse than no button at all. */
+    ok('link: and the request to paste into the chat is on screen, with the code in it',
+       /34741096/.test(waiting.ask) && waiting.ask.length > 20, waiting.ask.slice(0, 70));
+    ok('link: the waiting row reaches the advertisement at idealista',
+       /idealista\.pt\/imovel\/34741096/.test(waiting.href || ''), waiting.href);
+
+    await page.evaluate(l => { document.querySelector('#wpLink').value = l; }, LINK);
+    await page.click('[data-wpact="link"]');
+    await page.waitForTimeout(200);
+    ok('link: the same link twice is one waiting property, and the box says so',
+       await page.evaluate(() => document.querySelectorAll('#doc .lnk-row').length) === 1
+         && /ממתין/.test(await page.evaluate(() => (document.querySelector('#doc .wp-link .warn') || {}).textContent || '')));
+
+    await page.evaluate(d => importProperties(d), prop);
+    await page.waitForTimeout(900);
+    const card = await page.evaluate(() => {
+      const p = D.mine.find(x => x.id === 'l34741096');
+      const el = document.querySelector('[data-wp="l34741096"]') || document.querySelector('#doc .card:last-child');
+      return { has: !!p, name: p && p.name, waiting: document.querySelectorAll('#doc .lnk-row').length,
+               quote: (document.querySelector('#doc .lst-quote p') || {}).textContent || '',
+               grp: (document.querySelector('#doc .lst-quote .grp') || {}).textContent || '',
+               body: el ? el.textContent.replace(/\s+/g, ' ') : '',
+               ph: Array.from(document.querySelectorAll('#doc .lst-ph li')).map(x => x.textContent) };
+    });
+    ok('link: the file arrives and the waiting property becomes a place',
+       card.has && card.waiting === 0, JSON.stringify({ has: card.has, w: card.waiting }));
+    ok('link: the card is headed by the Hebrew title, not the Portuguese one',
+       card.name === it.he.title, card.name);
+    /* The whole of rule 4 on one line: a translation is a restatement, so it
+       is LABELLED one and its author is named — never printed where a reader
+       takes it for the advertisement's own words. */
+    ok('link: the Hebrew is shown as a translation, and says whose',
+       /תרגום/.test(card.grp) && card.grp.includes(it.he_by) && /לא לשון המודעה/.test(card.grp), card.grp);
+    ok('link: and the Hebrew on the glass is the Hebrew from the file',
+       card.quote.trim() === it.he.description.trim(), card.quote.slice(0, 60));
+    ok('link: the Hebrew bullets are shown one for one with the Portuguese',
+       card.ph.length === it.he.phrases.features.length + it.he.phrases.costs.length
+         && card.ph[0] === it.he.phrases.features[0], JSON.stringify(card.ph.slice(0, 2)));
+    /* Rule 6, and the nicest part of the design: the place name is not
+       translated by anybody. It is read out of the atlas FROM THE
+       COORDINATE, so it is the same name the rest of the app uses for the
+       same parish — and the advertisement's own "Fânzeres e São Pedro da
+       Cova, Gondomar, Porto" never reaches the screen. */
+    const he = await page.evaluate(() => {
+      const f = freguesiaAt(41.180702, -8.5292814);
+      return f ? nm(f) : null;
+    });
+    ok('link: the place name comes from the atlas by coordinate, not from the listing text',
+       !!he && card.body.includes(he) && !card.body.includes('Fânzeres e São Pedro da Cova, Gondomar'),
+       JSON.stringify({ he: he, seen: card.body.slice(0, 60) }));
+
+    await page.click('[data-wpact="orig"]');
+    await page.waitForTimeout(250);
+    const orig = await page.evaluate(() => ({
+      quote: (document.querySelector('#doc .lst-quote p') || {}).textContent || '',
+      grp: (document.querySelector('#doc .lst-quote .grp') || {}).textContent || '',
+      ph: Array.from(document.querySelectorAll('#doc .lst-ph li')).map(x => x.textContent),
+    }));
+    ok('link: one tap shows the Portuguese, byte for byte as idealista wrote it',
+       orig.quote.trim() === it.pt.description.trim(), orig.quote.slice(0, 60));
+    ok('link: and it is then labelled the advertisement\'s own words',
+       /לשון המודעה/.test(orig.grp) && !/תרגום/.test(orig.grp), orig.grp);
+    ok('link: the bullets flip with it, still one for one',
+       orig.ph.length === card.ph.length && orig.ph[0] === it.pt.phrases.features[0],
+       JSON.stringify(orig.ph.slice(0, 1)));
+
+    await page.evaluate(l => { document.querySelector('#wpLink').value = l; }, LINK);
+    await page.click('[data-wpact="link"]');
+    await page.waitForTimeout(200);
+    ok('link: pasting a link to a property already saved says so instead of waiting for it',
+       await page.evaluate(() => document.querySelectorAll('#doc .lnk-row').length) === 0
+         && /כבר נמצא/.test(await page.evaluate(() => (document.querySelector('#doc .wp-link .warn') || {}).textContent || '')));
+
+    await page.evaluate(() => { deleteMine('l34741096'); D.links = []; saveLinks(); if (S.wp) toggleWp(); });
+    await page.unroute('**idealista.pt/**');
+    await page.waitForTimeout(200);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await browser.close();
   process.exit(fail ? 1 : 0);

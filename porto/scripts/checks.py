@@ -2086,8 +2086,14 @@ def main():
             for m in re.finditer(pat, inside):
                 fail("app.js listings block line %d reaches %s (%s) — a listing screen shows no statistics"
                      % (appjs_txt.count("\n", 0, lst_a + m.start()) + 1, what, m.group(0)))
+        # The dispatch calls, and nothing else: each one is a name the rest of
+        # the app says to hand control INTO the block, never a way to read a
+        # listing's fields outside it.  lstToggleOrig( joined them in 2.7.0 —
+        # the my-places card's "show the Portuguese" button is handled by the
+        # waypoints click handler, which is outside, exactly as the card's own
+        # lstSavedHtml( is.
         allowed = {"renderListings(", "drawListings(", "lstAfterRender(", "toggleLst(", "lstOff(", "importListings(",
-                   "lstClick(", "lstInput(", "lstLoad(", "lstSavedHtml("}
+                   "lstClick(", "lstInput(", "lstLoad(", "lstSavedHtml(", "lstToggleOrig("}
         for m in re.finditer(r"\bD\.lst\b|\blst[A-Z]\w*\(|\bLST_\w+", outside):
             if m.group(0) in allowed:
                 continue
@@ -3189,6 +3195,109 @@ def main():
             fail("docs/ARCHITECTURE.md does not mention scripts/audit_e2e.py — "
                  "a verification step that no document names is a step nobody "
                  "runs")
+
+    # ---- 7au. a translation never stands where the source's words belong ----
+    # 2.7.0, and the request that produced it: "I copy the link, I paste it
+    # into My places, and the property joins them with all its details, a
+    # button to the source, and the text in Hebrew."
+    #
+    # THE HEBREW IS THE PART THAT NEEDS A CHECK.  Rule 4 of the accuracy
+    # contract is that a source's wording is never restated into something
+    # else — `perigosidade` is not `risco` — and a translation IS a
+    # restatement.  A good one, made on purpose, by somebody who can be named,
+    # but still not the advertisement's own words.  So the Portuguese travels
+    # verbatim and always; the Hebrew sits BESIDE it, labelled, with its
+    # author named; and the original is one tap away and never further.
+    #
+    # And rule 6 is honoured by NOT translating the one thing a script could:
+    # the place.  "Fânzeres e São Pedro da Cova, Gondomar" is read out of the
+    # atlas from the coordinate, in the Hebrew the rest of the app already
+    # uses for that parish — never transliterated here.
+    conv2 = os.path.join(ROOT, "scripts", "connector_property.py")
+    if not os.path.exists(conv2):
+        fail("scripts/connector_property.py is gone. It is what turns one "
+             "pasted link into a property the app can hold")
+    else:
+        cp = io.open(conv2, encoding="utf-8").read()
+        for owed, why in (
+                ("from connector_listings import item_of",
+                 "one record shape, in one place: two builders drift, and the "
+                 "card cannot tell which fields it is missing"),
+                ("A translation with no original is not a",
+                 "a `he` field with no `pt` beside it is a claim, not a "
+                 "translation, and nothing downstream could tell"),
+                ("--he-by",
+                 "a translation that does not say who made it cannot be "
+                 "weighed by the person reading it"),
+                ("One for one, or a line was dropped or invented",
+                 "a bullet list that came back a line short lost something, "
+                 "and nobody can see which line once it is on screen"),
+                ("--operation sale|rent",
+                 "`property_detail` carries no operation, and reading it off "
+                 "the size of the price is the unmarked interpolation rule 2 "
+                 "is written against")):
+            if owed not in cp:
+                fail("scripts/connector_property.py no longer carries %r — %s"
+                     % (owed, why))
+    # The app side.  A pasted link is a bookmark that knows it is one.
+    if "function idealistaCode" not in appjs_txt:
+        fail("app.js no longer reads the code out of an idealista link — the "
+             "link is the only thing the app CAN read, since idealista answers "
+             "it with DataDome and no Access-Control-Allow-Origin")
+    i = appjs_txt.find("function idealistaCode")
+    idc = appjs_txt[i:i + 900] if i >= 0 else ""
+    if idc.count("err:") < 3:
+        fail("idealistaCode() no longer says WHICH wrong thing was pasted. "
+             "A search link, an agency page and another portal are three "
+             "different mistakes, and 'bad link' sends the reader back to the "
+             "clipboard with nothing to fix")
+    if "importProperties" not in appjs_txt or "data.mine === true" not in appjs_txt:
+        fail("app.js no longer routes a by-link file into my places. Sending "
+             "it through the listings screen would draw a coverage audit over "
+             "a set that was never a search")
+    # The label on the Hebrew, and the way back to the Portuguese.  Both, or
+    # the translation is simply printed as the advertisement.
+    i = appjs_txt.find("function lstSavedHtml")
+    sv = appjs_txt[i:i + 3000] if i >= 0 else ""
+    for owed, why in ((u"תרגום לעברית",
+                       "the Hebrew has to be named a translation where it is shown"),
+                      (u"לא לשון המודעה",
+                       "and said not to be the advertisement's own words"),
+                      ("s.he_by",
+                       "and to name who made it"),
+                      ("data-wpact=\"orig\"",
+                       "and the Portuguese has to be one tap away, always")):
+        if owed not in sv:
+            fail("lstSavedHtml() no longer carries %r — %s. A translation "
+                 "printed where a reader takes it for the source is rule 4 "
+                 "broken in the direction that cannot be seen" % (owed, why))
+    # And the fixture the browser suite imports has to obey the same rule the
+    # converter enforces, or the test proves the app on a file the converter
+    # would have refused.
+    fx = os.path.join(ROOT, "scripts", "fixtures", "property_link.json")
+    if not os.path.exists(fx):
+        fail("scripts/fixtures/property_link.json is gone — the browser suite "
+             "has nothing to prove the translation pair on")
+    else:
+        pf = json.load(io.open(fx, encoding="utf-8"))
+        if pf.get("mine") is not True:
+            fail("the property fixture no longer says `mine: true`, which is "
+                 "the whole routing decision")
+        for it in pf.get("items", []):
+            pt, he = it.get("pt") or {}, it.get("he") or {}
+            for k in ("title", "subtitle", "description"):
+                if he.get(k) and not (pt.get(k) or "").strip():
+                    fail("property fixture %s: he.%s with no Portuguese behind it"
+                         % (it.get("code"), k))
+            for k, lst in (he.get("phrases") or {}).items():
+                if len(lst) != len((pt.get("phrases") or {}).get(k) or []):
+                    fail("property fixture %s: he.phrases[%r] does not match "
+                         "the Portuguese one for one" % (it.get("code"), k))
+            if not it.get("he_by"):
+                fail("property fixture %s carries a translation and does not "
+                     "say who made it" % it.get("code"))
+    print("by-link property: the Portuguese travels whole, the Hebrew beside "
+          "it and named")
 
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:

@@ -3120,6 +3120,7 @@ function loadMine() {
     D.mine = Array.isArray(a) ? a.filter(p => p && Array.isArray(p.ll)) : [];
   } catch (e) { D.mine = []; }
   D.mine = D.mine.filter(mineAlive);
+  loadLinks();
 }
 function saveMine() {
   try {
@@ -3452,6 +3453,7 @@ function renderWaypoints() {
       </div>
       <h1>${t('המקומות שלי')}</h1>
     </div>
+    ${linkBoxHtml()}
     ${D.mine.map(p => wpCard(p)).join('')}`;
   renderWpSheet();
   wpThumbs();
@@ -3983,6 +3985,12 @@ function wpClick(e) {
     if (act === 'pick') { harvestWp(); toggleAdd(); return true; }
     if (act === 'photo') { harvestWp(); pickPhoto(); return true; }
     if (act === 'fix') { fixPlacing(); return true; }
+    /* A link is read where it was typed: the box is re-rendered by linkAdd,
+       so the value has to be taken off the element BEFORE that happens. */
+    if (act === 'link') { const el = $('#wpLink'); linkAdd(el ? el.value : ''); return true; }
+    if (act === 'linkcopy') { linkCopy(b.dataset.code); return true; }
+    if (act === 'linkdel') { linkDel(b.dataset.code); return true; }
+    if (act === 'orig') { lstToggleOrig(b.dataset.code); return true; }
     if (act === 'del') {
       // two taps, because a card is the only copy of what is on it and the
       // list puts the button under a thumb that is scrolling past
@@ -6979,6 +6987,8 @@ const ONLINE = () => [
     what: t('אותם קבצים מ-GitHub, אם jsDelivr אינו זמין.') },
   { host: 'api.idealista.com', he: t('חיפוש נכסים'),
     what: t('״חפש״ במוד נכסים פונה ל-API של idealista עם המפתח שהזנת, ותמונות המודעות נטענות מהשרתים של idealista. מה שנשמר עובד אחר כך בלי רשת.') },
+  { host: 'www.idealista.pt', he: t('פתיחת מודעה במקור'),
+    what: t('״פתח במקור״ פותח את המודעה בדפדפן. האפליקציה עצמה אינה קוראת את העמוד — idealista חוסמת אותה — והדבקת קישור שומרת במכשיר את קוד המודעה בלבד, בלי לשלוח דבר.') },
   { host: 'www.google.com', he: t('פתיחה במפות גוגל'),
     what: t('לחיצה כפולה על מקום פותחת בדפדפן קישור עם נ״צ בלבד — בלי מפתח, בלי חשבון ובלי לשמור דבר.') },
 ];
@@ -8064,6 +8074,8 @@ async function lstSearch() {
 
 /* ---- a results file, from scripts/fetch_listings.py or from another device ---- */
 function importListings(data) {
+  // asked for by link, one at a time — those are places, not a search
+  if (data && data.mine === true) { importProperties(data); return; }
   const items = (data.items || []).filter(it => it && Array.isArray(it.ll) && it.ll.length === 2
     && it.ll.every(n => typeof n === 'number' && isFinite(n))).map(it => Object.assign({}, it, { code: String(it.code) }));
   if (!items.length) { const n = $('#impNote'); if (n) n.textContent = t('קובץ תוצאות בלי מודעות עם קואורדינטות.'); return; }
@@ -8081,21 +8093,33 @@ function importListings(data) {
 }
 
 /* ---- saving: the listing becomes a place of the user's own ---- */
-async function saveListing(code) {
-  const it = D.lst && D.lst.items.find(x => x.code === code);
-  if (!it) return;
-  const id = 'l' + it.code;
-  if (D.mine.some(p => p.id === id)) { lstSetState(code, 'saved'); redrawText(); return; }
-  const rec = { id, name: it.title || (lstPriceText(it)), desc: it.description || '', ll: [it.ll[0], it.ll[1]],
-    at: new Date().toISOString(),
-    src: { provider: D.lst.provider || '', code: it.code, url: it.url || '', price: it.price, currency: it.currency || '€',
+/* One record shape, built in one place.  A listing saved from the search
+   screen and a property fetched by its link are the same object on the same
+   card, and the moment they were built by two functions they would start to
+   differ in which fields they carried — which is the failure the fixture in
+   scripts/fixtures is there to prevent on the file side. */
+function listingRec(it, provider, readAt) {
+  /* The heading is the user's own label for their place, so a translated
+     title belongs there — and the Portuguese it came from is not lost: it
+     stays in `src.pt.title`, which the card shows on the other side of the
+     toggle. */
+  const head = (it.he && it.he.title) || it.title || lstPriceText(it);
+  const rec = { id: 'l' + it.code, name: head, desc: it.description || '',
+    ll: [it.ll[0], it.ll[1]], at: new Date().toISOString(), rev: nowStamp(),
+    src: { provider: provider || '', code: it.code, url: it.url || '', price: it.price, currency: it.currency || '€',
       size: it.size, rooms: it.rooms, bathrooms: it.bathrooms, floor: it.floor, type: it.type, operation: it.operation,
-      status: it.status, priceByArea: it.priceByArea, features: it.features || {}, read_at: D.lst.readAt,
+      status: it.status, priceByArea: it.priceByArea, features: it.features || {}, read_at: readAt,
       contact: it.contact || null } };
-  D.mine.push(rec);
-  saveMine();
-  lstSetState(code, 'saved');
-  redrawText(); drawMine();
+  /* What `property_detail` adds over a search hit, and what a translation adds
+     over that.  `pt` is always the advertisement's own words; `he` only ever
+     sits BESIDE it, never in its place, and `he_by` says who wrote it — a
+     reader weighing a translation needs to know whose it is. */
+  ['pt', 'he', 'he_by', 'areas', 'energy', 'updated_text', 'outcome', 'operation_from']
+    .forEach(k => { if (it[k] !== undefined && it[k] !== null && it[k] !== '') rec.src[k] = it[k]; });
+  return rec;
+}
+async function listingPhotos(rec, it) {
+  const id = rec.id;
   const urls = [it.thumbnail].concat(it.photos || []).filter((u, i, a) => u && a.indexOf(u) === i).slice(0, LST_PHOTOS_MAX);
   const metas = [];
   let failed = 0;
@@ -8109,13 +8133,86 @@ async function saveListing(code) {
     } catch (e) { failed++; }
   }
   if (metas.length) { rec.photo = metas[0]; rec.photos = metas; saveMine(); }
-  if (failed) lstMsg(`${t('נשמר. ')}${metas.length} ${t('תמונות נשמרו, ')}${failed} ${t('לא הגיעו — ללא רשת התמונות נשארות אצל הספק.')}`, true);
-  else if (metas.length) lstMsg(`${t('נשמר עם')} ${metas.length} ${t('תמונות.')}`);
+  return { kept: metas.length, failed: failed };
+}
+async function saveListing(code) {
+  const it = D.lst && D.lst.items.find(x => x.code === code);
+  if (!it) return;
+  if (D.mine.some(p => p.id === 'l' + it.code)) { lstSetState(code, 'saved'); redrawText(); return; }
+  const rec = listingRec(it, D.lst.provider || '', D.lst.readAt);
+  D.mine.push(rec);
+  saveMine();
+  lstSetState(code, 'saved');
+  redrawText(); drawMine();
+  const got = await listingPhotos(rec, it);
+  if (got.failed) lstMsg(`${t('נשמר. ')}${got.kept} ${t('תמונות נשמרו, ')}${got.failed} ${t('לא הגיעו — ללא רשת התמונות נשארות אצל הספק.')}`, true);
+  else if (got.kept) lstMsg(`${t('נשמר עם')} ${got.kept} ${t('תמונות.')}`);
   if (S.wp) renderWaypoints();
 }
 
+/* ---- a file of properties asked for one by one, by link ---- */
+/* `"mine": true` is the whole routing decision: a SEARCH lands on the listings
+   screen, where the coverage audit belongs; properties asked for BY LINK were
+   already chosen, one at a time, and belong in "המקומות שלי" straight away.
+   Sending them through the listings screen would mean a "coverage" line over
+   a set that was never a search — an audit of a question nobody asked. */
+async function importProperties(data) {
+  const items = (data.items || []).filter(it => it && Array.isArray(it.ll) && it.ll.length === 2
+    && it.ll.every(n => typeof n === 'number' && isFinite(n)));
+  if (!items.length) { const n = $('#impNote'); if (n) n.textContent = t('קובץ נכסים בלי קואורדינטות.'); return; }
+  closePanel();
+  let added = 0, updated = 0;
+  const fresh = [];
+  items.forEach(it => {
+    const rec = listingRec(Object.assign({}, it, { code: String(it.code) }), data.provider || 'idealista', data.read_at);
+    const i = D.mine.findIndex(p => p.id === rec.id);
+    if (i < 0) { D.mine.push(rec); added++; } else { D.mine[i] = rec; updated++; }
+    // the link has arrived; it is not waiting for anything any more
+    D.links = D.links.filter(x => x.code !== rec.src.code);
+    fresh.push([rec, it]);
+  });
+  saveMine(); saveLinks();
+  // land on the screen the user pasted into, not on whichever one was open
+  if (!S.wp) { S.wp = true; renderMenu(); }
+  if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
+  mapNote(`${added} ${t('נכסים נוספו')}${updated ? ' · ' + updated + ' ' + t('עודכנו') : ''}`);
+  for (const [rec, it] of fresh) await listingPhotos(rec, it);
+  drawMine(); renderWaypoints();
+}
+
+/* Which properties are currently showing their Portuguese instead of their
+   Hebrew.  Per property and not global: comparing one card against its source
+   is a thing you do to ONE card, and flipping the whole screen to Portuguese
+   to check a single sentence is not what was asked. */
+const lstOrig = new Set();
+function lstToggleOrig(code) {
+  if (lstOrig.has(code)) lstOrig.delete(code); else lstOrig.add(code);
+  renderWaypoints();
+}
+/* idealista's own bullet list, by block, in whichever language is showing.
+   The Portuguese is laid out left-to-right and the Hebrew right-to-left,
+   because a price with a currency sign reads backwards in the wrong one. */
+function lstPhrasesHtml(src, he) {
+  const blocks = (he && he.phrases) || (src.pt && src.pt.phrases) || null;
+  if (!blocks) return '';
+  return Object.keys(blocks).map(k => `<ul class="lst-ph"${he ? '' : ' dir="ltr"'}>${
+    blocks[k].map(x => `<li>${html(x)}</li>`).join('')}</ul>`).join('');
+}
+
 /* The saved listing on its my-places card: three layers of "this is a copy",
-   the quote marked as the provider's words, the parish from the coordinate. */
+   the quote marked as the provider's words, the parish from the coordinate.
+
+   AND, FROM 2.7.0, A TRANSLATION THAT SAYS IT IS ONE.  The user asked for the
+   text in Hebrew, and the honest way to give it is not to replace the
+   advertisement with a rendering of it: rule 4 of the accuracy contract is
+   that a source's wording is never restated into something else, and a
+   translation IS a restatement — a good one, made on purpose, by somebody
+   who can be named.  So the Hebrew is shown with its own heading, which says
+   it is a translation and who made it, and the Portuguese is one tap away and
+   never further.  The place name is not translated by anybody: `wpCard` reads
+   it out of the atlas, in Hebrew, from the coordinate — which is rule 6, and
+   is also just better, because it is the same name the rest of the app uses
+   for the same parish. */
 function lstSavedHtml(p) {
   const s = p.src;
   const when = lstDate(s.read_at || p.at);
@@ -8124,12 +8221,155 @@ function lstSavedHtml(p) {
   const meta = lstMeta({ rooms: s.rooms, size: s.size, floor: s.floor, status: s.status });
   const figs = (p.photos && p.photos.length ? p.photos : (p.photo ? [p.photo] : [])).map((m, i) =>
     `<figure class="ph-fig lst-savedph" data-wpimg="${html(i ? p.id + ':' + i : p.id)}"><figcaption class="ph-cap">${t('עותק שמור')} · ${html(when)}</figcaption><img class="ph-img" alt=""></figure>`).join('');
+  const pt = s.pt || null;
+  const showHe = !!(s.he && !lstOrig.has(s.code));
+  const body = showHe ? (s.he.description || '') : ((pt && pt.description) || p.desc || '');
+  const head = showHe
+    ? `${t('תרגום לעברית')} · ${html(s.he_by || '')} — ${t('לא לשון המודעה')}`
+    : `${t('לשון המודעה')} · ${html(s.provider || '')}${pt ? ' · ' + t('פורטוגזית') : ''}`;
+  const flip = s.he ? `<div class="chips"><button class="chip" data-wpact="orig" data-code="${html(s.code)}"
+      >${showHe ? t('הצגת המקור בפורטוגזית') : t('חזרה לתרגום')}</button></div>` : '';
+  /* A withdrawn advertisement is still worth keeping — it is what the market
+     did — but it is not an offer any more, and the card may not read like one. */
+  const gone = s.outcome && s.outcome !== 'active';
   return `<div class="lst-price"><span class="num">${html(lstPriceText({ price: s.price, currency: s.currency }))}</span>${meta ? ' <span class="lst-meta">· ' + meta + '</span>' : ''}
       <span class="lst-asread">${t('כפי שנקרא אז')} · ${html(when)}</span></div>
+    ${gone ? `<div class="warn">${t('המודעה אינה פעילה אצל idealista')} · <span class="lat">${html(s.outcome)}</span></div>` : ''}
     ${stale ? `<div class="warn">${t('נקרא לפני')} ${days} ${t('ימים. מודעה יכולה להימכר מאז.')} ${s.url ? `<a href="${html(s.url)}" target="_blank" rel="noopener">${t('בדוק במקור')}</a>` : ''}</div>` : ''}
-    ${p.desc ? `<div class="lst-quote"><div class="grp">${t('לשון המודעה')} · ${html(s.provider || '')}</div><p>${html(p.desc)}</p></div>` : ''}
+    ${body ? `<div class="lst-quote"><div class="grp">${head}</div><p${showHe ? '' : ' dir="ltr"'}>${html(body)}</p>${flip}</div>` : ''}
+    ${lstPhrasesHtml(s, showHe ? s.he : null)}
+    ${s.updated_text ? `<p class="note" dir="ltr">${html(s.updated_text)}</p>` : ''}
     ${figs}
     <p class="note">${s.url ? `<a href="${html(s.url)}" target="_blank" rel="noopener">${t('פתח במקור')}</a> · ` : ''}${t('קוד')} <span class="lat">${html(s.code || '')}</span></p>`;
+}
+
+/* ------------------------------------------------ a property from a link ---
+   The ask, in the user's words: "I find something interesting on idealista, I
+   copy the link, I paste it into My Places, and the property joins them with
+   all its details, a button to the source, and the text in Hebrew."
+
+   THREE OF THOSE FOUR HAPPEN HERE, AND THE FOURTH IS SAID OUT LOUD instead of
+   failing quietly: the app cannot READ that link.  idealista answers this app
+   with DataDome and without `Access-Control-Allow-Origin`, so a fetch from the
+   WebView does not come back — not slowly, not partly, at all.  Pretending
+   otherwise would mean a spinner that never ends.
+
+   What the link does carry, and what needs no network at all, is the
+   property's code: `idealista.pt/imovel/34741096/`.  So a pasted link becomes
+   a WAITING PROPERTY — the code, the canonical address, a button that opens it
+   at idealista, and the exact sentence to paste into the chat that holds the
+   connector.  When the file comes back the entry is matched BY CODE and
+   becomes a place.
+
+   Nothing is invented in between.  A waiting property has no price, no size
+   and no coordinate, and shows none of them: it is a bookmark that knows it is
+   a bookmark.  That is the difference between this and a row of "אין נתון"
+   pretending to be a property. */
+const LINK_KEY = 'porto-mine-link-v1';
+
+/* The shapes idealista actually hands out.  A property is `/imovel/<code>/`,
+   optionally behind a two-letter language segment (`/en/imovel/…` is what the
+   "send to a friend" link gives), and with any utm tail.  Everything else on
+   the domain — a search, an agency's microsite, a map page — has no single
+   property in it, and the refusal SAYS WHICH it got, because "bad link" sends
+   the reader back to the clipboard with nothing to fix. */
+const LINK_PROP = /idealista\.pt\/(?:[a-z]{2}\/)?imovel\/(\d{3,12})(?:[/?#]|$)/i;
+const LINK_SEARCH = /idealista\.pt\/(?:[a-z]{2}\/)?(?:geo\/)?(?:comprar|arrendar|venda|alugar)[a-z-]*\//i;
+const LINK_PRO = /idealista\.pt\/(?:[a-z]{2}\/)?pro\//i;
+
+/* Returns {code} or {err}.  Empty in, empty out — typing is not an error. */
+function idealistaCode(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return {};
+  const m = LINK_PROP.exec(s);
+  if (m) return { code: m[1] };
+  if (LINK_SEARCH.test(s)) return { err: t('זהו קישור לחיפוש, לא למודעה אחת. חיפוש שלם נכנס במסך ״נכסים״ → ייבוא.') };
+  if (LINK_PRO.test(s)) return { err: t('זהו קישור לעמוד של סוכנות, לא למודעה אחת.') };
+  if (/idealista\./i.test(s)) return { err: t('קישור של idealista, אבל לא למודעה. מודעה נראית כך: idealista.pt/imovel/34741096/') };
+  return { err: t('זה אינו קישור של idealista.pt.') };
+}
+/* The address without the tracking tail.  The utm parameters on a link the
+   CONNECTOR returns are kept — that is the attribution idealista asks for in
+   return — but these came off the user's own clipboard and identify nothing
+   but how they copied it. */
+const linkUrl = code => 'https://www.idealista.pt/imovel/' + code + '/';
+
+function loadLinks() {
+  try {
+    const a = JSON.parse(localStorage.getItem(LINK_KEY) || '[]');
+    D.links = Array.isArray(a) ? a.filter(x => x && typeof x.code === 'string') : [];
+  } catch (e) { D.links = []; }
+}
+function saveLinks() {
+  try { localStorage.setItem(LINK_KEY, JSON.stringify(D.links)); }
+  catch (e) { mapNote(t('לא הצלחתי לשמור — ייתכן שהדפדפן חוסם אחסון מקומי.'), true); }
+}
+/* The sentence to paste into the chat.  It names the code and asks for the
+   file by name, so that what comes back is a file this app imports and not a
+   description of one. */
+const linkAsk = code => t('הבא לי מ-idealista את הנכס ') + code +
+  t(', עם תרגום לעברית, כקובץ לייבוא לפורטולנד.');
+
+let linkMsg = '';            // what the box said after the last paste
+function linkAdd(raw) {
+  const { code, err } = idealistaCode(raw);
+  if (err) { linkMsg = err; renderWaypoints(); return; }
+  if (!code) return;
+  const have = D.mine.find(p => p.src && p.src.code === code);
+  if (have) { linkMsg = t('הנכס הזה כבר נמצא ב״המקומות שלי״.'); renderWaypoints(); return; }
+  if (D.links.some(x => x.code === code)) { linkMsg = t('הקישור הזה כבר ממתין.'); renderWaypoints(); return; }
+  D.links.push({ code: code, url: linkUrl(code), at: nowStamp() });
+  saveLinks();
+  linkMsg = '';
+  renderWaypoints();
+}
+function linkDel(code) {
+  D.links = D.links.filter(x => x.code !== code);
+  saveLinks(); renderWaypoints();
+}
+/* Copying is a convenience and not the mechanism: navigator.clipboard is
+   absent over file:// in some WebViews and rejects without a gesture in
+   others.  So the sentence is ON THE SCREEN, selectable, whether or not the
+   button works — a copy button that silently does nothing is worse than no
+   button. */
+function linkCopy(code) {
+  const s = linkAsk(code);
+  const done = () => { linkMsg = t('הועתק. להדביק בצ׳אט.'); renderWaypoints(); };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(s).then(done, () => {
+        linkMsg = t('הדפדפן לא נתן להעתיק — אפשר לסמן את הטקסט ולהעתיק ביד.');
+        renderWaypoints();
+      });
+      return;
+    }
+  } catch (e) { /* fall through to the same message */ }
+  linkMsg = t('הדפדפן לא נתן להעתיק — אפשר לסמן את הטקסט ולהעתיק ביד.');
+  renderWaypoints();
+}
+
+function linkBoxHtml() {
+  const rows = D.links.map(x => `<div class="lnk-row">
+      <div class="lnk-h"><span class="lat">${html(x.code)}</span>
+        <a href="${html(x.url)}" target="_blank" rel="noopener">${t('פתח במקור')}</a></div>
+      <p class="lnk-ask" id="lnkAsk-${html(x.code)}">${html(linkAsk(x.code))}</p>
+      <div class="chips">
+        <button class="chip" data-wpact="linkcopy" data-code="${html(x.code)}">${t('העתקת הבקשה')}</button>
+        <button class="chip" data-wpact="linkdel" data-code="${html(x.code)}">${t('הסרה')}</button>
+      </div>
+    </div>`).join('');
+  return `<div class="card wp-link">
+      <h2>${t('הוספת נכס מקישור')}</h2>
+      <div class="wp-find">
+        <input id="wpLink" type="url" inputmode="url" autocomplete="off" dir="ltr"
+               placeholder="https://www.idealista.pt/imovel/34741096/"
+               aria-label="${t('קישור למודעה ב-idealista')}">
+        <div class="chips"><button class="chip is-on" data-wpact="link">${t('הוספה')}</button></div>
+      </div>
+      ${linkMsg ? `<p class="warn">${html(linkMsg)}</p>` : ''}
+      <p class="note">${t('האפליקציה אינה יכולה לקרוא את העמוד בעצמה — idealista חוסמת אותה. מה שהקישור כן נותן הוא קוד המודעה, והוא מספיק: מעתיקים את הבקשה שלמטה לצ׳אט, ומייבאים את הקובץ שחוזר.')}</p>
+      ${rows ? `<div class="grp">${t('ממתינים לפרטים')}</div>${rows}` : ''}
+    </div>`;
 }
 
 /* ---- taps and typing in the text half ---- */
@@ -8214,6 +8454,62 @@ function lstHarvest() {
 /* ======================================================== LISTINGS-END ==== */
 
 Object.assign(EN, {
+  'פתיחת מודעה במקור':
+    'Opening an advertisement at its source',
+  '״פתח במקור״ פותח את המודעה בדפדפן. האפליקציה עצמה אינה קוראת את העמוד — idealista חוסמת אותה — והדבקת קישור שומרת במכשיר את קוד המודעה בלבד, בלי לשלוח דבר.':
+    '“Open at the source” opens the advertisement in the browser. The app does not read that page itself — idealista blocks it — and pasting a link stores only the advertisement\'s code on the device, sending nothing.',
+  ', עם תרגום לעברית, כקובץ לייבוא לפורטולנד.':
+    ', with a Hebrew translation, as a file Portoland can import.',
+  'האפליקציה אינה יכולה לקרוא את העמוד בעצמה — idealista חוסמת אותה. מה שהקישור כן נותן הוא קוד המודעה, והוא מספיק: מעתיקים את הבקשה שלמטה לצ׳אט, ומייבאים את הקובץ שחוזר.':
+    'The app cannot read that page itself — idealista blocks it. What the link does give is the advertisement\'s code, and that is enough: copy the request below into the chat, and import the file that comes back.',
+  'הבא לי מ-idealista את הנכס ':
+    'Get me property ',
+  'הדפדפן לא נתן להעתיק — אפשר לסמן את הטקסט ולהעתיק ביד.':
+    'The browser would not copy — select the text above and copy it by hand.',
+  'הוספה':
+    'Add',
+  'הוספת נכס מקישור':
+    'Add a property from a link',
+  'הועתק. להדביק בצ׳אט.':
+    'Copied. Paste it into the chat.',
+  'המודעה אינה פעילה אצל idealista':
+    'This advertisement is no longer active at idealista',
+  'הנכס הזה כבר נמצא ב״המקומות שלי״.':
+    'That property is already in My places.',
+  'הסרה':
+    'Remove',
+  'העתקת הבקשה':
+    'Copy the request',
+  'הצגת המקור בפורטוגזית':
+    'Show the Portuguese original',
+  'הקישור הזה כבר ממתין.':
+    'That link is already waiting.',
+  'זה אינו קישור של idealista.pt.':
+    'That is not an idealista.pt link.',
+  'זהו קישור לחיפוש, לא למודעה אחת. חיפוש שלם נכנס במסך ״נכסים״ → ייבוא.':
+    'That is a search link, not one advertisement. A whole search comes in through Properties → import.',
+  'זהו קישור לעמוד של סוכנות, לא למודעה אחת.':
+    'That is an agency page, not one advertisement.',
+  'חזרה לתרגום':
+    'Back to the translation',
+  'לא לשון המודעה':
+    'not the advertisement\'s own words',
+  'ממתינים לפרטים':
+    'Waiting for their details',
+  'נכסים נוספו':
+    'properties added',
+  'עודכנו':
+    'updated',
+  'פורטוגזית':
+    'Portuguese',
+  'קובץ נכסים בלי קואורדינטות.':
+    'A properties file with no coordinates.',
+  'קישור למודעה ב-idealista':
+    'Link to an idealista advertisement',
+  'קישור של idealista, אבל לא למודעה. מודעה נראית כך: idealista.pt/imovel/34741096/':
+    'An idealista link, but not to an advertisement. One looks like this: idealista.pt/imovel/34741096/',
+  'תרגום לעברית':
+    'Hebrew translation',
   'השכלה גבוהה — מכלל התושבים': 'Higher education — of all residents',
   '<h3>מגבלות בנייה</h3>': '<h3>Building constraints</h3>',
   'צורת הבנייה': 'The shape of the stock',
