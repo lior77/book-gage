@@ -212,7 +212,6 @@ const C = {
   mapInk: '#101010',       // --map-ink: a point with no category, the letter on a pin
   hi: '#b7791f',           // --hi-line: the ring on the chosen point, the chosen parish
   me: '#1a73e8',           // --me: the device's own position
-  listing: '#2f6fb3', listingRead: '#8a8f98',   // a listing pin, and one already read
   water: '#2f7fc1', waterFill: '#4a9ad4',
   fillDefault: '#dddddd',  // a parish with no colour of its own
   letterSwatch: '#cfe0f2', // the key's swatch for neighbourhood letters
@@ -783,28 +782,6 @@ function safetyStats(o, lvl) {
   </div>`;
 }
 
-/* Terrain: how high the ground is and how steeply it falls.  Both come from
-   the same 30 m raster and both are `approx` — a statistic this project
-   computed rather than one a body published, and computed on a model of the
-   SURFACE, which in a dense centre is the roofs.  The note says so on the
-   card rather than only in the source record, because "mean slope 5.6°" reads
-   like a survey of the plot if nothing on screen says it is not. */
-function terrainCard(o, lvl) {
-  const e = o.ele;
-  const kEle = lvl + '.ele', kSlope = lvl + '.slope';
-  if (!D.sources.fields[kEle]) return '';
-  const range = e && e.min !== null && e.max !== null
-    ? nf(e.min, 0) + '–' + nf(e.max, 0) : null;
-  return `<div class="card">
-    <h2>${t('גובה ושיפוע')}</h2>
-    <div class="stats">
-      ${stat(t('גובה ממוצע'), e ? e.mean : null, t('מ׳'), 0, kEle)}
-      ${statText(t('טווח הגבהים'), range === null ? '' : range + ' ' + t('מ׳'), kEle)}
-      ${stat(t('שיפוע ממוצע'), e ? e.slope : null, t('מעלות'), 1, kSlope)}
-    </div>
-    <p class="note">${t('נמדד מרשת של 30 מטר, ומודל פני שטח: הוא כולל בניינים וצמרות עצים ואינו הקרקע עצמה. השיפוע הוא של המדרון ולא של החלקה.')}</p>
-  </div>`;
-}
 
 function stat(label, val, unit, dec, srcKey, step, fmt) {
   const f = D.sources.fields[srcKey] || {};
@@ -994,6 +971,65 @@ async function load() {
 
 /* ------------------------------------------------------------------- map --- */
 let map, tileLayer;
+
+/* ------------------------------------------------- the two backgrounds ---
+   Streets, and contour lines.  Added in 2.8.0 together with the deletion of
+   "גובה ושיפוע": the elevation numbers came from Copernicus GLO-30, a SURFACE
+   model that measures roofs and tree canopy, so they were withdrawn (see
+   sources.json → missing).  What a reader actually wanted from them — is this
+   place on a hill, and how steep — a contour map answers directly, and
+   without pretending to be a measurement of anything in particular.
+
+   AND THE HONEST LIMIT, WHICH IS ON THE MENU ROW ITSELF: OpenTopoMap's
+   contours are derived from SRTM, which is not bare earth either.  They are
+   good for reading a hillside and are not a source for a number — which is
+   exactly why this is a BACKGROUND and not a field.  A field would need a
+   source record, a reference year and a confidence; a background needs
+   attribution, and gets it. */
+const BASEMAPS = {
+  street: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom: 19,
+            attribution: '© OpenStreetMap contributors' },
+  topo:   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', maxZoom: 17,
+            subdomains: 'abc',
+            attribution: '© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)' },
+};
+const baseKey = () => (BASEMAPS[S.base] ? S.base : 'street');
+function makeTiles() {
+  const b = BASEMAPS[baseKey()];
+  const opt = { maxZoom: b.maxZoom, crossOrigin: true, attribution: b.attribution };
+  if (b.subdomains) opt.subdomains = b.subdomains;
+  return L.tileLayer(b.url, opt);
+}
+/* Swapping the background must not swap anything else.  The old layer is
+   removed before the new one is built, and the new one is added only if the
+   background was on — choosing a style while the background is off is a
+   preference, not a request to turn it on. */
+/* No connection, or a host that will not load third-party images: drop the
+   background rather than leave the user staring at empty grey squares.  Bound
+   per layer, so a swap carries it. */
+function attachTileFallback() {
+  let errs = 0;
+  tileLayer.on('tileerror', () => {
+    if (++errs < 6 || !map.hasLayer(tileLayer)) return;
+    map.removeLayer(tileLayer);
+    S.tiles = false;
+    applySwitches();
+    const tileNote = () =>
+      t('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.');
+    mapNote(tileNote(), false, true, tileNote);
+  });
+}
+function setBasemap(k) {
+  if (!BASEMAPS[k] || k === baseKey()) return;
+  const on = map && tileLayer && map.hasLayer(tileLayer);
+  if (on) map.removeLayer(tileLayer);
+  S.base = k; save();
+  tileLayer = makeTiles();
+  attachTileFallback();
+  if (on) tileLayer.addTo(map);
+  renderMenu();
+}
+
 const LG = {};                      // the layers currently on the map
 let fitBounds = null;               // what the "fit" button goes back to
 
@@ -1021,21 +1057,10 @@ function initMap() {
   });
   map.setView([41.22, -8.35], 9);
 
-  tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, crossOrigin: true, attribution: '© OpenStreetMap contributors',
-  });
+  tileLayer = makeTiles();
   // No connection, or a host that will not load third-party images: drop the
   // background rather than leave the user staring at empty grey squares.
-  let errs = 0;
-  tileLayer.on('tileerror', () => {
-    if (++errs < 6 || !map.hasLayer(tileLayer)) return;
-    map.removeLayer(tileLayer);
-    S.tiles = false;
-    applySwitches();
-    const tileNote = () =>
-      t('רקע המפה לא נטען — מוצגים הגבולות בלבד. כל הנתונים והטקסטים זמינים.');
-    mapNote(tileNote(), false, true, tileNote);
-  });
+  attachTileFallback();
   if (S.tiles) tileLayer.addTo(map);
 
   // The map half changes size when the layout button switches views and when
@@ -1832,7 +1857,6 @@ function renderMun(num) {
     ${seriesCard(m, 'municipio')}
     ${incomeStats(m, 'municipio')}
     ${safetyStats(m, 'municipio')}
-    ${terrainCard(m, 'municipio')}
     ${adjCard(m, 'municipio')}
     ${crusCard(m)}
     ${tipauCard(rows)}
@@ -4696,7 +4720,6 @@ function renderZone(key) {
     ${housingStats(f, 'freguesia')}
     ${marketStats(f, 'freguesia')}
     ${seriesCard(f, 'freguesia')}
-    ${terrainCard(f, 'freguesia')}
     ${adjCard(f, 'freguesia')}
 
     ${z.bairros.length ? `
@@ -4836,7 +4859,6 @@ function redrawLevel() {
   if (S.climate) { drawClimate(); return; }
   if (S.cmp) { drawCmp(); return; }
   if (S.flt) { drawFlt(); return; }
-  if (S.lst) { drawListings(); return; }
   if (S.level === 'district') drawDistrict();
   else if (S.level === 'mun') drawMun(S.mun);
   else drawZone(S.zone);
@@ -4878,7 +4900,6 @@ const ICON = {
   pin: '<path d="M12 21.5s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0c0 4.5 6.5 10.5 6.5 10.5z"/><circle cx="12" cy="10.5" r="2.4"/>',
   /* נכסים: a house with a tag on it.  It wore the pin until 2.0.6, which is
      also המקומות שלי's — two of the five rows drawn with one glyph. */
-  listing: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.8V20h13V9.8"/><path d="M9 20v-5.5h6V20"/><circle cx="12" cy="11.6" r="1"/>',
   locate: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   station: '<rect x="6" y="3" width="12" height="13" rx="3"/><path d="M6 10h12M9 20l-2 2M15 20l2 2"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M8 16h8"/>',
   hospital: '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M12 9v7M8.5 12.5h7"/>',
@@ -5029,10 +5050,6 @@ const CMP_ALL = [
      Degrees, not percent: it is what the app has always shown for slope and
      what fetch_dem.py computed — rule 4, a source's own unit is not restated
      into a friendlier one. */
-  { g: 'טופוגרפיה', k: 'ele.mean', he: 'גובה ממוצע', unit: 'מ׳', dec: 0 },
-  { g: 'טופוגרפיה', k: 'ele.max', he: 'הנקודה הגבוהה', unit: 'מ׳', dec: 0 },
-  { g: 'טופוגרפיה', k: 'ele.min', he: 'הנקודה הנמוכה', unit: 'מ׳', dec: 0 },
-  { g: 'טופוגרפיה', k: 'ele.slope', he: 'שיפוע ממוצע', unit: 'מעלות', dec: 1 },
   { g: 'שטח ומרחק', k: 'area_km2', he: 'שטח', unit: 'קמ״ר', dec: 1 },
   { g: 'שטח ומרחק', k: 'dist_porto_km', he: 'מרחק אווירי בין המרכזים', unit: 'ק״מ', dec: 1,
     only: 'municipio' },
@@ -5043,11 +5060,19 @@ const CMP_ALL = [
    with it, and one table decides both so they cannot drift apart. */
 const CMP_CONS = new Set(['ran_pct', 'ren_pct', 'both_pct', 'either_pct']);
 /* A nested key and the source record it answers to.  The mapping is not
-   derivable from the path: `ele.min`, `ele.mean` and `ele.max` all come from
-   the one `ele` record, while `ele.slope` — which lives inside the same object
-   because that is how fetch_dem.py writes it — has a record of its own. */
-const CMP_NESTED = { 'ele.min': 'ele', 'ele.mean': 'ele', 'ele.max': 'ele',
-                     'ele.slope': 'slope' };
+   derivable from the path — `ele.min`, `ele.mean` and `ele.max` all came from
+   one `ele` record while `ele.slope`, inside the same object, had a record of
+   its own — which is the whole reason this table exists rather than a split on
+   the dot.
+
+   IT IS EMPTY FROM 2.8.0, AND THAT IS WORTH SAYING OUT LOUD.  Elevation and
+   slope were the only nested fields, and they were withdrawn: the one free
+   source for them was a SURFACE model, so what it called ground was roofs and
+   tree canopy (see sources.json → missing).  The machinery stays because the
+   replacement — DGT's LiDAR terrain model — comes back in exactly this shape.
+   Until then this code path carries no real field, so it is exercised by the
+   browser suite against an injected object instead. */
+const CMP_NESTED = {};
 /* The four fields that have a quarterly series behind them, and the series each
    one reads.  When series.json is present these four come from it at whichever
    quarter is chosen — the latest by default, which is the same number
@@ -5820,6 +5845,11 @@ const menuRows = () => [
      not a row to scroll to. */
   { grp: t('שכבות') },
   { k: 'tiles', he: t('מפת רקע'), icon: 'tiles', kind: 'tog' },
+  /* Which background, not whether.  Two radios under the switch they qualify:
+     turning the background off and choosing a style are different questions,
+     and a single three-way control would have conflated them. */
+  { k: 'base:street', he: t('רחובות'), icon: 'tiles', kind: 'radio' },
+  { k: 'base:topo', he: t('קווי גובה'), icon: 'tiles', kind: 'radio' },
   { k: 'glass', he: t('ויטרז׳ מפות'), icon: 'glass', kind: 'tog' },
   /* The two NUTS III regions.  A layer, and a switch again: 2.0.0 drew them on
      every map at levels 1–2 with nothing to turn them off. */
@@ -5896,6 +5926,7 @@ function menuState(k) {
   /* The mark is on the setting that is in force, not on the theme it resolves
      to: "auto" is a choice of its own, and marking light while auto is set
      would say the user had picked light. */
+  if (k.startsWith('base:')) return baseKey() === k.slice(5);
   if (k.startsWith('theme:')) return (S.theme || 'auto') === k.slice(6);
   if (k.startsWith('lang:')) return (S.lang || 'he') === k.slice(5);
   if (k === 'tiles') return S.tiles;
@@ -6014,6 +6045,7 @@ function menuPick(k) {
   if (k.startsWith('view:')) {
     S.view = k.slice(5); applyView(); save(); openMenu(false); return;
   }
+  if (k.startsWith('base:')) { setBasemap(k.slice(5)); return; }
   if (k.startsWith('theme:')) {
     S.theme = k.slice(6); applyTheme(); save(); renderMenu(); return;
   }
@@ -6109,10 +6141,9 @@ const MODES = () => [
      reading half and changes what the map draws, which is the definition the
      other five answer to. */
   { k: 'flt', he: t('סינון'), icon: 'filter' },
-  { k: 'lst', he: t('נכסים'), icon: 'listing' },
   { k: 'mine', he: t('המקומות שלי'), icon: 'pin' },
 ];
-const modeOf = () => (S.wp ? 'mine' : S.lst ? 'lst' : S.flt ? 'flt'
+const modeOf = () => (S.wp ? 'mine' : S.flt ? 'flt'
   : S.cmp ? 'cmp' : S.cons ? 'cons' : 'overview');
 
 /* The strip above the page: the controls that belong to the mode's own
@@ -6138,11 +6169,9 @@ function setMode(k) {
   if (S.cmp) toggleCmp();
   if (S.flt) toggleFlt();
   if (S.cons) consOff();
-  if (S.lst) lstOff();
   if (k === 'cmp') toggleCmp();
   else if (k === 'flt') toggleFlt();
   else if (k === 'cons') toggleCons();
-  else if (k === 'lst') toggleLst();
   else if (k === 'mine') toggleWp();
   renderMenu();
 }
@@ -6155,7 +6184,6 @@ function redrawText() {
   // the places list sits over the level document: the map is still at its
   // level and still navigable, and the mode is still the mode, until it closes
   if (S.wp) { renderWaypoints(); return; }
-  if (S.lst) { $('#doc').innerHTML = renderListings(); lstAfterRender(); return; }
   if (S.cmp) {
     $('#doc').innerHTML = renderCmp();
     if (S.level === 'zone') cmpFocus('f' + S.zone);
@@ -6301,7 +6329,7 @@ function goZone(key) {
   S.cats = new Set(D.poiOrder);
   // the comparison paints its own map at every level — the parish among its
   // siblings, on the ramp — so it is drawn by the mode, not by the level
-  if (S.cmp || S.lst) redrawLevel(); else drawZone(key);
+  if (S.cmp) redrawLevel(); else drawZone(key);
   redrawText(); afterNav();
 }
 function goUp() {
@@ -6361,7 +6389,7 @@ function save() {
     localStorage.setItem(KEY, JSON.stringify({
       level: S.level, mun: S.mun, zone: S.zone, view: S.view, theme: S.theme,
       letters: S.letters, mine: S.mine, water: S.water, floods: S.floods,
-      cons: S.cons, lst: S.lst, regions: S.regions, climate: S.climate,
+      cons: S.cons, regions: S.regions, climate: S.climate, base: baseKey(),
       consShow: S.consShow, rev: PREF_REV,
       lang: S.lang,
       muncol: S.muncol, dense: S.dense, sortDesc: S.sortDesc,
@@ -6393,7 +6421,7 @@ function restore() {
     if (typeof o.water === 'boolean' && fresh('water')) S.water = o.water;
     if (typeof o.floods === 'boolean') S.floods = o.floods;
     if (typeof o.cons === 'boolean') S.cons = o.cons;
-    if (typeof o.lst === 'boolean') S.lst = o.lst;
+    if (typeof o.base === 'string' && BASEMAPS[o.base]) S.base = o.base;
     if (typeof o.regions === 'boolean') S.regions = o.regions;
     if (typeof o.climate === 'boolean') S.climate = o.climate;
     /* Whatever is in the store was written by SOME version of this app, not
@@ -6981,14 +7009,14 @@ async function quarterGet(period) {
 const ONLINE = () => [
   { host: 'tile.openstreetmap.org', he: t('מפת הרקע (רחובות)'),
     what: t('אריחי OpenStreetMap. אריח שכבר נראה נשמר במכשיר; בלי רשת המפה מוצגת כגבולות בלבד, וכל הנתונים זמינים.') },
+  { host: 'tile.opentopomap.org', he: t('מפת הרקע (קווי גובה)'),
+    what: t('אריחי OpenTopoMap — קווי גובה והצללת תבליט — כשנבחר רקע ״קווי גובה״. כמו הרחובות: אריח שכבר נראה נשמר במכשיר, ובלי רשת המפה מוצגת כגבולות בלבד. קווי הגובה נגזרים מ-SRTM, שאינו מודל קרקע חשופה: הם טובים לקריאת מדרון ואינם מקור למספר.') },
   { host: 'cdn.jsdelivr.net', he: t('מגבלות בנייה, ורבעון חדש — הורדה חד-פעמית'),
     what: t('שכבות REN ו-RAN לכל 18 העיריות, ורבעון INE שפורסם אחרי ההתקנה, מ-jsDelivr; הגודל כתוב לפני הלחיצה. מכאן הם עובדים בלי רשת.') },
   { host: 'raw.githubusercontent.com', he: t('אותם קבצים — מקור גיבוי'),
     what: t('אותם קבצים מ-GitHub, אם jsDelivr אינו זמין.') },
-  { host: 'api.idealista.com', he: t('חיפוש נכסים'),
-    what: t('״חפש״ במוד נכסים פונה ל-API של idealista עם המפתח שהזנת, ותמונות המודעות נטענות מהשרתים של idealista. מה שנשמר עובד אחר כך בלי רשת.') },
   { host: 'www.idealista.pt', he: t('פתיחת מודעה במקור'),
-    what: t('״פתח במקור״ פותח את המודעה בדפדפן. האפליקציה עצמה אינה קוראת את העמוד — idealista חוסמת אותה — והדבקת קישור שומרת במכשיר את קוד המודעה בלבד, בלי לשלוח דבר.') },
+    what: t('״פתח במקור״ פותח את המודעה בדפדפן, ותמונות של נכס שנשמר נמשכות מהשרתים של idealista בעת השמירה ואחר כך עובדות בלי רשת. האפליקציה אינה קוראת את עמוד המודעה — idealista חוסמת אותה — והדבקת קישור שומרת במכשיר את קוד המודעה בלבד, בלי לשלוח דבר.') },
   { host: 'www.google.com', he: t('פתיחה במפות גוגל'),
     what: t('לחיצה כפולה על מקום פותחת בדפדפן קישור עם נ״צ בלבד — בלי מפתח, בלי חשבון ובלי לשמור דבר.') },
 ];
@@ -7296,7 +7324,7 @@ function wire() {
     if (S.level === 'zone') { drawZone(S.zone); redrawText(); }
     drawMine(); renderMenu(); applyHi(); applySwitches();
   });
-  $('#doc').addEventListener('input', e => { if (S.lst) lstInput(e); if (S.flt) fltInput(e); });
+  $('#doc').addEventListener('input', e => { if (S.flt) fltInput(e); });
   $('#panelBody').addEventListener('input', e => {
     if (panelIs('search') && e.target.id === 'q') runSearch(e.target.value);
   });
@@ -7369,7 +7397,6 @@ function wire() {
       const c = e.target.closest('[data-stationpick]');
       if (c) { pickStation(Number(c.dataset.stationpick), 'doc'); return; }
     }
-    if (S.lst && lstClick(e)) return;
     // the sort chip: reading order only, so the text is redrawn and the map is not
     if (e.target.closest('[data-sortdir]')) { S.sortDesc = !S.sortDesc; save(); redrawText(); return; }
     if (e.target.closest('[data-dense]')) {
@@ -7515,7 +7542,6 @@ function wire() {
   // on top of it — re-applied here, in period order, every launch.
   quarterLoad();
   loadMine();
-  lstLoad();
   applyView();
   applyLang();
   themeAttr();
@@ -7588,165 +7614,19 @@ function wire() {
    with a source record, no number on it is clickable, and everything about
    it says who said it and when.  What is saved is saved as a place of the
    user's own, with the quote and the pictures inside it, and works offline
-   from then on; the search itself is the one thing here that needs a
-   network, and it says so. */
-const LST_KEY = 'porto-listings';          // the last search: query, results, states
-const LST_CRED = 'porto-listings-key';     // the provider key the user typed, and nothing else
-const LST_QUOTA = 'porto-listings-quota';  // requests spent this month
-const LST_API = 'https://api.idealista.com';
+   from then on.
+
+   2.8.0 DELETED THE MODE AND KEPT THE RULE.  The search form, the results
+   list, the map coloured by how many advertisements a unit held and the
+   provider key the user typed are all gone — the user searches at idealista
+   and brings back the ones they chose.  What is left is what a chosen
+   property needs: the record it becomes, the card that draws it, the import
+   that lands it in "המקומות שלי", and the link box that holds one until its
+   file arrives.  The block went from 875 lines to about 310; its BOUNDARY
+   did not move, and §7ad still refuses a source record inside it and a
+   listing outside it. */
 const LST_PHOTOS_MAX = 8;
 const LST_STALE_DAYS = 30;
-const LST_PAGE = 50;                       // the provider's page size
-const LST_TYPES = [['home', 'דירה'], ['house', 'בית'], ['any', 'הכול']];
-const LST_WHERE = [['district', 'מחוז'], ['mun', 'עירייה'], ['zone', 'רובע'], ['place', 'רחוב / יישוב'], ['radius', 'רדיוס']];
-const LST_STATUS_HE = { unread: 'לא נקרא', read: 'נקרא', saved: 'שמור' };
-
-const lstDefaultQ = () => ({ op: 'sale', type: 'house', where: 'district', mun: null, zone: null,
-  place: null, ll: null, km: 2, minPrice: '', maxPrice: '', minSize: '', rooms: '',
-  renew: false, garden: false, terrace: false, cap: 50 });
-
-/* ---- state on disk: the last search, the key, the month's spend ---- */
-function lstLoad() {
-  try { D.lst = JSON.parse(localStorage.getItem(LST_KEY) || 'null'); } catch (e) { D.lst = null; }
-  if (D.lst && !Array.isArray(D.lst.items)) D.lst = null;
-  if (D.lst) { lstAttach(D.lst.items); if (D.lst.query) S.lstQ = Object.assign(lstDefaultQ(), D.lst.query); }
-  if (!S.lstQ) S.lstQ = lstDefaultQ();
-}
-function lstSave() {
-  try { if (D.lst) localStorage.setItem(LST_KEY, JSON.stringify(D.lst)); else localStorage.removeItem(LST_KEY); }
-  catch (e) { mapNote(t('לא הצלחתי לשמור את תוצאות החיפוש — ייתכן שהאחסון המקומי מלא.'), true); }
-}
-function lstCred() {
-  try { const c = JSON.parse(localStorage.getItem(LST_CRED) || 'null'); return c && c.apikey && c.secret ? c : null; }
-  catch (e) { return null; }
-}
-function lstSetCred(apikey, secret) {
-  try {
-    if (apikey && secret) localStorage.setItem(LST_CRED, JSON.stringify({ apikey, secret }));
-    else localStorage.removeItem(LST_CRED);
-  } catch (e) { /* private mode */ }
-}
-function lstQuota() {
-  const month = new Date().toISOString().slice(0, 7);
-  let q = null;
-  try { q = JSON.parse(localStorage.getItem(LST_QUOTA) || 'null'); } catch (e) { q = null; }
-  if (!q || q.month !== month) q = { month, used: 0, limit: (q && q.limit) || 100 };
-  return q;
-}
-function lstQuotaSet(q) { try { localStorage.setItem(LST_QUOTA, JSON.stringify(q)); } catch (e) { /* private mode */ } }
-function lstSpend(n) { const q = lstQuota(); q.used += n; lstQuotaSet(q); return q; }
-
-/* ---- the mode ---- */
-function toggleLst() {
-  if (S.adding) stopPlacing();
-  S.lst = !S.lst;
-  if (S.lst) {
-    if (S.view === 'map') { S.view = 'split'; applyView(); }
-    if (!S.lstQ) S.lstQ = lstDefaultQ();
-    S.lstForm = !D.lst;
-  }
-  closePanel();
-  applySwitches();
-  redrawLevel(); drawMine(); redrawText();
-  if (S.lst) $('#paneText').scrollTop = 0;
-  save();
-}
-const lstOff = () => { if (S.lst) toggleLst(); };
-
-/* ---- where a listing is: from its coordinate, never from its text ---- */
-function lstAttach(items) {
-  items.forEach(it => {
-    if (!Array.isArray(it.ll) || it.ll.length !== 2) { it.zone = null; it.mun = null; return; }
-    const at = freguesiaAt(it.ll[0], it.ll[1]);
-    it.zone = at ? D.freKey(at) : null;
-    it.mun = at ? at.mun_num : null;
-  });
-}
-const lstState = code => (D.lst && D.lst.state && D.lst.state[code]) || (D.mine.some(p => p.id === 'l' + code) ? 'saved' : 'unread');
-function lstSetState(code, st) {
-  if (!D.lst) return;
-  D.lst.state = D.lst.state || {};
-  D.lst.state[code] = st;
-  lstSave();
-}
-const lstLive = () => (D.lst ? D.lst.items.filter(it => lstState(it.code) !== 'deleted') : []);
-function lstCounts(items) {
-  const mun = new Map(), fre = new Map();
-  items.forEach(it => {
-    if (it.mun) mun.set(it.mun, (mun.get(it.mun) || 0) + 1);
-    if (it.zone) fre.set(it.zone, (fre.get(it.zone) || 0) + 1);
-  });
-  return { mun, fre };
-}
-const lstHere = items => items.filter(it => S.level === 'district' ? true
-  : S.level === 'mun' ? it.mun === S.mun : it.zone === S.zone);
-function lstSorted(items) {
-  const s = items.slice().sort((a, b) => (a.price || 0) - (b.price || 0));
-  return S.sortDesc ? s.reverse() : s;
-}
-
-/* ---- the map: units coloured by how many listings they hold, pins at level 3 ---- */
-function lstBand(n, max) {
-  if (!n) return C.fillDefault;
-  const i = Math.min(CMP_BANDS - 1, Math.floor((n - 1) / Math.max(1, max) * CMP_BANDS));
-  return CMP_BLUES[i];
-}
-function lstPinIcon(st) {
-  const col = st === 'saved' ? MINE_COLOUR : st === 'read' ? C.listingRead : C.listing;
-  return L.divIcon({ className: 'me-pin', iconSize: [22, 29], iconAnchor: [11, 29],
-    html: `<svg viewBox="0 0 24 32" width="22" height="29" aria-hidden="true"
-        style="display:block;filter:drop-shadow(0 1px 2px ${C.pinShadow})">
-        <path d="M12 31.2C12 31.2 1.6 18.6 1.6 11.4a10.4 10.4 0 1 1 20.8 0C22.4 18.6 12 31.2 12 31.2z"
-              fill="${col}" stroke="${C.white}" stroke-width="1.8"/>
-        <text x="12" y="15" text-anchor="middle" font-size="10" font-weight="700" fill="${C.white}">€</text>
-      </svg>` });
-}
-function drawListings() {
-  clearMap();
-  const items = lstLive();
-  const counts = lstCounts(items);
-  if (S.level === 'zone') {
-    const feats = D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === S.zone);
-    LG.mun = L.geoJSON({ type: 'FeatureCollection', features: feats }, { interactive: false,
-      style: { weight: 0, fillColor: C.fillDefault, fillOpacity: .2 } }).addTo(map);
-    LG.lst = L.layerGroup(items.filter(it => it.zone === S.zone).map(it => {
-      const mk = L.marker(it.ll, { icon: lstPinIcon(lstState(it.code)), zIndexOffset: 1400,
-        title: lstPriceText(it) });
-      mk.bindTooltip(`<b>${html(lstPriceText(it))}</b><br>${html(it.title || '')}`, { direction: 'top', className: 'tt' });
-      mk.on('click', () => lstOpen(it.code));
-      return mk;
-    })).addTo(map);
-    drawLines();
-    fit(LG.mun.getBounds());
-    return;
-  }
-  const inMun = S.level === 'mun';
-  const base = inMun ? freFeatures(S.mun) : D.bM;
-  const unitOf = ft => inMun ? freOfFeature(S.mun, ft.properties) : D.munByNum.get(ft.properties.num);
-  const countOf = o => (!o ? 0 : (inMun ? counts.fre.get(D.freKey(o)) : counts.mun.get(o.num)) || 0);
-  let max = 0;
-  base.features.forEach(ft => { max = Math.max(max, countOf(unitOf(ft))); });
-  LG.mun = L.geoJSON(base, {
-    style: ft => { const n = countOf(unitOf(ft));
-      return { weight: 0, fillColor: lstBand(n, max), fillOpacity: n ? .82 : .18 }; },
-    onEachFeature: (ft, l) => {
-      const o = unitOf(ft);
-      if (!o) return;
-      l.on('click', () => { if (inMun) goZone(D.freKey(o)); else goMun(o.num); });
-      l.bindTooltip(`<b>${html(nm(o))}</b><br>${countOf(o)} ${html(t('מודעות'))}`, { sticky: true, className: 'tt' });
-    },
-  }).addTo(map);
-  const rows = inMun ? (D.freByMun.get(S.mun) || []) : D.mun;
-  LG.labels = L.layerGroup(rows.filter(o => countOf(o) > 0 && o.center).map(o => {
-    const mk = L.marker(latlng(o.center), { icon: cmpIcon(String(countOf(o))), keyboard: false, riseOnHover: true });
-    mk.on('click', () => { if (inMun) goZone(D.freKey(o)); else goMun(o.num); });
-    return mk;
-  })).addTo(map);
-  drawLines();
-  cmpPattern();
-  fit(LG.mun.getBounds());
-}
-
 /* ---- the text half ---- */
 const lstPriceText = it => (it.price != null ? nf(it.price, 0) + ' ' + (it.currency || '€') : t('מחיר לא צוין'));
 const lstDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); };
@@ -7765,332 +7645,18 @@ function lstWhere(it) {
   const f = D.freByKey.get(it.zone);
   return f ? nm(f) + ', ' + nm(D.munByNum.get(f.mun_num)) : '';
 }
-function lstQuerySummary(q) {
-  const parts = [t(q.op === 'rent' ? 'שכירות' : 'מכירה'), t((LST_TYPES.find(x => x[0] === q.type) || LST_TYPES[2])[1])];
-  if (q.where === 'district') parts.push(t('מחוז פורטו'));
-  else if (q.where === 'mun') { const m = D.munByNum.get(q.mun); if (m) parts.push(nm(m)); }
-  else if (q.where === 'zone') { const f = D.freByKey.get(q.zone); if (f) parts.push(nm(f)); }
-  else if (q.where === 'place' && q.place) parts.push(q.place.name + ' · ' + q.km + ' ' + t('ק״מ'));
-  else if (q.where === 'radius' && q.ll) parts.push(t('רדיוס') + ' ' + q.km + ' ' + t('ק״מ'));
-  if (q.minPrice || q.maxPrice) parts.push((q.minPrice ? nf(+q.minPrice, 0) : '') + '–' + (q.maxPrice ? nf(+q.maxPrice, 0) : '') + ' €');
-  if (q.minSize) parts.push('≥' + q.minSize + ' ' + t('מ״ר'));
-  if (q.rooms) parts.push('T' + q.rooms + '+');
-  if (q.renew) parts.push(t('לשיפוץ'));
-  if (q.garden) parts.push(t('גינה'));
-  if (q.terrace) parts.push(t('מרפסת'));
-  return parts.join(' · ');
-}
-const lstChip = (key, val, he, on) => `<button class="chip${on ? ' is-on' : ''}" data-lstset="${key}:${val}" role="radio" aria-checked="${on}">${html(t(he))}</button>`;
-const lstCheck = (key, he, on) => `<button class="chip${on ? ' is-on' : ''}" data-lstset="${key}:${on ? '0' : '1'}" role="checkbox" aria-checked="${on}">${on ? '☑ ' : '☐ '}${html(t(he))}</button>`;
-
-function lstFormHtml() {
-  const q = S.lstQ;
-  const cred = lstCred();
-  const quota = lstQuota();
-  const need = 1 + Math.ceil((q.cap || LST_PAGE) / LST_PAGE);
-  const left = Math.max(0, quota.limit - quota.used);
-  const munSel = `<select class="lf-sel" data-lstin="mun" aria-label="${t('עירייה')}">${D.mun.map(m =>
-    `<option value="${m.num}"${m.num === q.mun ? ' selected' : ''}>${html(munNum(m))} · ${html(nm(m))}</option>`).join('')}</select>`;
-  const zoneRows = D.freByMun.get(q.mun || S.mun || D.mun[0].num) || [];
-  const zoneSel = `<select class="lf-sel" data-lstin="zone" aria-label="${t('רובע')}">${zoneRows.map(f =>
-    `<option value="${html(D.freKey(f))}"${D.freKey(f) === q.zone ? ' selected' : ''}>${html(freNum(f))} · ${html(nm(f))}</option>`).join('')}</select>`;
-  const whereBody = q.where === 'mun' ? munSel
-    : q.where === 'zone' ? munSel + zoneSel
-    : q.where === 'place' ? `<div class="lf-fld"><span class="fld-l">${t('שם היישוב, הרובע או האתר — מהנתונים של האפליקציה')}</span>
-        <input class="lf-in" data-lstin="placeq" type="search" value="${html(q.placeq || '')}" placeholder="${t('שתי אותיות ומעלה')}">
-        <div id="lstPlaceHits"></div>
-        ${q.place ? `<p class="note">${t('נבחר:')} ${html(q.place.name)} <bdi class="num">${q.place.ll[0].toFixed(4)}, ${q.place.ll[1].toFixed(4)}</bdi></p>` : ''}
-        <span class="fld-l">${t('רדיוס בק״מ')}</span><input class="lf-in lf-short" data-lstin="km" type="number" min="0.2" step="0.5" value="${html(q.km)}"></div>`
-    : q.where === 'radius' ? `<div class="lf-fld"><button class="chip" id="lstCenter">${t('הנקודה: מרכז המפה כפי שהוא עכשיו')}</button>
-        ${q.ll ? `<p class="note">${t('הנקודה:')} <bdi class="num">${q.ll[0].toFixed(4)}, ${q.ll[1].toFixed(4)}</bdi></p>` : `<p class="note">${t('הזיזו את המפה כך שהנקודה הרצויה במרכזה, ואז לחצו.')}</p>`}
-        <span class="fld-l">${t('רדיוס בק״מ')}</span><input class="lf-in lf-short" data-lstin="km" type="number" min="0.2" step="0.5" value="${html(q.km)}"></div>`
-    : `<p class="note">${t('כל 18 העיריות. תוצאות מחוץ לגבולות המחוז מסוננות לפי גבולות CAOP.')}</p>`;
-  return `<div class="card lf-form" id="lstForm">
-    <h2>${t('חיפוש נכסים')}</h2>
-    <div class="lf-fld"><span class="fld-l">${t('עסקה')}</span>
-      <div class="chips" role="radiogroup">${lstChip('op', 'sale', 'מכירה', q.op === 'sale')}${lstChip('op', 'rent', 'שכירות', q.op === 'rent')}</div></div>
-    <div class="lf-fld"><span class="fld-l">${t('סוג נכס')}</span>
-      <div class="chips" role="radiogroup">${LST_TYPES.map(([k, he]) => lstChip('type', k, he, q.type === k)).join('')}</div></div>
-    <div class="lf-fld"><span class="fld-l">${t('היכן')}</span>
-      <div class="chips" role="radiogroup">${LST_WHERE.map(([k, he]) => lstChip('where', k, he, q.where === k)).join('')}</div>
-      ${whereBody}</div>
-    <div class="lf-fld"><span class="fld-l">${t('מחיר, €')}</span>
-      <div class="lf-row"><input class="lf-in" data-lstin="minPrice" type="number" inputmode="numeric" placeholder="${t('מ-')}" value="${html(q.minPrice)}">
-        <input class="lf-in" data-lstin="maxPrice" type="number" inputmode="numeric" placeholder="${t('עד')}" value="${html(q.maxPrice)}"></div></div>
-    <div class="lf-fld"><span class="fld-l">${t('שטח מזערי, מ״ר')}</span>
-      <input class="lf-in lf-short" data-lstin="minSize" type="number" inputmode="numeric" value="${html(q.minSize)}"></div>
-    <div class="lf-fld"><span class="fld-l">${t('חדרים, לפחות')}</span>
-      <div class="chips" role="radiogroup">${lstChip('rooms', '', 'לא משנה', !q.rooms)}${[1, 2, 3, 4, 5].map(n => lstChip('rooms', String(n), 'T' + n, String(q.rooms) === String(n))).join('')}</div></div>
-    <div class="lf-fld"><span class="fld-l">${t('מצב וחוץ')}</span>
-      <div class="chips">${lstCheck('renew', 'דורש שיפוץ', q.renew)}${lstCheck('garden', 'גינה', q.garden)}${lstCheck('terrace', 'מרפסת', q.terrace)}</div></div>
-    <div class="lf-fld"><span class="fld-l">${t('עד כמה תוצאות')}</span>
-      <div class="chips" role="radiogroup">${[50, 100, 150].map(n => lstChip('cap', String(n), String(n), (q.cap || 50) === n)).join('')}</div></div>
-    <button class="cta" id="lstSearch">${t('חפש')}</button>
-    <p class="note">${cred
-      ? `${t('החיפוש הזה יעלה')} ${need} ${t('בקשות · נותרו')} ${left} ${t('מתוך')} ${quota.limit} ${t('החודש · דורש רשת')}`
-      : t('אין מפתח ספק. ״חפש״ יסביר מה חסר; הכול חוץ מהחיפוש עובד גם בלי מפתח.')}</p>
-    <div class="chips"><button class="chip" data-lstform="cred">${cred ? t('הגדרות ספק') : t('הזנת מפתח ספק')}</button>
-      <button class="chip" data-lstform="file">${t('ייבוא קובץ תוצאות')}</button>
-      ${D.lst ? `<button class="chip" data-lstform="close">${t('חזרה לתוצאות')}</button>` : ''}</div>
-    ${S.lstCredOpen ? lstCredHtml(cred, quota) : ''}
-  </div>`;
-}
-function lstCredHtml(cred, quota) {
-  return `<div class="lf-cred">
-    <h3>${t('מפתח ה-API של idealista')}</h3>
-    <p class="note">${t('נשמר במכשיר הזה בלבד, ולעולם לא בקובץ ההתקנה. מתקבל ב-developers.idealista.com.')}</p>
-    <span class="fld-l">apikey</span><input class="lf-in" id="lstApikey" type="text" autocomplete="off" spellcheck="false" dir="ltr" value="${html(cred ? cred.apikey : '')}">
-    <span class="fld-l">secret</span><input class="lf-in" id="lstSecret" type="password" autocomplete="off" dir="ltr" value="${html(cred ? cred.secret : '')}">
-    <span class="fld-l">${t('מכסה חודשית (בקשות)')}</span><input class="lf-in lf-short" id="lstLimit" type="number" min="1" value="${quota.limit}">
-    <div class="chips"><button class="chip is-on" id="lstCredSave">${t('שמירה')}</button>
-      <button class="chip" id="lstCredClear">${t('מחיקת המפתח')}</button></div>
-  </div>`;
-}
-
-function lstCard(it, open) {
-  const st = lstState(it.code);
-  const thumb = it.thumbnail ? `<figure class="lst-thumb"><img src="${html(it.thumbnail)}" alt="" loading="lazy"></figure>` : '';
-  const photos = [it.thumbnail].concat(it.photos || []).filter((u, i, a) => u && a.indexOf(u) === i).slice(0, LST_PHOTOS_MAX);
-  const feats = Object.entries(it.features || {}).filter(([, v]) => v === true).map(([k]) => k.replace(/^has/, ''));
-  const detail = !open ? '' : `<div class="lst-detail">
-      ${it.description ? `<div class="lst-quote"><div class="grp">${t('לשון המודעה')}</div><p>${html(it.description)}</p></div>` : ''}
-      ${photos.length > 1 ? `<div class="lst-photos">${photos.slice(1).map(u => `<img src="${html(u)}" alt="" loading="lazy">`).join('')}</div>` : ''}
-      ${feats.length ? `<p class="note lat">${html(feats.join(' · '))}</p>` : ''}
-      ${it.priceByArea ? `<p class="note">${t('€/מ״ר לפי המודעה:')} <span class="num">${nf(it.priceByArea, 0)}</span> — ${t('על השטח שהמודעה מונה, לא על שטח מגורים')}</p>` : ''}
-      <div class="chips">
-        ${it.url ? `<a class="chip" href="${html(it.url)}" target="_blank" rel="noopener">${t('פתח במקור')}</a>` : ''}
-        <button class="chip" data-lstact="read" data-code="${html(it.code)}">${st === 'read' ? t('סמן כלא נקרא') : t('סמן כנקרא')}</button>
-        <button class="chip${st === 'saved' ? ' is-on' : ''}" data-lstact="save" data-code="${html(it.code)}">${st === 'saved' ? t('שמור ב״המקומות שלי״') : t('שמור כמקום שלי')}</button>
-        <button class="chip" data-lstact="del" data-code="${html(it.code)}">${t('מחק מהתוצאות')}</button>
-      </div></div>`;
-  return `<article class="card lst lst-${st}${open ? ' is-hi' : ''}" data-lst="${html(it.code)}">
-    <div class="lst-line">
-      ${thumb}
-      <div class="lst-txt">
-        <div class="lst-price"><span class="num">${html(lstPriceText(it))}</span>${lstMeta(it) ? ' <span class="lst-meta">· ' + lstMeta(it) + '</span>' : ''}</div>
-        <h2>${html(it.title || '')}</h2>
-        <p class="note">${html(lstWhere(it))} · <span class="flag">${html(t(LST_STATUS_HE[st] || st))}</span></p>
-      </div>
-    </div>
-    ${detail}
-  </article>`;
-}
-
-/* WHAT THE SEARCH DID NOT SEE — and why this line is not decoration.
-
-   idealista's connector returns at most 50 properties per call and has no
-   page parameter, so a real search is several calls over disjoint slices.
-   The moment that is true, "did I see everything?" stops being obvious.  And
-   the screen cannot answer it: sixty-seven listings look identical whether
-   they are all of them or the first fifty of two hundred and fifty-five.
-
-   What makes the answer possible is that the connector returns `total`
-   beside the properties.  A slice is complete when what came back is at
-   least what it said existed — and scripts/connector_listings.py refuses to
-   write a file with a short slice in it unless somebody passes
-   --allow-partial on purpose.  When they do, it is marked, and this is where
-   the mark is shown.
-
-   It is the same rule as the filter's second line (§7am): a count that is
-   silently a floor, printed where a reader takes it for a total, is the
-   failure rule 2 exists to prevent. */
-function lstCoverageHtml(c) {
-  if (!c || typeof c !== 'object' || !Array.isArray(c.slices)) return '';
-  const n = c.slices.length;
-  const short = c.slices.filter(s => !s.complete).length;
-  const slice = n === 1 ? t('חתך אחד') : `<b class="num">${nf(n)}</b> ${t('חתכים')}`;
-  if (!short) {
-    return `<p class="note lst-cov">${t('כיסוי מלא:')} ${slice} ${
-      t('— ובכל אחד הגיע כל מה ש-idealista מדווחת עליו')}${
-      c.reported > c.unique ? ' · ' + t('חפיפה בין חתכים:') + ' <span class="num">'
-        + nf(c.reported - c.unique) + '</span>' : ''}</p>`;
-  }
-  return `<div class="warn lst-cov">${t('כיסוי חלקי.')} ${
-    t('idealista מדווחת על')} <b class="num">${nf(c.reported || 0)}</b> ${
-    t('מודעות והגיעו')} <b class="num">${nf(c.unique || 0)}</b>${'. '}${
-    short === 1 ? t('חתך אחד נקטע') : '<b class="num">' + nf(short) + '</b> ' + t('חתכים נקטעו')}${
-    t('. המחבר מחזיר 50 לכל היותר לקריאה ואין לו עמוד הבא — צריך לפצל את החתכים האלה למדרגות מחיר או לסוגי נכס עד שכל אחד חוזר שלם.')}</div>`;
-}
-
-function renderListings() {
-  const q = S.lstQ || lstDefaultQ();
-  const items = lstLive();
-  const head = ``;
-  if (!D.lst || S.lstForm) return head + lstFormHtml();
-  const summary = `<div class="card">
-    <h1>${t('נכסים')}</h1>
-    <p class="sub">${html(lstQuerySummary(D.lst.query || q))}</p>
-    <p class="note">${t('מקור:')} ${html(D.lst.provider || '')} · ${t(D.lst.source === 'file' ? 'מקובץ' : 'מה-API')} · ${t('נקרא ב-')}${html(lstDate(D.lst.readAt))} · ${items.length} ${t('מודעות')}</p>
-    ${lstCoverageHtml(D.lst.coverage)}
-    <div class="chips"><button class="chip" data-lstform="open">${t('שינוי החיפוש')}</button>
-      <button class="chip" data-lstform="query">${t('השאילתה לסקריפט')}</button></div>
-    ${S.lstQueryOpen ? `<textarea class="lf-in" rows="5" dir="ltr" readonly>${html(JSON.stringify(lstQueryForScript(D.lst.query || q)))}</textarea>
-      <p class="note">${t('להדביק כ-query.json ולהריץ: python3 scripts/fetch_listings.py --query query.json')}</p>` : ''}
-  </div>`;
-  const counts = lstCounts(items);
-  let rows = '';
-  if (S.level === 'district') {
-    rows = `<div class="grp">${t('18 העיריות — מודעות בכל אחת')}</div><div class="rows">${D.mun.map(m => {
-      const n = counts.mun.get(m.num) || 0;
-      return `<button class="row" data-lstmun="${m.num}"><span class="pin" style="--c:${html(m.fill)}">${html(munNum(m))}</span>
-        <span class="row-body"><span class="row-t">${nmPair(m, m.en)}</span>
-        <span class="row-m"><span class="num">${n}</span> ${t('מודעות')}</span></span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>`; }).join('')}</div>`;
-  } else if (S.level === 'mun') {
-    const fr = D.freByMun.get(S.mun) || [];
-    rows = `<div class="grp">${t('הרובעים — מודעות בכל אחד')}</div><div class="rows">${fr.map(f => {
-      const n = counts.fre.get(D.freKey(f)) || 0;
-      return `<button class="row" data-lstfre="${html(D.freKey(f))}"><span class="pin" style="--c:${html(f.colour || C.fillDefault)}">${html(freNum(f))}</span>
-        <span class="row-body"><span class="row-t">${nmPair(f, bare(f.pt))}</span>
-        <span class="row-m"><span class="num">${n}</span> ${t('מודעות')}</span></span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>`; }).join('')}</div>`;
-  }
-  const here = lstSorted(lstHere(items));
-  const list = S.level === 'district' ? '' : `<div class="grp">${here.length} ${t('מודעות')}${S.level === 'zone' ? ' · ' + html(nm(D.freByKey.get(S.zone))) : ' · ' + html(nm(D.munByNum.get(S.mun)))}</div>
-    ${here.length ? sortBar() : ''}
-    ${here.length ? here.map(it => lstCard(it, S.lstOpen === it.code)).join('') : `<p class="note">${t('אין מודעות תואמות כאן. המספרים על המפה אומרים איפה יש.')}</p>`}`;
-  return head + summary + rows + list;
-}
-function lstAfterRender() {
-  if (S.lstOpen) { const el = $(`#doc [data-lst="${CSS.escape(S.lstOpen)}"]`); if (el) el.scrollIntoView({ block: 'nearest' }); }
-}
-function lstOpen(code) {
-  const it = D.lst && D.lst.items.find(x => x.code === code);
-  if (!it) return;
-  S.lstOpen = S.lstOpen === code ? null : code;
-  if (S.lstOpen && lstState(code) === 'unread') lstSetState(code, 'read');
-  if (S.lstOpen && it.zone && it.zone !== S.zone) { goZone(it.zone); return; }
-  redrawLevel(); redrawText();
-}
-
-/* ---- the query, in the provider's terms ---- */
-function lstGeo(q) {
-  const ring = feats => { const b = L.geoJSON({ type: 'FeatureCollection', features: feats }).getBounds();
-    const c = b.getCenter(); return { center: [c.lat, c.lng], distance: Math.ceil(c.distanceTo(b.getNorthEast())) }; };
-  if (q.where === 'mun' && q.mun) {
-    const g = ring(D.bM.features.filter(ft => ft.properties.num === q.mun));
-    return Object.assign(g, { filter: it => it.mun === q.mun });
-  }
-  if (q.where === 'zone' && q.zone) {
-    const g = ring(D.bF.features.filter(ft => ft.properties.mun_num + '|' + ft.properties.name === q.zone));
-    return Object.assign(g, { filter: it => it.zone === q.zone });
-  }
-  if ((q.where === 'place' && q.place) || (q.where === 'radius' && q.ll)) {
-    const ll = q.where === 'place' ? q.place.ll : q.ll;
-    const m = Math.round((+q.km || 2) * 1000);
-    return { center: ll, distance: m, filter: it => L.latLng(ll).distanceTo(L.latLng(it.ll)) <= m };
-  }
-  const g = ring(D.bM.features);
-  return Object.assign(g, { filter: it => !!it.mun });
-}
-function lstApiParams(q, geo, page) {
-  const p = { country: 'pt', locale: 'pt', operation: q.op === 'rent' ? 'rent' : 'sale', propertyType: 'homes',
-    center: geo.center[0].toFixed(6) + ',' + geo.center[1].toFixed(6), distance: String(geo.distance),
-    maxItems: String(LST_PAGE), numPage: String(page), order: 'price', sort: 'asc' };
-  if (q.type === 'home') p.flat = 'true';
-  if (q.type === 'house') { p.chalet = 'true'; p.countryHouse = 'true'; }
-  if (q.minPrice) p.minPrice = String(+q.minPrice);
-  if (q.maxPrice) p.maxPrice = String(+q.maxPrice);
-  if (q.minSize) p.minSize = String(+q.minSize);
-  if (q.rooms) p.bedrooms = [1, 2, 3, 4].filter(n => n >= +q.rooms).join(',') + (+q.rooms <= 4 ? ',4' : '');
-  if (q.renew) p.status = 'renew';
-  if (q.garden) p.garden = 'true';
-  if (q.terrace) p.terrace = 'true';
-  return p;
-}
-const lstQueryForScript = q => ({ kind: 'listings-query', provider: 'idealista', query: q, geo: lstGeo(q) && { center: lstGeo(q).center, distance: lstGeo(q).distance } });
-function lstFromApi(el) {
-  const st = el.suggestedTexts || {};
-  return { code: String(el.propertyCode), url: el.url || '', price: el.price, currency: '€',
-    size: el.size, rooms: el.rooms, bathrooms: el.bathrooms, floor: el.floor == null ? null : el.floor,
-    type: el.detailedType ? (el.detailedType.typology || '') + (el.detailedType.subTypology ? '/' + el.detailedType.subTypology : '') : (el.propertyType || ''),
-    operation: el.operation || '', status: el.status || '', newDevelopment: !!el.newDevelopment,
-    ll: [el.latitude, el.longitude], title: st.title || el.address || '', subtitle: st.subtitle || '',
-    description: el.description || '', thumbnail: el.thumbnail || '',
-    photos: (el.images || []).map(i => i && i.url).filter(Boolean), numPhotos: el.numPhotos,
-    priceByArea: el.priceByArea, features: el.features || {}, contact: el.contactInfo || null };
-}
-function lstTake(items, q, provider, source) {
-  lstAttach(items);
-  const keep = {};
-  if (D.lst && D.lst.state) Object.entries(D.lst.state).forEach(([c, s]) => { if (s === 'saved') keep[c] = s; });
-  D.lst = { readAt: new Date().toISOString(), provider, source, query: Object.assign({}, q), items, state: keep };
-  S.lstForm = false; S.lstOpen = null;
-  lstSave();
-  if (!S.lst) toggleLst(); else { redrawLevel(); redrawText(); }
-}
-function lstMsg(text, bad) { mapNote(html(text), !!bad); }
-
-async function lstSearch() {
-  const q = S.lstQ;
-  if (q.where === 'mun' && !q.mun) { lstMsg(t('בחרו עירייה.'), true); return; }
-  if (q.where === 'zone' && !q.zone) { lstMsg(t('בחרו רובע.'), true); return; }
-  if (q.where === 'place' && !q.place) { lstMsg(t('בחרו יישוב, רובע או אתר מהרשימה.'), true); return; }
-  if (q.where === 'radius' && !q.ll) { lstMsg(t('קבעו את הנקודה: מרכז המפה.'), true); return; }
-  const cred = lstCred();
-  if (!cred) {
-    S.lstCredOpen = true; redrawText();
-    lstMsg(t('החיפוש פונה ל-API של idealista ודורש מפתח (apikey וסוד) שמזינים כאן פעם אחת. בלי מפתח אפשר לייבא קובץ תוצאות.'), true);
-    return;
-  }
-  const pages = Math.ceil((q.cap || LST_PAGE) / LST_PAGE);
-  const quota = lstQuota();
-  if (quota.used + 1 + pages > quota.limit) {
-    lstMsg(`${t('החיפוש יעלה')} ${1 + pages} ${t('בקשות ונותרו')} ${Math.max(0, quota.limit - quota.used)} ${t('החודש. אפשר להקטין את מספר התוצאות או להגדיל את המכסה בהגדרות.')}`, true);
-    return;
-  }
-  const geo = lstGeo(q);
-  const btn = $('#lstSearch');
-  if (btn) btn.textContent = t('מחפש…');
-  try {
-    const tok = await fetch(LST_API + '/oauth/token', { method: 'POST',
-      headers: { Authorization: 'Basic ' + btoa(cred.apikey + ':' + cred.secret), 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'grant_type=client_credentials&scope=read' });
-    lstSpend(1);
-    if (!tok.ok) throw new Error(t('המפתח לא התקבל — השרת השיב ') + tok.status);
-    const token = (await tok.json()).access_token;
-    let all = [], total = 0;
-    for (let page = 1; page <= pages; page++) {
-      const r = await fetch(LST_API + '/3.5/pt/search', { method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(lstApiParams(q, geo, page)).toString() });
-      lstSpend(1);
-      if (!r.ok) throw new Error(t('החיפוש נכשל — השרת השיב ') + r.status);
-      const j = await r.json();
-      total = j.total || 0;
-      all = all.concat((j.elementList || []).map(lstFromApi));
-      if (!j.elementList || j.elementList.length < LST_PAGE || page >= (j.totalPages || 1)) break;
-    }
-    lstAttach(all);
-    const kept = all.filter(geo.filter);
-    lstTake(kept, q, 'idealista', 'api');
-    lstMsg(`${kept.length} ${t('מודעות')}${total > all.length ? ` (${t('מתוך')} ${total} ${t('אצל הספק — עד הגבול שנבחר')})` : ''}`);
-  } catch (e) {
-    const net = e instanceof TypeError;
-    lstMsg((net ? t('לא הצלחתי להגיע ל-api.idealista.com מהמכשיר — אין רשת, או שהדפדפן חוסם את הקריאה (CORS). החלופה: להריץ את scripts/fetch_listings.py במחשב ולייבא את הקובץ. ') : '') + String(e.message || e), true);
-    redrawText();
-  }
-}
-
 /* ---- a results file, from scripts/fetch_listings.py or from another device ---- */
-function importListings(data) {
-  // asked for by link, one at a time — those are places, not a search
-  if (data && data.mine === true) { importProperties(data); return; }
-  const items = (data.items || []).filter(it => it && Array.isArray(it.ll) && it.ll.length === 2
-    && it.ll.every(n => typeof n === 'number' && isFinite(n))).map(it => Object.assign({}, it, { code: String(it.code) }));
-  if (!items.length) { const n = $('#impNote'); if (n) n.textContent = t('קובץ תוצאות בלי מודעות עם קואורדינטות.'); return; }
-  closePanel();
-  const q = Object.assign(lstDefaultQ(), data.query || {});
-  S.lstQ = q;
-  lstTake(items, q, data.provider || 'file', 'file');
-  /* The audit travels with the file, because the screen cannot work it out
-     for itself: 67 listings on screen look exactly the same whether that is
-     all of them or the first fifty of two hundred and fifty-five.  The file
-     is the only thing that knows what idealista said the total was. */
-  if (data.coverage && typeof data.coverage === 'object') D.lst.coverage = data.coverage;
-  if (data.read_at) { D.lst.readAt = data.read_at; lstSave(); redrawText(); }
-  lstMsg(`${items.length} ${t('מודעות נקראו מקובץ')}${data.read_at ? ' · ' + t('נקרא ב-') + lstDate(data.read_at) : ''}`);
-}
+/* ---- every listings file, and the one place it can go --------------------
+   Two entry points collapsed into one in 2.8.0.  A SEARCH used to open the
+   properties mode and a property asked for BY LINK went to "המקומות שלי";
+   the mode is gone, so both are places now.  The name stays because it is
+   what `importData()` dispatches on and what every file written before this
+   release expects to be read by. */
+/* Returns the promise, deliberately: importProperties() fetches photos, and a
+   caller that cannot await it has no way to know when the import is finished.
+   The browser suite spent a run discovering that — its probes kept landing
+   between the first render and the last. */
+function importListings(data) { return importProperties(data); }
 
 /* ---- saving: the listing becomes a place of the user's own ---- */
 /* One record shape, built in one place.  A listing saved from the search
@@ -8135,27 +7701,14 @@ async function listingPhotos(rec, it) {
   if (metas.length) { rec.photo = metas[0]; rec.photos = metas; saveMine(); }
   return { kept: metas.length, failed: failed };
 }
-async function saveListing(code) {
-  const it = D.lst && D.lst.items.find(x => x.code === code);
-  if (!it) return;
-  if (D.mine.some(p => p.id === 'l' + it.code)) { lstSetState(code, 'saved'); redrawText(); return; }
-  const rec = listingRec(it, D.lst.provider || '', D.lst.readAt);
-  D.mine.push(rec);
-  saveMine();
-  lstSetState(code, 'saved');
-  redrawText(); drawMine();
-  const got = await listingPhotos(rec, it);
-  if (got.failed) lstMsg(`${t('נשמר. ')}${got.kept} ${t('תמונות נשמרו, ')}${got.failed} ${t('לא הגיעו — ללא רשת התמונות נשארות אצל הספק.')}`, true);
-  else if (got.kept) lstMsg(`${t('נשמר עם')} ${got.kept} ${t('תמונות.')}`);
-  if (S.wp) renderWaypoints();
-}
-
-/* ---- a file of properties asked for one by one, by link ---- */
-/* `"mine": true` is the whole routing decision: a SEARCH lands on the listings
-   screen, where the coverage audit belongs; properties asked for BY LINK were
-   already chosen, one at a time, and belong in "המקומות שלי" straight away.
-   Sending them through the listings screen would mean a "coverage" line over
-   a set that was never a search — an audit of a question nobody asked. */
+/* ---- a file of properties, and the only screen they can land on ----------
+   Until 2.8.0 there were two destinations and `"mine": true` chose between
+   them: a SEARCH went to the properties mode with its coverage audit, and a
+   property asked for BY LINK went straight to "המקומות שלי".  The properties
+   mode is gone — the user searches at idealista and brings back the ones they
+   chose — so there is one destination left, and the flag no longer decides
+   anything.  It is still read, because files written before this release
+   carry it and a file is not made wrong by an app that changed its mind. */
 async function importProperties(data) {
   const items = (data.items || []).filter(it => it && Array.isArray(it.ll) && it.ll.length === 2
     && it.ll.every(n => typeof n === 'number' && isFinite(n)));
@@ -8175,7 +7728,33 @@ async function importProperties(data) {
   // land on the screen the user pasted into, not on whichever one was open
   if (!S.wp) { S.wp = true; renderMenu(); }
   if (S.view === 'map') { S.view = 'split'; applyView(); save(); }
-  mapNote(`${added} ${t('נכסים נוספו')}${updated ? ' · ' + updated + ' ' + t('עודכנו') : ''}`);
+  /* THE COVERAGE AUDIT OUTLIVED THE SCREEN IT WAS BUILT FOR.  Until 2.8.0 it
+     was a line on the properties mode; that mode is gone, and the temptation
+     was to drop the audit with it.  But the thing it guards did not go
+     anywhere: a file of forty flats looks exactly the same whether that is all
+     of them or the first fifty of two hundred and fifty-five, and only the
+     `total` idealista returned — carried in the file — can tell the
+     difference.  So it is said here, on the import, where the file arrives:
+     two numbers beside each other, never one. */
+  /* ONE NOTE, NOT TWO.  mapNote() REPLACES the message area, so a second call
+     silently eats the first — the count and the audit have to arrive in the
+     same sentence or one of them is never read. */
+  /* DRAW THE PLACES BEFORE FETCHING THEIR PICTURES.  The photo loop below is
+     one network round trip per image — for a harvest of ninety-four that is
+     tens of seconds — and until 2.8.0 the screen was not redrawn until it
+     finished.  The properties were already saved and already on the map; only
+     the list was missing, for no reason but the order of two lines.  Found by
+     the browser suite, whose probes kept landing in that gap. */
+  drawMine(); renderWaypoints();
+  const cov = data.coverage;
+  const head = `${added} ${t('נכסים נוספו')}${updated ? ' · ' + updated + ' ' + t('עודכנו') : ''}`;
+  if (cov && typeof cov === 'object' && !cov.complete) {
+    mapNote(`${head}<br><b class="lst-cov">${t('כיסוי חלקי. idealista מדווחת על ')}${nf(cov.reported || 0)}${t(' והגיעו ')}${nf(cov.unique || 0)}${t('. חתך אחד או יותר חזר קצר — פצלו אותו.')}</b>`, true);
+  } else if (cov && typeof cov === 'object') {
+    mapNote(`${head}<br><span class="lst-cov">${t('כיסוי מלא: ')}${nf(cov.unique || 0)} ${t('מתוך')} ${nf(cov.reported || 0)}</span>`);
+  } else {
+    mapNote(head);
+  }
   for (const [rec, it] of fresh) await listingPhotos(rec, it);
   drawMine(); renderWaypoints();
 }
@@ -8372,88 +7951,29 @@ function linkBoxHtml() {
     </div>`;
 }
 
-/* ---- taps and typing in the text half ---- */
-function lstClick(e) {
-  const set = e.target.closest('[data-lstset]');
-  if (set) {
-    const [k, v] = set.dataset.lstset.split(':');
-    const q = S.lstQ;
-    if (k === 'renew' || k === 'garden' || k === 'terrace') q[k] = v === '1';
-    else if (k === 'cap') q.cap = +v;
-    else q[k] = v;
-    if (k === 'where') {
-      if (v === 'mun' && !q.mun) q.mun = S.mun || D.mun[0].num;
-      if (v === 'zone') { q.mun = S.mun || q.mun || D.mun[0].num; q.zone = S.zone || q.zone || D.freKey((D.freByMun.get(q.mun) || [])[0]); }
-    }
-    redrawText(); return true;
-  }
-  const form = e.target.closest('[data-lstform]');
-  if (form) {
-    const k = form.dataset.lstform;
-    if (k === 'open') { S.lstForm = true; S.lstCredOpen = false; }
-    else if (k === 'close') S.lstForm = false;
-    else if (k === 'cred') S.lstCredOpen = !S.lstCredOpen;
-    else if (k === 'query') S.lstQueryOpen = !S.lstQueryOpen;
-    else if (k === 'file') { openImport(); const n = $('#impNote'); if (n) n.textContent = t('בחרו קובץ תוצאות (listings) שכתב scripts/fetch_listings.py, או קובץ מקומות.'); return true; }
-    redrawText(); return true;
-  }
-  if (e.target.closest('#lstSearch')) { lstHarvest(); lstSearch(); return true; }
-  if (e.target.closest('#lstCredSave')) {
-    const a = ($('#lstApikey') || {}).value || '', s = ($('#lstSecret') || {}).value || '';
-    lstSetCred(a.trim(), s.trim());
-    const lim = +(($('#lstLimit') || {}).value || 0);
-    if (lim > 0) { const qt = lstQuota(); qt.limit = lim; lstQuotaSet(qt); }
-    S.lstCredOpen = false; redrawText();
-    lstMsg(a.trim() && s.trim() ? t('המפתח נשמר במכשיר הזה.') : t('לא נשמר מפתח — שני השדות נדרשים.'), !(a.trim() && s.trim()));
-    return true;
-  }
-  if (e.target.closest('#lstCredClear')) { lstSetCred('', ''); S.lstCredOpen = false; redrawText(); return true; }
-  if (e.target.closest('#lstCenter')) { const c = map.getCenter(); S.lstQ.ll = [c.lat, c.lng]; redrawText(); return true; }
-  const hit = e.target.closest('[data-lstplace]');
-  if (hit) {
-    const r = (lstPlaceHits || [])[Number(hit.dataset.lstplace)];
-    if (r && r.ll) { S.lstQ.place = { name: r.t, ll: r.ll }; S.lstQ.placeq = r.t; redrawText(); }
-    return true;
-  }
-  const act = e.target.closest('[data-lstact]');
-  if (act) {
-    const code = act.dataset.code, a = act.dataset.lstact;
-    if (a === 'read') lstSetState(code, lstState(code) === 'read' ? 'unread' : 'read');
-    else if (a === 'del') { lstSetState(code, 'deleted'); if (S.lstOpen === code) S.lstOpen = null; }
-    else if (a === 'save') { saveListing(code); return true; }
-    redrawLevel(); redrawText(); return true;
-  }
-  const mn = e.target.closest('[data-lstmun]');
-  if (mn) { goMun(Number(mn.dataset.lstmun)); return true; }
-  const fr = e.target.closest('[data-lstfre]');
-  if (fr) { goZone(fr.dataset.lstfre); return true; }
-  const card = e.target.closest('[data-lst]');
-  if (card && !e.target.closest('a, button, input, select, textarea')) { lstOpen(card.dataset.lst); return true; }
-  return false;
-}
-let lstPlaceHits = null;
-function lstInput(e) {
-  const k = e.target.dataset && e.target.dataset.lstin;
-  if (!k) return false;
-  const v = e.target.value;
-  if (k === 'mun') { S.lstQ.mun = Number(v); S.lstQ.zone = null; if (S.lstQ.where === 'zone') redrawText(); }
-  else if (k === 'zone') S.lstQ.zone = v;
-  else if (k === 'km') S.lstQ.km = v;
-  else if (k === 'placeq') {
-    S.lstQ.placeq = v; S.lstQ.place = null;
-    lstPlaceHits = (placeHits(v) || []).filter(r => r.ll).slice(0, 10);
-    const box = $('#lstPlaceHits');
-    if (box) box.innerHTML = lstPlaceHits.map((r, i) =>
-      `<button class="row" data-lstplace="${i}"><span class="row-body"><span class="row-t">${html(r.t)}</span><span class="row-d">${html(r.s || '')} · ${html(r.k || '')}</span></span></button>`).join('');
-  } else S.lstQ[k] = v;
-  return true;
-}
-function lstHarvest() {
-  $$('#doc [data-lstin]').forEach(el => { const k = el.dataset.lstin; if (k !== 'placeq' && k !== 'mun' && k !== 'zone') S.lstQ[k] = el.value; });
-}
-/* ======================================================== LISTINGS-END ==== */
+/* ========================================================= LISTINGS-END ==== */
 
 Object.assign(EN, {
+  'מפת הרקע (קווי גובה)':
+    'The background map (contour lines)',
+  'אריחי OpenTopoMap — קווי גובה והצללת תבליט — כשנבחר רקע ״קווי גובה״. כמו הרחובות: אריח שכבר נראה נשמר במכשיר, ובלי רשת המפה מוצגת כגבולות בלבד. קווי הגובה נגזרים מ-SRTM, שאינו מודל קרקע חשופה: הם טובים לקריאת מדרון ואינם מקור למספר.':
+    'OpenTopoMap tiles — contour lines and hillshading — when the “contour lines” background is chosen. As with the streets: a tile already seen is kept on the device, and without a network the map shows boundaries only. The contours are derived from SRTM, which is not a bare-earth model: they are good for reading a hillside and are not a source for a number.',
+  'רחובות':
+    'Streets',
+  'קווי גובה':
+    'Contour lines',
+  '״פתח במקור״ פותח את המודעה בדפדפן, ותמונות של נכס שנשמר נמשכות מהשרתים של idealista בעת השמירה ואחר כך עובדות בלי רשת. האפליקציה אינה קוראת את עמוד המודעה — idealista חוסמת אותה — והדבקת קישור שומרת במכשיר את קוד המודעה בלבד, בלי לשלוח דבר.':
+    '“Open at the source” opens the advertisement in the browser, and a saved property\'s photos are fetched from idealista\'s servers at the moment it is saved and work without a network afterwards. The app does not read the advertisement\'s page — idealista blocks it — and pasting a link stores only its code on the device, sending nothing.',
+  'כיסוי מלא: ':
+    'Full coverage: ',
+  'מתוך':
+    'of',
+  'כיסוי חלקי. idealista מדווחת על ':
+    'Partial coverage. idealista reports ',
+  ' והגיעו ':
+    ' and what arrived is ',
+  '. חתך אחד או יותר חזר קצר — פצלו אותו.':
+    '. One slice or more came back short — split it.',
   'פתיחת מודעה במקור':
     'Opening an advertisement at its source',
   '״פתח במקור״ פותח את המודעה בדפדפן. האפליקציה עצמה אינה קוראת את העמוד — idealista חוסמת אותה — והדבקת קישור שומרת במכשיר את קוד המודעה בלבד, בלי לשלוח דבר.':

@@ -9,8 +9,8 @@
   "CAOP 2025, ושכבות SRUP ו-CRUS: Direção-Geral do Território (DGT), OGC API Features — CC BY 4.0.",
   "מחירי מכירה ושכירות למ״ר: INE — Estatísticas de preços da habitação ao nível local, ו-Estatísticas de Rendas da Habitação ao nível local.",
   "אזורי הצפה: Agência Portuguesa do Ambiente — Carta de zonas inundáveis, Portugal continental, דירקטיבה 2007/60/CE מחזור שני. אותר דרך dados.gov.pt.",
-  "Copernicus DEM GLO-30 — produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
-  "נורמלים אקלימיים 1991–2020: Instituto Português do Mar e da Atmosfera (IPMA). שימוש בנתונים מחייב ציון המקור, לפי מדיניות ההפצה של IPMA."
+  "נורמלים אקלימיים 1991–2020: Instituto Português do Mar e da Atmosfera (IPMA). שימוש בנתונים מחייב ציון המקור, לפי מדיניות ההפצה של IPMA.",
+  "OpenTopoMap — map data: © OpenStreetMap contributors, SRTM; map style: © OpenTopoMap (CC-BY-SA)"
  ],
  "fields": {
   "municipio.pop2021": {
@@ -713,62 +713,6 @@
    "caveat_he": "טיפולוגיה סטטיסטית של INE, לא ייעוד תכנוני: ׳כפרי בעיקרו׳ אינו אומר שאסור לבנות, ו׳עירוני בעיקרו׳ אינו אומר שמותר — את זה אומר CRUS. הגרסה עומדת על CAOP 2020, ולכן ל-57 הרובעים שנוצרו ברפורמת 2025 אין שורה והם מוצגים כ׳אין נתון׳ — לא הסיווג של האיחוד שממנו יצאו.",
    "validation_he": "243 שורות למחוז פורטו בקובץ, כמספר רובעי CAOP 2020. 218 מהן נמצאו ברובעי 2025 של האפליקציה לפי הקוד, ובכל 218 השם בקובץ INE זהה לשם ב-CAOP 2025. 25 הקודים הנותרים הם האיחודים שבוטלו ב-2025 ואינם באפליקציה. מקור שני עצמאי לסיווג אין, ולכן reported ולא verified."
   },
-  "municipio.ele": {
-   "label_he": "גובה מעל פני הים — מזערי, ממוצע ומרבי",
-   "label_en": "Elevation above sea level — minimum, mean and maximum",
-   "value_type": "metres",
-   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
-   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
-   "reference_year": 2019,
-   "retrieved": "2026-09-16",
-   "coverage": "18/18 עיריות",
-   "confidence": "approx",
-   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
-   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. ביחידות החוף המינימום עשוי לרדת מעט מתחת לאפס: המכ״ם ראה מים, והאפס הוא גאואיד EGM2008 ולא מפלס הים בקאשקאיש. הערך נרשם כפי שנמדד ולא נחתך לאפס.",
-   "method_he": "חיתוך הרשת לגבול העירייה לפי CAOP 2025, ואז המינימום, הממוצע והמרבי של הפיקסלים שבתוכו. הרשת היא 30 מטר, ולכן פסגה צרה או גיא צר מ-30 מטר אינם בה."
-  },
-  "municipio.slope": {
-   "label_he": "שיפוע ממוצע",
-   "label_en": "Mean slope",
-   "value_type": "degrees",
-   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
-   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
-   "reference_year": 2019,
-   "retrieved": "2026-09-16",
-   "coverage": "18/18 עיריות",
-   "confidence": "approx",
-   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
-   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. השיפוע מחושב על אותה רשת של 30 מטר, ולכן הוא השיפוע של המדרון ולא של החלקה: מדרגה בת שני מטרים בתוך פיקסל אחת אינה בו.",
-   "method_he": "שיפוע כל פיקסל מחושב מהגרדיאנט של הרשת, כשמרווח המזרח־מערב מוכפל ב-cos(41°) — מעלת אורך קצרה ממעלת רוחב, וספָּק יחיד היה מטה כל מדרון מזרח־מערב בשליש. הערך הוא ממוצע העירייה."
-  },
-  "freguesia.ele": {
-   "label_he": "גובה מעל פני הים — מזערי, ממוצע ומרבי",
-   "label_en": "Elevation above sea level — minimum, mean and maximum",
-   "value_type": "metres",
-   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
-   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
-   "reference_year": 2019,
-   "retrieved": "2026-09-16",
-   "coverage": "275/275 רובעים",
-   "confidence": "approx",
-   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
-   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. ביחידות החוף המינימום עשוי לרדת מעט מתחת לאפס: המכ״ם ראה מים, והאפס הוא גאואיד EGM2008 ולא מפלס הים בקאשקאיש. הערך נרשם כפי שנמדד ולא נחתך לאפס.",
-   "method_he": "חיתוך הרשת לגבול הרובע לפי CAOP 2025, ואז המינימום, הממוצע והמרבי של הפיקסלים שבתוכו. הרשת היא 30 מטר, ולכן פסגה צרה או גיא צר מ-30 מטר אינם בה."
-  },
-  "freguesia.slope": {
-   "label_he": "שיפוע ממוצע",
-   "label_en": "Mean slope",
-   "value_type": "degrees",
-   "source": "Copernicus DEM GLO-30 (COP-DEM_GLO-30-F), רשת של 30 מטר, מודל פני שטח שנגזר ממשימת TanDEM-X. האריחים N41/W009 ו-N41/W008 מ-copernicus-dem-30m.s3.amazonaws.com. הערך חושב בחיתוך הרשת לגבול היחידה ב-scripts/fetch_dem.py. רישיון Full, Free & Open — הודעת הייחוס מופיעה בדף התנאים.",
-   "url": "https://copernicus-dem-30m.s3.amazonaws.com",
-   "reference_year": 2019,
-   "retrieved": "2026-09-16",
-   "coverage": "275/275 רובעים",
-   "confidence": "approx",
-   "licence_notice": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
-   "caveat_he": "‏**זהו מודל פני שטח (DSM), לא מודל קרקע.** המכ״ם מדד את מה שעומד על הקרקע — בניינים וצמרות עצים בכלל זה — ולכן במרכז עירוני צפוף הגובה המרבי כולל גגות. במונחי שיפוע זה מטה כלפי מעלה שטח בנוי צפוף. מודל קרקע (DTM) למחוז פורטו אינו מתפרסם בשלמותו. השיפוע מחושב על אותה רשת של 30 מטר, ולכן הוא השיפוע של המדרון ולא של החלקה: מדרגה בת שני מטרים בתוך פיקסל אחת אינה בו.",
-   "method_he": "שיפוע כל פיקסל מחושב מהגרדיאנט של הרשת, כשמרווח המזרח־מערב מוכפל ב-cos(41°) — מעלת אורך קצרה ממעלת רוחב, וספָּק יחיד היה מטה כל מדרון מזרח־מערב בשליש. הערך הוא ממוצע הרובע."
-  },
   "station.temp": {
    "label_he": "טמפרטורה — נורמל 1991–2020 בתחנה",
    "label_en": "Air temperature — 1991–2020 normal at the station",
@@ -865,6 +809,18 @@
     "candidate_sources": [
      "https://ogcapi.dgterritorio.gov.pt/collections/srup_perigosidade_inc_rural",
      "https://www.icnf.pt/"
+    ]
+   },
+   {
+    "field": "ele",
+    "label_he": "גובה ושיפוע",
+    "why_he": "היו באפליקציה עד 2.8.0, ונמשכו ממנה. המקור היחיד שהיה זמין בחינם — Copernicus DEM GLO-30 — הוא **מודל פני שטח** (DSM) שנגזר מראדאר TanDEM-X: גגות וצמרות עצים הם חלק מהמשטח שהוא מודד. במרכז פורטו הצפוף ״גובה הקרקע״ שנקרא ממנו הוא גובה הגגות, והשיפוע שנגזר ממנו הוא שיפוע קו הרקיע ולא של הקרקע. ההערה הזאת אכן הופיעה על המסך — אבל מספר שצריך פסקת הסתייגות כדי שלא יטעה הוא מספר שכלל 2 מעדיף שלא יוצג.",
+    "important_he": "‏MDT ו-MDS אינם שמות נרדפים אצל המקור: ‏DGT מגדירה ‏MDT כ״תבליט הקרקע החשופה, ללא עצים ומבנים״ ו-MDS כ״פני השטח הנראים, כולל צמרות וגגות״. מה שהיה באפליקציה הוא המקבילה ל-MDS, והוצג בשם ״גובה״.",
+    "decision_he": "לא מתפרסם עד שיימדד ממודל קרקע אמיתי. המחליף מזוהה: הסקר הלאומי של DGT ב-LiDAR, ‏MDT ברזולוציה של 0.5 ו-2 מטר, ‏10 נקודות למ״ר, חינם בהרשמה. זו החלטה, לא היעדר החלטה.",
+    "candidate_sources": [
+     "https://cdd.dgterritorio.gov.pt/",
+     "https://www.dgterritorio.gov.pt/atividades/cartografia/cartografia-topografica/modelos-digitais",
+     "https://www.dgterritorio.gov.pt/levantamento-lidar-de-portugal-continental-0"
     ]
    }
   ]

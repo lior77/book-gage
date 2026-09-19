@@ -2022,7 +2022,12 @@ def main():
     reached = {}
     for name in ("app.js", "sw.js", "index.html"):
         txt = io.open(os.path.join(ROOT, name), encoding="utf-8").read()
-        for u in re.findall(r"https?://([A-Za-z0-9.-]+\.[a-z]{2,})", txt):
+        # A tile URL carries Leaflet's subdomain placeholder — `https://{s}.
+        # tile.opentopomap.org/...` — and the old pattern, anchored straight
+        # after the slashes, saw no host at all there.  It passed while the app
+        # reached a host nobody had declared, which is the one thing this check
+        # exists to prevent.  Found 2026-09-19, adding the contour background.
+        for u in re.findall(r"https?://(?:\{s\}\.)?([A-Za-z0-9.-]+\.[a-z]{2,})", txt):
             reached.setdefault(u, set()).add(name)
     lm = json.load(io.open(os.path.join(ROOT, "data", "layers_manifest.json"), encoding="utf-8"))
     for k in ("base", "fallback"):
@@ -2092,8 +2097,10 @@ def main():
         # the my-places card's "show the Portuguese" button is handled by the
         # waypoints click handler, which is outside, exactly as the card's own
         # lstSavedHtml( is.
-        allowed = {"renderListings(", "drawListings(", "lstAfterRender(", "toggleLst(", "lstOff(", "importListings(",
-                   "lstClick(", "lstInput(", "lstLoad(", "lstSavedHtml(", "lstToggleOrig("}
+        # 2.8.0 deleted the properties mode, and eight of the eleven names
+        # here went with it.  What is left is the whole surface the rest of the
+        # app may touch: the import, the card, and the card's one button.
+        allowed = {"importListings(", "lstSavedHtml(", "lstToggleOrig("}
         for m in re.finditer(r"\bD\.lst\b|\blst[A-Z]\w*\(|\bLST_\w+", outside):
             if m.group(0) in allowed:
                 continue
@@ -2109,86 +2116,17 @@ def main():
     bundle_txt = io.open(os.path.join(ROOT, "scripts", "bundle_standalone.py"), encoding="utf-8").read()
     if "fixtures" in bundle_txt:
         fail("bundle_standalone.py inlines a fixture")
-    for name in ("app.js", "sw.js", "scripts/fetch_listings.py"):
+    # scripts/fetch_listings.py was the third file here until 2.8.0; it went
+    # with the properties mode it fed, and idealista's key went with it — the
+    # app holds no provider key at all now.  The rule stays anyway, on the
+    # files that could grow one: it costs nothing while there is no key, and
+    # the first key added without it is the one that ships in the source.
+    for name in ("app.js", "sw.js", "scripts/connector_property.py"):
         txt = io.open(os.path.join(ROOT, name), encoding="utf-8").read()
         for m in re.finditer(r"(?i)(apikey|secret|client_id|client_secret)\s*[:=]\s*['\"]([A-Za-z0-9+/=_-]{16,})['\"]", txt):
             fail("%s line %d: a key-shaped literal (%s=…) — the key is typed by the user and never sits in the source"
                  % (name, txt.count("\n", 0, m.start()) + 1, m.group(1)))
 
-
-    # ---- 7ag. elevation and slope: measured here, so measured consistently --
-    # These are the project's first fields that no body published — they were
-    # computed by cutting a raster to a boundary.  A derived field can be wrong
-    # in ways a transcribed one cannot: a key that does not match silently
-    # attaches one unit's terrain to another, and the page still looks right.
-    # So the invariants are checked against the boundaries themselves.
-    dem_path = os.path.join(ROOT, "data", "raw", "elevation_dem.json")
-    have_dem = os.path.exists(dem_path)
-    mun_ele = [m for m in mun if "ele" in m]
-    fre_ele = [f for f in fre if "ele" in f]
-    if not have_dem:
-        # The tiles are 81 MB and re-fetchable, so a checkout without them is a
-        # legitimate state.  What is NOT legitimate is a build that half has it.
-        if mun_ele or fre_ele:
-            fail("elevation_dem.json is absent but %d units carry an elevation — "
-                 "stale processed data, rebuild" % (len(mun_ele) + len(fre_ele)))
-    else:
-        if len(mun_ele) != len(mun) or len(fre_ele) != len(fre):
-            fail("elevation covers %d/%d municipalities and %d/%d parishes — "
-                 "a partial cover means a key that did not match, not a gap in the raster"
-                 % (len(mun_ele), len(mun), len(fre_ele), len(fre)))
-        for lab, rows in (("municipality", mun_ele), ("parish", fre_ele)):
-            for r in rows:
-                e = r["ele"]
-                for k in ("min", "mean", "max", "slope"):
-                    if e.get(k) is None:
-                        fail("%s %s: elevation has no %s" % (lab, r["pt"], k))
-                        break
-                else:
-                    if not (e["min"] <= e["mean"] <= e["max"]):
-                        fail("%s %s: elevation %s/%s/%s is not min <= mean <= max"
-                             % (lab, r["pt"], e["min"], e["mean"], e["max"]))
-                    # Marão, the highest ground in the district, is 1415 m; a
-                    # value far past it means the wrong tile or the wrong units.
-                    if not (-10 <= e["min"] and e["max"] <= 1500):
-                        fail("%s %s: elevation %s..%s is outside the district's range"
-                             % (lab, r["pt"], e["min"], e["max"]))
-                    if not (0 <= e["slope"] <= 45):
-                        fail("%s %s: mean slope %s is not a hillside"
-                             % (lab, r["pt"], e["slope"]))
-        # The containment test is the one that catches a mis-key: a parish is
-        # inside its municipality, so its ground cannot be higher or lower.
-        mun_by_num = {m["num"]: m for m in mun}
-        for f in fre_ele:
-            m = mun_by_num.get(f["mun_num"])
-            if not m or "ele" not in m:
-                continue
-            e, me = f["ele"], m["ele"]
-            if e["min"] < me["min"] - 0.05 or e["max"] > me["max"] + 0.05:
-                fail("parish %s (%s): %s..%s m lies outside its municipality's %s..%s m — "
-                     "the elevation is keyed to the wrong unit"
-                     % (f["pt"], m["pt"], e["min"], e["max"], me["min"], me["max"]))
-    # Whatever the tiles' state, the records and the attribution are not optional.
-    for key in ("municipio.ele", "municipio.slope", "freguesia.ele", "freguesia.slope"):
-        rec = sources["fields"].get(key)
-        if not rec:
-            fail("data/sources.json has no entry for %s" % key)
-            continue
-        if rec.get("confidence") != "approx":
-            fail("%s: a value this project computed is approx, never reported or verified" % key)
-        if "method_he" not in rec:
-            fail("%s: a derived value has to say how it was derived (method_he)" % key)
-        if "Copernicus" not in rec.get("source", ""):
-            fail("%s: the source line does not name Copernicus" % key)
-    # Licence article 6(b): a user who ADAPTS the data owes this notice, and a
-    # per-unit statistic is an adaptation.  Same rule as ODbL's attribution,
-    # and it is checked the same way — the notice reaches the terms page.
-    notices = " ".join(sources["license_notices"])
-    for frag in ("Copernicus WorldDEM-30", "DLR e.V.", "Airbus Defence and Space",
-                 "European Union and ESA"):
-        if frag not in notices:
-            fail("data/sources.json license_notices is missing %r — the Copernicus DEM "
-                 "licence requires the full notice wherever the derived data is shown" % frag)
 
     # ---- 7ah. the read-path measurement says what it measured --------------
     # Added with move ח׳ of INFORMATION-PLAN.md, 2026-09-17.  Until then the
@@ -2416,9 +2354,35 @@ def main():
                                   nested_block.group(1) if nested_block else ""))
         dotted = [k for k in cmp_keys if "." in k]
         if not dotted:
-            fail("7aj: no nested comparison field is offered any more. ele and "
-                 "slope were added in 2.0.8 because they were unreachable; "
-                 "losing them again is a regression, not a simplification")
+            # Until 2.8.0 this was simply a failure: ele and slope were the
+            # nested fields, they had been unreachable before move ג׳, and
+            # losing them again would have been a regression.  They were then
+            # WITHDRAWN ON PURPOSE — the only free source measured roofs and
+            # tree canopy and called it ground — and a deliberate withdrawal is
+            # not the thing this check exists to catch.
+            #
+            # What it guards instead, while no nested field is offered: the
+            # machinery must survive, and the gap must be on the record.  A
+            # capability that quietly rots while nothing uses it is how the
+            # replacement arrives to find nowhere to land, and an undocumented
+            # absence is the thing sources.json → missing exists for.
+            if "const CMP_NESTED" not in appjs_txt:
+                fail("CMP_NESTED is gone. No nested field is offered today, but "
+                     "the terrain model that replaces ele and slope comes back "
+                     "in exactly that shape — the mapping table has to outlive "
+                     "the gap")
+            i_cv = appjs_txt.find("const cmpValue")
+            if i_cv < 0 or "split('.')" not in appjs_txt[i_cv:i_cv + 1400]:
+                fail("cmpValue() no longer walks a dotted path. With no nested "
+                     "field offered nothing exercises it, which is exactly when "
+                     "it gets simplified away by accident")
+            miss_txt = json.dumps(sources.get("missing", {}), ensure_ascii=False)
+            if "ele" not in [it.get("field", "").split(".")[0]
+                             for it in sources.get("missing", {}).get("items", [])]:
+                fail("no nested comparison field is offered and sources.json → "
+                     "missing says nothing about elevation. A field that was on "
+                     "the screen and is not any more is exactly what that list "
+                     "is for — %s" % miss_txt[:60])
         for k in dotted:
             if k not in mapping:
                 fail("app.js offers the comparison field %r and CMP_NESTED does "
@@ -2838,34 +2802,38 @@ def main():
         print("connector converter: refuses short slices, wrong places, and "
               "keeps contact details out unless asked")
     # And the app side: the audit has to survive the import and reach the glass.
-    i = appjs_txt.find("function importListings")
-    body = appjs_txt[i:i + 1400] if i >= 0 else ""
-    if "data.coverage" not in body:
-        fail("importListings() no longer carries the file's coverage block. The "
+    #
+    # WHERE THE GLASS IS MOVED IN 2.8.0.  The audit used to be a line on the
+    # properties mode, and that mode was deleted — the user searches at
+    # idealista and brings back the ones they chose.  The temptation was to
+    # drop the audit with the screen that carried it.  But the failure it
+    # guards is untouched: a file of forty flats looks identical whether that
+    # is all of them or the first fifty of two hundred and fifty-five, and
+    # only the `total` idealista returned, carried in the file, can tell them
+    # apart.  So it is said on the IMPORT now, and this follows it there.
+    i = appjs_txt.find("async function importProperties")
+    imp = appjs_txt[i:i + 3000] if i >= 0 else ""
+    if "data.coverage" not in imp:
+        fail("importProperties() no longer reads the file's coverage block. The "
              "screen cannot recompute it — only the file knows what idealista "
              "said the total was")
-    if "function lstCoverageHtml" not in appjs_txt:
-        fail("app.js no longer carries lstCoverageHtml — a partial harvest then "
-             "draws exactly like a complete one")
-    i = appjs_txt.find("function lstCoverageHtml")
-    cov = appjs_txt[i:i + 1800] if i >= 0 else ""
     for owed, why in ((u"\u05db\u05d9\u05e1\u05d5\u05d9 \u05d7\u05dc\u05e7\u05d9",
-                       "the partial case has to be named on screen"),
-                      # The PRINTING form, not the name: the first version of
-                      # this check looked for `c.reported`, which also appears
+                       "the partial case has to be named where the file lands"),
+                      # The PRINTING form, not the name: an earlier version of
+                      # this check looked for `c.reported`, which also appeared
                       # in the complete branch — so replacing the printed
                       # number with a constant passed it. A check that a
                       # deliberate break walks through is not a check.
-                      ("nf(c.reported", "and it has to print what idealista said existed"),
-                      ("nf(c.unique", "beside what actually arrived")):
-        if owed not in cov:
-            fail("lstCoverageHtml() no longer uses %r — %s. One number is a "
+                      ("nf(cov.reported", "and it has to print what idealista said existed"),
+                      ("nf(cov.unique", "beside what actually arrived")):
+        if owed not in imp:
+            fail("importProperties() no longer uses %r — %s. One number is a "
                  "claim; two numbers beside each other are a measurement"
                  % (owed, why))
-    if "lstCoverageHtml(D.lst.coverage)" not in appjs_txt:
-        fail("renderListings no longer draws the coverage line. A file that "
-             "knows it is partial and a screen that does not say so is worse "
-             "than not knowing")
+    if "cov.complete" not in imp:
+        fail("importProperties() no longer separates a complete harvest from a "
+             "partial one. A file that knows it is partial and a screen that "
+             "does not say so is worse than not knowing")
 
     # ---- 7as. a fetched quarter is checked before it is believed ------------
     # Move יא.1, 2.5.0.  A number that arrives over the network after the app
@@ -3251,10 +3219,19 @@ def main():
              "A search link, an agency page and another portal are three "
              "different mistakes, and 'bad link' sends the reader back to the "
              "clipboard with nothing to fix")
-    if "importProperties" not in appjs_txt or "data.mine === true" not in appjs_txt:
-        fail("app.js no longer routes a by-link file into my places. Sending "
-             "it through the listings screen would draw a coverage audit over "
-             "a set that was never a search")
+    # Until 2.8.0 this read `data.mine === true`, the flag that chose between
+    # the properties mode and my places.  The mode was deleted, so the flag no
+    # longer routes anything and checking for it would be checking for a
+    # decision nobody makes.  What has to hold now is simpler and stronger:
+    # EVERY listings file ends up in my places, because that is the only place
+    # left, and importListings() exists solely to say so.
+    i = appjs_txt.find("function importListings")
+    il = appjs_txt[i:i + 260] if i >= 0 else ""
+    if "importProperties(" not in il:
+        fail("importListings() no longer hands the file to importProperties(). "
+             "There is one destination since the properties mode was deleted, "
+             "and a second path to it is a second set of rules about what a "
+             "file may contain")
     # The label on the Hebrew, and the way back to the Portuguese.  Both, or
     # the translation is simply printed as the advertisement.
     i = appjs_txt.find("function lstSavedHtml")
@@ -3298,6 +3275,93 @@ def main():
                      "say who made it" % it.get("code"))
     print("by-link property: the Portuguese travels whole, the Hebrew beside "
           "it and named")
+
+    # ---- 7av. a background is attributed, and is not a source ---------------
+    # 2.8.0.  "גובה ושיפוע" were deleted because their raster measured roofs
+    # and tree canopy, and a contour background took their place on the menu.
+    # That swap has one trap in it: a contour line LOOKS like a measurement.
+    # OpenTopoMap's contours are derived from SRTM, which is not bare earth
+    # either — so the background is allowed to exist only as a background,
+    # carrying its licence, and never as a field with a source record.
+    #
+    # Hence three rules.  Both backgrounds are declared in one table, so a
+    # third cannot be added without an attribution beside it.  The licence
+    # line OpenTopoMap asks for is present verbatim.  And choosing a style
+    # never turns the background ON: that is a different question from
+    # whether to show one at all, and conflating them means a tap on
+    # "contour lines" undoes a deliberate decision to see boundaries only.
+    if "const BASEMAPS" not in appjs_txt:
+        fail("app.js has no BASEMAPS table — the background is chosen in one "
+             "place so that a new one cannot arrive without its attribution")
+    else:
+        i = appjs_txt.find("const BASEMAPS")
+        bm = appjs_txt[i:i + 900]
+        for owed, why in (("tile.openstreetmap.org", "the street background"),
+                          ("tile.opentopomap.org", "the contour background"),
+                          ("CC-BY-SA", "OpenTopoMap's licence, which it asks for by name"),
+                          ("SRTM", "and the data its contours come from")):
+            if owed not in bm:
+                fail("BASEMAPS no longer names %r — %s. A background without "
+                     "attribution is the one thing a map may not do" % (owed, why))
+        i = appjs_txt.find("function setBasemap")
+        sb = appjs_txt[i:i + 700] if i >= 0 else ""
+        if "hasLayer" not in sb:
+            fail("setBasemap() no longer checks whether the background was on "
+                 "before swapping it. Choosing a style is not a request to turn "
+                 "the background on, and a tap that does both undoes a decision "
+                 "the reader made on purpose")
+    # And it must stay a background: a contour line is not a measured field, so
+    # no source record may appear for it.
+    for k in sources["fields"]:
+        if k.endswith(".contour") or k.endswith(".topo"):
+            fail("sources.json carries %r — the contour background is a "
+                 "background, not a field. Its lines come from SRTM, which is "
+                 "not bare earth; a field would need a reference year and a "
+                 "confidence, and there is none to give" % k)
+    print("backgrounds: two, both attributed, and neither is a field")
+
+    # ---- 7aw. no definition is inside a comment ----------------------------
+    # 2026-09-19, and it cost a whole test run to find.  Deleting the
+    # properties mode removed functions one at a time, each with the comment
+    # above it — and one of those comments carried the `*/` that closed the
+    # LISTINGS-START banner.  With the closer gone the banner ran on and
+    # swallowed the two lines after it, `const LST_PHOTOS_MAX` among them.
+    #
+    # `node --check` PASSED.  It had to: the result is perfectly valid
+    # JavaScript, just with a longer comment.  The build passed, every static
+    # check passed, and the only thing that noticed was a browser importing a
+    # real file — at the very end of the run, in the error collector, far from
+    # where it happened.
+    #
+    # A syntax check cannot tell you your code became a comment.  This can:
+    # strip the block comments and see whether any top-level definition
+    # disappeared.  One that did was inside one.
+    def _strip_block_comments(txt):
+        out, i, n = [], 0, len(txt)
+        while i < n:
+            if txt.startswith("/*", i):
+                j = txt.find("*/", i + 2)
+                i = n if j < 0 else j + 2
+            else:
+                out.append(txt[i])
+                i += 1
+        return "".join(out)
+
+    def _top_defs(txt):
+        return set(re.findall(r"^(?:async )?(?:function (\w+)|const (\w+)\s*=|let (\w+)\b)",
+                              txt, re.M))
+
+    for name in ("app.js", "sw.js"):
+        raw = io.open(os.path.join(ROOT, name), encoding="utf-8").read()
+        swallowed = _top_defs(raw) - _top_defs(_strip_block_comments(raw))
+        if swallowed:
+            names = sorted(x for tup in swallowed for x in tup if x)
+            fail("%s: %d top-level definition(s) sit INSIDE a block comment — "
+                 "%s. A `*/` went missing, probably with a comment that was "
+                 "deleted above a function, and the file is still valid "
+                 "JavaScript so nothing else can see it"
+                 % (name, len(names), ", ".join(names[:4])))
+    print("no definition hides inside a comment")
 
     # ---- 7af. every check in this file answers to one label, and only one ---
     # Found 2026-09-15 while counting the sections for the 2.0.0 documents:

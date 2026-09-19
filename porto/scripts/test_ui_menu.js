@@ -298,11 +298,15 @@ const css = (page, sel, prop) =>
      from 2.0.6 — the four switches only that panel carried (אזורי הצפה,
      נהרות, הנקודות השמורות, אותיות היישובים) are rows here now. */
   const WANT = ['search',
-    /* Six modes since 2.2.0: סינון joined them, and it is a mode rather than a
-       panel because it takes over the reading half and changes what the map
-       draws — the same test the other five answer to. */
-    'mode:overview', 'mode:cons', 'mode:cmp', 'mode:flt', 'mode:lst', 'mode:mine',
-    'tiles', 'glass', 'regions', 'climate',
+    /* Six from 2.2.0 and five from 2.8.0: נכסים was deleted — the user
+       searches at idealista and brings back what they chose, and a property
+       now arrives as a file into ״המקומות שלי״ rather than through a mode of
+       its own.  The remaining five each meet the same test: they take over
+       the reading half and change what the map draws. */
+    'mode:overview', 'mode:cons', 'mode:cmp', 'mode:flt', 'mode:mine',
+    /* base:street / base:topo joined in 2.8.0 — which background, not
+       whether, so they are radios under the switch they qualify. */
+    'tiles', 'base:street', 'base:topo', 'glass', 'regions', 'climate',
     'cons-src', 'floods', 'water', 'mine', 'letters', 'cats', 'cats-open',
     'view:split', 'view:map', 'view:text',
     'theme:auto', 'theme:light', 'theme:dark',
@@ -400,7 +404,7 @@ const css = (page, sel, prop) =>
   ok('another tap brings them all back', await catsOn() === 8, String(await catsOn()));
 
   const HE = { search: 'חיפוש',
-    'mode:overview': 'סקירה', 'mode:cmp': 'השוואה', 'mode:lst': 'נכסים',
+    'mode:overview': 'סקירה', 'mode:cmp': 'השוואה',
     'mode:mine': 'המקומות שלי',
     cats: 'נקודות ציון', regions: 'אזורים', climate: 'אקלים',
     'view:split': 'גרפיקה וטקסט', 'view:map': 'גרפיקה בלבד', 'view:text': 'טקסט בלבד',
@@ -670,61 +674,44 @@ const css = (page, sel, prop) =>
   await page.evaluate(() => { S.tiles = true; tileLayer.addTo(map); goDistrict(); });
   await page.waitForTimeout(700);
 
-  /* ---- TERRAIN: measured here, so it says so ---------------------------
-     Elevation and slope are the first fields in this app that no body
-     published — they were computed by cutting a 30 m raster to a boundary.
-     What the checks cannot see is whether the screen tells the reader that:
-     "mean slope 15.9°" reads like a survey of the plot unless something on
-     the card says it is a hillside on a 30 m grid. */
+  /* ---- TERRAIN: withdrawn in 2.8.0, and the withdrawal is on the record ----
+     Elevation and slope were the first fields in this app that no body
+     published — computed by cutting a 30 m raster to a boundary.  The raster
+     was Copernicus GLO-30, which is a SURFACE model: what it called ground
+     was roofs and tree canopy.  The card carried that caveat honestly, and
+     the caveat is the point — a number that needs a paragraph of
+     qualification to stop it misleading is one rule 2 would rather not show.
+
+     So the assertions flipped.  They no longer check that the card reads
+     well; they check that it is GONE, and that its absence is on the record
+     where a reader can find it, rather than having quietly evaporated. */
   await page.evaluate(() => goMun(D.mun.find(m => m.pt === 'Baião').num));
   await page.waitForTimeout(800);
-  const terr = await page.evaluate(() => {
-    const c = [...document.querySelectorAll('#doc .card')]
-      .find(x => /גובה ושיפוע/.test(x.innerText));
-    if (!c) return null;
-    return { text: c.innerText, srcs: [...c.querySelectorAll('[data-src]')].map(e => e.dataset.src) };
-  });
-  ok('the municipality page carries a terrain card', terr !== null);
-  ok('and every figure on it opens its own source record',
-     terr && terr.srcs.length === 3
-       && terr.srcs.filter(k => k === 'municipio.ele').length === 2
-       && terr.srcs.indexOf('municipio.slope') >= 0, JSON.stringify(terr && terr.srcs));
-  ok('Baião reads its real ground: mean 557 m, up to 1,410 m on the Marão',
-     terr && /557/.test(terr.text) && /1,410/.test(terr.text),
-     terr && terr.text.replace(/\n/g, ' ').slice(0, 120));
-  /* The card must not let a surface model pass as ground.  This is the
-     accuracy contract's rule 4 — never restate a source into something
-     stronger — applied to a measurement rather than to wording. */
-  ok('and it says on the card that this is a surface model, not the ground',
-     terr && /מודל פני שטח/.test(terr.text) && /30 מטר/.test(terr.text));
-  ok('the source record names Copernicus, marks the value approx, and says how it was computed',
+  const terrGone = await page.evaluate(() => ({
+    card: [...document.querySelectorAll('#doc .card')].some(x => /גובה ושיפוע/.test(x.innerText)),
+    src: !!document.querySelector('#doc [data-src$=".slope"], #doc [data-src$=".ele"]'),
+    fields: Object.keys(D.sources.fields).filter(k => /\.(ele|slope)$/.test(k)),
+    onUnit: !!(D.mun.find(m => m.pt === 'Baião') || {}).ele,
+    missing: (D.sources.missing.items || []).find(x => x.field === 'ele') || null,
+  }));
+  ok('terrain: the elevation card is gone from the municipality page',
+     !terrGone.card && !terrGone.src);
+  ok('terrain: and no elevation field survives in the data or the source records',
+     terrGone.fields.length === 0 && !terrGone.onUnit,
+     JSON.stringify(terrGone.fields));
+  /* A field that was on the screen and is not any more is exactly what
+     sources.json → missing exists for.  Deleting it silently would leave a
+     reader who remembers it with no way to find out what happened. */
+  ok('terrain: the withdrawal is written down, with the reason and the replacement',
+     !!terrGone.missing && /DSM|פני שטח/.test(terrGone.missing.why_he || '')
+       && /LiDAR|MDT/.test(terrGone.missing.decision_he || ''),
+     terrGone.missing && (terrGone.missing.why_he || '').slice(0, 60));
+  /* Read the table, not t(): t() returns the Hebrew unchanged while the app
+     is in Hebrew, so going through it here asserted nothing at all. */
+  ok('terrain: and the missing entry has its English, like every other string in the data',
      await page.evaluate(() => {
-       const f = D.sources.fields['municipio.slope'];
-       return /Copernicus/.test(f.source) && f.confidence === 'approx' && !!f.method_he;
-     }));
-  /* A parish sits inside its municipality, so its ground cannot be higher. */
-  ok('a parish never reports ground its municipality does not have',
-     await page.evaluate(() => {
-       const bad = [];
-       for (const f of D.fre) {
-         const m = D.munByNum.get(f.mun_num);
-         if (!f.ele || !m || !m.ele) continue;
-         if (f.ele.min < m.ele.min - 0.05 || f.ele.max > m.ele.max + 0.05) bad.push(f.pt);
-       }
-       return bad.length === 0;
-     }));
-  ok('all 18 municipalities and all 275 parishes carry it — a partial cover is a mis-key',
-     await page.evaluate(() => D.mun.filter(m => m.ele).length === 18
-       && D.fre.filter(f => f.ele).length === 275));
-  /* A value shown to one decimal is not "rounded" from two.  Until 2.0.3 the
-     guard compared the strings, so every such figure offered an exact value
-     identical to itself, over a sentence saying that was what the source
-     published — which on a derived field is not true of anything published. */
-  ok('a one-decimal figure offers no "exact value", and a rounded one still does',
-     await page.evaluate(() => {
-       const s = document.querySelector('#doc [data-src$=".slope"]');
-       const p = document.querySelector('#doc [data-src$=".pop2021"]');
-       return s && !s.dataset.exact && p && !!p.dataset.exact;
+       const k = (D.sources.missing.items.find(x => x.field === 'ele') || {}).why_he;
+       return !!k && typeof EN[k] === 'string' && EN[k].length > 40;
      }));
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(600);
@@ -1670,66 +1657,40 @@ const css = (page, sel, prop) =>
   ok('the key names the missing group too, with its own hatch',
      k2.some(k => k.nd && k.n === 8), JSON.stringify(k2));
 
-  /* Move ג׳ — the nested fields.  `ele` and `slope` have been on every unit
-     since 2.0.3, and until 2.0.8 this screen could not offer them: cmpFields()
-     read FLAT keys only, so the one question a buyer asks about a hillside —
-     is this parish higher, or steeper, than that one — could not be asked at
-     all.  Four things are checked, and every one of them fails against the
-     code of 2.0.7: the picker offers the four fields, choosing one ranks the
-     units, the value chip opens the record the value really came from (`ele`
-     for the three heights, `slope` for the gradient — two records inside one
-     object), and the number shown is the number the data holds. */
+  /* Move ג׳ — the nested fields, with nothing nested left to offer.
+     `ele` and `slope` were the only dotted keys this screen ever had, and
+     2.8.0 withdrew them: the raster behind them measured roofs and canopy.
+     The MACHINERY stays, because DGT's terrain model comes back in exactly
+     that shape — and machinery that nothing exercises is machinery that gets
+     simplified away by accident, which is what these assertions now prevent.
+
+     So the path is driven against an object injected into the page rather
+     than against real data. That is weaker than the old test and it is said
+     out loud: it proves cmpValue() still walks a dotted path and still asks
+     CMP_NESTED which record answers for it, and it proves nothing at all
+     about any field being on the screen — because none is. */
   await page.evaluate(() => goDistrict());
   await page.waitForTimeout(700);
-  if (await page.evaluate(() => !S.cmpPick)) { await page.click('[data-cmppick="1"]'); await page.waitForTimeout(400); }
-  const nested = ['ele.mean', 'ele.max', 'ele.min', 'ele.slope'];
-  const offered = await Promise.all(nested.map(k => page.$(`#doc [data-cmpf="${k}"]`)));
-  ok('the field picker offers the four topography fields',
-     offered.every(el => el !== null),
-     nested.filter((k, i) => offered[i] === null).join(', ') || 'all four');
-  ok('and each says it covers all eighteen municipalities',
-     await page.$$eval('#doc [data-cmpf^="ele."] .cmp-f-c',
-       els => els.every(e => e.textContent.trim() === '18/18')),
-     await page.$$eval('#doc [data-cmpf^="ele."] .cmp-f-c',
-       els => els.map(e => e.textContent.trim()).join(' ')));
-
-  /* Guarded, not asserted twice: against code that does not offer the field,
-     page.click() times out and takes the whole run with it — and a suite that
-     dies on the first missing thing reports one line instead of the rest of
-     its checks.  Proved on a copy with move ג׳ removed: the four assertions
-     above go red and everything after them still runs. */
-  const havePick = async k => await page.$(`#doc [data-cmpf="${k}"]`) !== null;
-  if (await havePick('ele.slope')) {
-    await page.click('#doc [data-cmpf="ele.slope"]');
-    await page.waitForTimeout(900);
-  }
-  const slopeRows = await cmpRows();
-  ok('choosing the nested slope field ranks every municipality',
-     slopeRows.length === 18 && slopeRows.every(r => !r.none),
-     `${slopeRows.length} rows, ${slopeRows.filter(r => r.none).length} without a value`);
-  ok('and the chip beside the value opens the slope record, not the elevation one',
-     slopeRows.every(r => r.src === 'municipio.slope'),
-     [...new Set(slopeRows.map(r => r.src))].join(', '));
-
-  await page.click('[data-cmppick="1"]').catch(() => {});
-  await page.waitForTimeout(400);
-  if (await havePick('ele.mean')) {
-    await page.click('#doc [data-cmpf="ele.mean"]');
-    await page.waitForTimeout(900);
-  }
-  const eleRows = await cmpRows();
-  ok('the three heights answer to the ele record',
-     eleRows.length === 18 && eleRows.every(r => r.src === 'municipio.ele'),
-     [...new Set(eleRows.map(r => r.src))].join(', '));
-  ok('and the number on the row is the number in the data, rounded as declared',
-     await page.evaluate(rows => {
-       const want = new Map(D.mun.map(m => [m.he, Math.round(m.ele.mean)]));
-       return rows.every(r => {
-         const n = Number(r.val.replace(/[^\d.-]/g, ''));
-         return want.has(r.name) && n === want.get(r.name);
-       });
-     }, eleRows),
-     eleRows.slice(0, 3).map(r => `${r.name}=${r.val}`).join(' '));
+  const nestedMech = await page.evaluate(() => {
+    const before = Object.keys(CMP_NESTED).length;
+    CMP_NESTED['t.mean'] = 't';               // a field that does not exist
+    const walked = cmpValue({ t: { mean: 42 } }, 't.mean');
+    const missing = cmpValue({}, 't.mean');   // a missing step is a missing value
+    const key = cmpSrcKey('municipio', 't.mean');
+    delete CMP_NESTED['t.mean'];
+    return { before, walked, missing, key, after: Object.keys(CMP_NESTED).length };
+  });
+  ok('nested: no dotted field is offered any more — ele and slope were withdrawn',
+     nestedMech.before === 0 && nestedMech.after === 0,
+     JSON.stringify({ before: nestedMech.before, after: nestedMech.after }));
+  ok('nested: cmpValue still reads down a dotted path',
+     nestedMech.walked === 42, String(nestedMech.walked));
+  ok('nested: and a missing step is a missing value, not a throw',
+     nestedMech.missing === null, String(nestedMech.missing));
+  /* The mapping is not derivable from the path — that was the whole reason
+     CMP_NESTED exists — so the source key has to come from the table. */
+  ok('nested: the source record still comes from CMP_NESTED, not from the dot',
+     nestedMech.key === 'municipio.t', nestedMech.key);
 
   /* Move א׳ — the quarterly series.  Twenty-six quarters of two INE
      indicators have been read on every build since 1.25.0 and ONE of them
@@ -1942,7 +1903,7 @@ const css = (page, sel, prop) =>
      is untested — the untested set is about the data, not about the question. */
   await page.click('[data-fltadd]');
   await page.waitForTimeout(400);
-  await page.click('[data-fltf="ele.mean"]');
+  await page.click('[data-fltf="area_km2"]');
   await page.waitForTimeout(600);
   ok('a second condition on a fully covered field leaves the untested count alone',
      (await page.$eval('.flt-none', e => e.textContent)).includes(String(fltWant.none)),
@@ -1962,7 +1923,7 @@ const css = (page, sel, prop) =>
      hole in it and no memory of the question that made the hole. */
   await page.evaluate(() => {
     S.fltConds = [{ k: 'price_eur_m2', op: 'le', v: '1500' },
-                  { k: 'ele.mean', op: 'ge', v: '100' }];
+                  { k: 'area_km2', op: 'ge', v: '10' }];
     save();
   });
   const fltStore = await page.evaluate(() => {
@@ -1977,14 +1938,18 @@ const css = (page, sel, prop) =>
   });
   ok('filter: a restart brings the question back, field, relation and value alike',
      JSON.stringify(fltBack.conds) === JSON.stringify(
-       [{ k: 'price_eur_m2', op: 'le', v: '1500' }, { k: 'ele.mean', op: 'ge', v: '100' }]),
+       [{ k: 'price_eur_m2', op: 'le', v: '1500' }, { k: 'area_km2', op: 'ge', v: '10' }]),
      JSON.stringify(fltBack.conds));
   /* A store written by an older build can name a field this one dropped.  Left
      alone it would render as a bare Latin key on a Hebrew row and put every
-     unit in "not tested" with no reason given. */
+     unit in "not tested" with no reason given.
+
+     `ele.mean` is no longer a hypothetical here: 2.8.0 withdrew it, so any
+     phone that filtered on elevation before this release has exactly this
+     condition sitting in its store right now. */
   const fltJunk = await page.evaluate(() => {
     const o = JSON.parse(localStorage.getItem(KEY) || '{}');
-    o.fltConds = [{ k: 'a_field_that_was_dropped', op: 'le', v: '3' },
+    o.fltConds = [{ k: 'ele.mean', op: 'le', v: '3' },
                   { k: 'density', op: 'sideways', v: '3' },
                   { k: 'density', op: 'ge', v: 'not a number' },
                   { k: 'density', op: 'ge', v: '500' }];
@@ -3576,20 +3541,20 @@ const css = (page, sel, prop) =>
       await page.waitForFunction(() => !S.cons || consPhase === 'ready', null, { timeout: 120000 });
       await page.waitForTimeout(600);
     };
-    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); });
-    ok('the menu offers the six modes, ״המקומות שלי״ and ״סינון״ among them',
-       (await cell()).tabs === 6, JSON.stringify(await cell()));
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); });
+    ok('the menu offers the five modes, ״המקומות שלי״ and ״סינון״ among them',
+       (await cell()).tabs === 5, JSON.stringify(await cell()));
     ok('and they sit at the top of the menu, right under חיפוש',
        await page.evaluate(() => {
          const rows = [...document.querySelectorAll('#menuIn [data-m]')].map(e => e.dataset.m);
-         return rows[0] === 'search' && rows.slice(1, 7).every(r => r.startsWith('mode:'));
+         return rows[0] === 'search' && rows.slice(1, 6).every(r => r.startsWith('mode:'));
        }));
     ok('and no mode bar takes a strip off the reading half any more',
        await page.evaluate(() => !document.getElementById('modeBar')));
     for (const level of ['district', 'mun', 'zone']) {
       await mode('overview'); await go(level);
       const before = await cell();
-      for (const k of ['cons', 'cmp', 'lst', 'mine', 'overview']) {
+      for (const k of ['cons', 'cmp', 'flt', 'mine', 'overview']) {
         await mode(k);
         const c = await cell();
         /* המקומות שלי with nothing saved yet is a heading and a חדש button,
@@ -3605,7 +3570,7 @@ const css = (page, sel, prop) =>
        button is not navigation — it is the one way back to the overview at
        level 1, from any mode and any level.  Going UP one level is what the
        trail above the map is for. */
-    for (const k of ['cons', 'cmp', 'lst', 'mine']) {
+    for (const k of ['cons', 'cmp', 'flt', 'mine']) {
       await go('district'); await mode(k);
       await go('mun'); const a = await cell();
       await go('zone'); const b = await cell();
@@ -3638,68 +3603,117 @@ const css = (page, sel, prop) =>
     await mode('overview'); await go('district');
   }
 
-  /* THE LISTINGS MODE.  A results file (six real Lousada listings, read
-     through the provider's connector) is imported; the map colours by count,
-     the rows count, the cards quote; nothing on it opens a source record and
-     nothing in the overview shows a listing; save makes a place of the
-     user's own with the quote inside and the copy marked as a copy. */
+  /* A HARVEST FILE, AND THE ONE SCREEN IT CAN LAND ON.
+     Until 2.8.0 a results file opened a mode of its own: a form, a map
+     coloured by how many advertisements each unit held, rows, cards.  That
+     mode is gone — the user searches at idealista and brings back the ones
+     they chose — and the file now lands in "המקומות שלי" like a property
+     asked for by link.  The fixture is the same six real Lousada
+     advertisements, read through the official connector. */
   {
     const fixture = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'listings_lousada.json'), 'utf8'));
     await page.route('**img4.idealista.pt/**', r => r.abort());
-    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); if (S.lst) lstOff(); goDistrict(); });
-    await page.click('#menuBtn'); await page.waitForTimeout(250);
-    await page.click('#menuIn [data-m="mode:lst"]'); await page.waitForTimeout(600);
-    ok('the listings tab opens a search form and moves nothing', await page.evaluate(() =>
-      S.lst === true && S.level === 'district' && !!document.querySelector('#lstForm') && !!document.querySelector('#lstSearch')));
-    ok('the form is one column with a label above every field', await page.evaluate(() => {
-      const f = document.querySelector('#lstForm'); const cs = getComputedStyle(f);
-      return cs.flexDirection === 'column' && f.querySelectorAll('.fld-l').length >= 6; }));
-    await page.click('#lstSearch'); await page.waitForTimeout(500);
-    ok('search without a key explains what is missing and opens the key fields, without a blocking screen',
-       await page.evaluate(() => !!document.querySelector('#lstApikey') && document.querySelector('#msgs').innerText.includes('מפתח')
-         && !document.querySelector('#menu').hidden === false));
-    await page.evaluate(f => importListings(f), fixture); await page.waitForTimeout(800);
-    const l1 = await page.evaluate(() => ({ n: D.lst.items.length, level: S.level, form: !!document.querySelector('#lstForm'),
-      lousada: (document.querySelector('#doc [data-lstmun="14"] .num') || {}).innerText,
-      chips: document.querySelectorAll('#doc [data-src]').length,
-      painted: LG.mun ? LG.mun.getLayers().filter(l => l.options.fillOpacity > .5).length : 0 }));
-    ok('the file is read: six listings, the level unchanged, the form folded', l1.n === 6 && l1.level === 'district' && !l1.form, JSON.stringify(l1));
-    ok('level 1 counts them by municipality — all six in Lousada', l1.lousada === '6', JSON.stringify(l1));
-    ok('and paints exactly one municipality on the map', l1.painted === 1, String(l1.painted));
-    ok('no number on the listings screen opens a source record', l1.chips === 0, String(l1.chips));
-    await page.click('#doc [data-lstmun="14"]'); await page.waitForTimeout(700);
-    const l2 = await page.evaluate(() => ({ level: S.level, mun: S.mun, mode: S.lst,
-      sum: [...document.querySelectorAll('#doc [data-lstfre] .num')].reduce((a, e) => a + (+e.innerText || 0), 0),
-      cards: document.querySelectorAll('#doc .lst').length, chips: document.querySelectorAll('#doc [data-src]').length }));
-    ok('level 2 keeps the mode, counts by parish to six, and lists the six', l2.level === 'mun' && l2.mode && l2.sum === 6 && l2.cards === 6 && l2.chips === 0, JSON.stringify(l2));
-    const code = fixture.items[0].code;
-    await page.click(`#doc [data-lst="${code}"] .lst-txt`); await page.waitForTimeout(800);
-    const l3 = await page.evaluate(c => ({ level: S.level, zone: S.zone, open: S.lstOpen, state: lstState(c),
-      quote: !!document.querySelector('#doc .lst-quote'), pins: LG.lst ? LG.lst.getLayers().length : 0,
-      src: !!document.querySelector('#doc a[href*="idealista.pt"]'), chips: document.querySelectorAll('#doc [data-src]').length }), code);
-    ok('tapping a listing opens its parish at level 3, marks it read, and shows the quote and the pin', l3.level === 'zone' && l3.open === code && l3.state === 'read' && l3.quote && l3.pins >= 1 && l3.src && l3.chips === 0, JSON.stringify(l3));
-    ok('and the parish it opened is the one under the coordinate, not the one in the text',
-       l3.zone === await page.evaluate(c => { const it = D.lst.items.find(x => x.code === c); const f = freguesiaAt(it.ll[0], it.ll[1]); return D.freKey(f); }, code), l3.zone);
+    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.cons) consOff(); goDistrict(); });
     await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); });
-    await page.click(`#doc [data-lstact="save"][data-code="${code}"]`); await page.waitForTimeout(1200);
-    const sv = await page.evaluate(c => { const p = D.mine.find(x => x.id === 'l' + c); return p ? { state: lstState(c), price: p.src.price, read: p.src.read_at, desc: p.desc.length > 20, url: p.src.url } : null; }, code);
-    ok('save makes a place of the user\'s own with the quote, the price as read then, and when it was read', sv && sv.state === 'saved' && sv.price === 69000 && /2026/.test(sv.read) && sv.desc && /idealista/.test(sv.url), JSON.stringify(sv));
-    await page.evaluate(() => { if (!S.wp) toggleWp(); }); await page.waitForTimeout(600);
-    const card = await page.evaluate(c => { const el = document.querySelector(`#doc [data-wp="l${c}"]`); return el ? el.innerText : ''; }, code);
-    ok('on its my-places card the copy says it is a copy: the price "as read then", the quote as the listing\'s words', /כפי שנקרא אז/.test(card) && /לשון המודעה/.test(card) && /69/.test(card), card.slice(0, 120));
-    const ex = await page.evaluate(async c => { const p = await exportPayload(); const r = p.points.find(x => x.id === 'l' + c); return !!(r && r.src && r.src.code === c); }, code);
-    ok('and the export carries the quote and its provenance', ex);
-    await page.evaluate(() => { toggleWp(); }); await page.waitForTimeout(400);
-    await page.click(`#doc [data-lstact="del"][data-code="${fixture.items[1].code}"]`).catch(() => {});
-    await page.evaluate(c => { lstSetState(c, 'deleted'); redrawText(); }, fixture.items[1].code); await page.waitForTimeout(400);
-    ok('delete removes a listing from the results', await page.evaluate(() => lstLive().length) === 5);
-    await page.click('#menuBtn'); await page.waitForTimeout(250);
-    await page.click('#menuIn [data-m="mode:overview"]'); await page.waitForTimeout(700);
-    const ov = await page.evaluate(() => ({ level: S.level, zone: S.zone, lst: document.querySelectorAll('#doc .lst, #doc .lst-quote').length,
-      euros: /€ ?69|69[,.]000/.test(document.getElementById('doc').innerText), chips: document.querySelectorAll('#doc [data-src]').length }));
-    ok('the overview of the same parish shows the statistics and not one listing — two screens, no mixing', ov.level === 'zone' && ov.lst === 0 && !ov.euros && ov.chips > 0, JSON.stringify(ov));
-    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); D.lst = null; lstSave(); goDistrict(); });
+    const before = await page.evaluate(() => D.mine.length);
+    await page.evaluate(d => importListings(d), fixture);
+    /* AWAITED, not timed.  importListings() returns the promise so a caller
+       can wait for the whole import — photos included — and the earlier
+       versions of this block, which waited on a clock and then on the DOM,
+       both raced the tail: the screen renders once when the places are saved
+       and again when the pictures land. */
+    const got = await page.evaluate(() => ({
+      mode: S.wp, added: D.mine.filter(p => p.src).length,
+      note: (document.querySelector('#msgs .msg-body') || {}).innerText || '',
+      quoted: document.querySelectorAll('#doc .lst-quote').length,
+      copy: document.querySelectorAll('#doc .ph-cap').length,
+      src: document.querySelectorAll('#doc [data-src]').length,
+    }));
+    ok('harvest: a results file lands in my places, not on a screen of its own',
+       got.mode === true && got.added === fixture.items.length,
+       JSON.stringify({ mode: got.mode, added: got.added, want: fixture.items.length }));
+    ok('harvest: and the import says how many arrived',
+       new RegExp(String(fixture.items.length)).test(got.note), got.note.slice(0, 60));
+    /* The rule the user set, and the one §7ad enforces structurally: a screen
+       that shows an asking price shows no official statistic. */
+    ok('harvest: the cards quote the advertisement and open no source record',
+       got.quoted > 0 && got.src === 0,
+       JSON.stringify({ quoted: got.quoted, src: got.src }));
+
+    await page.evaluate(() => { if (S.wp) toggleWp(); goZone(D.freKey(D.fre.find(f => f.mun === 'Lousada'))); });
+    await page.waitForTimeout(800);
+    const ov = await page.evaluate(() => ({
+      level: S.level,
+      lst: document.querySelectorAll('#doc .lst-quote, #doc .lst-price').length,
+      chips: document.querySelectorAll('#doc [data-src]').length,
+    }));
+    ok('harvest: the statistics screen for the same parish shows no advertisement — two screens, no mixing',
+       ov.level === 'zone' && ov.lst === 0 && ov.chips > 0, JSON.stringify(ov));
+    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); goDistrict(); });
     await page.unroute('**img4.idealista.pt/**');
+  }
+
+  /* ---- TWO BACKGROUNDS, AND THE ONE THAT MUST NOT PRETEND -----------------
+     2.8.0 deleted "גובה ושיפוע" — the raster behind them measured roofs and
+     canopy — and put a contour background on the menu instead.  That swap has
+     a trap in it: a contour line LOOKS like a measurement, and OpenTopoMap's
+     lines come from SRTM, which is not bare earth either.  So the assertions
+     are about keeping it a background: it is attributed, and choosing it is
+     not the same act as turning the background on.
+
+     THE SWAP IS TESTED INSIDE ONE page.evaluate, ON PURPOSE.  No tile server
+     is reachable from this container, so six failed tiles trip the app's own
+     "the background did not load, show boundaries only" fallback within a
+     few hundred milliseconds — correct behaviour, and it would tear the
+     layer off the map between the act and the assertion.  Faking the tiles
+     does not help: the layer is crossOrigin, and a fulfilled route carries no
+     CORS headers, so the images fail to decode anyway.  Measured: `tiles`
+     and `hasLayer` both read true immediately after arming and both read
+     false 400 ms later.  Running the whole sequence synchronously measures
+     setBasemap() and nothing else. */
+  {
+    await page.click('#menuBtn'); await page.waitForTimeout(250);
+    const rows = await page.$$eval('#menuIn [data-m^="base:"]', els => els.map(e => e.dataset.m));
+    ok('background: the menu offers streets and contour lines, as a choice under the switch',
+       rows.join(' ') === 'base:street base:topo', rows.join(' '));
+    await page.evaluate(() => { const m = $('#menu'); if (m && !m.hidden) openMenu(false); });
+    await page.waitForTimeout(250);
+
+    const swap = await page.evaluate(() => {
+      setBasemap('street');
+      // on: arm it, swap, and read back — all before any tile can fail
+      S.tiles = true;
+      if (!map.hasLayer(tileLayer)) tileLayer.addTo(map);
+      setBasemap('topo');
+      const withOn = { key: S.base, on: map.hasLayer(tileLayer), tiles: S.tiles,
+                       url: tileLayer._url, attr: (tileLayer.options || {}).attribution || '' };
+      // off: the background is deliberately off, and a style is still a style
+      setBasemap('street');
+      S.tiles = false;
+      if (map.hasLayer(tileLayer)) map.removeLayer(tileLayer);
+      setBasemap('topo');
+      const withOff = { key: S.base, on: map.hasLayer(tileLayer), tiles: S.tiles };
+      setBasemap('street');
+      return { withOn, withOff };
+    });
+    ok('background: choosing contour lines swaps the layer and keeps it on',
+       swap.withOn.key === 'topo' && swap.withOn.on === true
+         && /opentopomap/.test(swap.withOn.url), JSON.stringify(swap.withOn));
+    /* OpenTopoMap asks for its licence by name, and OSM's attribution rides
+       with it — the data under the contours is still OSM's. */
+    ok('background: and it carries the attribution both sources ask for',
+       /OpenTopoMap/.test(swap.withOn.attr) && /CC-BY-SA/.test(swap.withOn.attr)
+         && /OpenStreetMap/.test(swap.withOn.attr) && /SRTM/.test(swap.withOn.attr),
+       swap.withOn.attr);
+    /* The one that would be easy to get wrong: turning the background OFF is a
+       deliberate act — boundaries only, nothing fetched — and picking a style
+       is a different question.  A tap that did both would quietly undo a
+       decision the reader made. */
+    ok('background: choosing a style while the background is off does not turn it on',
+       swap.withOff.key === 'topo' && swap.withOff.on === false
+         && swap.withOff.tiles === false, JSON.stringify(swap.withOff));
+    ok('background: and the app is left on the streets, as it was found',
+       await page.evaluate(() => baseKey()) === 'street');
   }
 
   /* Last block in the file, and it has to be: from here on every tile is
@@ -4425,25 +4439,27 @@ const css = (page, sel, prop) =>
     await page.evaluate(() => { localStorage.removeItem('porto-quarter-v1'); closePanel(); });
   }
 
-  /* ---- a sliced search says what it did not see --------------------------
+  /* ---- a sliced search still says what it did not see ---------------------
      Route 2, 2026-09-18.  idealista's connector returns at most 50 per call
      and has no page parameter — Lousada alone has 255 for sale — so a real
      search is several calls over disjoint slices, and "did I see everything?"
      stops being obvious the moment that is true.
 
-     Both fixtures are the SAME 67-listing harvest, read through the official
-     connector on 2026-09-18 in two complete slices (25 up to 150,000 € and
-     42 between 150 and 250). One carries its real audit; the other carries
-     the audit it would have had if a slice had been cut short. The screen has
-     to tell them apart, because nothing else can: the listings look
-     identical. */
+     2.8.0 DELETED THE SCREEN THIS WAS DRAWN ON, and the audit did not go with
+     it.  The failure it guards is untouched: the two fixtures below are the
+     SAME 67-listing harvest, one carrying its real audit and one carrying the
+     audit it would have had if a slice had been cut short, and the properties
+     in them are identical. Nothing about the places on the map can tell them
+     apart — only the `total` idealista returned, carried in the file, can. So
+     it is said on the import now, where the file arrives. */
   {
     const fs = require('fs'), path = require('path');
     const readFix = n => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8'));
     const full = readFix('listings_cov_full.json');
     const part = readFix('listings_cov_partial.json');
     await page.route('**img4.idealista.pt/**', r => r.abort());
-    await page.evaluate(() => { if (S.wp) toggleWp(); if (S.cmp) toggleCmp(); if (S.flt) toggleFlt(); if (S.lst) lstOff(); goDistrict(); });
+    await page.evaluate(() => { if (S.cmp) toggleCmp(); if (S.flt) toggleFlt(); goDistrict();
+                                D.mine = D.mine.filter(p => !p.src); saveMine(); });
 
     ok('coverage: the harvest was taken in slices, and every slice says how many exist',
        full.coverage.slices.length === 2 && full.coverage.slices.every(s => s.total > 0 && s.complete)
@@ -4457,41 +4473,42 @@ const css = (page, sel, prop) =>
        !JSON.stringify(full).includes('phoneNumber') && !JSON.stringify(part).includes('phoneNumber')
          && full.items.every(i => !i.contact));
 
+    const noteOf = () => page.evaluate(() => {
+      const m = document.querySelector('#msgs .msg');
+      const c = document.querySelector('#msgs .lst-cov');
+      return { there: !!c, bad: m ? m.classList.contains('bad') : null,
+               text: m ? m.innerText.replace(/\s+/g, ' ').trim() : '' };
+    });
+    /* Each import ends in an async tail — photos, then renderWaypoints() — and
+       a fixed wait races it.  Unfinished tails from this block were landing
+       inside the NEXT one and re-rendering the screen under its feet. */
     await page.evaluate(d => importListings(d), full);
-    await page.waitForTimeout(600);
-    const okLine = await page.evaluate(() => {
-      const e = document.querySelector('#doc .lst-cov');
-      return { there: !!e, warn: e ? e.classList.contains('warn') : null,
-               text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '' };
-    });
-    ok('coverage: a complete harvest says so on the glass, and not as a warning',
-       okLine.there && okLine.warn === false && /כיסוי מלא/.test(okLine.text), okLine.text.slice(0, 80));
+    const okLine = await noteOf();
+    ok('coverage: a complete harvest says so where the file lands, and not as a warning',
+       okLine.there && okLine.bad === false && /כיסוי מלא/.test(okLine.text), okLine.text.slice(0, 80));
 
+    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); hideNote(); });
     await page.evaluate(d => importListings(d), part);
-    await page.waitForTimeout(600);
-    const badLine = await page.evaluate(() => {
-      const e = document.querySelector('#doc .lst-cov');
-      return { there: !!e, warn: e ? e.classList.contains('warn') : null,
-               text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '' };
-    });
+    const badLine = await noteOf();
     ok('coverage: a partial harvest is a warning, not a footnote',
-       badLine.there && badLine.warn === true && /כיסוי חלקי/.test(badLine.text), badLine.text.slice(0, 80));
-    /* Two numbers beside each other, not one. "75 listings" is a claim;
+       badLine.there && badLine.bad === true && /כיסוי חלקי/.test(badLine.text), badLine.text.slice(0, 80));
+    /* Two numbers beside each other, not one. "75 properties" is a claim;
        "idealista reports 297 and 75 arrived" is a measurement. */
     ok('coverage: and it prints what idealista said existed beside what arrived',
        /297/.test(badLine.text) && /75/.test(badLine.text), badLine.text.slice(0, 110));
-    ok('coverage: the listings themselves are identical in both — only the audit differs',
+    ok('coverage: the properties themselves are identical in both — only the audit differs',
        JSON.stringify(full.items) === JSON.stringify(part.items));
 
     /* And a file with no audit at all — every listings file written before
-       today — still imports, and simply says nothing rather than claiming
+       route 2 — still imports, and simply says nothing rather than claiming
        a coverage it cannot know. */
-    await page.evaluate(d => { const x = JSON.parse(JSON.stringify(d)); delete x.coverage; importListings(x); }, full);
-    await page.waitForTimeout(600);
+    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); hideNote(); });
+    await page.evaluate(d => { const x = JSON.parse(JSON.stringify(d)); delete x.coverage; return importListings(x); }, full);
+    const quiet = await noteOf();
     ok('coverage: an older file with no audit imports and claims nothing',
-       await page.evaluate(() => document.querySelectorAll('#doc .lst-cov').length) === 0
-         && await page.evaluate(() => (D.lst.items || []).length) === full.items.length);
-    await page.evaluate(() => { if (S.lst) lstOff(); });
+       !quiet.there && await page.evaluate(() => D.mine.filter(p => p.src).length) === full.items.length,
+       JSON.stringify(quiet));
+    await page.evaluate(() => { D.mine = D.mine.filter(p => !p.src); saveMine(); hideNote(); if (S.wp) toggleWp(); });
     await page.unroute('**img4.idealista.pt/**');
     await page.waitForTimeout(300);
   }
@@ -4518,7 +4535,7 @@ const css = (page, sel, prop) =>
     const prop = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'property_link.json'), 'utf8'));
     const it = prop.items[0];
     await page.route('**idealista.pt/**', r => r.abort());
-    await page.evaluate(() => { if (S.lst) lstOff(); if (!S.wp) toggleWp(); });
+    await page.evaluate(() => { if (!S.wp) toggleWp(); });
     await page.evaluate(() => { D.links = []; saveLinks(); renderWaypoints(); });
 
     /* The link the user pasted, verbatim, with /en/ and their own utm tail. */
@@ -4573,7 +4590,6 @@ const css = (page, sel, prop) =>
          && /ממתין/.test(await page.evaluate(() => (document.querySelector('#doc .wp-link .warn') || {}).textContent || '')));
 
     await page.evaluate(d => importProperties(d), prop);
-    await page.waitForTimeout(900);
     const card = await page.evaluate(() => {
       const p = D.mine.find(x => x.id === 'l34741096');
       const el = document.querySelector('[data-wp="l34741096"]') || document.querySelector('#doc .card:last-child');
